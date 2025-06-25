@@ -23,23 +23,6 @@ def download_db_from_drive():
 
 DB_PATH = download_db_from_drive()
 
-# ===== แสดงตัวอย่างข้อมูลเพื่อดูชื่อคอลัมน์ =====
-@st.cache_data(ttl=300)
-def get_preview():
-    conn = sqlite3.connect(DB_PATH)
-    df = pd.read_sql_query("SELECT * FROM health_data LIMIT 5", conn)
-    conn.close()
-    return df
-
-st.subheader("📋 ตัวอย่างข้อมูลจากฐานข้อมูล")
-try:
-    preview = get_preview()
-    st.dataframe(preview)
-    st.write("🔑 ชื่อคอลัมน์ทั้งหมด:", preview.columns.tolist())
-except Exception as e:
-    st.error("❌ ไม่สามารถโหลดข้อมูลตัวอย่างได้")
-    st.exception(e)
-
 # ===== ค้นหาด้วย HN / ชื่อ-สกุล / เลขที่ ว. =====
 st.subheader("🔍 ค้นหาผลตรวจสุขภาพ")
 search = st.text_input("กรอก HN หรือ ชื่อ-สกุล หรือ เลขที่ ว.")
