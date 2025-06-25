@@ -5,7 +5,7 @@ import pandas as pd
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 st.title("ระบบรายงานผลตรวจสุขภาพ")
 
-DB_PATH = "SQliteDatabase รวมทุกปี.db"
+DB_PATH = "SQliteDatabase_AllData.db"
 
 @st.cache_data(ttl=300)
 def load_data_from_db(citizen_or_name):
