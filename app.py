@@ -67,6 +67,12 @@ def load_data_from_db():
     db_url = "https://drive.google.com/uc?export=download&id=1HruO9AMrUfniC8hBWtumVdxLJayEc1Xr"
     db_path = "/tmp/temp_data.db"
 
+def get_clean_value(value):
+    if pd.isna(value) or value is None:
+        return ""
+    value = str(value).strip()
+    return "" if value in ["-", "null", "NULL"] else value
+    
     # ดาวน์โหลดไฟล์จาก Google Drive
     with requests.get(db_url, stream=True) as r:
         with open(db_path, 'wb') as f:
@@ -80,6 +86,12 @@ def load_data_from_db():
     return df
 
 df = load_data_from_db()
+
+def get_clean_value(value):
+    if pd.isna(value) or value is None:
+        return ""
+    value = str(value).strip()
+    return "" if value in ["-", "null", "NULL"] else value
 
 df.columns = df.columns.str.strip()
 df['เลขบัตรประชาชน'] = df['เลขบัตรประชาชน'].astype(str).str.strip()
@@ -306,12 +318,12 @@ if "person" in st.session_state:
     year_df = df[df["Year"] == selected_year]
 
     def render_health_report(person):
-        sbp = person.get("SBP", "")
-        dbp = person.get("DBP", "")
-        pulse = person.get("Pulse", "")
-        weight = person.get("Weight", "")
-        height = person.get("Height", "")
-        waist = person.get("Waist", "")
+        sbp = get_clean_value(person.get("SBP"))
+        dbp = get_clean_value(person.get("DBP"))
+        pulse = get_clean_value(person.get("Pulse"))
+        weight = get_clean_value(person.get("Weight"))
+        height = get_clean_value(person.get("Height"))
+        waist = get_clean_value(person.get("Waist"))
     
         bp_result = "-"
         if sbp and dbp:
@@ -320,14 +332,23 @@ if "person" in st.session_state:
             bp_result = f"{bp_val} - {bp_desc}"
 
     
-        pulse = f"{pulse} ครั้ง/นาที" if pulse != "-" else "-"
-        weight = f"{weight} กก." if weight else "-"
-        height = f"{height} ซม." if height else "-"
-        waist = f"{waist} ซม." if waist else "-"
+        pulse_raw = get_clean_value(person.get("Pulse"))
+        weight_raw = get_clean_value(person.get("Weight"))
+        height_raw = get_clean_value(person.get("Height"))
+        waist_raw = get_clean_value(person.get("Waist"))
+        
+        pulse = f"{pulse_raw} ครั้ง/นาที" if pulse_raw else "-"
+        weight = f"{weight_raw} กก." if weight_raw else "-"
+        height = f"{height_raw} ซม." if height_raw else "-"
+        waist = f"{waist_raw} ซม." if waist_raw else "-"
     
         try:
-            weight_val = float(weight.replace(" กก.", "").strip())
-            height_val = float(height.replace(" ซม.", "").strip())
+            weight_val = float(weight_raw)
+            height_val = float(height_raw)
+            bmi_val = weight_val / ((height_val / 100) ** 2)
+        except Exception as e:
+            st.warning(f"❌ ไม่สามารถคำนวณ BMI ได้: {e}")
+            bmi_val = None
             bmi_val = weight_val / ((height_val / 100) ** 2)
         except Exception as e:
             st.warning(f"❌ ไม่สามารถคำนวณ BMI ได้: {e}")
@@ -403,7 +424,7 @@ if "person" in st.session_state:
     
     cbc_rows = []
     for name, col, normal, low, high in cbc_config:
-        raw = person.get(col, "-")
+        raw = get_clean_value(person.get(col))
         result, is_abnormal = flag_value(raw, low, high)
         cbc_rows.append([(name, is_abnormal), (result, is_abnormal), (normal, is_abnormal)])
     
@@ -426,7 +447,7 @@ if "person" in st.session_state:
     blood_rows = []
     for name, col, normal, low, high, *opt in blood_config:
         higher_is_better = opt[0] if opt else False
-        raw = person.get(col, "-")
+        raw = get_clean_value(person.get(col))
         result, is_abnormal = flag_value(raw, low, high, higher_is_better=higher_is_better)
         blood_rows.append([(name, is_abnormal), (result, is_abnormal), (normal, is_abnormal)])
     
@@ -692,9 +713,9 @@ if "person" in st.session_state:
     sex = person.get("เพศ", "").strip()
     
     # 🔍 ดึงค่าตามปีที่เลือก
-    hb_raw = person.get("Hb(%)", "").strip()
-    wbc_raw = person.get("WBC (cumm)", "").strip()
-    plt_raw = person.get("Plt (/mm)", "").strip()
+    hb_raw = get_clean_value(person.get("Hb(%)"))
+    wbc_raw = get_clean_value(person.get("WBC (cumm)"))
+    plt_raw = get_clean_value(person.get("Plt (/mm)"))
     
     # 🧠 แปลผล
     hb_result = interpret_hb(hb_raw, sex)
@@ -803,7 +824,7 @@ if "person" in st.session_state:
     # ใช้ปีที่เลือกจาก dropdown
     y = selected_year
     y_label = str(y)
-    raw_value = str(person.get("FBS", "")).strip()
+    raw_value = get_clean_value(person.get("FBS"))
     advice_fbs = fbs_advice(raw_value)
     
     # 🧪 ฟังก์ชันสรุปผลไขมันในเลือด
@@ -972,10 +993,10 @@ if "person" in st.session_state:
             st.markdown(styled_result_table(["ชื่อการตรวจ", "ผลตรวจ", "ค่าปกติ"], urine_rows), unsafe_allow_html=True)
         
             # ✅ คำแนะนำ
-            alb_raw = person.get("Alb68", "").strip()
-            sugar_raw = person.get("sugar68", "").strip()
-            rbc_raw = person.get("RBC168", "").strip()
-            wbc_raw = person.get("WBC168", "").strip()
+            alb_raw = get_clean_value(person.get("Alb68"))
+            sugar_raw = get_clean_value(person.get("sugar68"))
+            rbc_raw = get_clean_value(person.get("RBC168"))
+            wbc_raw = get_clean_value(person.get("WBC168"))
         
             urine_advice = advice_urine(sex, alb_raw, sugar_raw, rbc_raw, wbc_raw)
             if urine_advice:
@@ -1051,7 +1072,7 @@ if "person" in st.session_state:
             return str(value).strip()
     
         cxr_col = get_cxr_col_name(2500 + selected_year)
-        cxr_raw = person.get(cxr_col, "")
+        cxr_raw = get_clean_value(person.get("CXR"))
         cxr_result = interpret_cxr(cxr_raw)
     
         st.markdown(f"""
@@ -1076,7 +1097,7 @@ if "person" in st.session_state:
             return str(value).strip()
         
         ekg_col = get_ekg_col_name(2500 + selected_year)
-        ekg_raw = person.get(ekg_col, "")
+        ekg_raw = get_clean_value(person.get(ekg_col, "")
         ekg_result = interpret_ekg(ekg_raw)
         
         st.markdown(f"""
