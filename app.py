@@ -1085,7 +1085,7 @@ if "person" in st.session_state:
         """, unsafe_allow_html=True)
     
         # ----------------------------
-
+        
         st.markdown(render_section_header("ผลคลื่นไฟฟ้าหัวใจ (EKG)"), unsafe_allow_html=True)
         
         def get_ekg_col_name(year):
@@ -1097,7 +1097,7 @@ if "person" in st.session_state:
             return str(value).strip()
         
         ekg_col = get_ekg_col_name(2500 + selected_year)
-        ekg_raw = get_clean_value(person.get(ekg_col, "")
+        ekg_raw = get_clean_value(person.get(ekg_col, ""))
         ekg_result = interpret_ekg(ekg_raw)
         
         st.markdown(f"""
@@ -1136,15 +1136,16 @@ if "person" in st.session_state:
         {hep_a_raw}
         </div>
         """, unsafe_allow_html=True)
+
         
         # 👉 หัวข้อ Hepatitis B (ใหม่: รวมตาราง HBsAg/HBsAb/HBcAb)
         st.markdown(render_section_header("ผลการตรวจไวรัสตับอักเสบบี (Viral hepatitis B)"), unsafe_allow_html=True)
         
-        # ดึงค่าจาก DataFrame
-        hbsag_raw = person.get("HbsAg", "N/A").strip()
-        hbsab_raw = person.get("HbsAb", "N/A").strip()
-        hbcab_raw = person.get("HBcAB", "N/A").strip()
-
+        # ดึงค่าจาก DataFrame แบบปลอดภัย
+        hbsag_raw = get_clean_value(person.get("HbsAg"))
+        hbsab_raw = get_clean_value(person.get("HbsAb"))
+        hbcab_raw = get_clean_value(person.get("HBcAB"))
+        
         # แสดงผลแบบไม่มีพื้นหลังสีในแถวหัวตาราง
         hepb_table = f"""
         <table style='width:100%; font-size:16px; text-align:center; border-collapse: collapse; margin-bottom: 1rem;'>
@@ -1165,7 +1166,7 @@ if "person" in st.session_state:
         </table>
         """
         st.markdown(hepb_table, unsafe_allow_html=True)
-
+        
         def hepatitis_b_advice(hbsag, hbsab, hbcab):
             hbsag = hbsag.lower()
             hbsab = hbsab.lower()
@@ -1188,41 +1189,40 @@ if "person" in st.session_state:
         {hepatitis_b_advice(hbsag_raw, hbsab_raw, hbcab_raw)}
         </div>
         """, unsafe_allow_html=True)
-
-    left_spacer3, doctor_col, right_spacer3 = st.columns([1, 6, 1])
-    
-    with doctor_col:
-        st.markdown(f"""
-        <div style='
-            background-color: #1B5E20;
-            padding: 20px 24px;
-            border-radius: 6px;
-            font-size: 18px;
-            line-height: 1.6;
-            margin: 1.5rem 0;
-            color: inherit;
-        '>
-            <b>สรุปความเห็นของแพทย์ :</b> (ยังไม่ได้เชื่อมคอลัมน์)
-        </div>
-    
-        <div style='
-            margin-top: 3rem;
-            text-align: right;
-            padding-right: 1rem;
-        '>
+        
+        left_spacer3, doctor_col, right_spacer3 = st.columns([1, 6, 1])
+        
+        with doctor_col:
+            st.markdown(f"""
             <div style='
-                display: inline-block;
-                text-align: center;
-                width: 340px;
+                background-color: #1B5E20;
+                padding: 20px 24px;
+                border-radius: 6px;
+                font-size: 18px;
+                line-height: 1.6;
+                margin: 1.5rem 0;
+                color: inherit;
+            '>
+                <b>สรุปความเห็นของแพทย์ :</b> (ยังไม่ได้เชื่อมคอลัมน์)
+            </div>
+        
+            <div style='
+                margin-top: 3rem;
+                text-align: right;
+                padding-right: 1rem;
             '>
                 <div style='
-                    border-bottom: 1px dotted #ccc;
-                    margin-bottom: 0.5rem;
-                    width: 100%;
-                '></div>
-                <div style='white-space: nowrap;'>นายแพทย์นพรัตน์ รัชฎาพร</div>
-                <div style='white-space: nowrap;'>เลขที่ใบอนุญาตผู้ประกอบวิชาชีพเวชกรรม ว.26674</div>
+                    display: inline-block;
+                    text-align: center;
+                    width: 340px;
+                '>
+                    <div style='
+                        border-bottom: 1px dotted #ccc;
+                        margin-bottom: 0.5rem;
+                        width: 100%;
+                    '></div>
+                    <div style='white-space: nowrap;'>นายแพทย์นพรัตน์ รัชฎาพร</div>
+                    <div style='white-space: nowrap;'>เลขที่ใบอนุญาตผู้ประกอบวิชาชีพเวชกรรม ว.26674</div>
+                </div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
-
+            """, unsafe_allow_html=True)
