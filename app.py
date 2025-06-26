@@ -3,11 +3,19 @@ import streamlit as st
 import pandas as pd
 import json
 import html
+import sqlite3
+import requests
 
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
+# ==================== STYLE ====================
 st.markdown("""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch&display=swap');
+    html, body, [class*="css"] {
+        font-family: 'Chakra Petch', sans-serif !important;
+    }
+
     .doctor-section {
         font-size: 16px;
         line-height: 1.8;
@@ -47,46 +55,28 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-
-# ==================== STYLE ====================
-st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch&display=swap');
-    html, body, [class*="css"] {
-        font-family: 'Chakra Petch', sans-serif !important;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-# ==================== LOAD SHEET ====================
-import sqlite3
-import requests
-
+# ==================== LOAD FROM DATABASE ====================
 @st.cache_data(ttl=600)
 def load_data_from_db():
-    import requests
-    import sqlite3
-    import pandas as pd
-
     db_url = "https://drive.google.com/uc?export=download&id=1HruO9AMrUfniC8hBWtumVdxLJayEc1Xr"
     db_path = "/tmp/temp_data.db"
 
-    # ✅ 1. ดาวน์โหลดไฟล์จาก Google Drive
     with requests.get(db_url, stream=True) as r:
         with open(db_path, 'wb') as f:
             for chunk in r.iter_content(chunk_size=8192):
                 f.write(chunk)
 
-    # ✅ 2. อ่านข้อมูลจากไฟล์ .db
     conn = sqlite3.connect(db_path)
     df = pd.read_sql_query("SELECT * FROM health_data", conn)
     conn.close()
-
-    # ✅ 3. ส่งข้อมูลกลับให้โปรแกรม
     return df
 
 df = load_data_from_db()
+df.columns = df.columns.str.strip()
 df["Year"] = df["Year"].astype(int)
+df["เลขบัตรประชาชน"] = df["เลขบัตรประชาชน"].astype(str).str.strip()
+df["HN"] = df["HN"].astype(str).str.strip().str.replace(".0", "", regex=False)
+df["ชื่อ-สกุล"] = df["ชื่อ-สกุล"].astype(str).str.strip()
 
 def get_clean_value(value):
     if pd.isna(value) or value is None:
@@ -94,15 +84,16 @@ def get_clean_value(value):
     value = str(value).strip()
     return "" if value in ["-", "null", "NULL"] else value
 
-df.columns = [(str(col)).strip() for col in df.columns]
-df['เลขบัตรประชาชน'] = df['เลขบัตรประชาชน'].astype(str).str.strip()
-df['HN'] = df['HN'].astype(str).str.strip().str.replace(".0", "", regex=False)
-df['ชื่อ-สกุล'] = df['ชื่อ-สกุล'].astype(str).str.strip()
-
-id_card = st.text_input("เลขบัตรประชาชน")
-hn = st.text_input("HN")
-full_name = st.text_input("ชื่อ-สกุล")
-submitted = st.button("ค้นหา")
+# ==================== SEARCH FORM ====================
+with st.form("search_form"):
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        id_card = st.text_input("เลขบัตรประชาชน")
+    with col2:
+        hn = st.text_input("HN")
+    with col3:
+        full_name = st.text_input("ชื่อ-สกุล")
+    submitted = st.form_submit_button("ค้นหา")
 
 if submitted:
     query = df.copy()
@@ -116,9 +107,29 @@ if submitted:
     if query.empty:
         st.error("❌ ไม่พบข้อมูล กรุณาตรวจสอบอีกครั้ง")
         st.session_state.pop("person_data", None)
+        st.session_state.pop("person", None)
     else:
         st.session_state["person_data"] = query
         st.session_state["person"] = query.sort_values("Year", ascending=False).iloc[0]
+
+# ==================== DROPDOWN YEAR ====================
+if "person_data" in st.session_state:
+    data = st.session_state["person_data"]
+    years = data["Year"].dropna().astype(int).unique().tolist()
+
+    selected_year = st.selectbox(
+        "📅 เลือกปีที่ต้องการดูผลตรวจรายงาน",
+        options=sorted(years, reverse=True),
+        format_func=lambda y: f"พ.ศ. {y}"
+    )
+
+    person = data[data["Year"] == selected_year].iloc[0]
+
+    # ✅ พร้อมใช้ person ต่อในส่วนแสดงผล
+    st.success(f"🎯 แสดงผลของปี พ.ศ. {selected_year}")
+    st.write("ชื่อ-สกุล:", person["ชื่อ-สกุล"])
+    st.write("น้ำหนัก:", person["น้ำหนัก"])
+    st.write("Hb:", person["Hb(%)"])
 
 # ==================== INTERPRET FUNCTIONS ====================
 def interpret_bmi(bmi):
