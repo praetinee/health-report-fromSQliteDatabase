@@ -214,9 +214,6 @@ blood_columns_by_year = {
     for y in years
 }
 
-st.write("คอลัมน์ที่มี:", df.columns.tolist())
-st.write("ตัวอย่างข้อมูล:", df.head())
-
 if submitted:
     query = df.copy()
     if id_card.strip():
