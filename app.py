@@ -90,15 +90,6 @@ df['เลขบัตรประชาชน'] = df['เลขบัตรป�
 df['HN'] = df['HN'].astype(str).str.strip()
 df['ชื่อ-สกุล'] = df['ชื่อ-สกุล'].astype(str).str.strip()
 
-# ==================== YEAR MAPPING (ใหม่) ====================
-available_years = sorted(df["Year"].dropna().unique().astype(int), reverse=True)
-
-selected_year = st.selectbox(
-    "📅 เลือกปีที่ต้องการดูผลตรวจรายงาน",
-    options=available_years,
-    format_func=lambda y: f"พ.ศ. {y + 543}"
-)
-
 # ==================== INTERPRET FUNCTIONS ====================
 def interpret_bmi(bmi):
     try:
