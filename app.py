@@ -71,10 +71,8 @@ def load_data_from_db_url():
     df = pd.read_sql("SELECT * FROM health_data", conn)  # เปลี่ยนชื่อ table ให้ตรงกับฐานข้อมูลของคุณ
     conn.close()
 
-    # ทำความสะอาด HN และฟิลด์ที่ใช้ค้นหา
-    df["เลขบัตรประชาชน"] = df["เลขบัตรประชาชน"].astype(str).str.strip()
-    df["HN"] = df["HN"].astype(str).str.strip()
-    df["ชื่อ-สกุล"] = df["ชื่อ-สกุล"].astype(str).str.strip()
+    # ✅ ล้างคอลัมน์ให้สะอาด
+    df.columns = df.columns.str.strip()
     
     # แปลงค่าที่ไม่ใช่ผลตรวจให้เป็น NaN
     df.replace(["", " ", "-", "NULL", "null", None], pd.NA, inplace=True)
@@ -87,11 +85,6 @@ def load_data_from_db_url():
     return df
 
 df = load_data_from_db_url()
-
-df.columns = df.columns.str.strip()
-df['เลขบัตรประชาชน'] = df['เลขบัตรประชาชน'].astype(str).str.strip()
-df['HN'] = df['HN'].astype(str).str.strip()
-df['ชื่อ-สกุล'] = df['ชื่อ-สกุล'].astype(str).str.strip()
 
 # ==================== INTERPRET FUNCTIONS ====================
 def interpret_bmi(bmi):
