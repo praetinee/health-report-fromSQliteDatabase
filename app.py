@@ -93,7 +93,7 @@ def get_clean_value(value):
     value = str(value).strip()
     return "" if value in ["-", "null", "NULL"] else value
 
-df.columns = [str(col).strip() for col in df.columns]
+df.columns = [(str(col)).strip() for col in df.columns]
 df['เลขบัตรประชาชน'] = df['เลขบัตรประชาชน'].astype(str).str.strip()
 df['HN'] = df['HN'].astype(str).str.strip().str.replace(".0", "", regex=False)
 df['ชื่อ-สกุล'] = df['ชื่อ-สกุล'].astype(str).str.strip()
