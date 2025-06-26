@@ -693,7 +693,7 @@ if "person" in st.session_state:
     # 🔍 ดึงค่าตามปีที่เลือก
     hb_raw = person.get("Hb(%)", "").strip()
     wbc_raw = person.get("WBC (cumm)", "").strip()
-    plt_raw = person.get("Plt (/mm)", "")).strip()
+    plt_raw = person.get("Plt (/mm)", "").strip()
     
     # 🧠 แปลผล
     hb_result = interpret_hb(hb_raw, sex)
