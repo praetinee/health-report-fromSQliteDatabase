@@ -335,12 +335,12 @@ if "person" in st.session_state:
     person = query[query["Year"] == selected_year].iloc[0]
 
     def render_health_report(person):
-        sbp = get_clean_value(person.get("SBP"))
-        dbp = get_clean_value(person.get("DBP"))
-        pulse = get_clean_value(person.get("Pulse"))
-        weight = get_clean_value(person.get("Weight"))
-        height = get_clean_value(person.get("Height"))
-        waist = get_clean_value(person.get("Waist"))
+        sbp = get_clean_value(person["SBP"])
+        dbp = get_clean_value(person["DBP"])
+        pulse = get_clean_value(person["Pulse"])
+        weight = get_clean_value(person["Weight"])
+        height = get_clean_value(person["Height"])
+        waist = get_clean_value(person["Waist"])
     
         bp_result = "-"
         if sbp and dbp:
