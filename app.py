@@ -1,10 +1,10 @@
+import numpy as np
 import streamlit as st
 import pandas as pd
-import numpy as np
-import sqlite3
-import requests  # << ต้องอยู่ตรงนี้
+import gspread
 import json
 import html
+from oauth2client.service_account import ServiceAccountCredentials
 
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
@@ -51,125 +51,6 @@ st.markdown("""
 
 
 # ==================== STYLE ====================
-st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch&display=swap');
-    html, body, [class*="css"] {
-        font-family: 'Chakra Petch', sans-serif !important;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-# ==================== LOAD FROM DATABASE ====================
-@st.cache_data(ttl=600)
-def load_data_from_db():
-    db_url = "https://drive.google.com/uc?export=download&id=1HruO9AMrUfniC8hBWtumVdxLJayEc1Xr"
-    db_path = "/tmp/temp_data.db"
-
-    with requests.get(db_url, stream=True) as r:
-        with open(db_path, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                f.write(chunk)
-
-    conn = sqlite3.connect(db_path)
-    df = pd.read_sql_query("SELECT * FROM health_data", conn)
-    conn.close()
-    return df
-
-df = load_data_from_db()
-df.columns = df.columns.str.strip()
-df["Year"] = df["Year"].astype(int)
-df["เลขบัตรประชาชน"] = df["เลขบัตรประชาชน"].astype(str).str.strip()
-df["HN"] = df["HN"].astype(str).str.strip().str.replace(".0", "", regex=False)
-df["ชื่อ-สกุล"] = df["ชื่อ-สกุล"].astype(str).str.strip()
-
-def get_clean_value(value):
-    if pd.isna(value) or value is None:
-        return ""
-    value = str(value).strip()
-    return "" if value in ["-", "null", "NULL"] else value
-
-# ==================== SEARCH FORM ====================
-with st.form("search_form"):
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        id_card = st.text_input("เลขบัตรประชาชน")
-    with col2:
-        hn = st.text_input("HN")
-    with col3:
-        full_name = st.text_input("ชื่อ-สกุล")
-    submitted = st.form_submit_button("ค้นหา")
-
-if submitted:
-    query = df.copy()
-    if id_card.strip():
-        query = query[df["เลขบัตรประชาชน"] == id_card.strip()]
-    elif hn.strip():
-        query = query[df["HN"] == hn.strip()]
-    elif full_name.strip():
-        query = query[df["ชื่อ-สกุล"].str.strip() == full_name.strip()]
-    
-    if query.empty:
-        st.error("❌ ไม่พบข้อมูล กรุณาตรวจสอบอีกครั้ง")
-        st.session_state.pop("person_data", None)
-        st.session_state.pop("person", None)
-    else:
-        st.session_state["person_data"] = query
-        st.session_state["person"] = query.sort_values("Year", ascending=False).iloc[0]
-
-import numpy as np
-import streamlit as st
-import pandas as pd
-import json
-import html
-import sqlite3
-import requests
-
-st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
-
-# ==================== STYLE ====================
-st.markdown("""
-<style>
-    .doctor-section {
-        font-size: 16px;
-        line-height: 1.8;
-        margin-top: 2rem;
-    }
-
-    .summary-box {
-        background-color: #dcedc8;
-        padding: 12px 18px;
-        font-weight: bold;
-        border-radius: 6px;
-        margin-bottom: 1.5rem;
-    }
-
-    .appointment-box {
-        background-color: #ffcdd2;
-        padding: 12px 18px;
-        border-radius: 6px;
-        margin-bottom: 1.5rem;
-    }
-
-    .remark {
-        font-weight: bold;
-        margin-top: 2rem;
-    }
-
-    .footer {
-        display: flex;
-        justify-content: space-between;
-        margin-top: 3rem;
-        font-size: 16px;
-    }
-
-    .footer .right {
-        text-align: right;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# Font override
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch&display=swap');
@@ -180,43 +61,43 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==================== LOAD SHEET ====================
-@st.cache_data(ttl=600)
-def load_data_from_db():
+import sqlite3
+import urllib.request
+
+@st.cache_data
+def load_data_from_db_url():
     db_url = "https://drive.google.com/uc?export=download&id=1HruO9AMrUfniC8hBWtumVdxLJayEc1Xr"
-    db_path = "/tmp/temp_data.db"
+    db_path = "/tmp/health_data.db"
+    urllib.request.urlretrieve(db_url, db_path)
+    conn = sqlite3.connect(db_path)
+    df = pd.read_sql("SELECT * FROM health_data", conn)  # เปลี่ยนชื่อ table ให้ตรงกับฐานข้อมูลของคุณ
+    conn.close()
+    
+    # แปลงค่าที่ไม่ใช่ผลตรวจให้เป็น NaN
+    df.replace(["", " ", "-", "NULL", "null", None], pd.NA, inplace=True)
+    
+    # จัดการคอลัมน์ string ที่ใช้ค้นหา
+    df['เลขบัตรประชาชน'] = df['เลขบัตรประชาชน'].astype(str).str.strip()
+    df['HN'] = df['HN'].astype(str).str.strip()
+    df['ชื่อ-สกุล'] = df['ชื่อ-สกุล'].astype(str).str.strip()
 
-    with requests.get(db_url, stream=True) as r:
-        if r.status_code != 200:
-            st.error("❌ ไม่สามารถดาวน์โหลดไฟล์ฐานข้อมูลได้")
-            return pd.DataFrame()
-        with open(db_path, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                f.write(chunk)
+    return df
 
-    try:
-        conn = sqlite3.connect(db_path)
-        df = pd.read_sql_query("SELECT * FROM health_data", conn)
-        conn.close()
-        return df
-    except Exception as e:
-        st.error(f"❌ อ่านฐานข้อมูลล้มเหลว: {e}")
-        return pd.DataFrame()
+df = load_data_from_db_url()
 
-df = load_data_from_db()
+df.columns = df.columns.str.strip()
+df['เลขบัตรประชาชน'] = df['เลขบัตรประชาชน'].astype(str).str.strip()
+df['HN'] = df['HN'].astype(str).str.strip()
+df['ชื่อ-สกุล'] = df['ชื่อ-สกุล'].astype(str).str.strip()
 
-# ==================== YEAR MAPPING ====================
-years = list(range(61, 69))
-columns_by_year = {
-    y: {
-        "weight": f"น้ำหนัก{y}" if y != 68 else "น้ำหนัก",
-        "height": f"ส่วนสูง{y}" if y != 68 else "ส่วนสูง",
-        "waist": f"รอบเอว{y}" if y != 68 else "รอบเอว",
-        "sbp": f"SBP{y}" if y != 68 else "SBP",
-        "dbp": f"DBP{y}" if y != 68 else "DBP",
-        "pulse": f"pulse{y}" if y != 68 else "pulse",
-    }
-    for y in years
-}
+# ==================== YEAR MAPPING (ใหม่) ====================
+available_years = sorted(df["Year"].dropna().unique().astype(int), reverse=True)
+
+selected_year = st.selectbox(
+    "📅 เลือกปีที่ต้องการดูผลตรวจรายงาน",
+    options=available_years,
+    format_func=lambda y: f"พ.ศ. {y + 543}"
+)
 
 # ==================== INTERPRET FUNCTIONS ====================
 def interpret_bmi(bmi):
@@ -316,22 +197,39 @@ with st.form("search_form"):
 # ==================== BLOOD COLUMN MAPPING ====================
 
 if submitted:
-    query = df[
-        (df["เลขบัตรประชาชน"] == person["เลขบัตรประชาชน"]) |
-        (df["HN"] == person["HN"]) |
-        (df["ชื่อ-สกุล"] == person["ชื่อ-สกุล"])
-    ]
-
-    if not query.empty:
-        # ✅ ดึงเฉพาะปีที่เลือกจาก dropdown
-        selected_year = st.session_state.get("selected_year") or query["Year"].max()
-        query = query[query["Year"] == selected_year]
+    # 🔍 กรองข้อมูลตามสิ่งที่กรอก
+    query = df.copy()
+    if id_card.strip():
+        query = query[query["เลขบัตรประชาชน"] == id_card.strip()]
+    if hn.strip():
+        query = query[query["HN"] == hn.strip()]
+    if full_name.strip():
+        query = query[query["ชื่อ-สกุล"].str.strip() == full_name.strip()]
 
     if query.empty:
         st.error("❌ ไม่พบข้อมูล กรุณาตรวจสอบอีกครั้ง")
         st.session_state.pop("person", None)
     else:
-        st.session_state["person"] = query.iloc[0]
+        # ✅ ปีที่มีอยู่จริงสำหรับผู้คนนี้
+        year_options = sorted(query["Year"].dropna().unique().astype(int), reverse=True)
+        selected_year = st.selectbox("📅 เลือกปีที่ต้องการดูผล", options=year_options, format_func=lambda y: f"พ.ศ. {y + 543}")
+
+        # ✅ ดูว่าปีนี้มีกี่ครั้ง
+        subquery = query[query["Year"] == selected_year]
+
+        if len(subquery) > 1:
+            # มีหลายครั้งในปีเดียว → ให้เลือกครั้งที่
+            indices = subquery.index.tolist()
+            selected_index = st.selectbox(
+                "เลือกรอบที่ตรวจในปีนี้",
+                options=indices,
+                format_func=lambda i: f"ครั้งที่ {subquery.index.get_loc(i) + 1}"
+            )
+            st.session_state["person"] = subquery.loc[selected_index]
+        else:
+            # มีแค่รอบเดียว → เอาอัตโนมัติ
+            st.session_state["person"] = subquery.iloc[0]
+
 
 cbc_columns = {
     "Hb": "Hb(%)",
@@ -438,12 +336,11 @@ if "person" in st.session_state:
     ]
 
     # ✅ ดึงปีทั้งหมดของบุคคลนี้
-    years = query["Year"].dropna().astype(int).unique().tolist()
-
+    available_years = sorted(df["Year"].dropna().unique().astype(int), reverse=True)
     selected_year = st.selectbox(
         "📅 เลือกปีที่ต้องการดูผลตรวจรายงาน",
-        options=sorted(years, reverse=True),
-        format_func=lambda y: f"พ.ศ. {y}"
+        options=available_years,
+        format_func=lambda y: f"พ.ศ. {y + 543}"
     )
 
     # ✅ อัปเดต person ตามปีที่เลือก
