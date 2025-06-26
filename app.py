@@ -390,8 +390,23 @@ if "person" in st.session_state:
     # ================== CBC / BLOOD TEST DISPLAY ==================
 
     
-    cbc_cols = cbc_columns_by_year[selected_year]
-    blood_cols = blood_columns_by_year[selected_year]
+    cbc_cols = cbc_columns
+
+    blood_cols = {
+        "FBS": "FBS",
+        "Uric": "Uric Acid",
+        "ALK": "ALP",
+        "SGOT": "SGOT",
+        "SGPT": "SGPT",
+        "Cholesterol": "CHOL",
+        "TG": "TGL",
+        "HDL": "HDL",
+        "LDL": "LDL",
+        "BUN": "BUN",
+        "Cr": "Cr",
+        "GFR": "GFR",
+    }
+
     
     # ✅ ฟังก์ชันช่วยให้แสดงค่า และ flag ว่าผิดปกติหรือไม่
     def flag_value(raw, low=None, high=None, higher_is_better=False):
