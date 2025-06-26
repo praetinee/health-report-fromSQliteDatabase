@@ -305,16 +305,15 @@ if "person" in st.session_state:
 
     year_df = df[df["Year"] == selected_year]
 
-    def get_vital_sign_columns():
-        return {
-            "sbp": "SBP",
-            "dbp": "DBP",
-            "pulse": "Pulse",
-            "weight": "Weight",
-            "height": "Height",
-            "waist": "Waist",
-        }
-    
+    vital_cols = {
+        "sbp": "SBP",
+        "dbp": "DBP",
+        "pulse": "Pulse",
+        "weight": "Weight",
+        "height": "Height",
+        "waist": "Waist",
+    }
+        
         bp_result = "-"
         if sbp and dbp:
             bp_val = f"{sbp}/{dbp} ม.ม.ปรอท"
@@ -365,7 +364,7 @@ if "person" in st.session_state:
         </div>
         """
 
-    st.markdown(render_health_report(person, vital_cols), unsafe_allow_html=True)
+    st.markdown(render_health_report(person), unsafe_allow_html=True)
 
     # ================== CBC / BLOOD TEST DISPLAY ==================
 
