@@ -349,7 +349,8 @@ if "person" in st.session_state:
         except Exception as e:
             st.warning(f"❌ ไม่สามารถคำนวณ BMI ได้: {e}")
             bmi_val = None
-            bmi_val = weight_val / ((height_val / 100) ** 2)
+            weight_val = None  # ป้องกัน UnboundLocalError
+            height_val = None
         except Exception as e:
             st.warning(f"❌ ไม่สามารถคำนวณ BMI ได้: {e}")
             bmi_val = None
