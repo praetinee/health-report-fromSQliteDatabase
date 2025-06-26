@@ -307,16 +307,17 @@ def interpret_stool_cs(value):
 
 # ==================== DISPLAY ====================
 if "person" in st.session_state:
-    person = st.session_state["person"]  # ⬅️ ต้องอยู่ตรงนี้ก่อนใช้ person ด้านล่าง
+    # ✅ ต้องกำหนดก่อนใช้งาน person
+    person = st.session_state["person"]
 
-    # ✅ กรองข้อมูลทุกปีของบุคคลนี้ เพื่อแสดง dropdown ปีทั้งหมด
+    # ✅ กรองข้อมูลทุกปีของบุคคลนี้ โดยใช้ค่าจาก person
     query = df[
-        (df["เลขบัตรประชาชน"] == person["เลขบัตรประชาชน"]) |
-        (df["HN"] == person["HN"]) |
-        (df["ชื่อ-สกุล"] == person["ชื่อ-สกุล"])
+        (df["เลขบัตรประชาชน"] == person.get("เลขบัตรประชาชน", "")) |
+        (df["HN"] == person.get("HN", "")) |
+        (df["ชื่อ-สกุล"] == person.get("ชื่อ-สกุล", ""))
     ]
 
-    # ✅ สร้าง dropdown ปี
+    # ✅ ดึงปีทั้งหมดของบุคคลนี้
     years = query["Year"].dropna().astype(int).unique().tolist()
 
     selected_year = st.selectbox(
@@ -325,7 +326,7 @@ if "person" in st.session_state:
         format_func=lambda y: f"พ.ศ. {y}"
     )
 
-    # ✅ อัปเดต person ให้ตรงกับปีที่เลือก
+    # ✅ อัปเดต person ตามปีที่เลือก
     person = query[query["Year"] == selected_year].iloc[0]
 
     def render_health_report(person):
