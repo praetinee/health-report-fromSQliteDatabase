@@ -1,10 +1,8 @@
 import numpy as np
 import streamlit as st
 import pandas as pd
-import gspread
 import json
 import html
-from oauth2client.service_account import ServiceAccountCredentials
 
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
