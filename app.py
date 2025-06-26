@@ -1021,7 +1021,7 @@ if "person" in st.session_state:
                 margin-top: 1rem;
                 font-size: 16px;
             '>
-                <div style='font-size: 18px; font-weight: bold;'>📌 คำแนะนำจากผลตรวจปัสสาวะ ปี {selected_year + 543}</div>
+                <div style='font-size: 18px; font-weight: bold;'>📌 คำแนะนำจากผลตรวจปัสสาวะ ปี {selected_year}</div>
                 <div style='margin-top: 0.5rem;'>{urine_advice}</div>
             </div>
             """, unsafe_allow_html=True)
