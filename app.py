@@ -1056,8 +1056,17 @@ if "person" in st.session_state:
                 """, unsafe_allow_html=True)
     
         # ✅ ผลตรวจอุจจาระ + คำแนะนำ
-        stool_exam_raw = person.get(f"Stool exam{'' if y == 68 else y_label}", "").strip()
-        stool_cs_raw = person.get(f"Stool C/S{'' if y == 68 else y_label}", "").strip()
+        def safe_get(person, key):
+            if person and key in person and person[key] is not None:
+                return str(person[key]).strip()
+            return ""
+        
+        stool_exam_key = "Stool exam" if y == 68 else f"Stool exam{y_label}"
+        stool_cs_key = "Stool C/S" if y == 68 else f"Stool C/S{y_label}"
+        
+        stool_exam_raw = safe_get(person, stool_exam_key)
+        stool_cs_raw = safe_get(person, stool_cs_key)
+
     
         exam_text = interpret_stool_exam(stool_exam_raw)
         cs_text = interpret_stool_cs(stool_cs_raw)
