@@ -203,6 +203,12 @@ if submitted:
         query = query[query["HN"] == hn.strip()]
     if full_name.strip():
         query = query[query["ชื่อ-สกุล"].str.strip() == full_name.strip()]
+
+    if not query.empty:
+        # ✅ ดึงเฉพาะปีที่เลือกจาก dropdown
+        selected_year = st.session_state.get("selected_year") or query["Year"].max()
+        query = query[query["Year"] == selected_year]
+
     if query.empty:
         st.error("❌ ไม่พบข้อมูล กรุณาตรวจสอบอีกครั้ง")
         st.session_state.pop("person", None)
@@ -305,15 +311,29 @@ def interpret_stool_cs(value):
 if "person" in st.session_state:
     person = st.session_state["person"]
 
-    years = df["Year"].dropna().astype(int).unique().tolist()
-    
+    # ✅ เงื่อนไขค้นหาเฉพาะข้อมูลของบุคคลนี้ (จาก ID หรือ HN หรือชื่อ)
+    query = df.copy()
+    if person["เลขบัตรประชาชน"]:
+        query = query[query["เลขบัตรประชาชน"] == person["เลขบัตรประชาชน"]]
+    elif person["HN"]:
+        query = query[query["HN"] == person["HN"]]
+    elif person["ชื่อ-สกุล"]:
+        query = query[query["ชื่อ-สกุล"] == person["ชื่อ-สกุล"]]
+
+    # ✅ ดึงปีทั้งหมดของบุคคลนี้
+    years = query["Year"].dropna().astype(int).unique().tolist()
+
+    # ✅ dropdown ปี
     selected_year = st.selectbox(
-        "📅 เลือกปีที่ต้องการดูผลตรวจรายงาน", 
+        "📅 เลือกปีที่ต้องการดูผลตรวจรายงาน",
         options=sorted(years, reverse=True),
         format_func=lambda y: f"พ.ศ. {y}"
     )
 
-    year_df = df[df["Year"] == selected_year]
+    # ✅ อัปเดต person ใหม่ ตามปีที่เลือก
+    person = query[query["Year"] == selected_year].iloc[0]
+
+
 
     def render_health_report(person):
         sbp = get_clean_value(person.get("SBP"))
