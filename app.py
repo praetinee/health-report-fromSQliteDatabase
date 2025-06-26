@@ -197,30 +197,21 @@ if submitted:
     else:
         st.session_state["person"] = query.iloc[0]
 
-from collections import defaultdict
-
-cbc_columns_by_year = defaultdict(dict)
-
 cbc_columns = {
     "hb": "Hb(%)",
     "hct": "HCT",
     "wbc": "WBC (cumm)",
     "plt": "Plt (/mm)",
-    ...
+    "ne": "Ne (%)",
+    "ly": "Ly (%)",
+    "eo": "Eo",
+    "mo": "M",
+    "ba": "BA",
+    "rbc": "RBCmo",
+    "mcv": "MCV",
+    "mch": "MCH",
+    "mchc": "MCHC",
 }
-
-    if year == 68:
-        cbc_columns_by_year[year].update({
-            "ne": "Ne (%)68",
-            "ly": "Ly (%)68",
-            "eo": "Eo68",
-            "mo": "M68",
-            "ba": "BA68",
-            "rbc": "RBCmo68",
-            "mcv": "MCV68",
-            "mch": "MCH68",
-            "mchc": "MCHC",
-        })
 
 def interpret_alb(value):
     value = str(value).strip().lower()
@@ -304,6 +295,8 @@ def interpret_stool_cs(value):
 if "person" in st.session_state:
     person = st.session_state["person"]
 
+    years = df["Year"].dropna().astype(int).unique().tolist()
+    
     selected_year = st.selectbox(
         "📅 เลือกปีที่ต้องการดูผลตรวจรายงาน", 
         options=sorted(years, reverse=True),
@@ -698,9 +691,9 @@ if "person" in st.session_state:
     sex = person.get("เพศ", "").strip()
     
     # 🔍 ดึงค่าตามปีที่เลือก
-    hb_raw = str(person.get(f"Hb(%)" + suffix, "")).strip()
-    wbc_raw = str(person.get(f"WBC (cumm)" + suffix, "")).strip()
-    plt_raw = str(person.get(f"Plt (/mm)" + suffix, "")).strip()
+    hb_raw = person.get("Hb(%)", "").strip()
+    wbc_raw = person.get("WBC (cumm)", "")).strip()
+    plt_raw = person.get("Plt (/mm)", "")).strip()
     
     # 🧠 แปลผล
     hb_result = interpret_hb(hb_raw, sex)
