@@ -112,6 +112,135 @@ if submitted:
         st.session_state["person_data"] = query
         st.session_state["person"] = query.sort_values("Year", ascending=False).iloc[0]
 
+import numpy as np
+import streamlit as st
+import pandas as pd
+import json
+import html
+import sqlite3
+import requests
+
+st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
+
+# ==================== STYLE ====================
+st.markdown("""
+<style>
+    .doctor-section {
+        font-size: 16px;
+        line-height: 1.8;
+        margin-top: 2rem;
+    }
+
+    .summary-box {
+        background-color: #dcedc8;
+        padding: 12px 18px;
+        font-weight: bold;
+        border-radius: 6px;
+        margin-bottom: 1.5rem;
+    }
+
+    .appointment-box {
+        background-color: #ffcdd2;
+        padding: 12px 18px;
+        border-radius: 6px;
+        margin-bottom: 1.5rem;
+    }
+
+    .remark {
+        font-weight: bold;
+        margin-top: 2rem;
+    }
+
+    .footer {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 3rem;
+        font-size: 16px;
+    }
+
+    .footer .right {
+        text-align: right;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Font override
+st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch&display=swap');
+    html, body, [class*="css"] {
+        font-family: 'Chakra Petch', sans-serif !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# ==================== LOAD SHEET ====================
+@st.cache_data(ttl=600)
+def load_data_from_db():
+    db_url = "https://drive.google.com/uc?export=download&id=1HruO9AMrUfniC8hBWtumVdxLJayEc1Xr"
+    db_path = "/tmp/temp_data.db"
+
+    with requests.get(db_url, stream=True) as r:
+        if r.status_code != 200:
+            st.error("❌ ไม่สามารถดาวน์โหลดไฟล์ฐานข้อมูลได้")
+            return pd.DataFrame()
+        with open(db_path, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                f.write(chunk)
+
+    try:
+        conn = sqlite3.connect(db_path)
+        df = pd.read_sql_query("SELECT * FROM health_data", conn)
+        conn.close()
+        return df
+    except Exception as e:
+        st.error(f"❌ อ่านฐานข้อมูลล้มเหลว: {e}")
+        return pd.DataFrame()
+
+df = load_data_from_db()
+
+# ✅ ตรวจสอบคอลัมน์ที่จำเป็น
+required_columns = ["เลขบัตรประชาชน", "HN", "ชื่อ-สกุล", "Year"]
+missing = [col for col in required_columns if col not in df.columns]
+if missing:
+    st.error(f"❌ ไม่พบคอลัมน์: {', '.join(missing)}")
+    st.stop()
+
+# ✅ เตรียมข้อมูล
+df.columns = [(str(col)).strip() for col in df.columns]
+df['เลขบัตรประชาชน'] = df['เลขบัตรประชาชน'].astype(str).str.strip()
+df['HN'] = df['HN'].astype(str).str.strip().str.replace(".0", "", regex=False)
+df['ชื่อ-สกุล'] = df['ชื่อ-สกุล'].astype(str).str.strip()
+df["Year"] = pd.to_numeric(df["Year"], errors="coerce").fillna(0).astype(int)
+
+# ==================== ค้นหาข้อมูล ====================
+id_card = st.text_input("เลขบัตรประชาชน")
+hn = st.text_input("HN")
+full_name = st.text_input("ชื่อ-สกุล")
+submitted = st.button("ค้นหา")
+
+if submitted:
+    query = df.copy()
+
+    id_card_clean = id_card.strip().replace("\u200b", "")
+    hn_clean = hn.strip().replace(".0", "").replace("\u200b", "")
+    full_name_clean = full_name.strip().replace("\u200b", "")
+
+    if id_card_clean:
+        query = query[query["เลขบัตรประชาชน"] == id_card_clean]
+    elif hn_clean:
+        query = query[query["HN"] == hn_clean]
+    elif full_name_clean:
+        query = query[query["ชื่อ-สกุล"].str.strip() == full_name_clean]
+
+    if query.empty:
+        st.error("❌ ไม่พบข้อมูล กรุณาตรวจสอบอีกครั้ง")
+        st.session_state.pop("person_data", None)
+    else:
+        st.session_state["person_data"] = query
+        st.session_state["person"] = query.sort_values("Year", ascending=False).iloc[0]
+        st.success("✅ พบข้อมูลแล้ว")
+
 # ==================== DROPDOWN YEAR ====================
 if "person_data" in st.session_state:
     data = st.session_state["person_data"]
@@ -125,11 +254,11 @@ if "person_data" in st.session_state:
 
     person = data[data["Year"] == selected_year].iloc[0]
 
-    # ✅ พร้อมใช้ person ต่อในส่วนแสดงผล
+    # ✅ แสดงผลข้อมูล
     st.success(f"🎯 แสดงผลของปี พ.ศ. {selected_year}")
-    st.write("ชื่อ-สกุล:", person["ชื่อ-สกุล"])
-    st.write("น้ำหนัก:", person["น้ำหนัก"])
-    st.write("Hb:", person["Hb(%)"])
+    st.write("👤 ชื่อ-สกุล:", person.get("ชื่อ-สกุล", "-"))
+    st.write("⚖️ น้ำหนัก:", person.get("น้ำหนัก", "-"))
+    st.write("🧪 Hb:", person.get("Hb(%)", "-"))
 
 # ==================== INTERPRET FUNCTIONS ====================
 def interpret_bmi(bmi):
