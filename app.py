@@ -75,30 +75,16 @@ def load_data_from_db():
 
     # อ่านข้อมูลจาก SQLite
     conn = sqlite3.connect(db_path)
-    df = pd.read_sql_query("SELECT * FROM health_data", conn)  # 🔁 เปลี่ยนชื่อ table ตรงนี้
+    df = pd.read_sql_query("SELECT * FROM health_data", conn)  # ✅ ใช้ชื่อ table ที่ถูกต้อง
     conn.close()
-
     return df
 
 df = load_data_from_db()
+
 df.columns = df.columns.str.strip()
 df['เลขบัตรประชาชน'] = df['เลขบัตรประชาชน'].astype(str).str.strip()
-df['HN'] = df['HN'].astype(str).str.strip()
+df['HN'] = df['HN'].astype(str).str.strip().str.replace(".0", "", regex=False)
 df['ชื่อ-สกุล'] = df['ชื่อ-สกุล'].astype(str).str.strip()
-
-# ==================== YEAR MAPPING ====================
-years = list(range(61, 69))
-columns_by_year = {
-    y: {
-        "weight": f"น้ำหนัก{y}" if y != 68 else "น้ำหนัก",
-        "height": f"ส่วนสูง{y}" if y != 68 else "ส่วนสูง",
-        "waist": f"รอบเอว{y}" if y != 68 else "รอบเอว",
-        "sbp": f"SBP{y}" if y != 68 else "SBP",
-        "dbp": f"DBP{y}" if y != 68 else "DBP",
-        "pulse": f"pulse{y}" if y != 68 else "pulse",
-    }
-    for y in years
-}
 
 # ==================== INTERPRET FUNCTIONS ====================
 def interpret_bmi(bmi):
@@ -196,23 +182,6 @@ with st.form("search_form"):
     submitted = st.form_submit_button("ค้นหา")
 
 # ==================== BLOOD COLUMN MAPPING ====================
-blood_columns_by_year = {
-    y: {
-        "FBS": f"FBS{y}",
-        "Uric": f"Uric Acid{y}",
-        "ALK": f"ALP{y}",
-        "SGOT": f"SGOT{y}",
-        "SGPT": f"SGPT{y}",
-        "Cholesterol": f"CHOL{y}",
-        "TG": f"TGL{y}",
-        "HDL": f"HDL{y}",
-        "LDL": f"LDL{y}",
-        "BUN": f"BUN{y}",
-        "Cr": f"Cr{y}",
-        "GFR": f"GFR{y}",
-    }
-    for y in years
-}
 
 if submitted:
     query = df.copy()
@@ -232,13 +201,13 @@ from collections import defaultdict
 
 cbc_columns_by_year = defaultdict(dict)
 
-for year in range(61, 69):
-    cbc_columns_by_year[year] = {
-        "hb": f"Hb(%)" + str(year),
-        "hct": f"HCT" + str(year),
-        "wbc": f"WBC (cumm)" + str(year),
-        "plt": f"Plt (/mm)" + str(year),
-    }
+cbc_columns = {
+    "hb": "Hb(%)",
+    "hct": "HCT",
+    "wbc": "WBC (cumm)",
+    "plt": "Plt (/mm)",
+    ...
+}
 
     if year == 68:
         cbc_columns_by_year[year].update({
@@ -341,8 +310,7 @@ if "person" in st.session_state:
         format_func=lambda y: f"พ.ศ. {y + 2500}"
     )
 
-
-    selected_cols = columns_by_year[selected_year]
+    year_df = df[df["Year"] == selected_year]
 
     def render_health_report(person, year_cols):
         sbp = person.get(year_cols["sbp"], "")
