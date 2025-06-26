@@ -177,7 +177,7 @@ st.markdown("<h4 style='text-align:center; color:gray;'>- คลินิกต�
 with st.form("search_form"):
     col1, col2, col3 = st.columns(3)
     id_card = col1.text_input("เลขบัตรประชาชน")
-    hn = col2.text_input("HN")
+    HN = col2.text_input("HN")
     full_name = col3.text_input("ชื่อ-สกุล")
     submitted = st.form_submit_button("ค้นหา")
 
@@ -188,8 +188,8 @@ if submitted:
     query = df.copy()
     if id_card.strip():
         query = query[query["เลขบัตรประชาชน"] == id_card.strip()]
-    if hn.strip():
-        query = query[query["HN"].astype(str).str.strip() == hn.strip()]
+    if HN.strip():
+        query = query[query["HN"].astype(str).str.strip() == HN.strip()]
     if full_name.strip():
         query = query[query["ชื่อ-สกุล"].str.strip() == full_name.strip()]
 
