@@ -300,7 +300,7 @@ if "person" in st.session_state:
     selected_year = st.selectbox(
         "📅 เลือกปีที่ต้องการดูผลตรวจรายงาน", 
         options=sorted(years, reverse=True),
-        format_func=lambda y: f"พ.ศ. {y + 2500}"
+        format_func=lambda y: f"พ.ศ. {y}"
     )
 
     year_df = df[df["Year"] == selected_year]
@@ -363,7 +363,7 @@ if "person" in st.session_state:
         </div>
         """
 
-    st.markdown(render_health_report(person, selected_cols), unsafe_allow_html=True)
+    st.markdown(render_health_report(person, cbc_columns), unsafe_allow_html=True)
 
     # ================== CBC / BLOOD TEST DISPLAY ==================
 
