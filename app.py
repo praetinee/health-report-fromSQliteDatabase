@@ -1,21 +1,15 @@
 import numpy as np
 import streamlit as st
 import pandas as pd
+import gspread
 import json
 import html
-import sqlite3
-import requests
+from oauth2client.service_account import ServiceAccountCredentials
 
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
-# ==================== STYLE ====================
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch&display=swap');
-    html, body, [class*="css"] {
-        font-family: 'Chakra Petch', sans-serif !important;
-    }
-
     .doctor-section {
         font-size: 16px;
         line-height: 1.8;
@@ -53,6 +47,17 @@ st.markdown("""
         text-align: right;
     }
 </style>
+""", unsafe_allow_html=True)
+
+
+# ==================== STYLE ====================
+st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch&display=swap');
+    html, body, [class*="css"] {
+        font-family: 'Chakra Petch', sans-serif !important;
+    }
+    </style>
 """, unsafe_allow_html=True)
 
 # ==================== LOAD FROM DATABASE ====================
@@ -199,66 +204,19 @@ def load_data_from_db():
 
 df = load_data_from_db()
 
-# ✅ ตรวจสอบคอลัมน์ที่จำเป็น
-required_columns = ["เลขบัตรประชาชน", "HN", "ชื่อ-สกุล", "Year"]
-missing = [col for col in required_columns if col not in df.columns]
-if missing:
-    st.error(f"❌ ไม่พบคอลัมน์: {', '.join(missing)}")
-    st.stop()
-
-# ✅ เตรียมข้อมูล
-df.columns = [(str(col)).strip() for col in df.columns]
-df['เลขบัตรประชาชน'] = df['เลขบัตรประชาชน'].astype(str).str.strip()
-df['HN'] = df['HN'].astype(str).str.strip().str.replace(".0", "", regex=False)
-df['ชื่อ-สกุล'] = df['ชื่อ-สกุล'].astype(str).str.strip()
-df["Year"] = pd.to_numeric(df["Year"], errors="coerce").fillna(0).astype(int)
-
-# ==================== ค้นหาข้อมูล ====================
-id_card = st.text_input("เลขบัตรประชาชน")
-hn = st.text_input("HN")
-full_name = st.text_input("ชื่อ-สกุล")
-submitted = st.button("ค้นหา")
-
-if submitted:
-    query = df.copy()
-
-    id_card_clean = id_card.strip().replace("\u200b", "")
-    hn_clean = hn.strip().replace(".0", "").replace("\u200b", "")
-    full_name_clean = full_name.strip().replace("\u200b", "")
-
-    if id_card_clean:
-        query = query[query["เลขบัตรประชาชน"] == id_card_clean]
-    elif hn_clean:
-        query = query[query["HN"] == hn_clean]
-    elif full_name_clean:
-        query = query[query["ชื่อ-สกุล"].str.strip() == full_name_clean]
-
-    if query.empty:
-        st.error("❌ ไม่พบข้อมูล กรุณาตรวจสอบอีกครั้ง")
-        st.session_state.pop("person_data", None)
-    else:
-        st.session_state["person_data"] = query
-        st.session_state["person"] = query.sort_values("Year", ascending=False).iloc[0]
-        st.success("✅ พบข้อมูลแล้ว")
-
-# ==================== DROPDOWN YEAR ====================
-if "person_data" in st.session_state:
-    data = st.session_state["person_data"]
-    years = data["Year"].dropna().astype(int).unique().tolist()
-
-    selected_year = st.selectbox(
-        "📅 เลือกปีที่ต้องการดูผลตรวจรายงาน",
-        options=sorted(years, reverse=True),
-        format_func=lambda y: f"พ.ศ. {y}"
-    )
-
-    person = data[data["Year"] == selected_year].iloc[0]
-
-    # ✅ แสดงผลข้อมูล
-    st.success(f"🎯 แสดงผลของปี พ.ศ. {selected_year}")
-    st.write("👤 ชื่อ-สกุล:", person.get("ชื่อ-สกุล", "-"))
-    st.write("⚖️ น้ำหนัก:", person.get("น้ำหนัก", "-"))
-    st.write("🧪 Hb:", person.get("Hb(%)", "-"))
+# ==================== YEAR MAPPING ====================
+years = list(range(61, 69))
+columns_by_year = {
+    y: {
+        "weight": f"น้ำหนัก{y}" if y != 68 else "น้ำหนัก",
+        "height": f"ส่วนสูง{y}" if y != 68 else "ส่วนสูง",
+        "waist": f"รอบเอว{y}" if y != 68 else "รอบเอว",
+        "sbp": f"SBP{y}" if y != 68 else "SBP",
+        "dbp": f"DBP{y}" if y != 68 else "DBP",
+        "pulse": f"pulse{y}" if y != 68 else "pulse",
+    }
+    for y in years
+}
 
 # ==================== INTERPRET FUNCTIONS ====================
 def interpret_bmi(bmi):
