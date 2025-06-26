@@ -67,12 +67,6 @@ def load_data_from_db():
     db_url = "https://drive.google.com/uc?export=download&id=1HruO9AMrUfniC8hBWtumVdxLJayEc1Xr"
     db_path = "/tmp/temp_data.db"
 
-def get_clean_value(value):
-    if pd.isna(value) or value is None:
-        return ""
-    value = str(value).strip()
-    return "" if value in ["-", "null", "NULL"] else value
-    
     # ดาวน์โหลดไฟล์จาก Google Drive
     with requests.get(db_url, stream=True) as r:
         with open(db_path, 'wb') as f:
@@ -81,7 +75,7 @@ def get_clean_value(value):
 
     # อ่านข้อมูลจาก SQLite
     conn = sqlite3.connect(db_path)
-    df = pd.read_sql_query("SELECT * FROM health_data", conn)  # ✅ ใช้ชื่อ table ที่ถูกต้อง
+    df = pd.read_sql_query("SELECT * FROM health_data", conn)
     conn.close()
     return df
 
