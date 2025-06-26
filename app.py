@@ -1057,12 +1057,29 @@ if "person" in st.session_state:
     
         # ✅ ผลตรวจอุจจาระ + คำแนะนำ
         def safe_get(person, key):
-            if person and key in person and person[key] is not None:
+            if isinstance(person, (dict, pd.Series)) and key in person and pd.notna(person[key]):
                 return str(person[key]).strip()
             return ""
-        
+
         stool_exam_key = "Stool exam" if y == 68 else f"Stool exam{y_label}"
         stool_cs_key = "Stool C/S" if y == 68 else f"Stool C/S{y_label}"
+
+        if person is None:
+    st.warning("ไม่พบข้อมูลของ HN นี้ในระบบ")
+else:
+    stool_exam_raw = safe_get(person, stool_exam_key)
+    stool_cs_raw = safe_get(person, stool_cs_key)
+
+    exam_text = interpret_stool_exam(stool_exam_raw)
+    cs_text = interpret_stool_cs(stool_cs_raw)
+
+    st.markdown(render_section_header("ผลตรวจอุจจาระ (Stool Examination)"), unsafe_allow_html=True)
+    st.markdown(f"""
+    <p style='font-size: 16px; line-height: 1.7; margin-bottom: 1rem;'>
+        <b>ผลตรวจอุจจาระทั่วไป:</b> {exam_text}<br>
+        <b>ผลตรวจอุจจาระเพาะเชื้อ:</b> {cs_text}
+    </p>
+    """, unsafe_allow_html=True)
         
         stool_exam_raw = safe_get(person, stool_exam_key)
         stool_cs_raw = safe_get(person, stool_cs_key)
