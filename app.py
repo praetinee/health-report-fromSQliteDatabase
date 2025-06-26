@@ -64,22 +64,31 @@ import requests
 
 @st.cache_data(ttl=600)
 def load_data_from_db():
+    import requests
+    import sqlite3
+    import pandas as pd
+
     db_url = "https://drive.google.com/uc?export=download&id=1HruO9AMrUfniC8hBWtumVdxLJayEc1Xr"
     db_path = "/tmp/temp_data.db"
 
-    # ดาวน์โหลดไฟล์จาก Google Drive
+    # ✅ 1. ดาวน์โหลดไฟล์จาก Google Drive
     with requests.get(db_url, stream=True) as r:
         with open(db_path, 'wb') as f:
             for chunk in r.iter_content(chunk_size=8192):
                 f.write(chunk)
 
-    # อ่านข้อมูลจาก SQLite
+    # ✅ 2. อ่านข้อมูลจากไฟล์ .db
     conn = sqlite3.connect(db_path)
     df = pd.read_sql_query("SELECT * FROM health_data", conn)
     conn.close()
+
+    # ✅ 3. ส่งข้อมูลกลับให้โปรแกรม
     return df
 
 df = load_data_from_db()
+
+# ✅ ใส่โค้ดนี้เพื่อตรวจสอบว่าข้อมูลโหลดมาจริงไหม
+st.write("ข้อมูลที่โหลดได้:", df.head())  # แสดง 5 แถวแรก
 
 def get_clean_value(value):
     if pd.isna(value) or value is None:
