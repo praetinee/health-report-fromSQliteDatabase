@@ -199,7 +199,7 @@ if submitted:
     else:
         # ✅ ปีที่มีอยู่จริงสำหรับผู้คนนี้
         year_options = sorted(query["Year"].dropna().unique().astype(int), reverse=True)
-        selected_year = st.selectbox("📅 เลือกปีที่ต้องการดูผล", options=year_options, format_func=lambda y: f"พ.ศ. {y + 543}")
+        selected_year = st.selectbox("📅 เลือกปีที่ต้องการดูผล", options=year_options, format_func=lambda y: f"พ.ศ. {y}")
 
         # ✅ ดูว่าปีนี้มีกี่ครั้ง
         subquery = query[query["Year"] == selected_year]
@@ -327,7 +327,7 @@ if "person" in st.session_state:
     selected_year = st.selectbox(
         "📅 เลือกปีที่ต้องการดูผลตรวจรายงาน",
         options=available_years,
-        format_func=lambda y: f"พ.ศ. {y + 543}"
+        format_func=lambda y: f"พ.ศ. {y}"
     )
 
     # ✅ อัปเดต person ตามปีที่เลือก
