@@ -87,9 +87,6 @@ def load_data_from_db():
 
 df = load_data_from_db()
 
-# ✅ ใส่โค้ดนี้เพื่อตรวจสอบว่าข้อมูลโหลดมาจริงไหม
-st.write("ข้อมูลที่โหลดได้:", df.head())  # แสดง 5 แถวแรก
-
 def get_clean_value(value):
     if pd.isna(value) or value is None:
         return ""
