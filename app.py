@@ -191,7 +191,7 @@ if submitted:
     if id_card.strip():
         query = query[query["เลขบัตรประชาชน"] == id_card.strip()]
     if hn.strip():
-        query = query[query["HN"] == hn.strip()]
+        query = query[query["HN"].astype(str).str.strip() == hn.strip()]]
     if full_name.strip():
         query = query[query["ชื่อ-สกุล"].str.strip() == full_name.strip()]
 
