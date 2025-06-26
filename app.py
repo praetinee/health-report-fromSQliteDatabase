@@ -86,6 +86,7 @@ def load_data_from_db():
     return df
 
 df = load_data_from_db()
+df["Year"] = df["Year"].astype(int)
 
 def get_clean_value(value):
     if pd.isna(value) or value is None:
@@ -97,6 +98,27 @@ df.columns = [(str(col)).strip() for col in df.columns]
 df['เลขบัตรประชาชน'] = df['เลขบัตรประชาชน'].astype(str).str.strip()
 df['HN'] = df['HN'].astype(str).str.strip().str.replace(".0", "", regex=False)
 df['ชื่อ-สกุล'] = df['ชื่อ-สกุล'].astype(str).str.strip()
+
+id_card = st.text_input("เลขบัตรประชาชน")
+hn = st.text_input("HN")
+full_name = st.text_input("ชื่อ-สกุล")
+submitted = st.button("ค้นหา")
+
+if submitted:
+    query = df.copy()
+    if id_card.strip():
+        query = query[df["เลขบัตรประชาชน"] == id_card.strip()]
+    elif hn.strip():
+        query = query[df["HN"] == hn.strip()]
+    elif full_name.strip():
+        query = query[df["ชื่อ-สกุล"].str.strip() == full_name.strip()]
+    
+    if query.empty:
+        st.error("❌ ไม่พบข้อมูล กรุณาตรวจสอบอีกครั้ง")
+        st.session_state.pop("person_data", None)
+    else:
+        st.session_state["person_data"] = query
+        st.session_state["person"] = query.sort_values("Year", ascending=False).iloc[0]
 
 # ==================== INTERPRET FUNCTIONS ====================
 def interpret_bmi(bmi):
