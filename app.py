@@ -305,13 +305,15 @@ if "person" in st.session_state:
 
     year_df = df[df["Year"] == selected_year]
 
-    def render_health_report(person, year_cols):
-        sbp = person.get(year_cols["sbp"], "")
-        dbp = person.get(year_cols["dbp"], "")
-        pulse = person.get(year_cols["pulse"], "-")
-        weight = person.get(year_cols["weight"], "-")
-        height = person.get(year_cols["height"], "-")
-        waist = person.get(year_cols["waist"], "-")
+    def get_vital_sign_columns():
+        return {
+            "sbp": "SBP",
+            "dbp": "DBP",
+            "pulse": "Pulse",
+            "weight": "Weight",
+            "height": "Height",
+            "waist": "Waist",
+        }
     
         bp_result = "-"
         if sbp and dbp:
@@ -363,7 +365,7 @@ if "person" in st.session_state:
         </div>
         """
 
-    st.markdown(render_health_report(person, cbc_columns), unsafe_allow_html=True)
+    st.markdown(render_health_report(person, vital_cols), unsafe_allow_html=True)
 
     # ================== CBC / BLOOD TEST DISPLAY ==================
 
@@ -727,9 +729,10 @@ if "person" in st.session_state:
     y = selected_year
     y_label = "" if y == 2568 else str(y % 100)
     
-    alp_raw = str(person.get(f"ALP{y_label}", "") or "").strip()
-    sgot_raw = str(person.get(f"SGOT{y_label}", "") or "").strip()
-    sgpt_raw = str(person.get(f"SGPT{y_label}", "") or "").strip()
+    alp_raw = str(person.get("ALP", "")).strip()
+    sgot_raw = str(person.get("SGOT", "")).strip()
+    sgpt_raw = str(person.get("SGPT", "")).strip()
+
     
     summary = summarize_liver(alp_raw, sgot_raw, sgpt_raw)
     advice_liver = liver_advice(summary)
@@ -746,9 +749,7 @@ if "person" in st.session_state:
     # ✅ ปีที่เลือกจาก dropdown
     y = selected_year
     y_label = "" if y == 2568 else str(y % 100)
-    col_name = f"Uric Acid{y_label}"
-    
-    raw_value = str(person.get(col_name, "") or "").strip()
+    raw_value = str(person.get("Uric Acid", "")).strip()
     advice_uric = uric_acid_advice(raw_value)
     
     # 🧪 แปลผลการทำงานของไตจาก GFR
@@ -774,7 +775,7 @@ if "person" in st.session_state:
             )
         return ""
     # ✅ ดึงค่าจาก person ตามปีที่เลือก
-    gfr_raw = str(person.get(f"GFR{y_label}", "") or "").strip()
+    gfr_raw = str(person.get("GFR", "")).strip()
     
     # ✅ วิเคราะห์ผลการทำงานของไต และให้คำแนะนำ
     kidney_summary = kidney_summary_gfr_only(gfr_raw)
@@ -803,8 +804,7 @@ if "person" in st.session_state:
     # ใช้ปีที่เลือกจาก dropdown
     y = selected_year
     y_label = str(y)
-    col_name = f"FBS{y_label}"
-    raw_value = str(person.get(col_name, "") or "").strip()
+    raw_value = str(person.get("FBS", "")).strip()
     advice_fbs = fbs_advice(raw_value)
     
     # 🧪 ฟังก์ชันสรุปผลไขมันในเลือด
@@ -843,9 +843,9 @@ if "person" in st.session_state:
     y = selected_year
     y_label = str(y)  # ควรใช้ str(y) เช่น "68", "67"
     
-    chol_raw = str(person.get(f"CHOL{y_label}", "") or "").strip()
-    tgl_raw = str(person.get(f"TGL{y_label}", "") or "").strip()
-    ldl_raw = str(person.get(f"LDL{y_label}", "") or "").strip()
+    chol_raw = str(person.get("CHOL", "")).strip()
+    tgl_raw = str(person.get("TGL", "")).strip()
+    ldl_raw = str(person.get("LDL", "")).strip()
     
     summary = summarize_lipids(chol_raw, tgl_raw, ldl_raw)
     advice = lipids_advice(summary)
@@ -1022,9 +1022,8 @@ if "person" in st.session_state:
                 return str(person[key]).strip()
             return ""
 
-        stool_exam_key = "Stool exam" if y == 68 else f"Stool exam{y_label}"
-        stool_cs_key = "Stool C/S" if y == 68 else f"Stool C/S{y_label}"
-
+        stool_exam_key = "Stool exam"
+        stool_cs_key = "Stool C/S"
                 
         stool_exam_raw = safe_get(person, stool_exam_key)
         stool_cs_raw = safe_get(person, stool_cs_key)
@@ -1044,8 +1043,8 @@ if "person" in st.session_state:
     with right_col:
         st.markdown(render_section_header("ผลเอกซเรย์ (Chest X-ray)"), unsafe_allow_html=True)
     
-        def get_cxr_col_name(year):
-            return "CXR" if year == 2568 else f"CXR{str(year)[-2:]}"
+        cxr_col = "CXR"
+        ekg_col = "EKG"
     
         def interpret_cxr(value):
             if not value or str(value).strip() == "":
@@ -1093,8 +1092,8 @@ if "person" in st.session_state:
         # ✅ Hepatitis Section (A & B)
         y_label = str(selected_year)
         
-        hep_a_col = f"Hepatitis A{y_label}"
-        hep_b_col = f"Hepatitis B{y_label}"
+        hep_a_col = "Hepatitis A"
+        hep_b_col = "Hepatitis B"
         
         def interpret_hep(value):
             if not value or str(value).strip() == "":
