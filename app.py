@@ -196,13 +196,11 @@ with st.form("search_form"):
 # ==================== BLOOD COLUMN MAPPING ====================
 
 if submitted:
-    query = df.copy()
-    if id_card.strip():
-        query = query[query["เลขบัตรประชาชน"] == id_card.strip()]
-    if hn.strip():
-        query = query[query["HN"] == hn.strip()]
-    if full_name.strip():
-        query = query[query["ชื่อ-สกุล"].str.strip() == full_name.strip()]
+    query = df[
+        (df["เลขบัตรประชาชน"] == person["เลขบัตรประชาชน"]) |
+        (df["HN"] == person["HN"]) |
+        (df["ชื่อ-สกุล"] == person["ชื่อ-สกุล"])
+    ]
 
     if not query.empty:
         # ✅ ดึงเฉพาะปีที่เลือกจาก dropdown
@@ -407,11 +405,24 @@ if "person" in st.session_state:
     st.markdown(render_health_report(person), unsafe_allow_html=True)
 
     # ================== CBC / BLOOD TEST DISPLAY ==================
-
     
-    cbc_cols = cbc_columns
-
-    blood_cols = {
+    cbc_columns = {
+        "hb": "Hb(%)",
+        "hct": "HCT",
+        "wbc": "WBC (cumm)",
+        "plt": "Plt (/mm)",
+        "ne": "Ne (%)",
+        "ly": "Ly (%)",
+        "eo": "Eo",
+        "mo": "M",
+        "ba": "BA",
+        "rbc": "RBCmo",
+        "mcv": "MCV",
+        "mch": "MCH",
+        "mchc": "MCHC",
+    }
+    
+    blood_columns = {
         "FBS": "FBS",
         "Uric": "Uric Acid",
         "ALK": "ALP",
@@ -426,7 +437,6 @@ if "person" in st.session_state:
         "GFR": "GFR",
     }
 
-    
     # ✅ ฟังก์ชันช่วยให้แสดงค่า และ flag ว่าผิดปกติหรือไม่
     def flag_value(raw, low=None, high=None, higher_is_better=False):
         try:
