@@ -404,7 +404,9 @@ if "person" in st.session_state:
         </div>
         """
 
-    st.markdown(render_health_report(person), unsafe_allow_html=True)
+    if "person" in st.session_state:
+        person = st.session_state["person"]
+        st.markdown(render_health_report(person), unsafe_allow_html=True)
 
     # ================== CBC / BLOOD TEST DISPLAY ==================
     
