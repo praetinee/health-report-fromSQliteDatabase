@@ -210,19 +210,17 @@ if submitted:
         st.session_state["person"] = query.iloc[0]
 
 cbc_columns = {
-    "hb": "Hb(%)",
-    "hct": "HCT",
-    "wbc": "WBC (cumm)",
-    "plt": "Plt (/mm)",
-    "ne": "Ne (%)",
-    "ly": "Ly (%)",
-    "eo": "Eo",
-    "mo": "M",
-    "ba": "BA",
-    "rbc": "RBCmo",
-    "mcv": "MCV",
-    "mch": "MCH",
-    "mchc": "MCHC",
+    "Hb": "Hb(%)",
+    "HCT": "HCT",
+    "MCV": "MCV",
+    "MCH": "MCH",
+    "MCHC": "MCHC",
+    "Plt": "Plt (/mm)",
+    "Neutro": "Ne (%)",
+    "Lympho": "Ly (%)",
+    "Mono": "M",
+    "Eosino": "Eo",
+    "Baso": "BA",
 }
 
 def interpret_alb(value):
@@ -332,10 +330,10 @@ if "person" in st.session_state:
             bp_result = f"{bp_val} - {bp_desc}"
 
     
-        pulse_raw = get_clean_value(person.get("Pulse"))
-        weight_raw = get_clean_value(person.get("Weight"))
-        height_raw = get_clean_value(person.get("Height"))
-        waist_raw = get_clean_value(person.get("Waist"))
+        pulse_raw = get_clean_value(person.get("pulse"))
+        weight_raw = get_clean_value(person.get("น้ำหนัก"))
+        height_raw = get_clean_value(person.get("ส่วนสูง"))
+        waist_raw = get_clean_value(person.get("รอบเอว"))
         
         pulse = f"{pulse_raw} ครั้ง/นาที" if pulse_raw else "-"
         weight = f"{weight_raw} กก." if weight_raw else "-"
