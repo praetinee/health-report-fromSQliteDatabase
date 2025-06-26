@@ -985,71 +985,47 @@ if "person" in st.session_state:
         y_label = str(y)
         sex = person.get("เพศ", "").strip()
         
-        if y == 68:
-            # 🔎 ปี 68 มีรายละเอียดครบ
-            urine_config = [
-                ("สี (Colour)", person.get("Color68", "N/A"), "Yellow, Pale Yellow"),
-                ("น้ำตาล (Sugar)", person.get("sugar68", "N/A"), "Negative"),
-                ("โปรตีน (Albumin)", person.get("Alb68", "N/A"), "Negative, trace"),
-                ("กรด-ด่าง (pH)", person.get("pH68", "N/A"), "5.0 - 8.0"),
-                ("ความถ่วงจำเพาะ (Sp.gr)", person.get("Spgr68", "N/A"), "1.003 - 1.030"),
-                ("เม็ดเลือดแดง (RBC)", person.get("RBC168", "N/A"), "0 - 2 cell/HPF"),
-                ("เม็ดเลือดขาว (WBC)", person.get("WBC168", "N/A"), "0 - 5 cell/HPF"),
-                ("เซลล์เยื่อบุผิว (Squam.epit.)", person.get("SQ-epi68", "N/A"), "0 - 10 cell/HPF"),
-                ("อื่นๆ", person.get("ORTER68", "N/A"), "-"),
-            ]
-            
-            urine_rows = []
-            for name, value, normal in urine_config:
-                val_text, is_abn = flag_urine_value(value, normal)
-                urine_rows.append([(name, is_abn), (val_text, is_abn), (normal, is_abn)])
-            
-            st.markdown(styled_result_table(["ชื่อการตรวจ", "ผลตรวจ", "ค่าปกติ"], urine_rows), unsafe_allow_html=True)
+        # 🔁 ใช้ข้อมูลแบบใหม่ทุกปี (ไม่มีปีในชื่อคอลัมน์)
+        urine_config = [
+            ("สี (Colour)", person.get("Color", "N/A"), "Yellow, Pale Yellow"),
+            ("น้ำตาล (Sugar)", person.get("sugar", "N/A"), "Negative"),
+            ("โปรตีน (Albumin)", person.get("Alb", "N/A"), "Negative, trace"),
+            ("กรด-ด่าง (pH)", person.get("pH", "N/A"), "5.0 - 8.0"),
+            ("ความถ่วงจำเพาะ (Sp.gr)", person.get("Spgr", "N/A"), "1.003 - 1.030"),
+            ("เม็ดเลือดแดง (RBC)", person.get("RBC1", "N/A"), "0 - 2 cell/HPF"),
+            ("เม็ดเลือดขาว (WBC)", person.get("WBC1", "N/A"), "0 - 5 cell/HPF"),
+            ("เซลล์เยื่อบุผิว (Squam.epit.)", person.get("SQ-epi", "N/A"), "0 - 10 cell/HPF"),
+            ("อื่นๆ", person.get("ORTER", "N/A"), "-"),
+        ]
         
-            # ✅ คำแนะนำ
-            alb_raw = get_clean_value(person.get("Alb68"))
-            sugar_raw = get_clean_value(person.get("sugar68"))
-            rbc_raw = get_clean_value(person.get("RBC168"))
-            wbc_raw = get_clean_value(person.get("WBC168"))
+        urine_rows = []
+        for name, value, normal in urine_config:
+            val_text, is_abn = flag_urine_value(value, normal)
+            urine_rows.append([(name, is_abn), (val_text, is_abn), (normal, is_abn)])
         
-            urine_advice = advice_urine(sex, alb_raw, sugar_raw, rbc_raw, wbc_raw)
-            if urine_advice:
-                st.markdown(f"""
-                <div style='
-                    background-color: rgba(255, 215, 0, 0.2);
-                    padding: 1rem;
-                    border-radius: 6px;
-                    margin-top: 1rem;
-                    font-size: 16px;
-                '>
-                    <div style='font-size: 18px; font-weight: bold;'>📌 คำแนะนำจากผลตรวจปัสสาวะ ปี 2568</div>
-                    <div style='margin-top: 0.5rem;'>{urine_advice}</div>
-                </div>
-                """, unsafe_allow_html=True)
+        st.markdown(styled_result_table(["ชื่อการตรวจ", "ผลตรวจ", "ค่าปกติ"], urine_rows), unsafe_allow_html=True)
         
-        else:
-            # 🔎 ปี < 68 → ใช้ข้อมูลสรุปจากฟิลด์ "ผลปัสสาวะ<ปี>"
-            urine_text = person.get(f"ผลปัสสาวะ{y_label}", "").strip()
+        # ✅ ให้คำแนะนำตามทุกปี (ยึดรูปแบบปี 68 เสมอ)
+        alb_raw = get_clean_value(person.get("Alb"))
+        sugar_raw = get_clean_value(person.get("sugar"))
+        rbc_raw = get_clean_value(person.get("RBC1"))
+        wbc_raw = get_clean_value(person.get("WBC1"))
         
-            if urine_text:
-                st.markdown(f"""
-                <div style='
-                    margin-top: 1rem;
-                    font-size: 16px;
-                    line-height: 1.7;
-                '>{urine_text}</div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"""
-                <div style='
-                    margin-top: 1rem;
-                    padding: 1rem;
-                    background-color: rgba(255,255,255,0.05);
-                    font-size: 16px;
-                    line-height: 1.7;
-                '>ไม่พบข้อมูลผลตรวจปัสสาวะในปีนี้</div>
-                """, unsafe_allow_html=True)
-    
+        urine_advice = advice_urine(sex, alb_raw, sugar_raw, rbc_raw, wbc_raw)
+        if urine_advice:
+            st.markdown(f"""
+            <div style='
+                background-color: rgba(255, 215, 0, 0.2);
+                padding: 1rem;
+                border-radius: 6px;
+                margin-top: 1rem;
+                font-size: 16px;
+            '>
+                <div style='font-size: 18px; font-weight: bold;'>📌 คำแนะนำจากผลตรวจปัสสาวะ ปี {selected_year + 543}</div>
+                <div style='margin-top: 0.5rem;'>{urine_advice}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
         # ✅ ผลตรวจอุจจาระ + คำแนะนำ
         def safe_get(person, key):
             if isinstance(person, (dict, pd.Series)) and key in person and pd.notna(person[key]):
