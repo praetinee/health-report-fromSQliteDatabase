@@ -305,20 +305,20 @@ if "person" in st.session_state:
 
     year_df = df[df["Year"] == selected_year]
 
-    vital_cols = {
-        "sbp": "SBP",
-        "dbp": "DBP",
-        "pulse": "Pulse",
-        "weight": "Weight",
-        "height": "Height",
-        "waist": "Waist",
-    }
-        
+    def render_health_report(person):
+        sbp = person.get("SBP", "")
+        dbp = person.get("DBP", "")
+        pulse = person.get("Pulse", "")
+        weight = person.get("Weight", "")
+        height = person.get("Height", "")
+        waist = person.get("Waist", "")
+    
         bp_result = "-"
         if sbp and dbp:
             bp_val = f"{sbp}/{dbp} ม.ม.ปรอท"
             bp_desc = interpret_bp(sbp, dbp)
             bp_result = f"{bp_val} - {bp_desc}"
+
     
         pulse = f"{pulse} ครั้ง/นาที" if pulse != "-" else "-"
         weight = f"{weight} กก." if weight else "-"
