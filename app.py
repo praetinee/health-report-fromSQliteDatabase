@@ -188,8 +188,9 @@ if submitted:
     query = df.copy()
     if id_card.strip():
         query = query[query["เลขบัตรประชาชน"] == id_card.strip()]
-    if HN.strip():
-        query = query[query["HN"].astype(str).str.strip() == HN.strip()]
+    if hn.strip():
+        hn_clean = hn.strip()
+        query = query[query["HN"].astype(str).str.strip() == hn_clean]
     if full_name.strip():
         query = query[query["ชื่อ-สกุล"].str.strip() == full_name.strip()]
 
