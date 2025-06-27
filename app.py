@@ -240,19 +240,18 @@ if "filtered_data" in st.session_state and st.session_state["filtered_data"] is 
                 return f"{bmi_text} และ {bp_text} แนะนำให้ปรับพฤติกรรมด้านอาหารและการออกกำลังกาย"
             return f"{bmi_text} แนะนำให้ดูแลเรื่องโภชนาการและการออกกำลังกายอย่างเหมาะสม"
 
-        num_visits = len(person_records)
-        if num_visits == 1:
-            row = person_records.iloc[0]
-            st.info(f"พบการตรวจ 1 ครั้งในปี {selected_year}")
-            st.write(row)
-        else:
-            st.success(f"พบการตรวจ {num_visits} ครั้งในปี {selected_year}")
-            for idx, (_, row) in enumerate(person_records.iterrows(), start=1):
-                with st.expander(f"ครั้งที่ {idx}"):
-                    weight = row.get("น้ำหนัก")
-                    height = row.get("ส่วนสูง")
-                    sbp = row.get("SBP")
-                    dbp = row.get("DBP")
+                num_visits = len(person_records)
+                if num_visits == 1:
+                    row = person_records.iloc[0]
+                    st.session_state["person"] = row
+                    st.info(f"พบการตรวจ 1 ครั้งในปี {selected_year}")
+                    st.markdown(render_health_report(row, selected_year), unsafe_allow_html=True)
+                else:
+                    st.success(f"พบการตรวจ {num_visits} ครั้งในปี {selected_year}")
+                    for idx, (_, row) in enumerate(person_records.iterrows(), start=1):
+                        with st.expander(f"ครั้งที่ {idx}"):
+                            st.session_state["person"] = row
+                            st.markdown(render_health_report(row, selected_year), unsafe_allow_html=True)
 
                     bmi = None
                     if not is_missing(height) and not is_missing(weight):
