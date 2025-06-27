@@ -389,3 +389,83 @@ def interpret_stool_cs(value):
     if "ไม่พบ" in value or "ปกติ" in value:
         return "ไม่พบการติดเชื้อ"
     return "พบการติดเชื้อในอุจจาระ ให้พบแพทย์เพื่อตรวจรักษาเพิ่มเติม"
+
+# ==================== DISPLAY ====================
+def is_missing(value):
+    if pd.isna(value):
+        return True
+    value = str(value).strip().lower()
+    return value in ["", "-", "nan", "none", "null"]
+
+if "person" in st.session_state:
+    person = st.session_state["person"]
+
+    # ใช้ปีจากข้อมูลจริงที่มี
+    available_years = sorted(df["Year"].dropna().unique(), reverse=True)
+    selected_year = st.selectbox("📅 เลือกปีที่ต้องการดูผลตรวจรายงาน", options=available_years)
+
+    # สร้างฟังก์ชันแปลผล BMI และ BP ตามโค้ดเดิม
+    def render_health_report(person, selected_year):
+        def get_val(key):
+            val = person.get(key)
+            return "-" if is_missing(val) else str(val).strip()
+
+        sbp = get_val("SBP")
+        dbp = get_val("DBP")
+        pulse = get_val("pulse")
+        weight = get_val("น้ำหนัก")
+        height = get_val("ส่วนสูง")
+        waist = get_val("รอบเอว")
+
+        bp_result = "-"
+        if not is_missing(sbp) and not is_missing(dbp):
+            bp_val = f"{sbp}/{dbp} ม.ม.ปรอท"
+            bp_desc = interpret_bp(sbp, dbp)
+            bp_result = f"{bp_val} - {bp_desc}"
+
+        pulse_display = f"{pulse} ครั้ง/นาที" if not is_missing(pulse) else "-"
+        weight_display = f"{weight} กก." if not is_missing(weight) else "-"
+        height_display = f"{height} ซม." if not is_missing(height) else "-"
+        waist_display = f"{waist} ซม." if not is_missing(waist) else "-"
+
+        try:
+            weight_val = float(weight)
+            height_val = float(height)
+            bmi_val = weight_val / ((height_val / 100) ** 2)
+        except:
+            bmi_val = None
+
+        summary_advice = combined_health_advice(bmi_val, sbp, dbp)
+        bmi_text = f"{round(bmi_val, 2)} ({interpret_bmi(bmi_val)})" if bmi_val else "-"
+
+        return f"""
+        <div style="font-size: 18px; line-height: 1.8; color: inherit; padding: 24px 8px;">
+            <div style="text-align: center; font-size: 22px; font-weight: bold;">รายงานผลการตรวจสุขภาพ</div>
+            <div style="text-align: center;">วันที่ตรวจ: {get_val('วันที่ตรวจ')}</div>
+            <div style="text-align: center; margin-top: 10px;">
+                โรงพยาบาลสันทราย 201 หมู่ที่ 11 ถนน เชียงใหม่ - พร้าว<br>
+                ตำบลหนองหาร อำเภอสันทราย เชียงใหม่ 50290 โทร 053 921 199 ต่อ 167
+            </div>
+            <hr style="margin: 24px 0;">
+            <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; margin-bottom: 20px; text-align: center;">
+                <div><b>ชื่อ-สกุล:</b> {get_val('ชื่อ-สกุล')}</div>
+                <div><b>อายุ:</b> {get_val('อายุ')} ปี</div>
+                <div><b>เพศ:</b> {get_val('เพศ')}</div>
+                <div><b>HN:</b> {get_val('HN')}</div>
+                <div><b>หน่วยงาน:</b> {get_val('หน่วยงาน')}</div>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; margin-bottom: 16px; text-align: center;">
+                <div><b>น้ำหนัก:</b> {weight_display}</div>
+                <div><b>ส่วนสูง:</b> {height_display}</div>
+                <div><b>รอบเอว:</b> {waist_display}</div>
+                <div><b>ความดันโลหิต:</b> {bp_result}</div>
+                <div><b>ชีพจร:</b> {pulse_display}</div>
+                <div><b>BMI:</b> {bmi_text}</div>
+            </div>
+            <div style="margin-top: 16px; text-align: center;">
+                <b>คำแนะนำ:</b> {summary_advice}
+            </div>
+        </div>
+        """
+
+    st.markdown(render_health_report(person, selected_year), unsafe_allow_html=True)
