@@ -440,9 +440,9 @@ if "person" in st.session_state:
     available_years = sorted(df["Year"].dropna().unique(), reverse=True)
     selected_year = st.selectbox("📅 เลือกปีที่ต้องการดูผลตรวจรายงาน", options=available_years)
 
-    st.write(person_records)
-    
-    # สร้างฟังก์ชันแปลผล BMI และ BP ตามโค้ดเดิม
+    # ลบการแสดง DataFrame ออก
+    # st.write(person_records) ← บรรทัดนี้ลบทิ้ง
+
     def render_health_report(person, selected_year):
         def get_val(key):
             val = person.get(key)
@@ -507,3 +507,4 @@ if "person" in st.session_state:
         """
 
     st.markdown(render_health_report(person, selected_year), unsafe_allow_html=True)
+
