@@ -85,12 +85,9 @@ with st.spinner("กำลังโหลดข้อมูล..."):
 
 st.success("โหลดข้อมูลเรียบร้อยแล้ว!")
 
-st.dataframe(df, use_container_width=True)
-
 # ==================== CLEAN & TRANSFORM DATA ====================
 df.columns = df.columns.str.strip()
 
-# ตรวจสอบว่าคอลัมน์มีอยู่ก่อนแปลงชนิดข้อมูล
 expected_columns = ['เลขบัตรประชาชน', 'HN', 'ชื่อ-สกุล']
 for col in expected_columns:
     if col in df.columns:
@@ -98,12 +95,8 @@ for col in expected_columns:
     else:
         st.warning(f"⚠️ ไม่พบคอลัมน์ '{col}' ในฐานข้อมูล SQLite")
 
-# แสดงตาราง
-st.dataframe(df, use_container_width=True)
-
-# ==================== YEAR MAPPING (Dynamic & Flexible) ====================
+# ==================== YEAR MAPPING ====================
 years = sorted(df["Year"].dropna().unique())
-
 columns_by_year = {
     y: {
         "weight": "น้ำหนัก",
@@ -115,6 +108,14 @@ columns_by_year = {
     }
     for y in years
 }
+
+# ==================== SEARCH FORM ====================
+with st.form("search_form"):
+    col1, col2, col3 = st.columns(3)
+    id_card = col1.text_input("เลขบัตรประชาชน")
+    hn = col2.text_input("HN")
+    full_name = col3.text_input("ชื่อ-สกุล")
+    submitted = st.form_submit_button("ค้นหา")
 
 # ==================== SEARCH AND DISPLAY ====================
 if submitted:
@@ -137,7 +138,7 @@ if submitted:
         if person_records.empty:
             st.warning(f"ไม่พบข้อมูลการตรวจในปี {selected_year} สำหรับบุคคลนี้")
         else:
-            # จัดเรียงลำดับตามวันที่ตรวจ (หากมี)
+            # จัดเรียงตามวันที่ตรวจ (ถ้ามี)
             if "วันที่ตรวจ" in person_records.columns:
                 try:
                     person_records["วันที่ตรวจ"] = pd.to_datetime(person_records["วันที่ตรวจ"], errors="coerce")
@@ -171,6 +172,86 @@ if submitted:
                                 bmi = round(float(weight) / (h_m ** 2), 2)
                             except:
                                 bmi = None
+
+                        def interpret_bmi(bmi):
+                            try:
+                                bmi = float(bmi)
+                                if bmi > 30:
+                                    return "อ้วนมาก"
+                                elif bmi >= 25:
+                                    return "อ้วน"
+                                elif bmi >= 23:
+                                    return "น้ำหนักเกิน"
+                                elif bmi >= 18.5:
+                                    return "ปกติ"
+                                else:
+                                    return "ผอม"
+                            except:
+                                return "-"
+
+                        def interpret_bp(sbp, dbp):
+                            try:
+                                sbp = float(sbp)
+                                dbp = float(dbp)
+                                if sbp == 0 or dbp == 0:
+                                    return "-"
+                                if sbp >= 160 or dbp >= 100:
+                                    return "ความดันสูง"
+                                elif sbp >= 140 or dbp >= 90:
+                                    return "ความดันสูงเล็กน้อย"
+                                elif sbp < 120 and dbp < 80:
+                                    return "ความดันปกติ"
+                                else:
+                                    return "ความดันค่อนข้างสูง"
+                            except:
+                                return "-"
+
+                        def combined_health_advice(bmi, sbp, dbp):
+                            try:
+                                bmi = float(bmi)
+                            except:
+                                bmi = None
+                            try:
+                                sbp = float(sbp)
+                                dbp = float(dbp)
+                            except:
+                                sbp = dbp = None
+
+                            if bmi is None:
+                                bmi_text = ""
+                            elif bmi > 30:
+                                bmi_text = "น้ำหนักเกินมาตรฐานมาก"
+                            elif bmi >= 25:
+                                bmi_text = "น้ำหนักเกินมาตรฐาน"
+                            elif bmi < 18.5:
+                                bmi_text = "น้ำหนักน้อยกว่ามาตรฐาน"
+                            else:
+                                bmi_text = "น้ำหนักอยู่ในเกณฑ์ปกติ"
+
+                            if sbp is None or dbp is None:
+                                bp_text = ""
+                            elif sbp >= 160 or dbp >= 100:
+                                bp_text = "ความดันโลหิตอยู่ในระดับสูงมาก"
+                            elif sbp >= 140 or dbp >= 90:
+                                bp_text = "ความดันโลหิตอยู่ในระดับสูง"
+                            elif sbp >= 120 or dbp >= 80:
+                                bp_text = "ความดันโลหิตเริ่มสูง"
+                            else:
+                                bp_text = ""
+
+                            if not bmi_text and not bp_text:
+                                return "ไม่พบข้อมูลเพียงพอในการประเมินสุขภาพ"
+
+                            if "ปกติ" in bmi_text and not bp_text:
+                                return "น้ำหนักอยู่ในเกณฑ์ดี ควรรักษาพฤติกรรมสุขภาพนี้ต่อไป"
+
+                            if not bmi_text and bp_text:
+                                return f"{bp_text} แนะนำให้ดูแลสุขภาพ และติดตามค่าความดันอย่างสม่ำเสมอ"
+
+                            if bmi_text and bp_text:
+                                return f"{bmi_text} และ {bp_text} แนะนำให้ปรับพฤติกรรมด้านอาหารและการออกกำลังกาย"
+
+                            return f"{bmi_text} แนะนำให้ดูแลเรื่องโภชนาการและการออกกำลังกายอย่างเหมาะสม"
 
                         st.markdown(f"**BMI:** {bmi if bmi else '-'}  ({interpret_bmi(bmi)})")
                         st.markdown(f"**BP:** {sbp}/{dbp}  ({interpret_bp(sbp, dbp)})")
