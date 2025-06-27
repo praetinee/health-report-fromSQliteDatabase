@@ -10,8 +10,6 @@ def is_missing(value):
     value = str(value).strip().lower()
     return value in ["", "-", "nan", "none", "null"]
 
-st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
-
 # ==================== FONT ====================
 st.markdown("""
     <style>
