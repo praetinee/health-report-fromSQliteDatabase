@@ -507,3 +507,116 @@ if "person" in st.session_state:
 
     st.markdown(render_health_report(person, selected_year), unsafe_allow_html=True)
 
+# ================== CBC / BLOOD TEST DISPLAY ==================
+
+cbc_cols = cbc_columns_by_year.get(selected_year, {})
+blood_cols = blood_columns_by_year.get(selected_year, {})
+
+def flag_value(raw, low=None, high=None, higher_is_better=False):
+    try:
+        val = float(str(raw).replace(",", "").strip())
+        if higher_is_better:
+            return f"{val:.1f}", val < low if low is not None else False
+        if (low is not None and val < low) or (high is not None and val > high):
+            return f"{val:.1f}", True
+        return f"{val:.1f}", False
+    except:
+        return "-", False
+
+sex = person.get("เพศ", "").strip()
+hb_low = 12 if sex == "หญิง" else 13
+hct_low = 36 if sex == "หญิง" else 39
+
+cbc_config = [
+    ("ฮีโมโกลบิน (Hb)", cbc_cols.get("hb"), "ชาย > 13, หญิง > 12 g/dl", hb_low, None),
+    ("ฮีมาโทคริต (Hct)", cbc_cols.get("hct"), "ชาย > 39%, หญิง > 36%", hct_low, None),
+    ("เม็ดเลือดขาว (wbc)", cbc_cols.get("wbc"), "4,000 - 10,000 /cu.mm", 4000, 10000),
+    ("นิวโทรฟิล (Neutrophil)", cbc_cols.get("ne"), "43 - 70%", 43, 70),
+    ("ลิมโฟไซต์ (Lymphocyte)", cbc_cols.get("ly"), "20 - 44%", 20, 44),
+    ("โมโนไซต์ (Monocyte)", cbc_cols.get("mo"), "3 - 9%", 3, 9),
+    ("อีโอซิโนฟิล (Eosinophil)", cbc_cols.get("eo"), "0 - 9%", 0, 9),
+    ("เบโซฟิล (Basophil)", cbc_cols.get("ba"), "0 - 3%", 0, 3),
+    ("เกล็ดเลือด (Platelet)", cbc_cols.get("plt"), "150,000 - 500,000 /cu.mm", 150000, 500000),
+]
+
+cbc_rows = []
+for name, col, normal, low, high in cbc_config:
+    raw = person.get(col, "-")
+    result, is_abnormal = flag_value(raw, low, high)
+    cbc_rows.append([(name, is_abnormal), (result, is_abnormal), (normal, is_abnormal)])
+
+blood_config = [
+    ("น้ำตาลในเลือด (FBS)", blood_cols.get("FBS"), "74 - 106 mg/dl", 74, 106),
+    ("กรดยูริคสาเหตุโรคเก๊าท์ (Uric acid)", blood_cols.get("Uric"), "2.6 - 7.2 mg%", 2.6, 7.2),
+    ("การทำงานของเอนไซม์ตับ ALK.POS", blood_cols.get("ALK"), "30 - 120 U/L", 30, 120),
+    ("การทำงานของเอนไซม์ตับ SGOT", blood_cols.get("SGOT"), "< 37 U/L", None, 37),
+    ("การทำงานของเอนไซม์ตับ SGPT", blood_cols.get("SGPT"), "< 41 U/L", None, 41),
+    ("คลอเรสเตอรอล (Cholesterol)", blood_cols.get("Cholesterol"), "150 - 200 mg/dl", 150, 200),
+    ("ไตรกลีเซอไรด์ (Triglyceride)", blood_cols.get("TG"), "35 - 150 mg/dl", 35, 150),
+    ("ไขมันดี (HDL)", blood_cols.get("HDL"), "> 40 mg/dl", 40, None, True),
+    ("ไขมันเลว (LDL)", blood_cols.get("LDL"), "0 - 160 mg/dl", 0, 160),
+    ("การทำงานของไต (BUN)", blood_cols.get("BUN"), "7.9 - 20 mg/dl", 7.9, 20),
+    ("การทำงานของไต (Cr)", blood_cols.get("Cr"), "0.5 - 1.17 mg/dl", 0.5, 1.17),
+    ("ประสิทธิภาพการกรองของไต (GFR)", blood_cols.get("GFR"), "> 60 mL/min", 60, None, True),
+]
+
+blood_rows = []
+for name, col, normal, low, high, *opt in blood_config:
+    higher_is_better = opt[0] if opt else False
+    raw = person.get(col, "-")
+    result, is_abnormal = flag_value(raw, low, high, higher_is_better=higher_is_better)
+    blood_rows.append([(name, is_abnormal), (result, is_abnormal), (normal, is_abnormal)])
+
+def styled_result_table(headers, rows):
+    header_html = "".join([f"<th>{h}</th>" for h in headers])
+    html = f"""
+    <style>
+        .styled-wrapper {{
+            max-width: 820px;
+            margin: 0 auto;
+        }}
+        .styled-result {{
+            width: 100%;
+            border-collapse: collapse;
+        }}
+        .styled-result th {{
+            background-color: #111;
+            color: white;
+            padding: 6px 12px;
+            text-align: center;
+        }}
+        .styled-result td {{
+            padding: 6px 12px;
+            vertical-align: middle;
+        }}
+        .styled-result td:nth-child(2) {{
+            text-align: center;
+        }}
+        .abn {{
+            background-color: rgba(255, 0, 0, 0.15);
+        }}
+    </style>
+    <div class="styled-wrapper">
+        <table class='styled-result'>
+            <thead><tr>{header_html}</tr></thead>
+            <tbody>
+    """
+    for row in rows:
+        row_html = ""
+        for cell, is_abn in row:
+            css = " class='abn'" if is_abn else ""
+            row_html += f"<td{css}>{cell}</td>"
+        html += f"<tr>{row_html}</tr>"
+    html += "</tbody></table></div>"
+    return html
+
+# ✅ Show tables if not empty
+if any(r[1][0] != "-" for r in cbc_rows):
+    st.markdown("### ผลตรวจ CBC")
+    st.markdown(styled_result_table(["รายการ", "ผลตรวจ", "เกณฑ์ปกติ"], cbc_rows), unsafe_allow_html=True)
+
+if any(r[1][0] != "-" for r in blood_rows):
+    st.markdown("### ผลตรวจเลือด (Blood Chemistry)")
+    st.markdown(styled_result_table(["รายการ", "ผลตรวจ", "เกณฑ์ปกติ"], blood_rows), unsafe_allow_html=True)
+
+
