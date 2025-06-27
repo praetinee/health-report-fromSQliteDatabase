@@ -435,9 +435,9 @@ def is_missing(value):
 if "person" in st.session_state:
     person = st.session_state["person"]
 
-    # ใช้ปีจากข้อมูลจริงที่มี
-    available_years = sorted(df["Year"].dropna().unique(), reverse=True)
-    selected_year = st.selectbox("📅 เลือกปีที่ต้องการดูผลตรวจรายงาน", options=available_years)
+# ใช้ปีจากข้อมูลจริงที่มี
+available_years = sorted(df["Year"].dropna().unique(), reverse=True)
+selected_year = st.selectbox("📅 เลือกปีที่ต้องการดูผลตรวจรายงาน", options=available_years)
 
     # ลบการแสดง DataFrame ออก
     # st.write(person_records) ← บรรทัดนี้ลบทิ้ง
