@@ -101,3 +101,78 @@ for col in expected_columns:
 # แสดงตาราง
 st.dataframe(df, use_container_width=True)
 
+# ==================== YEAR MAPPING (Dynamic & Flexible) ====================
+years = sorted(df["Year"].dropna().unique())
+
+columns_by_year = {
+    y: {
+        "weight": "น้ำหนัก",
+        "height": "ส่วนสูง",
+        "waist": "รอบเอว",
+        "sbp": "SBP",
+        "dbp": "DBP",
+        "pulse": "pulse",
+    }
+    for y in years
+}
+
+# ==================== SEARCH AND DISPLAY ====================
+if submitted:
+    filtered = df.copy()
+    if id_card:
+        filtered = filtered[filtered['เลขบัตรประชาชน'].astype(str).str.strip() == id_card.strip()]
+    if hn:
+        filtered = filtered[filtered['HN'].astype(str).str.strip() == hn.strip()]
+    if full_name:
+        filtered = filtered[filtered['ชื่อ-สกุล'].astype(str).str.strip() == full_name.strip()]
+
+    if filtered.empty:
+        st.warning("ไม่พบข้อมูลผู้ใช้ตามที่ค้นหา")
+    else:
+        all_years = sorted(df["Year"].dropna().unique())
+        selected_year = st.selectbox("เลือกปี พ.ศ.", all_years[::-1])  # แสดงปีใหม่ก่อน
+
+        person_records = filtered[filtered["Year"] == selected_year]
+
+        if person_records.empty:
+            st.warning(f"ไม่พบข้อมูลการตรวจในปี {selected_year} สำหรับบุคคลนี้")
+        else:
+            # จัดเรียงลำดับตามวันที่ตรวจ (หากมี)
+            if "วันที่ตรวจ" in person_records.columns:
+                try:
+                    person_records["วันที่ตรวจ"] = pd.to_datetime(person_records["วันที่ตรวจ"], errors="coerce")
+                    person_records = person_records.sort_values("วันที่ตรวจ")
+                except:
+                    st.warning("⚠️ ไม่สามารถจัดเรียงตามวันที่ตรวจได้ — จะเรียงตามลำดับข้อมูลเดิมแทน")
+            else:
+                st.info("ℹ️ ไม่มีคอลัมน์วันที่ตรวจ — จะแสดงลำดับตามข้อมูล")
+
+            num_visits = len(person_records)
+
+            if num_visits == 1:
+                row = person_records.iloc[0]
+                st.info(f"พบการตรวจ 1 ครั้งในปี {selected_year}")
+                st.write(row)
+            else:
+                st.success(f"พบการตรวจ {num_visits} ครั้งในปี {selected_year}")
+                for idx, (_, row) in enumerate(person_records.iterrows(), start=1):
+                    with st.expander(f"ครั้งที่ {idx}"):
+                        weight = row.get("น้ำหนัก")
+                        height = row.get("ส่วนสูง")
+                        waist = row.get("รอบเอว")
+                        sbp = row.get("SBP")
+                        dbp = row.get("DBP")
+                        pulse = row.get("pulse")
+
+                        bmi = None
+                        if height and weight:
+                            try:
+                                h_m = float(height) / 100
+                                bmi = round(float(weight) / (h_m ** 2), 2)
+                            except:
+                                bmi = None
+
+                        st.markdown(f"**BMI:** {bmi if bmi else '-'}  ({interpret_bmi(bmi)})")
+                        st.markdown(f"**BP:** {sbp}/{dbp}  ({interpret_bp(sbp, dbp)})")
+                        st.markdown(f"**คำแนะนำ:** {combined_health_advice(bmi, sbp, dbp)}")
+                        st.divider()
