@@ -263,3 +263,126 @@ if "filtered_data" in st.session_state and st.session_state["filtered_data"] is 
                     st.markdown(f"**BP:** {sbp}/{dbp} ({interpret_bp(sbp, dbp)})")
                     st.markdown(f"**คำแนะนำ:** {combined_health_advice(bmi, sbp, dbp)}")
                     st.divider()
+# ==================== BLOOD COLUMN MAPPING (Dynamic) ====================
+blood_columns_by_year = {
+    y: {
+        "FBS": "FBS",
+        "Uric": "Uric Acid",
+        "ALK": "ALP",
+        "SGOT": "SGOT",
+        "SGPT": "SGPT",
+        "Cholesterol": "CHOL",
+        "TG": "TGL",
+        "HDL": "HDL",
+        "LDL": "LDL",
+        "BUN": "BUN",
+        "Cr": "Cr",
+        "GFR": "GFR",
+    }
+    for y in df["Year"].dropna().unique()
+}
+
+# ==================== CBC COLUMN MAPPING (Dynamic) ====================
+from collections import defaultdict
+
+cbc_columns_by_year = defaultdict(dict)
+
+for y in df["Year"].dropna().unique():
+    cbc_columns_by_year[y] = {
+        "hb": "Hb(%)",
+        "hct": "HCT",
+        "wbc": "WBC (cumm)",
+        "plt": "Plt (/mm)",
+    }
+
+    if y == 2568:
+        cbc_columns_by_year[y].update({
+            "ne": "Ne (%)",
+            "ly": "Ly (%)",
+            "eo": "Eo",
+            "mo": "M",
+            "ba": "BA",
+            "rbc": "RBCmo",
+            "mcv": "MCV",
+            "mch": "MCH",
+            "mchc": "MCHC",
+        })
+
+# ==================== INTERPRETATION HELPERS ====================
+def interpret_alb(value):
+    value = str(value).strip().lower()
+    if value == "negative":
+        return "ไม่พบ"
+    elif value in ["trace", "1+", "2+"]:
+        return "พบโปรตีนในปัสสาวะเล็กน้อย"
+    elif value == "3+":
+        return "พบโปรตีนในปัสสาวะ"
+    return "-"
+
+def interpret_sugar(value):
+    value = str(value).strip().lower()
+    if value == "negative":
+        return "ไม่พบ"
+    elif value == "trace":
+        return "พบน้ำตาลในปัสสาวะเล็กน้อย"
+    elif value in ["1+", "2+", "3+", "4+", "5+", "6+"]:
+        return "พบน้ำตาลในปัสสาวะ"
+    return "-"
+
+def interpret_rbc(value):
+    value = str(value).strip().lower()
+    if value in ["0-1", "negative", "1-2", "2-3", "3-5"]:
+        return "ปกติ"
+    elif value in ["5-10", "10-20"]:
+        return "พบเม็ดเลือดแดงในปัสสาวะเล็กน้อย"
+    return "พบเม็ดเลือดแดงในปัสสาวะ"
+
+def interpret_wbc(value):
+    value = str(value).strip().lower()
+    if value in ["0-1", "negative", "1-2", "2-3", "3-5"]:
+        return "ปกติ"
+    elif value in ["5-10", "10-20"]:
+        return "พบเม็ดเลือดขาวในปัสสาวะเล็กน้อย"
+    return "พบเม็ดเลือดขาวในปัสสาวะ"
+
+def advice_urine(sex, alb, sugar, rbc, wbc):
+    alb_text = interpret_alb(alb)
+    sugar_text = interpret_sugar(sugar)
+    rbc_text = interpret_rbc(rbc)
+    wbc_text = interpret_wbc(wbc)
+
+    if all(x in ["-", "ปกติ", "ไม่พบ", "พบโปรตีนในปัสสาวะเล็กน้อย", "พบน้ำตาลในปัสสาวะเล็กน้อย"]
+           for x in [alb_text, sugar_text, rbc_text, wbc_text]):
+        return ""
+
+    if "พบน้ำตาลในปัสสาวะ" in sugar_text and "เล็กน้อย" not in sugar_text:
+        return "ควรลดการบริโภคน้ำตาล และตรวจระดับน้ำตาลในเลือดเพิ่มเติม"
+
+    if sex == "หญิง" and "พบเม็ดเลือดแดง" in rbc_text and "ปกติ" in wbc_text:
+        return "อาจมีปนเปื้อนจากประจำเดือน แนะนำให้ตรวจซ้ำ"
+
+    if sex == "ชาย" and "พบเม็ดเลือดแดง" in rbc_text and "ปกติ" in wbc_text:
+        return "พบเม็ดเลือดแดงในปัสสาวะ ควรตรวจทางเดินปัสสาวะเพิ่มเติม"
+
+    if "พบเม็ดเลือดขาวในปัสสาวะ" in wbc_text and "เล็กน้อย" not in wbc_text:
+        return "อาจมีการอักเสบของระบบทางเดินปัสสาวะ แนะนำให้ตรวจซ้ำ"
+
+    return "ควรตรวจปัสสาวะซ้ำเพื่อติดตามผล"
+
+def interpret_stool_exam(value):
+    if not value or value.strip() == "":
+        return "-"
+    if "ปกติ" in value:
+        return "ปกติ"
+    elif "เม็ดเลือดแดง" in value:
+        return "พบเม็ดเลือดแดงในอุจจาระ นัดตรวจซ้ำ"
+    elif "เม็ดเลือดขาว" in value:
+        return "พบเม็ดเลือดขาวในอุจจาระ นัดตรวจซ้ำ"
+    return value.strip()
+
+def interpret_stool_cs(value):
+    if not value or value.strip() == "":
+        return "-"
+    if "ไม่พบ" in value or "ปกติ" in value:
+        return "ไม่พบการติดเชื้อ"
+    return "พบการติดเชื้อในอุจจาระ ให้พบแพทย์เพื่อตรวจรักษาเพิ่มเติม"
