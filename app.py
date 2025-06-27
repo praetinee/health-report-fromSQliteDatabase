@@ -446,13 +446,6 @@ if "person" in st.session_state:
 available_years = sorted(df["Year"].dropna().unique(), reverse=True)
 selected_year = st.selectbox("📅 เลือกปีที่ต้องการดูผลตรวจรายงาน", options=available_years)
 
-        sbp = get_val("SBP")
-        dbp = get_val("DBP")
-        pulse = get_val("pulse")
-        weight = get_val("น้ำหนัก")
-        height = get_val("ส่วนสูง")
-        waist = get_val("รอบเอว")
-
         bp_result = "-"
         if not is_missing(sbp) and not is_missing(dbp):
             bp_val = f"{sbp}/{dbp} ม.ม.ปรอท"
