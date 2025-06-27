@@ -617,5 +617,3 @@ if any(r[1][0] != "-" for r in cbc_rows):
 if any(r[1][0] != "-" for r in blood_rows):
     st.markdown("### ผลตรวจเลือด (Blood Chemistry)")
     st.markdown(styled_result_table(["รายการ", "ผลตรวจ", "เกณฑ์ปกติ"], blood_rows), unsafe_allow_html=True)
-
-
