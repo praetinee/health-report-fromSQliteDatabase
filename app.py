@@ -291,11 +291,15 @@ if "filtered_data" in st.session_state and st.session_state["filtered_data"] is 
         st.warning(f"ไม่พบข้อมูลการตรวจในปี {selected_year} สำหรับบุคคลนี้")
     else:
         num_visits = len(person_records)
-        st.success(f"พบการตรวจ {num_visits} ครั้งในปี {selected_year}")
-        for idx, (_, row) in enumerate(person_records.iterrows(), start=1):
-            with st.expander(f"ครั้งที่ {idx}"):
-                st.session_state["person"] = row
-                st.markdown(render_health_report(row, selected_year), unsafe_allow_html=True)
+        
+        if num_visits == 1:
+            row = person_records.iloc[0]
+            st.markdown(render_health_report(row, selected_year), unsafe_allow_html=True)
+        else:
+            st.success(f"พบการตรวจ {num_visits} ครั้งในปี {selected_year}")
+            for idx, (_, row) in enumerate(person_records.iterrows(), start=1):
+                with st.expander(f"ครั้งที่ {idx}"):
+                    st.markdown(render_health_report(row, selected_year), unsafe_allow_html=True)
 
 # ==================== BLOOD COLUMN MAPPING (Dynamic) ====================
 blood_columns_by_year = {
