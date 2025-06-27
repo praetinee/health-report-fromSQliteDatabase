@@ -3,6 +3,13 @@ import pandas as pd
 import sqlite3
 import requests
 
+# ==================== FUNCTION: Check Missing Values ====================
+def is_missing(value):
+    if pd.isna(value):
+        return True
+    value = str(value).strip().lower()
+    return value in ["", "-", "nan", "none", "null"]
+
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
 # ==================== FONT ====================
@@ -174,6 +181,8 @@ if "filtered_data" in st.session_state and st.session_state["filtered_data"] is 
                 return "-"
 
         def interpret_bp(sbp, dbp):
+            if is_missing(sbp) or is_missing(dbp):
+                return "-"
             try:
                 sbp = float(sbp)
                 dbp = float(dbp)
@@ -191,50 +200,44 @@ if "filtered_data" in st.session_state and st.session_state["filtered_data"] is 
                 return "-"
 
         def combined_health_advice(bmi, sbp, dbp):
-            try:
-                bmi = float(bmi)
-            except:
-                bmi = None
-            try:
-                sbp = float(sbp)
-                dbp = float(dbp)
-            except:
-                sbp = dbp = None
-
-            if bmi is None:
-                bmi_text = ""
-            elif bmi > 30:
-                bmi_text = "น้ำหนักเกินมาตรฐานมาก"
-            elif bmi >= 25:
-                bmi_text = "น้ำหนักเกินมาตรฐาน"
-            elif bmi < 18.5:
-                bmi_text = "น้ำหนักน้อยกว่ามาตรฐาน"
-            else:
-                bmi_text = "น้ำหนักอยู่ในเกณฑ์ปกติ"
-
-            if sbp is None or dbp is None:
-                bp_text = ""
-            elif sbp >= 160 or dbp >= 100:
-                bp_text = "ความดันโลหิตอยู่ในระดับสูงมาก"
-            elif sbp >= 140 or dbp >= 90:
-                bp_text = "ความดันโลหิตอยู่ในระดับสูง"
-            elif sbp >= 120 or dbp >= 80:
-                bp_text = "ความดันโลหิตเริ่มสูง"
-            else:
-                bp_text = ""
-
+            bmi_text = ""
+            bp_text = ""
+        
+            if not is_missing(bmi):
+                try:
+                    bmi = float(bmi)
+                    if bmi > 30:
+                        bmi_text = "น้ำหนักเกินมาตรฐานมาก"
+                    elif bmi >= 25:
+                        bmi_text = "น้ำหนักเกินมาตรฐาน"
+                    elif bmi < 18.5:
+                        bmi_text = "น้ำหนักน้อยกว่ามาตรฐาน"
+                    else:
+                        bmi_text = "น้ำหนักอยู่ในเกณฑ์ปกติ"
+                except:
+                    bmi_text = ""
+        
+            if not is_missing(sbp) and not is_missing(dbp):
+                try:
+                    sbp = float(sbp)
+                    dbp = float(dbp)
+                    if sbp >= 160 or dbp >= 100:
+                        bp_text = "ความดันโลหิตอยู่ในระดับสูงมาก"
+                    elif sbp >= 140 or dbp >= 90:
+                        bp_text = "ความดันโลหิตอยู่ในระดับสูง"
+                    elif sbp >= 120 or dbp >= 80:
+                        bp_text = "ความดันโลหิตเริ่มสูง"
+                except:
+                    pass
+        
             if not bmi_text and not bp_text:
                 return "ไม่พบข้อมูลเพียงพอในการประเมินสุขภาพ"
-
             if "ปกติ" in bmi_text and not bp_text:
                 return "น้ำหนักอยู่ในเกณฑ์ดี ควรรักษาพฤติกรรมสุขภาพนี้ต่อไป"
-
             if not bmi_text and bp_text:
                 return f"{bp_text} แนะนำให้ดูแลสุขภาพ และติดตามค่าความดันอย่างสม่ำเสมอ"
-
             if bmi_text and bp_text:
                 return f"{bmi_text} และ {bp_text} แนะนำให้ปรับพฤติกรรมด้านอาหารและการออกกำลังกาย"
-
             return f"{bmi_text} แนะนำให้ดูแลเรื่องโภชนาการและการออกกำลังกายอย่างเหมาะสม"
 
         num_visits = len(person_records)
@@ -252,7 +255,7 @@ if "filtered_data" in st.session_state and st.session_state["filtered_data"] is 
                     dbp = row.get("DBP")
 
                     bmi = None
-                    if height and weight:
+                    if not is_missing(height) and not is_missing(weight):
                         try:
                             h_m = float(height) / 100
                             bmi = round(float(weight) / (h_m ** 2), 2)
