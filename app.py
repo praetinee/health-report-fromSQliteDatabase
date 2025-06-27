@@ -86,3 +86,18 @@ with st.spinner("กำลังโหลดข้อมูล..."):
 st.success("โหลดข้อมูลเรียบร้อยแล้ว!")
 
 st.dataframe(df, use_container_width=True)
+
+# ==================== CLEAN & TRANSFORM DATA ====================
+df.columns = df.columns.str.strip()
+
+# ตรวจสอบว่าคอลัมน์มีอยู่ก่อนแปลงชนิดข้อมูล
+expected_columns = ['เลขบัตรประชาชน', 'HN', 'ชื่อ-สกุล']
+for col in expected_columns:
+    if col in df.columns:
+        df[col] = df[col].astype(str).str.strip()
+    else:
+        st.warning(f"⚠️ ไม่พบคอลัมน์ '{col}' ในฐานข้อมูล SQLite")
+
+# แสดงตาราง
+st.dataframe(df, use_container_width=True)
+
