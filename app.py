@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import sqlite3
-import gdown
+import requests
 
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
@@ -57,14 +57,22 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ==================== LOAD DATABASE ====================
+# ==================== LOAD DATABASE FROM GOOGLE DRIVE ====================
 @st.cache_data
 def load_database():
     file_id = "1HruO9AMrUfniC8hBWtumVdxLJayEc1Xr"
-    url = f"https://drive.google.com/uc?id={file_id}"
-    output = "health_data.db"
-    gdown.download(url, output, quiet=False)
-    conn = sqlite3.connect(output)
+    url = f"https://drive.google.com/uc?export=download&id={file_id}"
+    output_path = "health_data.db"
+
+    response = requests.get(url)
+    if response.status_code == 200:
+        with open(output_path, "wb") as f:
+            f.write(response.content)
+    else:
+        st.error("ไม่สามารถโหลดไฟล์ฐานข้อมูลจาก Google Drive ได้")
+        st.stop()
+
+    conn = sqlite3.connect(output_path)
     df = pd.read_sql_query("SELECT * FROM health_data", conn)
     conn.close()
     return df
@@ -77,5 +85,4 @@ with st.spinner("กำลังโหลดข้อมูล..."):
 
 st.success("โหลดข้อมูลเรียบร้อยแล้ว!")
 
-# Display full data for now — adjust when specific filters or summary logic are added
 st.dataframe(df, use_container_width=True)
