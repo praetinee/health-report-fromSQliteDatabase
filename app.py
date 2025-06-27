@@ -147,22 +147,26 @@ if submitted:
 if "filtered_data" in st.session_state and st.session_state["filtered_data"] is not None:
     filtered = st.session_state["filtered_data"]
 
-    years = sorted(filtered["Year"].dropna().unique())[::-1]
-    selected_year = st.selectbox("เลือกปี พ.ศ.", years)
+    available_years = sorted(filtered["Year"].dropna().unique(), reverse=True)
+    selected_year = st.selectbox("เลือกปี พ.ศ.", options=available_years)
 
-    person_records = filtered[filtered["Year"] == selected_year]
+    year_data = filtered[filtered["Year"] == selected_year]
 
-    if person_records.empty:
-        st.warning(f"ไม่พบข้อมูลการตรวจในปี {selected_year} สำหรับบุคคลนี้")
+    if year_data.empty:
+        st.warning(f"ไม่พบข้อมูลในปี {selected_year}")
     else:
-        if "วันที่ตรวจ" in person_records.columns:
-            try:
-                person_records["วันที่ตรวจ"] = pd.to_datetime(person_records["วันที่ตรวจ"], errors="coerce")
-                person_records = person_records.sort_values("วันที่ตรวจ")
-            except:
-                st.warning("⚠️ ไม่สามารถจัดเรียงตามวันที่ตรวจได้")
+        num_visits = len(year_data)
+        if num_visits == 1:
+            row = year_data.iloc[0]
+            st.session_state["person"] = row
+            st.info(f"พบการตรวจ 1 ครั้งในปี {selected_year}")
+            st.markdown(render_health_report(row, selected_year), unsafe_allow_html=True)
         else:
-            st.info("ℹ️ ไม่มีคอลัมน์วันที่ตรวจ")
+            st.success(f"พบการตรวจ {num_visits} ครั้งในปี {selected_year}")
+            for idx, (_, row) in enumerate(year_data.iterrows(), start=1):
+                with st.expander(f"ครั้งที่ {idx}"):
+                    st.session_state["person"] = row
+                    st.markdown(render_health_report(row, selected_year), unsafe_allow_html=True)
 
         def interpret_bmi(bmi):
             try:
