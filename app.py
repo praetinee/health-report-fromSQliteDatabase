@@ -241,7 +241,9 @@ if "filtered_data" in st.session_state and st.session_state["filtered_data"] is 
             return f"{bmi_text} แนะนำให้ดูแลเรื่องโภชนาการและการออกกำลังกายอย่างเหมาะสม"
 
             num_visits = len(person_records)
-            if num_visits == 1:
+            if num_visits == 0:
+                st.warning(f"ไม่พบข้อมูลการตรวจในปี {selected_year} สำหรับบุคคลนี้")
+            elif num_visits == 1:
                 row = person_records.iloc[0]
                 st.session_state["person"] = row
                 st.info(f"พบการตรวจ 1 ครั้งในปี {selected_year}")
@@ -252,6 +254,7 @@ if "filtered_data" in st.session_state and st.session_state["filtered_data"] is 
                     with st.expander(f"ครั้งที่ {idx}"):
                         st.session_state["person"] = row
                         st.markdown(render_health_report(row, selected_year), unsafe_allow_html=True)
+
 
                     bmi = None
                     if not is_missing(height) and not is_missing(weight):
