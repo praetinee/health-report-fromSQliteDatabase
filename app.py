@@ -118,8 +118,11 @@ with st.form("search_form"):
     submitted = st.form_submit_button("ค้นหา")
 
 # ==================== SEARCH AND DISPLAY ====================
+# เก็บค่าผลลัพธ์การค้นหาไว้ใน session_state
 if submitted:
     filtered = df.copy()
+
+    # บังคับให้ทุกค่าที่จะใช้ค้นหาเป็น string และตัดช่องว่าง
     if id_card:
         filtered = filtered[filtered['เลขบัตรประชาชน'].astype(str).str.strip() == id_card.strip()]
     if hn:
@@ -129,131 +132,142 @@ if submitted:
 
     if filtered.empty:
         st.warning("ไม่พบข้อมูลผู้ใช้ตามที่ค้นหา")
+        st.session_state["filtered_data"] = None
     else:
-        all_years = sorted(df["Year"].dropna().unique())
-        selected_year = st.selectbox("เลือกปี พ.ศ.", all_years[::-1])  # แสดงปีใหม่ก่อน
+        st.session_state["filtered_data"] = filtered
+        st.session_state["selected_year"] = sorted(filtered["Year"].dropna().unique())[-1]  # ค่า default คือปีล่าสุด
 
-        person_records = filtered[filtered["Year"] == selected_year]
+# ตรวจสอบว่ามีข้อมูลอยู่ใน session
+if "filtered_data" in st.session_state and st.session_state["filtered_data"] is not None:
+    filtered = st.session_state["filtered_data"]
 
-        if person_records.empty:
-            st.warning(f"ไม่พบข้อมูลการตรวจในปี {selected_year} สำหรับบุคคลนี้")
+    # แสดง dropdown เลือกปี
+    years = sorted(filtered["Year"].dropna().unique())[::-1]  # เรียงปีล่าสุดอยู่บน
+    selected_year = st.selectbox("เลือกปี พ.ศ.", years, index=years.index(st.session_state.get("selected_year", years[0])))
+    st.session_state["selected_year"] = selected_year  # update ปีที่เลือกใน session
+
+    person_records = filtered[filtered["Year"] == selected_year]
+
+    if person_records.empty:
+        st.warning(f"ไม่พบข้อมูลการตรวจในปี {selected_year} สำหรับบุคคลนี้")
+    else:
+        # แปลงวันที่ถ้ามี
+        if "วันที่ตรวจ" in person_records.columns:
+            try:
+                person_records["วันที่ตรวจ"] = pd.to_datetime(person_records["วันที่ตรวจ"], errors="coerce")
+                person_records = person_records.sort_values("วันที่ตรวจ")
+            except:
+                st.warning("⚠️ ไม่สามารถจัดเรียงตามวันที่ตรวจได้ — จะเรียงตามลำดับข้อมูลเดิมแทน")
         else:
-            # จัดเรียงตามวันที่ตรวจ (ถ้ามี)
-            if "วันที่ตรวจ" in person_records.columns:
-                try:
-                    person_records["วันที่ตรวจ"] = pd.to_datetime(person_records["วันที่ตรวจ"], errors="coerce")
-                    person_records = person_records.sort_values("วันที่ตรวจ")
-                except:
-                    st.warning("⚠️ ไม่สามารถจัดเรียงตามวันที่ตรวจได้ — จะเรียงตามลำดับข้อมูลเดิมแทน")
-            else:
-                st.info("ℹ️ ไม่มีคอลัมน์วันที่ตรวจ — จะแสดงลำดับตามข้อมูล")
+            st.info("ℹ️ ไม่มีคอลัมน์วันที่ตรวจ — จะแสดงลำดับตามข้อมูล")
 
-            num_visits = len(person_records)
+        num_visits = len(person_records)
 
-            if num_visits == 1:
-                row = person_records.iloc[0]
-                st.info(f"พบการตรวจ 1 ครั้งในปี {selected_year}")
-                st.write(row)
-            else:
-                st.success(f"พบการตรวจ {num_visits} ครั้งในปี {selected_year}")
-                for idx, (_, row) in enumerate(person_records.iterrows(), start=1):
-                    with st.expander(f"ครั้งที่ {idx}"):
-                        weight = row.get("น้ำหนัก")
-                        height = row.get("ส่วนสูง")
-                        waist = row.get("รอบเอว")
-                        sbp = row.get("SBP")
-                        dbp = row.get("DBP")
-                        pulse = row.get("pulse")
+        if num_visits == 1:
+            row = person_records.iloc[0]
+            st.info(f"พบการตรวจ 1 ครั้งในปี {selected_year}")
+            st.write(row)
+        else:
+            st.success(f"พบการตรวจ {num_visits} ครั้งในปี {selected_year}")
+            for idx, (_, row) in enumerate(person_records.iterrows(), start=1):
+                with st.expander(f"ครั้งที่ {idx}"):
+                    weight = row.get("น้ำหนัก")
+                    height = row.get("ส่วนสูง")
+                    waist = row.get("รอบเอว")
+                    sbp = row.get("SBP")
+                    dbp = row.get("DBP")
+                    pulse = row.get("pulse")
 
-                        bmi = None
-                        if height and weight:
-                            try:
-                                h_m = float(height) / 100
-                                bmi = round(float(weight) / (h_m ** 2), 2)
-                            except:
-                                bmi = None
+                    bmi = None
+                    if height and weight:
+                        try:
+                            h_m = float(height) / 100
+                            bmi = round(float(weight) / (h_m ** 2), 2)
+                        except:
+                            bmi = None
 
-                        def interpret_bmi(bmi):
-                            try:
-                                bmi = float(bmi)
-                                if bmi > 30:
-                                    return "อ้วนมาก"
-                                elif bmi >= 25:
-                                    return "อ้วน"
-                                elif bmi >= 23:
-                                    return "น้ำหนักเกิน"
-                                elif bmi >= 18.5:
-                                    return "ปกติ"
-                                else:
-                                    return "ผอม"
-                            except:
-                                return "-"
-
-                        def interpret_bp(sbp, dbp):
-                            try:
-                                sbp = float(sbp)
-                                dbp = float(dbp)
-                                if sbp == 0 or dbp == 0:
-                                    return "-"
-                                if sbp >= 160 or dbp >= 100:
-                                    return "ความดันสูง"
-                                elif sbp >= 140 or dbp >= 90:
-                                    return "ความดันสูงเล็กน้อย"
-                                elif sbp < 120 and dbp < 80:
-                                    return "ความดันปกติ"
-                                else:
-                                    return "ความดันค่อนข้างสูง"
-                            except:
-                                return "-"
-
-                        def combined_health_advice(bmi, sbp, dbp):
-                            try:
-                                bmi = float(bmi)
-                            except:
-                                bmi = None
-                            try:
-                                sbp = float(sbp)
-                                dbp = float(dbp)
-                            except:
-                                sbp = dbp = None
-
-                            if bmi is None:
-                                bmi_text = ""
-                            elif bmi > 30:
-                                bmi_text = "น้ำหนักเกินมาตรฐานมาก"
+                    def interpret_bmi(bmi):
+                        try:
+                            bmi = float(bmi)
+                            if bmi > 30:
+                                return "อ้วนมาก"
                             elif bmi >= 25:
-                                bmi_text = "น้ำหนักเกินมาตรฐาน"
-                            elif bmi < 18.5:
-                                bmi_text = "น้ำหนักน้อยกว่ามาตรฐาน"
+                                return "อ้วน"
+                            elif bmi >= 23:
+                                return "น้ำหนักเกิน"
+                            elif bmi >= 18.5:
+                                return "ปกติ"
                             else:
-                                bmi_text = "น้ำหนักอยู่ในเกณฑ์ปกติ"
+                                return "ผอม"
+                        except:
+                            return "-"
 
-                            if sbp is None or dbp is None:
-                                bp_text = ""
-                            elif sbp >= 160 or dbp >= 100:
-                                bp_text = "ความดันโลหิตอยู่ในระดับสูงมาก"
+                    def interpret_bp(sbp, dbp):
+                        try:
+                            sbp = float(sbp)
+                            dbp = float(dbp)
+                            if sbp == 0 or dbp == 0:
+                                return "-"
+                            if sbp >= 160 or dbp >= 100:
+                                return "ความดันสูง"
                             elif sbp >= 140 or dbp >= 90:
-                                bp_text = "ความดันโลหิตอยู่ในระดับสูง"
-                            elif sbp >= 120 or dbp >= 80:
-                                bp_text = "ความดันโลหิตเริ่มสูง"
+                                return "ความดันสูงเล็กน้อย"
+                            elif sbp < 120 and dbp < 80:
+                                return "ความดันปกติ"
                             else:
-                                bp_text = ""
+                                return "ความดันค่อนข้างสูง"
+                        except:
+                            return "-"
 
-                            if not bmi_text and not bp_text:
-                                return "ไม่พบข้อมูลเพียงพอในการประเมินสุขภาพ"
+                    def combined_health_advice(bmi, sbp, dbp):
+                        try:
+                            bmi = float(bmi)
+                        except:
+                            bmi = None
+                        try:
+                            sbp = float(sbp)
+                            dbp = float(dbp)
+                        except:
+                            sbp = dbp = None
 
-                            if "ปกติ" in bmi_text and not bp_text:
-                                return "น้ำหนักอยู่ในเกณฑ์ดี ควรรักษาพฤติกรรมสุขภาพนี้ต่อไป"
+                        if bmi is None:
+                            bmi_text = ""
+                        elif bmi > 30:
+                            bmi_text = "น้ำหนักเกินมาตรฐานมาก"
+                        elif bmi >= 25:
+                            bmi_text = "น้ำหนักเกินมาตรฐาน"
+                        elif bmi < 18.5:
+                            bmi_text = "น้ำหนักน้อยกว่ามาตรฐาน"
+                        else:
+                            bmi_text = "น้ำหนักอยู่ในเกณฑ์ปกติ"
 
-                            if not bmi_text and bp_text:
-                                return f"{bp_text} แนะนำให้ดูแลสุขภาพ และติดตามค่าความดันอย่างสม่ำเสมอ"
+                        if sbp is None or dbp is None:
+                            bp_text = ""
+                        elif sbp >= 160 or dbp >= 100:
+                            bp_text = "ความดันโลหิตอยู่ในระดับสูงมาก"
+                        elif sbp >= 140 or dbp >= 90:
+                            bp_text = "ความดันโลหิตอยู่ในระดับสูง"
+                        elif sbp >= 120 or dbp >= 80:
+                            bp_text = "ความดันโลหิตเริ่มสูง"
+                        else:
+                            bp_text = ""
 
-                            if bmi_text and bp_text:
-                                return f"{bmi_text} และ {bp_text} แนะนำให้ปรับพฤติกรรมด้านอาหารและการออกกำลังกาย"
+                        if not bmi_text and not bp_text:
+                            return "ไม่พบข้อมูลเพียงพอในการประเมินสุขภาพ"
 
-                            return f"{bmi_text} แนะนำให้ดูแลเรื่องโภชนาการและการออกกำลังกายอย่างเหมาะสม"
+                        if "ปกติ" in bmi_text and not bp_text:
+                            return "น้ำหนักอยู่ในเกณฑ์ดี ควรรักษาพฤติกรรมสุขภาพนี้ต่อไป"
 
-                        st.markdown(f"**BMI:** {bmi if bmi else '-'}  ({interpret_bmi(bmi)})")
-                        st.markdown(f"**BP:** {sbp}/{dbp}  ({interpret_bp(sbp, dbp)})")
-                        st.markdown(f"**คำแนะนำ:** {combined_health_advice(bmi, sbp, dbp)}")
-                        st.divider()
+                        if not bmi_text and bp_text:
+                            return f"{bp_text} แนะนำให้ดูแลสุขภาพ และติดตามค่าความดันอย่างสม่ำเสมอ"
+
+                        if bmi_text and bp_text:
+                            return f"{bmi_text} และ {bp_text} แนะนำให้ปรับพฤติกรรมด้านอาหารและการออกกำลังกาย"
+
+                        return f"{bmi_text} แนะนำให้ดูแลเรื่องโภชนาการและการออกกำลังกายอย่างเหมาะสม"
+
+                    st.markdown(f"**BMI:** {bmi if bmi else '-'}  ({interpret_bmi(bmi)})")
+                    st.markdown(f"**BP:** {sbp}/{dbp}  ({interpret_bp(sbp, dbp)})")
+                    st.markdown(f"**คำแนะนำ:** {combined_health_advice(bmi, sbp, dbp)}")
+                    st.divider()
+
