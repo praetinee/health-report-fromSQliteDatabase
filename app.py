@@ -118,6 +118,9 @@ with st.form("search_form"):
     submitted = st.form_submit_button("ค้นหา")
 
 # ==================== SEARCH AND DISPLAY ====================
+# แปลง HN ที่มาจาก SQLite เป็น string ที่ไม่มี ".0"
+df["HN"] = df["HN"].apply(lambda x: str(int(x)) if pd.notnull(x) else "")
+
 # เก็บค่าผลลัพธ์การค้นหาไว้ใน session_state
 if submitted:
     filtered = df.copy()
@@ -126,7 +129,8 @@ if submitted:
     if id_card:
         filtered = filtered[filtered['เลขบัตรประชาชน'].astype(str).str.strip() == id_card.strip()]
     if hn:
-        filtered = filtered[filtered['HN'].astype(str).str.strip() == hn.strip()]
+        hn = hn.strip()
+        filtered = filtered[filtered['HN'] == hn]
     if full_name:
         filtered = filtered[filtered['ชื่อ-สกุล'].astype(str).str.strip() == full_name.strip()]
 
@@ -135,16 +139,14 @@ if submitted:
         st.session_state["filtered_data"] = None
     else:
         st.session_state["filtered_data"] = filtered
-        st.session_state["selected_year"] = sorted(filtered["Year"].dropna().unique())[-1]  # ค่า default คือปีล่าสุด
 
 # ตรวจสอบว่ามีข้อมูลอยู่ใน session
 if "filtered_data" in st.session_state and st.session_state["filtered_data"] is not None:
     filtered = st.session_state["filtered_data"]
 
     # แสดง dropdown เลือกปี
-    years = sorted(filtered["Year"].dropna().unique())[::-1]  # เรียงปีล่าสุดอยู่บน
-    selected_year = st.selectbox("เลือกปี พ.ศ.", years, index=years.index(st.session_state.get("selected_year", years[0])))
-    st.session_state["selected_year"] = selected_year  # update ปีที่เลือกใน session
+    years = sorted(filtered["Year"].dropna().unique())[::-1]
+    selected_year = st.selectbox("เลือกปี พ.ศ.", years)
 
     person_records = filtered[filtered["Year"] == selected_year]
 
@@ -270,4 +272,3 @@ if "filtered_data" in st.session_state and st.session_state["filtered_data"] is 
                     st.markdown(f"**BP:** {sbp}/{dbp}  ({interpret_bp(sbp, dbp)})")
                     st.markdown(f"**คำแนะนำ:** {combined_health_advice(bmi, sbp, dbp)}")
                     st.divider()
-
