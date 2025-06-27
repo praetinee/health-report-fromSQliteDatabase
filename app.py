@@ -426,26 +426,25 @@ def interpret_stool_cs(value):
     return "พบการติดเชื้อในอุจจาระ ให้พบแพทย์เพื่อตรวจรักษาเพิ่มเติม"
 
 # ==================== DISPLAY ====================
-def is_missing(value):
-    if pd.isna(value):
-        return True
-    value = str(value).strip().lower()
-    return value in ["", "-", "nan", "none", "null"]
 
 if "person" in st.session_state:
-    person = st.session_state["person"]
+    filtered = st.session_state.get("filtered_data")
+    selected_year = st.session_state.get("selected_year")
+    
+    if filtered is not None and selected_year:
+        person_records = filtered[filtered["Year"] == selected_year]
+        if not person_records.empty:
+            person = person_records.iloc[0]
+        else:
+            st.warning("ไม่พบข้อมูลผู้ใช้ในปีที่เลือก")
+            st.stop()
+    else:
+        st.warning("ไม่พบข้อมูลที่กรองหรือปีที่เลือก")
+        st.stop()
 
 # ใช้ปีจากข้อมูลจริงที่มี
 available_years = sorted(df["Year"].dropna().unique(), reverse=True)
 selected_year = st.selectbox("📅 เลือกปีที่ต้องการดูผลตรวจรายงาน", options=available_years)
-
-    # ลบการแสดง DataFrame ออก
-    # st.write(person_records) ← บรรทัดนี้ลบทิ้ง
-
-    def render_health_report(person, selected_year):
-        def get_val(key):
-            val = person.get(key)
-            return "-" if is_missing(val) else str(val).strip()
 
         sbp = get_val("SBP")
         dbp = get_val("DBP")
