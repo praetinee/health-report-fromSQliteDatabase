@@ -8,7 +8,7 @@ def is_missing(value):
     if pd.isna(value):
         return True
     value = str(value).strip().lower()
-    return value in ["", "-", "nan", "none", "null"]
+    return value in {"", "-", "nan", "none", "null"}
 
 # ==================== FONT ====================
 st.markdown("""
@@ -89,8 +89,7 @@ def load_database():
     conn.close()
     return df
 
-# ==================== MAIN ====================
-
+# ==================== INITIAL LOAD ====================
 with st.spinner("กำลังโหลดข้อมูล..."):
     df = load_database()
 
@@ -121,17 +120,17 @@ with st.form("search_form"):
     full_name = col3.text_input("ชื่อ-สกุล")
     submitted = st.form_submit_button("ค้นหา")
 
-# ==================== SEARCH & DISPLAY ====================
+# ==================== SEARCH & SESSION STATE ====================
 if submitted:
     filtered = df.copy()
 
     if id_card:
-        filtered = filtered[filtered['เลขบัตรประชาชน'].astype(str).str.strip() == id_card.strip()]
+        filtered = filtered[filtered["เลขบัตรประชาชน"].astype(str).str.strip() == id_card.strip()]
     if hn:
         hn = normalize_hn(hn)
         filtered = filtered[filtered["HN"] == hn]
     if full_name:
-        filtered = filtered[filtered['ชื่อ-สกุล'].astype(str).str.strip() == full_name.strip()]
+        filtered = filtered[filtered["ชื่อ-สกุล"].astype(str).str.strip() == full_name.strip()]
 
     if filtered.empty:
         st.warning("ไม่พบข้อมูลผู้ใช้ตามที่ค้นหา")
@@ -203,7 +202,7 @@ def render_health_report(person, selected_year):
     </div>
     """
 
-# ==================== INTERPRETATION HELPERS (BMI, BP, ADVICE) ====================
+# ==================== INTERPRETATION HELPERS ====================
 def interpret_bmi(bmi):
     try:
         bmi = float(bmi)
@@ -280,27 +279,6 @@ def combined_health_advice(bmi, sbp, dbp):
         return f"{bmi_text} และ {bp_text} แนะนำให้ปรับพฤติกรรมด้านอาหารและการออกกำลังกาย"
     return f"{bmi_text} แนะนำให้ดูแลเรื่องโภชนาการและการออกกำลังกายอย่างเหมาะสม"
 
-# ==================== MAIN DISPLAY ====================
-if "filtered_data" in st.session_state and st.session_state["filtered_data"] is not None:
-    filtered = st.session_state["filtered_data"]
-    available_years = sorted(filtered["Year"].dropna().unique(), reverse=True)
-    selected_year = st.selectbox("เลือกปี พ.ศ.", options=available_years)
-    person_records = filtered[filtered["Year"] == selected_year]
-
-    if person_records.empty:
-        st.warning(f"ไม่พบข้อมูลการตรวจในปี {selected_year} สำหรับบุคคลนี้")
-    else:
-        num_visits = len(person_records)
-        
-        if num_visits == 1:
-            row = person_records.iloc[0]
-            st.markdown(render_health_report(row, selected_year), unsafe_allow_html=True)
-        else:
-            st.success(f"พบการตรวจ {num_visits} ครั้งในปี {selected_year}")
-            for idx, (_, row) in enumerate(person_records.iterrows(), start=1):
-                with st.expander(f"ครั้งที่ {idx}"):
-                    st.markdown(render_health_report(row, selected_year), unsafe_allow_html=True)
-
 # ==================== BLOOD COLUMN MAPPING (Dynamic) ====================
 blood_columns_by_year = {
     y: {
@@ -324,7 +302,6 @@ blood_columns_by_year = {
 from collections import defaultdict
 
 cbc_columns_by_year = defaultdict(dict)
-
 for y in df["Year"].dropna().unique():
     cbc_columns_by_year[y] = {
         "hb": "Hb(%)",
@@ -332,7 +309,6 @@ for y in df["Year"].dropna().unique():
         "wbc": "WBC (cumm)",
         "plt": "Plt (/mm)",
     }
-
     if y == 2568:
         cbc_columns_by_year[y].update({
             "ne": "Ne (%)",
@@ -346,91 +322,11 @@ for y in df["Year"].dropna().unique():
             "mchc": "MCHC",
         })
 
-# ==================== INTERPRETATION HELPERS ====================
-def interpret_alb(value):
-    value = str(value).strip().lower()
-    if value == "negative":
-        return "ไม่พบ"
-    elif value in ["trace", "1+", "2+"]:
-        return "พบโปรตีนในปัสสาวะเล็กน้อย"
-    elif value == "3+":
-        return "พบโปรตีนในปัสสาวะ"
-    return "-"
-
-def interpret_sugar(value):
-    value = str(value).strip().lower()
-    if value == "negative":
-        return "ไม่พบ"
-    elif value == "trace":
-        return "พบน้ำตาลในปัสสาวะเล็กน้อย"
-    elif value in ["1+", "2+", "3+", "4+", "5+", "6+"]:
-        return "พบน้ำตาลในปัสสาวะ"
-    return "-"
-
-def interpret_rbc(value):
-    value = str(value).strip().lower()
-    if value in ["0-1", "negative", "1-2", "2-3", "3-5"]:
-        return "ปกติ"
-    elif value in ["5-10", "10-20"]:
-        return "พบเม็ดเลือดแดงในปัสสาวะเล็กน้อย"
-    return "พบเม็ดเลือดแดงในปัสสาวะ"
-
-def interpret_wbc(value):
-    value = str(value).strip().lower()
-    if value in ["0-1", "negative", "1-2", "2-3", "3-5"]:
-        return "ปกติ"
-    elif value in ["5-10", "10-20"]:
-        return "พบเม็ดเลือดขาวในปัสสาวะเล็กน้อย"
-    return "พบเม็ดเลือดขาวในปัสสาวะ"
-
-def advice_urine(sex, alb, sugar, rbc, wbc):
-    alb_text = interpret_alb(alb)
-    sugar_text = interpret_sugar(sugar)
-    rbc_text = interpret_rbc(rbc)
-    wbc_text = interpret_wbc(wbc)
-
-    if all(x in ["-", "ปกติ", "ไม่พบ", "พบโปรตีนในปัสสาวะเล็กน้อย", "พบน้ำตาลในปัสสาวะเล็กน้อย"]
-           for x in [alb_text, sugar_text, rbc_text, wbc_text]):
-        return ""
-
-    if "พบน้ำตาลในปัสสาวะ" in sugar_text and "เล็กน้อย" not in sugar_text:
-        return "ควรลดการบริโภคน้ำตาล และตรวจระดับน้ำตาลในเลือดเพิ่มเติม"
-
-    if sex == "หญิง" and "พบเม็ดเลือดแดง" in rbc_text and "ปกติ" in wbc_text:
-        return "อาจมีปนเปื้อนจากประจำเดือน แนะนำให้ตรวจซ้ำ"
-
-    if sex == "ชาย" and "พบเม็ดเลือดแดง" in rbc_text and "ปกติ" in wbc_text:
-        return "พบเม็ดเลือดแดงในปัสสาวะ ควรตรวจทางเดินปัสสาวะเพิ่มเติม"
-
-    if "พบเม็ดเลือดขาวในปัสสาวะ" in wbc_text and "เล็กน้อย" not in wbc_text:
-        return "อาจมีการอักเสบของระบบทางเดินปัสสาวะ แนะนำให้ตรวจซ้ำ"
-
-    return "ควรตรวจปัสสาวะซ้ำเพื่อติดตามผล"
-
-def interpret_stool_exam(value):
-    if not value or value.strip() == "":
-        return "-"
-    if "ปกติ" in value:
-        return "ปกติ"
-    elif "เม็ดเลือดแดง" in value:
-        return "พบเม็ดเลือดแดงในอุจจาระ นัดตรวจซ้ำ"
-    elif "เม็ดเลือดขาว" in value:
-        return "พบเม็ดเลือดขาวในอุจจาระ นัดตรวจซ้ำ"
-    return value.strip()
-
-def interpret_stool_cs(value):
-    if not value or value.strip() == "":
-        return "-"
-    if "ไม่พบ" in value or "ปกติ" in value:
-        return "ไม่พบการติดเชื้อ"
-    return "พบการติดเชื้อในอุจจาระ ให้พบแพทย์เพื่อตรวจรักษาเพิ่มเติม"
-
-# ==================== DISPLAY ====================
-
+# ==================== GET PERSON FROM SESSION ====================
 if "person" in st.session_state:
     filtered = st.session_state.get("filtered_data")
     selected_year = st.session_state.get("selected_year")
-    
+
     if filtered is not None and selected_year:
         person_records = filtered[filtered["Year"] == selected_year]
         if not person_records.empty:
@@ -442,11 +338,7 @@ if "person" in st.session_state:
         st.warning("ไม่พบข้อมูลที่กรองหรือปีที่เลือก")
         st.stop()
 
-# ใช้ปีจากข้อมูลจริงที่มี
-available_years = sorted(df["Year"].dropna().unique(), reverse=True)
-selected_year = st.selectbox("📅 เลือกปีที่ต้องการดูผลตรวจรายงาน", options=available_years)
-
-# ================== CBC / BLOOD TEST DISPLAY ==================
+# ==================== CBC / BLOOD TEST DISPLAY ====================
 
 cbc_cols = cbc_columns_by_year.get(selected_year, {})
 blood_cols = blood_columns_by_year.get(selected_year, {})
@@ -505,55 +397,3 @@ for name, col, normal, low, high, *opt in blood_config:
     raw = person.get(col, "-")
     result, is_abnormal = flag_value(raw, low, high, higher_is_better=higher_is_better)
     blood_rows.append([(name, is_abnormal), (result, is_abnormal), (normal, is_abnormal)])
-
-def styled_result_table(headers, rows):
-    header_html = "".join([f"<th>{h}</th>" for h in headers])
-    html = f"""
-    <style>
-        .styled-wrapper {{
-            max-width: 820px;
-            margin: 0 auto;
-        }}
-        .styled-result {{
-            width: 100%;
-            border-collapse: collapse;
-        }}
-        .styled-result th {{
-            background-color: #111;
-            color: white;
-            padding: 6px 12px;
-            text-align: center;
-        }}
-        .styled-result td {{
-            padding: 6px 12px;
-            vertical-align: middle;
-        }}
-        .styled-result td:nth-child(2) {{
-            text-align: center;
-        }}
-        .abn {{
-            background-color: rgba(255, 0, 0, 0.15);
-        }}
-    </style>
-    <div class="styled-wrapper">
-        <table class='styled-result'>
-            <thead><tr>{header_html}</tr></thead>
-            <tbody>
-    """
-    for row in rows:
-        row_html = ""
-        for cell, is_abn in row:
-            css = " class='abn'" if is_abn else ""
-            row_html += f"<td{css}>{cell}</td>"
-        html += f"<tr>{row_html}</tr>"
-    html += "</tbody></table></div>"
-    return html
-
-# ✅ Show tables if not empty
-if any(r[1][0] != "-" for r in cbc_rows):
-    st.markdown("### ผลตรวจ CBC")
-    st.markdown(styled_result_table(["รายการ", "ผลตรวจ", "เกณฑ์ปกติ"], cbc_rows), unsafe_allow_html=True)
-
-if any(r[1][0] != "-" for r in blood_rows):
-    st.markdown("### ผลตรวจเลือด (Blood Chemistry)")
-    st.markdown(styled_result_table(["รายการ", "ผลตรวจ", "เกณฑ์ปกติ"], blood_rows), unsafe_allow_html=True)
