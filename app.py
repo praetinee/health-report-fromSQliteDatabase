@@ -293,7 +293,7 @@ blood_config = [
 blood_rows = []
 for label, col, norm, low, high, *opt in blood_config:
     higher = opt[0] if opt else False
-    val = get_float(col)
+    val = get_float(col, person)
     result, is_abn = flag(val, low, high, higher)
     blood_rows.append([(label, is_abn), (result, is_abn), (norm, is_abn)])
 
