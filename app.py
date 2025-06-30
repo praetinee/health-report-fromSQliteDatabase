@@ -581,6 +581,9 @@ if "person_row" in st.session_state:
     """, unsafe_allow_html=True)
 
 # ==================== Urinalysis & Additional Tests ====================
+def render_section_header(title):
+    return f"<h4 style='margin-bottom: 1rem;'>{title}</h4>"
+    
 left_spacer2, left_col, right_col, right_spacer2 = st.columns([1, 3, 3, 1])
 
 with left_col:
