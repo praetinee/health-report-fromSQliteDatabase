@@ -99,6 +99,163 @@ if "search_result" in st.session_state:
     else:
         st.session_state["person_row"] = person_year_df.iloc[0].to_dict()
 
+    # ==================== เตรียมข้อมูลจาก SQLite ====================
+
+# ฟังก์ชันช่วยประเมินค่าตรวจทางห้องแล็บ (ใช้ได้ทุกกลุ่ม)
+def get_float(col, person_data):
+    try:
+        val = person_data.get(col, "")
+        if val in [None, "-", ""]:
+            return None
+        return float(str(val).replace(",", "").strip())
+    except:
+        return None
+
+def flag(val, low=None, high=None, higher_is_better=False):
+    if val is None:
+        return "-", False
+    if higher_is_better:
+        return f"{val:.1f}", val < low
+    if (low is not None and val < low) or (high is not None and val > high):
+        return f"{val:.1f}", True
+    return f"{val:.1f}", False
+
+# ========== ฟังก์ชันวิเคราะห์ค่าต่าง ๆ (ต้องอยู่ก่อนเรียกใช้) ==========
+def kidney_summary_gfr_only(gfr_raw):
+    try:
+        gfr = float(str(gfr_raw).replace(",", "").strip())
+        if gfr == 0:
+            return ""
+        elif gfr < 60:
+            return "การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย"
+        else:
+            return "ปกติ"
+    except:
+        return ""
+
+def kidney_advice_from_summary(summary_text):
+    if summary_text == "การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย":
+        return (
+            "การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย "
+            "ลดอาหารเค็ม อาหารโปรตีนสูงย่อยยาก ดื่มน้ำ 8-10 แก้วต่อวัน "
+            "และไม่ควรกลั้นปัสสาวะ มีอาการบวมผิดปกติให้พบแพทย์"
+        )
+    return ""
+
+def fbs_advice(fbs_raw):
+    try:
+        value = float(str(fbs_raw).replace(",", "").strip())
+        if value == 0:
+            return ""
+        elif 100 <= value < 106:
+            return "ระดับน้ำตาลเริ่มสูงเล็กน้อย ควรปรับพฤติกรรมการบริโภคอาหารหวาน แป้ง และออกกำลังกาย"
+        elif 106 <= value < 126:
+            return "ระดับน้ำตาลสูงเล็กน้อย ควรลดอาหารหวาน แป้ง ของมัน ตรวจติดตามน้ำตาลซ้ำ และออกกำลังกายสม่ำเสมอ"
+        elif value >= 126:
+            return "ระดับน้ำตาลสูง ควรพบแพทย์เพื่อตรวจยืนยันเบาหวาน และติดตามอาการ"
+        else:
+            return ""
+    except:
+        return ""
+
+def summarize_liver(alp_val, sgot_val, sgpt_val):
+    try:
+        alp = float(alp_val)
+        sgot = float(sgot_val)
+        sgpt = float(sgpt_val)
+        if alp == 0 or sgot == 0 or sgpt == 0:
+            return "-"
+        if alp > 120 or sgot > 36 or sgpt > 40:
+            return "การทำงานของตับสูงกว่าเกณฑ์ปกติเล็กน้อย"
+        return "ปกติ"
+    except:
+        return "-"
+
+def liver_advice(summary_text):
+    if summary_text == "การทำงานของตับสูงกว่าเกณฑ์ปกติเล็กน้อย":
+        return "ควรลดอาหารไขมันสูงและตรวจติดตามการทำงานของตับซ้ำ"
+    elif summary_text == "ปกติ":
+        return ""
+    return "-"
+
+def uric_acid_advice(value_raw):
+    try:
+        value = float(value_raw)
+        if value > 7.2:
+            return "ควรลดอาหารที่มีพิวรีนสูง เช่น เครื่องในสัตว์ อาหารทะเล และพบแพทย์หากมีอาการปวดข้อ"
+        return ""
+    except:
+        return "-"
+
+def summarize_lipids(chol_raw, tgl_raw, ldl_raw):
+    try:
+        chol = float(str(chol_raw).replace(",", "").strip())
+        tgl = float(str(tgl_raw).replace(",", "").strip())
+        ldl = float(str(ldl_raw).replace(",", "").strip())
+        if chol == 0 and tgl == 0:
+            return ""
+        if chol >= 250 or tgl >= 250 or ldl >= 180:
+            return "ไขมันในเลือดสูง"
+        elif chol <= 200 and tgl <= 150:
+            return "ปกติ"
+        else:
+            return "ไขมันในเลือดสูงเล็กน้อย"
+    except:
+        return ""
+
+def lipids_advice(summary_text):
+    if summary_text == "ไขมันในเลือดสูง":
+        return (
+            "ไขมันในเลือดสูง ควรลดอาหารที่มีไขมันอิ่มตัว เช่น ของทอด หนังสัตว์ "
+            "ออกกำลังกายสม่ำเสมอ และพิจารณาพบแพทย์เพื่อตรวจติดตาม"
+        )
+    elif summary_text == "ไขมันในเลือดสูงเล็กน้อย":
+        return (
+            "ไขมันในเลือดสูงเล็กน้อย ควรปรับพฤติกรรมการบริโภค ลดของมัน "
+            "และออกกำลังกายเพื่อควบคุมระดับไขมัน"
+        )
+    return ""
+
+def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
+    advice_parts = []
+
+    try:
+        hb_val = float(hb)
+        hb_ref = 13 if sex == "ชาย" else 12
+        if hb_val < hb_ref:
+            advice_parts.append("ระดับฮีโมโกลบินต่ำ ควรตรวจหาภาวะโลหิตจางและติดตามซ้ำ")
+    except:
+        pass
+
+    try:
+        hct_val = float(hct)
+        hct_ref = 39 if sex == "ชาย" else 36
+        if hct_val < hct_ref:
+            advice_parts.append("ค่าฮีมาโตคริตต่ำ ควรตรวจหาภาวะเลือดจางและตรวจติดตาม")
+    except:
+        pass
+
+    try:
+        wbc_val = float(wbc)
+        if wbc_val < 4000:
+            advice_parts.append("เม็ดเลือดขาวต่ำ อาจเกิดจากภูมิคุ้มกันลด ควรติดตาม")
+        elif wbc_val > 10000:
+            advice_parts.append("เม็ดเลือดขาวสูง อาจมีการอักเสบ ติดเชื้อ หรือความผิดปกติ ควรพบแพทย์")
+    except:
+        pass
+
+    try:
+        plt_val = float(plt)
+        if plt_val < 150000:
+            advice_parts.append("เกล็ดเลือดต่ำ อาจมีภาวะเลือดออกง่าย ควรตรวจยืนยันซ้ำ")
+        elif plt_val > 500000:
+            advice_parts.append("เกล็ดเลือดสูง ควรพบแพทย์เพื่อตรวจหาสาเหตุเพิ่มเติม")
+    except:
+        pass
+
+    return " ".join(advice_parts)
+
+
 if "person_row" in st.session_state:
     person = st.session_state["person_row"]
     year_display = person.get("Year", "-")
