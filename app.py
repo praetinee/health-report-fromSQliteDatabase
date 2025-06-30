@@ -487,88 +487,88 @@ def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
 
     return " ".join(advice_parts)
 
-# ==================== รวมคำแนะนำทั้งหมด ====================
-advice_list = []
+    # ==================== รวมคำแนะนำทั้งหมด ====================
+    advice_list = []
 
-# 🔍 ดึงค่าดิบ
-gfr_raw = person.get("GFR", "")
-fbs_raw = person.get("FBS", "")
-alp_raw = person.get("ALP", "")
-sgot_raw = person.get("SGOT", "")
-sgpt_raw = person.get("SGPT", "")
-uric_raw = person.get("Uric Acid", "")
-chol_raw = person.get("CHOL", "")
-tgl_raw = person.get("TGL", "")
-ldl_raw = person.get("LDL", "")
+    # 🔍 ดึงค่าดิบ
+    gfr_raw = person.get("GFR", "")
+    fbs_raw = person.get("FBS", "")
+    alp_raw = person.get("ALP", "")
+    sgot_raw = person.get("SGOT", "")
+    sgpt_raw = person.get("SGPT", "")
+    uric_raw = person.get("Uric Acid", "")
+    chol_raw = person.get("CHOL", "")
+    tgl_raw = person.get("TGL", "")
+    ldl_raw = person.get("LDL", "")
 
-# 📋 วิเคราะห์คำแนะนำ
-kidney_summary = kidney_summary_gfr_only(gfr_raw)
-advice_list.append(kidney_advice_from_summary(kidney_summary))
+    # 📋 วิเคราะห์คำแนะนำ
+    kidney_summary = kidney_summary_gfr_only(gfr_raw)
+    advice_list.append(kidney_advice_from_summary(kidney_summary))
+    
+    advice_list.append(fbs_advice(fbs_raw))
+    advice_list.append(liver_advice(summarize_liver(alp_raw, sgot_raw, sgpt_raw)))
+    advice_list.append(uric_acid_advice(uric_raw))
+    advice_list.append(lipids_advice(summarize_lipids(chol_raw, tgl_raw, ldl_raw)))
+    advice_list.append(cbc_advice(
+        person.get("Hb(%)", ""), 
+        person.get("HCT", ""), 
+        person.get("WBC (cumm)", ""), 
+        person.get("Plt (/mm)", ""),
+        sex=sex
+    ))
 
-advice_list.append(fbs_advice(fbs_raw))
-advice_list.append(liver_advice(summarize_liver(alp_raw, sgot_raw, sgpt_raw)))
-advice_list.append(uric_acid_advice(uric_raw))
-advice_list.append(lipids_advice(summarize_lipids(chol_raw, tgl_raw, ldl_raw)))
-advice_list.append(cbc_advice(
-    person.get("Hb(%)", ""), 
-    person.get("HCT", ""), 
-    person.get("WBC (cumm)", ""), 
-    person.get("Plt (/mm)", ""),
-    sex=sex
-))
-
-# ==================== แสดงผลรวมคำแนะนำ ====================
-from collections import OrderedDict
-
-def merge_final_advice_grouped(messages):
-    groups = {
-        "FBS": [], "ไต": [], "ตับ": [], "ยูริค": [], "ไขมัน": [], "อื่นๆ": []
-    }
-
-    for msg in messages:
-        if not msg or msg == "-" or msg.strip() == "":
-            continue
-        if "น้ำตาล" in msg:
-            groups["FBS"].append(msg)
-        elif "ไต" in msg:
-            groups["ไต"].append(msg)
-        elif "ตับ" in msg:
-            groups["ตับ"].append(msg)
-        elif "พิวรีน" in msg or "ยูริค" in msg:
-            groups["ยูริค"].append(msg)
-        elif "ไขมัน" in msg:
-            groups["ไขมัน"].append(msg)
-        else:
-            groups["อื่นๆ"].append(msg)
-
-    section_texts = []
-    icon_map = {
-        "FBS": "🍬", "ไต": "💧", "ตับ": "🫀",
-        "ยูริค": "🦴", "ไขมัน": "🧈", "อื่นๆ": "📝"
-    }
-    for title, msgs in groups.items():
-        if msgs:
-            unique_msgs = list(OrderedDict.fromkeys(msgs))
-            section_texts.append(f"<b>{icon_map.get(title)} {title}:</b> {' '.join(unique_msgs)}")
-
-    if not section_texts:
-        return "ไม่พบคำแนะนำเพิ่มเติมจากผลตรวจ"
-
-    return "<div style='margin-bottom: 0.75rem;'>" + "</div><div style='margin-bottom: 0.75rem;'>".join(section_texts) + "</div>"
-
-# แสดงผล
-st.markdown(f"""
-<div style="
-    background-color: rgba(33, 150, 243, 0.15);
-    padding: 2rem 2.5rem;
-    border-radius: 10px;
-    font-size: 16px;
-    line-height: 1.5;
-    color: inherit;
-">
-    <div style="font-size: 18px; font-weight: bold; margin-bottom: 1.5rem;">
-        📋 คำแนะนำจากผลตรวจสุขภาพ
+    # ==================== แสดงผลรวมคำแนะนำ ====================
+    from collections import OrderedDict
+    
+    def merge_final_advice_grouped(messages):
+        groups = {
+            "FBS": [], "ไต": [], "ตับ": [], "ยูริค": [], "ไขมัน": [], "อื่นๆ": []
+        }
+    
+        for msg in messages:
+            if not msg or msg == "-" or msg.strip() == "":
+                continue
+            if "น้ำตาล" in msg:
+                groups["FBS"].append(msg)
+            elif "ไต" in msg:
+                groups["ไต"].append(msg)
+            elif "ตับ" in msg:
+                groups["ตับ"].append(msg)
+            elif "พิวรีน" in msg or "ยูริค" in msg:
+                groups["ยูริค"].append(msg)
+            elif "ไขมัน" in msg:
+                groups["ไขมัน"].append(msg)
+            else:
+                groups["อื่นๆ"].append(msg)
+    
+        section_texts = []
+        icon_map = {
+            "FBS": "🍬", "ไต": "💧", "ตับ": "🫀",
+            "ยูริค": "🦴", "ไขมัน": "🧈", "อื่นๆ": "📝"
+        }
+        for title, msgs in groups.items():
+            if msgs:
+                unique_msgs = list(OrderedDict.fromkeys(msgs))
+                section_texts.append(f"<b>{icon_map.get(title)} {title}:</b> {' '.join(unique_msgs)}")
+    
+        if not section_texts:
+            return "ไม่พบคำแนะนำเพิ่มเติมจากผลตรวจ"
+    
+        return "<div style='margin-bottom: 0.75rem;'>" + "</div><div style='margin-bottom: 0.75rem;'>".join(section_texts) + "</div>"
+    
+    # แสดงผล
+    st.markdown(f"""
+    <div style="
+        background-color: rgba(33, 150, 243, 0.15);
+        padding: 2rem 2.5rem;
+        border-radius: 10px;
+        font-size: 16px;
+        line-height: 1.5;
+        color: inherit;
+    ">
+        <div style="font-size: 18px; font-weight: bold; margin-bottom: 1.5rem;">
+            📋 คำแนะนำจากผลตรวจสุขภาพ
+        </div>
+        {merge_final_advice_grouped(advice_list)}
     </div>
-    {merge_final_advice_grouped(advice_list)}
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
