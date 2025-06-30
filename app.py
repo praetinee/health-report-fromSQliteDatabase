@@ -435,6 +435,46 @@ def lipids_advice(summary_text):
         )
     return ""
 
+# ==================== คำแนะนำหมวด CBC ====================
+def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
+    advice_parts = []
+
+    try:
+        hb_val = float(hb)
+        hb_ref = 13 if sex == "ชาย" else 12
+        if hb_val < hb_ref:
+            advice_parts.append("ระดับฮีโมโกลบินต่ำ ควรตรวจหาภาวะโลหิตจางและติดตามซ้ำ")
+
+    except: pass
+
+    try:
+        hct_val = float(hct)
+        hct_ref = 39 if sex == "ชาย" else 36
+        if hct_val < hct_ref:
+            advice_parts.append("ค่าฮีมาโตคริตต่ำ ควรตรวจหาภาวะเลือดจางและตรวจติดตาม")
+
+    except: pass
+
+    try:
+        wbc_val = float(wbc)
+        if wbc_val < 4000:
+            advice_parts.append("เม็ดเลือดขาวต่ำ อาจเกิดจากภูมิคุ้มกันลด ควรติดตาม")
+        elif wbc_val > 10000:
+            advice_parts.append("เม็ดเลือดขาวสูง อาจมีการอักเสบ ติดเชื้อ หรือความผิดปกติ ควรพบแพทย์")
+
+    except: pass
+
+    try:
+        plt_val = float(plt)
+        if plt_val < 150000:
+            advice_parts.append("เกล็ดเลือดต่ำ อาจมีภาวะเลือดออกง่าย ควรตรวจยืนยันซ้ำ")
+        elif plt_val > 500000:
+            advice_parts.append("เกล็ดเลือดสูง ควรพบแพทย์เพื่อตรวจหาสาเหตุเพิ่มเติม")
+
+    except: pass
+
+    return " ".join(advice_parts)
+
 # ==================== รวมคำแนะนำทั้งหมด ====================
 advice_list = []
 
@@ -457,6 +497,13 @@ advice_list.append(fbs_advice(fbs_raw))
 advice_list.append(liver_advice(summarize_liver(alp_raw, sgot_raw, sgpt_raw)))
 advice_list.append(uric_acid_advice(uric_raw))
 advice_list.append(lipids_advice(summarize_lipids(chol_raw, tgl_raw, ldl_raw)))
+advice_list.append(cbc_advice(
+    person.get("Hb(%)", ""), 
+    person.get("HCT", ""), 
+    person.get("WBC (cumm)", ""), 
+    person.get("Plt (/mm)", ""),
+    sex=sex
+))
 
 # ==================== แสดงผลรวมคำแนะนำ ====================
 from collections import OrderedDict
