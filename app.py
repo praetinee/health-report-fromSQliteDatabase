@@ -504,7 +504,6 @@ def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
     # 📋 วิเคราะห์คำแนะนำ
     kidney_summary = kidney_summary_gfr_only(gfr_raw)
     advice_list.append(kidney_advice_from_summary(kidney_summary))
-    
     advice_list.append(fbs_advice(fbs_raw))
     advice_list.append(liver_advice(summarize_liver(alp_raw, sgot_raw, sgpt_raw)))
     advice_list.append(uric_acid_advice(uric_raw))
@@ -555,7 +554,7 @@ def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
             return "ไม่พบคำแนะนำเพิ่มเติมจากผลตรวจ"
     
         return "<div style='margin-bottom: 0.75rem;'>" + "</div><div style='margin-bottom: 0.75rem;'>".join(section_texts) + "</div>"
-    
+
     # แสดงผล
     st.markdown(f"""
     <div style="
