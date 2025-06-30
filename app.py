@@ -298,6 +298,22 @@ blood_columns_by_year = {
     for y in df["Year"].dropna().unique()
 }
 
+# ==================== GET PERSON FROM SESSION ====================
+if "person" in st.session_state:
+    filtered = st.session_state.get("filtered_data")
+    selected_year = st.session_state.get("selected_year")
+
+    if filtered is not None and selected_year:
+        person_records = filtered[filtered["Year"] == selected_year]
+        if not person_records.empty:
+            person = person_records.iloc[0]
+        else:
+            st.warning("ไม่พบข้อมูลผู้ใช้ในปีที่เลือก")
+            st.stop()
+    else:
+        st.warning("ไม่พบข้อมูลที่กรองหรือปีที่เลือก")
+        st.stop()
+
 # ==================== CBC COLUMN MAPPING (Dynamic) ====================
 from collections import defaultdict
 
@@ -321,22 +337,6 @@ for y in df["Year"].dropna().unique():
             "mch": "MCH",
             "mchc": "MCHC",
         })
-
-# ==================== GET PERSON FROM SESSION ====================
-if "person" in st.session_state:
-    filtered = st.session_state.get("filtered_data")
-    selected_year = st.session_state.get("selected_year")
-
-    if filtered is not None and selected_year:
-        person_records = filtered[filtered["Year"] == selected_year]
-        if not person_records.empty:
-            person = person_records.iloc[0]
-        else:
-            st.warning("ไม่พบข้อมูลผู้ใช้ในปีที่เลือก")
-            st.stop()
-    else:
-        st.warning("ไม่พบข้อมูลที่กรองหรือปีที่เลือก")
-        st.stop()
 
 # ==================== CBC / BLOOD TEST DISPLAY ====================
 
