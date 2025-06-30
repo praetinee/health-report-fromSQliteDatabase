@@ -334,3 +334,182 @@ with col1:
 with col2:
     st.markdown("<h4>ผลตรวจเคมีเลือด</h4>", unsafe_allow_html=True)
     st.markdown(styled_result_table(["การตรวจ", "ผล", "ค่าปกติ"], blood_rows), unsafe_allow_html=True)
+
+# ==================== วิเคราะห์ GFR → ไต ====================
+def kidney_summary_gfr_only(gfr_raw):
+    try:
+        gfr = float(str(gfr_raw).replace(",", "").strip())
+        if gfr == 0:
+            return ""
+        elif gfr < 60:
+            return "การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย"
+        else:
+            return "ปกติ"
+    except:
+        return ""
+
+def kidney_advice_from_summary(summary_text):
+    if summary_text == "การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย":
+        return (
+            "การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย "
+            "ลดอาหารเค็ม อาหารโปรตีนสูงย่อยยาก ดื่มน้ำ 8-10 แก้วต่อวัน "
+            "และไม่ควรกลั้นปัสสาวะ มีอาการบวมผิดปกติให้พบแพทย์"
+        )
+    return ""
+
+# ==================== วิเคราะห์ FBS → น้ำตาล ====================
+def fbs_advice(fbs_raw):
+    try:
+        value = float(str(fbs_raw).replace(",", "").strip())
+        if value == 0:
+            return ""
+        elif 100 <= value < 106:
+            return "ระดับน้ำตาลเริ่มสูงเล็กน้อย ควรปรับพฤติกรรมการบริโภคอาหารหวาน แป้ง และออกกำลังกาย"
+        elif 106 <= value < 126:
+            return "ระดับน้ำตาลสูงเล็กน้อย ควรลดอาหารหวาน แป้ง ของมัน ตรวจติดตามน้ำตาลซ้ำ และออกกำลังกายสม่ำเสมอ"
+        elif value >= 126:
+            return "ระดับน้ำตาลสูง ควรพบแพทย์เพื่อตรวจยืนยันเบาหวาน และติดตามอาการ"
+        else:
+            return ""
+    except:
+        return ""
+
+# ==================== วิเคราะห์ Liver Function (ALP, SGOT, SGPT) ====================
+def summarize_liver(alp_val, sgot_val, sgpt_val):
+    try:
+        alp = float(alp_val)
+        sgot = float(sgot_val)
+        sgpt = float(sgpt_val)
+        if alp == 0 or sgot == 0 or sgpt == 0:
+            return "-"
+        if alp > 120 or sgot > 36 or sgpt > 40:
+            return "การทำงานของตับสูงกว่าเกณฑ์ปกติเล็กน้อย"
+        return "ปกติ"
+    except:
+        return "-"
+
+def liver_advice(summary_text):
+    if summary_text == "การทำงานของตับสูงกว่าเกณฑ์ปกติเล็กน้อย":
+        return "ควรลดอาหารไขมันสูงและตรวจติดตามการทำงานของตับซ้ำ"
+    elif summary_text == "ปกติ":
+        return ""
+    return "-"
+
+# ==================== วิเคราะห์ Uric Acid ====================
+def uric_acid_advice(value_raw):
+    try:
+        value = float(value_raw)
+        if value > 7.2:
+            return "ควรลดอาหารที่มีพิวรีนสูง เช่น เครื่องในสัตว์ อาหารทะเล และพบแพทย์หากมีอาการปวดข้อ"
+        return ""
+    except:
+        return "-"
+
+# ==================== วิเคราะห์ ไขมันในเลือด (CHOL, TGL, LDL) ====================
+def summarize_lipids(chol_raw, tgl_raw, ldl_raw):
+    try:
+        chol = float(str(chol_raw).replace(",", "").strip())
+        tgl = float(str(tgl_raw).replace(",", "").strip())
+        ldl = float(str(ldl_raw).replace(",", "").strip())
+        if chol == 0 and tgl == 0:
+            return ""
+        if chol >= 250 or tgl >= 250 or ldl >= 180:
+            return "ไขมันในเลือดสูง"
+        elif chol <= 200 and tgl <= 150:
+            return "ปกติ"
+        else:
+            return "ไขมันในเลือดสูงเล็กน้อย"
+    except:
+        return ""
+
+def lipids_advice(summary_text):
+    if summary_text == "ไขมันในเลือดสูง":
+        return (
+            "ไขมันในเลือดสูง ควรลดอาหารที่มีไขมันอิ่มตัว เช่น ของทอด หนังสัตว์ "
+            "ออกกำลังกายสม่ำเสมอ และพิจารณาพบแพทย์เพื่อตรวจติดตาม"
+        )
+    elif summary_text == "ไขมันในเลือดสูงเล็กน้อย":
+        return (
+            "ไขมันในเลือดสูงเล็กน้อย ควรปรับพฤติกรรมการบริโภค ลดของมัน "
+            "และออกกำลังกายเพื่อควบคุมระดับไขมัน"
+        )
+    return ""
+
+# ==================== รวมคำแนะนำทั้งหมด ====================
+advice_list = []
+
+# 🔍 ดึงค่าดิบ
+gfr_raw = person.get("GFR", "")
+fbs_raw = person.get("FBS", "")
+alp_raw = person.get("ALP", "")
+sgot_raw = person.get("SGOT", "")
+sgpt_raw = person.get("SGPT", "")
+uric_raw = person.get("Uric Acid", "")
+chol_raw = person.get("CHOL", "")
+tgl_raw = person.get("TGL", "")
+ldl_raw = person.get("LDL", "")
+
+# 📋 วิเคราะห์คำแนะนำ
+kidney_summary = kidney_summary_gfr_only(gfr_raw)
+advice_list.append(kidney_advice_from_summary(kidney_summary))
+
+advice_list.append(fbs_advice(fbs_raw))
+advice_list.append(liver_advice(summarize_liver(alp_raw, sgot_raw, sgpt_raw)))
+advice_list.append(uric_acid_advice(uric_raw))
+advice_list.append(lipids_advice(summarize_lipids(chol_raw, tgl_raw, ldl_raw)))
+
+# ==================== แสดงผลรวมคำแนะนำ ====================
+from collections import OrderedDict
+
+def merge_final_advice_grouped(messages):
+    groups = {
+        "FBS": [], "ไต": [], "ตับ": [], "ยูริค": [], "ไขมัน": [], "อื่นๆ": []
+    }
+
+    for msg in messages:
+        if not msg or msg == "-" or msg.strip() == "":
+            continue
+        if "น้ำตาล" in msg:
+            groups["FBS"].append(msg)
+        elif "ไต" in msg:
+            groups["ไต"].append(msg)
+        elif "ตับ" in msg:
+            groups["ตับ"].append(msg)
+        elif "พิวรีน" in msg or "ยูริค" in msg:
+            groups["ยูริค"].append(msg)
+        elif "ไขมัน" in msg:
+            groups["ไขมัน"].append(msg)
+        else:
+            groups["อื่นๆ"].append(msg)
+
+    section_texts = []
+    icon_map = {
+        "FBS": "🍬", "ไต": "💧", "ตับ": "🫀",
+        "ยูริค": "🦴", "ไขมัน": "🧈", "อื่นๆ": "📝"
+    }
+    for title, msgs in groups.items():
+        if msgs:
+            unique_msgs = list(OrderedDict.fromkeys(msgs))
+            section_texts.append(f"<b>{icon_map.get(title)} {title}:</b> {' '.join(unique_msgs)}")
+
+    if not section_texts:
+        return "ไม่พบคำแนะนำเพิ่มเติมจากผลตรวจ"
+
+    return "<div style='margin-bottom: 0.75rem;'>" + "</div><div style='margin-bottom: 0.75rem;'>".join(section_texts) + "</div>"
+
+# แสดงผล
+st.markdown(f"""
+<div style="
+    background-color: rgba(33, 150, 243, 0.15);
+    padding: 2rem 2.5rem;
+    border-radius: 10px;
+    font-size: 16px;
+    line-height: 1.5;
+    color: inherit;
+">
+    <div style="font-size: 18px; font-weight: bold; margin-bottom: 1.5rem;">
+        📋 คำแนะนำจากผลตรวจสุขภาพ
+    </div>
+    {merge_final_advice_grouped(advice_list)}
+</div>
+""", unsafe_allow_html=True)
