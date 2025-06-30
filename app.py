@@ -579,3 +579,52 @@ if "person_row" in st.session_state:
         {merge_final_advice_grouped(advice_list)}
     </div>
     """, unsafe_allow_html=True)
+
+# ==================== Urinalysis & Additional Tests ====================
+left_spacer2, left_col, right_col, right_spacer2 = st.columns([1, 3, 3, 1])
+
+with left_col:
+    st.markdown(render_section_header("ผลการตรวจปัสสาวะ (Urinalysis)"), unsafe_allow_html=True)
+
+    sex = person.get("เพศ", "").strip()
+
+    urine_config = [
+        ("สี (Colour)", person.get("Color", ""), "Yellow, Pale Yellow"),
+        ("น้ำตาล (Sugar)", person.get("sugar", ""), "Negative"),
+        ("โปรตีน (Albumin)", person.get("Alb", ""), "Negative, trace"),
+        ("กรด-ด่าง (pH)", person.get("pH", ""), "5.0 - 8.0"),
+        ("ความถ่วงจำเพาะ (Sp.gr)", person.get("Spgr", ""), "1.003 - 1.030"),
+        ("เม็ดเลือดแดง (RBC)", person.get("RBC1", ""), "0 - 2 cell/HPF"),
+        ("เม็ดเลือดขาว (WBC)", person.get("WBC1", ""), "0 - 5 cell/HPF"),
+        ("เซลล์เยื่อบุผิว (Squam.epit.)", person.get("SQ-epi", ""), "0 - 10 cell/HPF"),
+        ("อื่นๆ", person.get("ORTER", ""), "-"),
+    ]
+
+    urine_rows = []
+    for name, value, normal in urine_config:
+        val_text, is_abn = flag_urine_value(value, normal)
+        urine_rows.append([(name, is_abn), (val_text, is_abn), (normal, is_abn)])
+
+    st.markdown(styled_result_table(["ชื่อการตรวจ", "ผลตรวจ", "ค่าปกติ"], urine_rows), unsafe_allow_html=True)
+
+    # ✅ วิเคราะห์เพื่อให้คำแนะนำ
+    alb_raw = person.get("Alb", "")
+    sugar_raw = person.get("sugar", "")
+    rbc_raw = person.get("RBC1", "")
+    wbc_raw = person.get("WBC1", "")
+
+    urine_advice = advice_urine(sex, alb_raw, sugar_raw, rbc_raw, wbc_raw)
+
+    if urine_advice:
+        st.markdown(f"""
+        <div style='
+            background-color: rgba(255, 215, 0, 0.2);
+            padding: 1rem;
+            border-radius: 6px;
+            margin-top: 1rem;
+            font-size: 16px;
+        '>
+            <div style='font-size: 18px; font-weight: bold;'>📌 คำแนะนำจากผลตรวจปัสสาวะ</div>
+            <div style='margin-top: 0.5rem;'>{urine_advice}</div>
+        </div>
+        """, unsafe_allow_html=True)
