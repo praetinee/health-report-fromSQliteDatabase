@@ -221,12 +221,24 @@ if "person_row" in st.session_state:
     """, unsafe_allow_html=True)
 
 # ==================== เตรียมข้อมูลจาก SQLite ====================
-
 if "person_row" in st.session_state:
     person = st.session_state["person_row"]
     sex = str(person.get("เพศ", "")).strip()
+
     if sex not in ["ชาย", "หญิง"]:
         st.warning("⚠️ เพศไม่ถูกต้องหรือไม่มีข้อมูล กำลังใช้ค่าอ้างอิงเริ่มต้น")
+        sex = "ไม่ระบุ"
+
+    # ค่ามาตรฐานตามเพศ (หรือ fallback)
+    if sex == "หญิง":
+        hb_low = 12
+        hct_low = 36
+    elif sex == "ชาย":
+        hb_low = 13
+        hct_low = 39
+    else:
+        hb_low = 12
+        hct_low = 36
 
     def get_float(col):
         try:
@@ -246,30 +258,19 @@ if "person_row" in st.session_state:
             return f"{val:.1f}", True
         return f"{val:.1f}", False
 
-# ==================== ดึงค่าตรวจ CBC ====================
-# ค่ามาตรฐานต่างเพศ
-if sex == "หญิง":
-    hb_low = 12
-    hct_low = 36
-elif sex == "ชาย":
-    hb_low = 13
-    hct_low = 39
-else:
-    hb_low = 12  # ค่ากลางหรือ safe default
-    hct_low = 36
+    # ==================== ดึงค่าตรวจ CBC ====================
+    cbc_config = [
+        ("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None),
+        ("ฮีมาโทคริต (Hct)", "HCT", "ชาย > 39%, หญิง > 36%", hct_low, None),
+        ("เม็ดเลือดขาว (WBC)", "WBC (cumm)", "4,000 - 10,000 /cu.mm", 4000, 10000),
+        ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150,000 - 500,000 /cu.mm", 150000, 500000),
+    ]
 
-cbc_config = [
-    ("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None),
-    ("ฮีมาโทคริต (Hct)", "HCT", "ชาย > 39%, หญิง > 36%", hct_low, None),
-    ("เม็ดเลือดขาว (WBC)", "WBC (cumm)", "4,000 - 10,000 /cu.mm", 4000, 10000),
-    ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150,000 - 500,000 /cu.mm", 150000, 500000),
-]
-
-cbc_rows = []
-for label, col, norm, low, high in cbc_config:
-    val = get_float(col)
-    result, is_abn = flag(val, low, high)
-    cbc_rows.append([(label, is_abn), (result, is_abn), (norm, is_abn)])
+    cbc_rows = []
+    for label, col, norm, low, high in cbc_config:
+        val = get_float(col)
+        result, is_abn = flag(val, low, high)
+        cbc_rows.append([(label, is_abn), (result, is_abn), (norm, is_abn)])
 
 # ==================== ตรวจเคมีเลือดทั่วไป (Blood Chemistry) ====================
 blood_config = [
