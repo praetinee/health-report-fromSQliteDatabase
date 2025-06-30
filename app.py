@@ -221,6 +221,26 @@ if "person_row" in st.session_state:
     """, unsafe_allow_html=True)
 
 # ==================== เตรียมข้อมูลจาก SQLite ====================
+
+# ฟังก์ชันช่วยประเมินค่าตรวจทางห้องแล็บ (ใช้ได้ทุกกลุ่ม)
+def get_float(col, person_data):
+    try:
+        val = person_data.get(col, "")
+        if val in [None, "-", ""]:
+            return None
+        return float(str(val).replace(",", "").strip())
+    except:
+        return None
+
+def flag(val, low=None, high=None, higher_is_better=False):
+    if val is None:
+        return "-", False
+    if higher_is_better:
+        return f"{val:.1f}", val < low
+    if (low is not None and val < low) or (high is not None and val > high):
+        return f"{val:.1f}", True
+    return f"{val:.1f}", False
+
 if "person_row" in st.session_state:
     person = st.session_state["person_row"]
     sex = str(person.get("เพศ", "")).strip()
@@ -240,24 +260,6 @@ if "person_row" in st.session_state:
         hb_low = 12
         hct_low = 36
 
-    def get_float(col):
-        try:
-            val = person.get(col, "")
-            if val in [None, "-", ""]:
-                return None
-            return float(str(val).replace(",", "").strip())
-        except:
-            return None
-
-    def flag(val, low=None, high=None, higher_is_better=False):
-        if val is None:
-            return "-", False
-        if higher_is_better:
-            return f"{val:.1f}", val < low
-        if (low is not None and val < low) or (high is not None and val > high):
-            return f"{val:.1f}", True
-        return f"{val:.1f}", False
-
     # ==================== ดึงค่าตรวจ CBC ====================
     cbc_config = [
         ("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None),
@@ -268,7 +270,7 @@ if "person_row" in st.session_state:
 
     cbc_rows = []
     for label, col, norm, low, high in cbc_config:
-        val = get_float(col)
+        val = get_float(col, person)
         result, is_abn = flag(val, low, high)
         cbc_rows.append([(label, is_abn), (result, is_abn), (norm, is_abn)])
 
