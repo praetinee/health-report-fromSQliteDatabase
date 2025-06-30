@@ -1,10 +1,11 @@
+import streamlit as st
 import sqlite3
 import requests
 import pandas as pd
 import io
 import tempfile
 
-@st.cache_data(ttl=600)
+@st.cache(ttl=600)
 def load_sqlite_data():
     try:
         file_id = "1HruO9AMrUfniC8hBWtumVdxLJayEc1Xr"
