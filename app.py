@@ -397,3 +397,55 @@ for name, col, normal, low, high, *opt in blood_config:
     raw = person.get(col, "-")
     result, is_abnormal = flag_value(raw, low, high, higher_is_better=higher_is_better)
     blood_rows.append([(name, is_abnormal), (result, is_abnormal), (normal, is_abnormal)])
+
+def styled_result_table(headers, rows):
+    header_html = "".join([f"<th>{h}</th>" for h in headers])
+    html = f"""
+    <style>
+        .styled-wrapper {{
+            max-width: 820px;
+            margin: 0 auto;
+        }}
+        .styled-result {{
+            width: 100%;
+            border-collapse: collapse;
+        }}
+        .styled-result th {{
+            background-color: #111;
+            color: white;
+            padding: 6px 12px;
+            text-align: center;
+        }}
+        .styled-result td {{
+            padding: 6px 12px;
+            vertical-align: middle;
+        }}
+        .styled-result td:nth-child(2) {{
+            text-align: center;
+        }}
+        .abn {{
+            background-color: rgba(255, 0, 0, 0.15);
+        }}
+    </style>
+    <div class="styled-wrapper">
+        <table class='styled-result'>
+            <thead><tr>{header_html}</tr></thead>
+            <tbody>
+    """
+    for row in rows:
+        row_html = ""
+        for cell, is_abn in row:
+            css = " class='abn'" if is_abn else ""
+            row_html += f"<td{css}>{cell}</td>"
+        html += f"<tr>{row_html}</tr>"
+    html += "</tbody></table></div>"
+    return html
+
+# ✅ Show tables if not empty
+if any(r[1][0] != "-" for r in cbc_rows):
+    st.markdown("### ผลตรวจ CBC")
+    st.markdown(styled_result_table(["รายการ", "ผลตรวจ", "เกณฑ์ปกติ"], cbc_rows), unsafe_allow_html=True)
+
+if any(r[1][0] != "-" for r in blood_rows):
+    st.markdown("### ผลตรวจเลือด (Blood Chemistry)")
+    st.markdown(styled_result_table(["รายการ", "ผลตรวจ", "เกณฑ์ปกติ"], blood_rows), unsafe_allow_html=True)
