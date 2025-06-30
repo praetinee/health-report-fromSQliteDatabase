@@ -337,8 +337,8 @@ def styled_result_table(headers, rows):
     return html_out
 
 # ==================== แสดงผลบนหน้า Streamlit ====================
-left_spacer, col1, col2, right_spacer = st.columns([1, 3, 3, 1])
-
+    left_spacer, col1, col2, right_spacer = st.columns([1, 3, 3, 1])
+    
     with col1:
         st.markdown("<h4>ผลตรวจ CBC</h4>", unsafe_allow_html=True)
         st.markdown(styled_result_table(["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows), unsafe_allow_html=True)
