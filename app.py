@@ -219,3 +219,118 @@ if "person_row" in st.session_state:
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+# ==================== เตรียมข้อมูลจาก SQLite ====================
+
+if "person_row" in st.session_state:
+    person = st.session_state["person_row"]
+    sex = str(person.get("เพศ", "")).strip()
+
+    def get_float(col):
+        try:
+            val = person.get(col, "")
+            if val in [None, "-", ""]:
+                return None
+            return float(str(val).replace(",", "").strip())
+        except:
+            return None
+
+    def flag(val, low=None, high=None, higher_is_better=False):
+        if val is None:
+            return "-", False
+        if higher_is_better:
+            return f"{val:.1f}", val < low
+        if (low is not None and val < low) or (high is not None and val > high):
+            return f"{val:.1f}", True
+        return f"{val:.1f}", False
+
+# ==================== ดึงค่าตรวจ CBC ====================
+# ค่ามาตรฐานต่างเพศ
+hb_low = 12 if sex == "หญิง" else 13
+hct_low = 36 if sex == "หญิง" else 39
+
+cbc_config = [
+    ("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None),
+    ("ฮีมาโทคริต (Hct)", "HCT", "ชาย > 39%, หญิง > 36%", hct_low, None),
+    ("เม็ดเลือดขาว (WBC)", "WBC (cumm)", "4,000 - 10,000 /cu.mm", 4000, 10000),
+    ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150,000 - 500,000 /cu.mm", 150000, 500000),
+]
+
+cbc_rows = []
+for label, col, norm, low, high in cbc_config:
+    val = get_float(col)
+    result, is_abn = flag(val, low, high)
+    cbc_rows.append([(label, is_abn), (result, is_abn), (norm, is_abn)])
+
+# ==================== ตรวจเคมีเลือดทั่วไป (Blood Chemistry) ====================
+blood_config = [
+    ("FBS", "FBS", "74 - 106 mg/dl", 74, 106),
+    ("Uric Acid", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2),
+    ("ALK", "ALP", "30 - 120 U/L", 30, 120),
+    ("SGOT", "SGOT", "< 37 U/L", None, 37),
+    ("SGPT", "SGPT", "< 41 U/L", None, 41),
+    ("CHOL", "CHOL", "150 - 200 mg/dl", 150, 200),
+    ("TGL", "TGL", "35 - 150 mg/dl", 35, 150),
+    ("HDL", "HDL", "> 40 mg/dl", 40, None, True),
+    ("LDL", "LDL", "0 - 160 mg/dl", 0, 160),
+    ("BUN", "BUN", "7.9 - 20 mg/dl", 7.9, 20),
+    ("Cr", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17),
+    ("GFR", "GFR", "> 60 mL/min", 60, None, True),
+]
+
+blood_rows = []
+for label, col, norm, low, high, *opt in blood_config:
+    higher = opt[0] if opt else False
+    val = get_float(col)
+    result, is_abn = flag(val, low, high, higher)
+    blood_rows.append([(label, is_abn), (result, is_abn), (norm, is_abn)])
+
+# ==================== ตาราง Styled Result Table ====================
+def styled_result_table(headers, rows):
+    header_html = "".join([f"<th>{h}</th>" for h in headers])
+    html_out = f"""
+    <style>
+        .styled-wrapper {{
+            max-width: 820px; margin: 0 auto;
+        }}
+        .styled-result {{
+            width: 100%; border-collapse: collapse;
+        }}
+        .styled-result th {{
+            background-color: #111; color: white;
+            padding: 6px 12px; text-align: center;
+        }}
+        .styled-result td {{
+            padding: 6px 12px; vertical-align: middle;
+        }}
+        .styled-result td:nth-child(2) {{
+            text-align: center;
+        }}
+        .abn {{
+            background-color: rgba(255, 0, 0, 0.15);
+        }}
+    </style>
+    <div class="styled-wrapper">
+        <table class='styled-result'>
+            <thead><tr>{header_html}</tr></thead>
+            <tbody>
+    """
+    for row in rows:
+        row_html = ""
+        for cell, is_abn in row:
+            css = " class='abn'" if is_abn else ""
+            row_html += f"<td{css}>{cell}</td>"
+        html_out += f"<tr>{row_html}</tr>"
+    html_out += "</tbody></table></div>"
+    return html_out
+
+# ==================== แสดงผลบนหน้า Streamlit ====================
+left_spacer, col1, col2, right_spacer = st.columns([1, 3, 3, 1])
+
+with col1:
+    st.markdown("<h4>ผลตรวจ CBC</h4>", unsafe_allow_html=True)
+    st.markdown(styled_result_table(["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows), unsafe_allow_html=True)
+
+with col2:
+    st.markdown("<h4>ผลตรวจเคมีเลือด</h4>", unsafe_allow_html=True)
+    st.markdown(styled_result_table(["การตรวจ", "ผล", "ค่าปกติ"], blood_rows), unsafe_allow_html=True)
