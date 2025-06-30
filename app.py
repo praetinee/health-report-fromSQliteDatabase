@@ -4,6 +4,7 @@ import requests
 import pandas as pd
 import io
 import tempfile
+import html  # ใช้สำหรับ html.escape()
 
 @st.cache_data(ttl=600)
 def load_sqlite_data():
@@ -59,7 +60,7 @@ if submitted:
     if hn.strip():
         try:
             hn_val = float(hn.strip())
-            query = query[query["HN"] == hn_val]
+            query = query[np.isclose(query["HN"], hn_val)]
         except ValueError:
             st.error("❌ HN ต้องเป็นตัวเลข เช่น 12345 หรือ 100.0")
             st.stop()
