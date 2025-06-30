@@ -338,6 +338,10 @@ for y in df["Year"].dropna().unique():
             "mchc": "MCHC",
         })
 
+# กำหนด fallback สำหรับ selected_year (กรณีไม่ได้เลือกจาก Session)
+available_years = sorted(df["Year"].dropna().unique(), reverse=True)
+selected_year = st.session_state.get("selected_year") or available_years[0]
+
 # ==================== CBC / BLOOD TEST DISPLAY ====================
 
 cbc_cols = cbc_columns_by_year.get(selected_year, {})
