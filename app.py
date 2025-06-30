@@ -255,7 +255,6 @@ def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
 
     return " ".join(advice_parts)
 
-
 if "person_row" in st.session_state:
     person = st.session_state["person_row"]
     year_display = person.get("Year", "-")
