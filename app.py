@@ -249,7 +249,6 @@ if "person_row" in st.session_state:
         st.warning("⚠️ เพศไม่ถูกต้องหรือไม่มีข้อมูล กำลังใช้ค่าอ้างอิงเริ่มต้น")
         sex = "ไม่ระบุ"
 
-    # ค่ามาตรฐานตามเพศ (หรือ fallback)
     if sex == "หญิง":
         hb_low = 12
         hct_low = 36
@@ -260,7 +259,6 @@ if "person_row" in st.session_state:
         hb_low = 12
         hct_low = 36
 
-    # ==================== ดึงค่าตรวจ CBC ====================
     cbc_config = [
         ("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None),
         ("ฮีมาโทคริต (Hct)", "HCT", "ชาย > 39%, หญิง > 36%", hct_low, None),
@@ -274,7 +272,6 @@ if "person_row" in st.session_state:
         result, is_abn = flag(val, low, high)
         cbc_rows.append([(label, is_abn), (result, is_abn), (norm, is_abn)])
 
-    # ==================== ตรวจเคมีเลือดทั่วไป (Blood Chemistry) ====================
     blood_config = [
         ("FBS", "FBS", "74 - 106 mg/dl", 74, 106),
         ("Uric Acid", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2),
@@ -289,7 +286,7 @@ if "person_row" in st.session_state:
         ("Cr", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17),
         ("GFR", "GFR", "> 60 mL/min", 60, None, True),
     ]
-    
+
     blood_rows = []
     for label, col, norm, low, high, *opt in blood_config:
         higher = opt[0] if opt else False
@@ -297,265 +294,119 @@ if "person_row" in st.session_state:
         result, is_abn = flag(val, low, high, higher)
         blood_rows.append([(label, is_abn), (result, is_abn), (norm, is_abn)])
 
-# ==================== ตาราง Styled Result Table ====================
-def styled_result_table(headers, rows):
-    header_html = "".join([f"<th>{h}</th>" for h in headers])
-    html_out = f"""
-    <style>
-        .styled-wrapper {{
-            max-width: 820px; margin: 0 auto;
-        }}
-        .styled-result {{
-            width: 100%; border-collapse: collapse;
-        }}
-        .styled-result th {{
-            background-color: #111; color: white;
-            padding: 6px 12px; text-align: center;
-        }}
-        .styled-result td {{
-            padding: 6px 12px; vertical-align: middle;
-        }}
-        .styled-result td:nth-child(2) {{
-            text-align: center;
-        }}
-        .abn {{
-            background-color: rgba(255, 0, 0, 0.15);
-        }}
-    </style>
-    <div class="styled-wrapper">
-        <table class='styled-result'>
-            <thead><tr>{header_html}</tr></thead>
-            <tbody>
-    """
-    for row in rows:
-        row_html = ""
-        for cell, is_abn in row:
-            css = " class='abn'" if is_abn else ""
-            row_html += f"<td{css}>{cell}</td>"
-        html_out += f"<tr>{row_html}</tr>"
-    html_out += "</tbody></table></div>"
-    return html_out
+    def styled_result_table(headers, rows):
+        header_html = "".join([f"<th>{h}</th>" for h in headers])
+        html_out = f"""
+        <style>
+            .styled-wrapper {{
+                max-width: 820px; margin: 0 auto;
+            }}
+            .styled-result {{
+                width: 100%; border-collapse: collapse;
+            }}
+            .styled-result th {{
+                background-color: #111; color: white;
+                padding: 6px 12px; text-align: center;
+            }}
+            .styled-result td {{
+                padding: 6px 12px; vertical-align: middle;
+            }}
+            .styled-result td:nth-child(2) {{
+                text-align: center;
+            }}
+            .abn {{
+                background-color: rgba(255, 0, 0, 0.15);
+            }}
+        </style>
+        <div class="styled-wrapper">
+            <table class='styled-result'>
+                <thead><tr>{header_html}</tr></thead>
+                <tbody>
+        """
+        for row in rows:
+            row_html = ""
+            for cell, is_abn in row:
+                css = " class='abn'" if is_abn else ""
+                row_html += f"<td{css}>{cell}</td>"
+            html_out += f"<tr>{row_html}</tr>"
+        html_out += "</tbody></table></div>"
+        return html_out
 
-    # ==================== แสดงผลบนหน้า Streamlit ====================
     left_spacer, col1, col2, right_spacer = st.columns([1, 3, 3, 1])
 
     with col1:
         st.markdown("<h4>ผลตรวจ CBC</h4>", unsafe_allow_html=True)
         st.markdown(styled_result_table(["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows), unsafe_allow_html=True)
-        
+
     with col2:
         st.markdown("<h4>ผลตรวจเคมีเลือด</h4>", unsafe_allow_html=True)
         st.markdown(styled_result_table(["การตรวจ", "ผล", "ค่าปกติ"], blood_rows), unsafe_allow_html=True)
 
-# ==================== วิเคราะห์ GFR → ไต ====================
-def kidney_summary_gfr_only(gfr_raw):
-    try:
-        gfr = float(str(gfr_raw).replace(",", "").strip())
-        if gfr == 0:
-            return ""
-        elif gfr < 60:
-            return "การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย"
-        else:
-            return "ปกติ"
-    except:
-        return ""
+    # ==================== รวมคำแนะนำ ====================
+    gfr_raw = person.get("GFR", "")
+    fbs_raw = person.get("FBS", "")
+    alp_raw = person.get("ALP", "")
+    sgot_raw = person.get("SGOT", "")
+    sgpt_raw = person.get("SGPT", "")
+    uric_raw = person.get("Uric Acid", "")
+    chol_raw = person.get("CHOL", "")
+    tgl_raw = person.get("TGL", "")
+    ldl_raw = person.get("LDL", "")
 
-def kidney_advice_from_summary(summary_text):
-    if summary_text == "การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย":
-        return (
-            "การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย "
-            "ลดอาหารเค็ม อาหารโปรตีนสูงย่อยยาก ดื่มน้ำ 8-10 แก้วต่อวัน "
-            "และไม่ควรกลั้นปัสสาวะ มีอาการบวมผิดปกติให้พบแพทย์"
-        )
-    return ""
+    advice_list = []
+    kidney_summary = kidney_summary_gfr_only(gfr_raw)
+    advice_list.append(kidney_advice_from_summary(kidney_summary))
+    advice_list.append(fbs_advice(fbs_raw))
+    advice_list.append(liver_advice(summarize_liver(alp_raw, sgot_raw, sgpt_raw)))
+    advice_list.append(uric_acid_advice(uric_raw))
+    advice_list.append(lipids_advice(summarize_lipids(chol_raw, tgl_raw, ldl_raw)))
+    advice_list.append(cbc_advice(
+        person.get("Hb(%)", ""), 
+        person.get("HCT", ""), 
+        person.get("WBC (cumm)", ""), 
+        person.get("Plt (/mm)", ""),
+        sex=sex
+    ))
 
-# ==================== วิเคราะห์ FBS → น้ำตาล ====================
-def fbs_advice(fbs_raw):
-    try:
-        value = float(str(fbs_raw).replace(",", "").strip())
-        if value == 0:
-            return ""
-        elif 100 <= value < 106:
-            return "ระดับน้ำตาลเริ่มสูงเล็กน้อย ควรปรับพฤติกรรมการบริโภคอาหารหวาน แป้ง และออกกำลังกาย"
-        elif 106 <= value < 126:
-            return "ระดับน้ำตาลสูงเล็กน้อย ควรลดอาหารหวาน แป้ง ของมัน ตรวจติดตามน้ำตาลซ้ำ และออกกำลังกายสม่ำเสมอ"
-        elif value >= 126:
-            return "ระดับน้ำตาลสูง ควรพบแพทย์เพื่อตรวจยืนยันเบาหวาน และติดตามอาการ"
-        else:
-            return ""
-    except:
-        return ""
+    from collections import OrderedDict
 
-# ==================== วิเคราะห์ Liver Function (ALP, SGOT, SGPT) ====================
-def summarize_liver(alp_val, sgot_val, sgpt_val):
-    try:
-        alp = float(alp_val)
-        sgot = float(sgot_val)
-        sgpt = float(sgpt_val)
-        if alp == 0 or sgot == 0 or sgpt == 0:
-            return "-"
-        if alp > 120 or sgot > 36 or sgpt > 40:
-            return "การทำงานของตับสูงกว่าเกณฑ์ปกติเล็กน้อย"
-        return "ปกติ"
-    except:
-        return "-"
+    def merge_final_advice_grouped(messages):
+        groups = {
+            "FBS": [], "ไต": [], "ตับ": [], "ยูริค": [], "ไขมัน": [], "อื่นๆ": []
+        }
 
-def liver_advice(summary_text):
-    if summary_text == "การทำงานของตับสูงกว่าเกณฑ์ปกติเล็กน้อย":
-        return "ควรลดอาหารไขมันสูงและตรวจติดตามการทำงานของตับซ้ำ"
-    elif summary_text == "ปกติ":
-        return ""
-    return "-"
+        for msg in messages:
+            if not msg or msg.strip() in ["-", ""]:
+                continue
+            if "น้ำตาล" in msg:
+                groups["FBS"].append(msg)
+            elif "ไต" in msg:
+                groups["ไต"].append(msg)
+            elif "ตับ" in msg:
+                groups["ตับ"].append(msg)
+            elif "พิวรีน" in msg or "ยูริค" in msg:
+                groups["ยูริค"].append(msg)
+            elif "ไขมัน" in msg:
+                groups["ไขมัน"].append(msg)
+            else:
+                groups["อื่นๆ"].append(msg)
 
-# ==================== วิเคราะห์ Uric Acid ====================
-def uric_acid_advice(value_raw):
-    try:
-        value = float(value_raw)
-        if value > 7.2:
-            return "ควรลดอาหารที่มีพิวรีนสูง เช่น เครื่องในสัตว์ อาหารทะเล และพบแพทย์หากมีอาการปวดข้อ"
-        return ""
-    except:
-        return "-"
+        icon_map = {
+            "FBS": "🍬", "ไต": "💧", "ตับ": "🫀",
+            "ยูริค": "🦴", "ไขมัน": "🧈", "อื่นๆ": "📝"
+        }
 
-# ==================== วิเคราะห์ ไขมันในเลือด (CHOL, TGL, LDL) ====================
-def summarize_lipids(chol_raw, tgl_raw, ldl_raw):
-    try:
-        chol = float(str(chol_raw).replace(",", "").strip())
-        tgl = float(str(tgl_raw).replace(",", "").strip())
-        ldl = float(str(ldl_raw).replace(",", "").strip())
-        if chol == 0 and tgl == 0:
-            return ""
-        if chol >= 250 or tgl >= 250 or ldl >= 180:
-            return "ไขมันในเลือดสูง"
-        elif chol <= 200 and tgl <= 150:
-            return "ปกติ"
-        else:
-            return "ไขมันในเลือดสูงเล็กน้อย"
-    except:
-        return ""
+        output = []
+        for title, msgs in groups.items():
+            if msgs:
+                unique_msgs = list(OrderedDict.fromkeys(msgs))
+                output.append(f"<b>{icon_map.get(title)} {title}:</b> {' '.join(unique_msgs)}")
 
-def lipids_advice(summary_text):
-    if summary_text == "ไขมันในเลือดสูง":
-        return (
-            "ไขมันในเลือดสูง ควรลดอาหารที่มีไขมันอิ่มตัว เช่น ของทอด หนังสัตว์ "
-            "ออกกำลังกายสม่ำเสมอ และพิจารณาพบแพทย์เพื่อตรวจติดตาม"
-        )
-    elif summary_text == "ไขมันในเลือดสูงเล็กน้อย":
-        return (
-            "ไขมันในเลือดสูงเล็กน้อย ควรปรับพฤติกรรมการบริโภค ลดของมัน "
-            "และออกกำลังกายเพื่อควบคุมระดับไขมัน"
-        )
-    return ""
+        if not output:
+            return "ไม่พบคำแนะนำเพิ่มเติมจากผลตรวจ"
 
-# ==================== คำแนะนำหมวด CBC ====================
-def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
-    advice_parts = []
+        return "<div style='margin-bottom: 0.75rem;'>" + "</div><div style='margin-bottom: 0.75rem;'>".join(output) + "</div>"
 
-    try:
-        hb_val = float(hb)
-        hb_ref = 13 if sex == "ชาย" else 12
-        if hb_val < hb_ref:
-            advice_parts.append("ระดับฮีโมโกลบินต่ำ ควรตรวจหาภาวะโลหิตจางและติดตามซ้ำ")
-
-    except: pass
-
-    try:
-        hct_val = float(hct)
-        hct_ref = 39 if sex == "ชาย" else 36
-        if hct_val < hct_ref:
-            advice_parts.append("ค่าฮีมาโตคริตต่ำ ควรตรวจหาภาวะเลือดจางและตรวจติดตาม")
-
-    except: pass
-
-    try:
-        wbc_val = float(wbc)
-        if wbc_val < 4000:
-            advice_parts.append("เม็ดเลือดขาวต่ำ อาจเกิดจากภูมิคุ้มกันลด ควรติดตาม")
-        elif wbc_val > 10000:
-            advice_parts.append("เม็ดเลือดขาวสูง อาจมีการอักเสบ ติดเชื้อ หรือความผิดปกติ ควรพบแพทย์")
-
-    except: pass
-
-    try:
-        plt_val = float(plt)
-        if plt_val < 150000:
-            advice_parts.append("เกล็ดเลือดต่ำ อาจมีภาวะเลือดออกง่าย ควรตรวจยืนยันซ้ำ")
-        elif plt_val > 500000:
-            advice_parts.append("เกล็ดเลือดสูง ควรพบแพทย์เพื่อตรวจหาสาเหตุเพิ่มเติม")
-
-    except: pass
-
-    return " ".join(advice_parts)
-
-# ==================== รวมคำแนะนำทั้งหมด ====================
-advice_list = []
-
-# 🔍 ดึงค่าดิบ
-gfr_raw = person.get("GFR", "")
-fbs_raw = person.get("FBS", "")
-alp_raw = person.get("ALP", "")
-sgot_raw = person.get("SGOT", "")
-sgpt_raw = person.get("SGPT", "")
-uric_raw = person.get("Uric Acid", "")
-chol_raw = person.get("CHOL", "")
-tgl_raw = person.get("TGL", "")
-ldl_raw = person.get("LDL", "")
-
-# 📋 วิเคราะห์คำแนะนำ
-kidney_summary = kidney_summary_gfr_only(gfr_raw)
-advice_list.append(kidney_advice_from_summary(kidney_summary))
-advice_list.append(fbs_advice(fbs_raw))
-advice_list.append(liver_advice(summarize_liver(alp_raw, sgot_raw, sgpt_raw)))
-advice_list.append(uric_acid_advice(uric_raw))
-advice_list.append(lipids_advice(summarize_lipids(chol_raw, tgl_raw, ldl_raw)))
-advice_list.append(cbc_advice(
-    person.get("Hb(%)", ""), 
-    person.get("HCT", ""), 
-    person.get("WBC (cumm)", ""), 
-    person.get("Plt (/mm)", ""),
-    sex=sex
-))
-
-# ==================== แสดงผลรวมคำแนะนำ ====================
-from collections import OrderedDict
-
-def merge_final_advice_grouped(messages):
-    groups = {
-        "FBS": [], "ไต": [], "ตับ": [], "ยูริค": [], "ไขมัน": [], "อื่นๆ": []
-    }
-
-    for msg in messages:
-        if not msg or msg == "-" or msg.strip() == "":
-            continue
-        if "น้ำตาล" in msg:
-            groups["FBS"].append(msg)
-        elif "ไต" in msg:
-            groups["ไต"].append(msg)
-        elif "ตับ" in msg:
-            groups["ตับ"].append(msg)
-        elif "พิวรีน" in msg or "ยูริค" in msg:
-            groups["ยูริค"].append(msg)
-        elif "ไขมัน" in msg:
-            groups["ไขมัน"].append(msg)
-        else:
-            groups["อื่นๆ"].append(msg)
-
-    section_texts = []
-    icon_map = {
-        "FBS": "🍬", "ไต": "💧", "ตับ": "🫀",
-        "ยูริค": "🦴", "ไขมัน": "🧈", "อื่นๆ": "📝"
-    }
-    for title, msgs in groups.items():
-        if msgs:
-            unique_msgs = list(OrderedDict.fromkeys(msgs))
-            section_texts.append(f"<b>{icon_map.get(title)} {title}:</b> {' '.join(unique_msgs)}")
-
-    if not section_texts:
-        return "ไม่พบคำแนะนำเพิ่มเติมจากผลตรวจ"
-
-    return "<div style='margin-bottom: 0.75rem;'>" + "</div><div style='margin-bottom: 0.75rem;'>".join(section_texts) + "</div>"
-
-    # แสดงผล
     st.markdown(f"""
     <div style="
         background-color: rgba(33, 150, 243, 0.15);
