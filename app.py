@@ -274,28 +274,28 @@ if "person_row" in st.session_state:
         result, is_abn = flag(val, low, high)
         cbc_rows.append([(label, is_abn), (result, is_abn), (norm, is_abn)])
 
-# ==================== ตรวจเคมีเลือดทั่วไป (Blood Chemistry) ====================
-blood_config = [
-    ("FBS", "FBS", "74 - 106 mg/dl", 74, 106),
-    ("Uric Acid", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2),
-    ("ALK", "ALP", "30 - 120 U/L", 30, 120),
-    ("SGOT", "SGOT", "< 37 U/L", None, 37),
-    ("SGPT", "SGPT", "< 41 U/L", None, 41),
-    ("CHOL", "CHOL", "150 - 200 mg/dl", 150, 200),
-    ("TGL", "TGL", "35 - 150 mg/dl", 35, 150),
-    ("HDL", "HDL", "> 40 mg/dl", 40, None, True),
-    ("LDL", "LDL", "0 - 160 mg/dl", 0, 160),
-    ("BUN", "BUN", "7.9 - 20 mg/dl", 7.9, 20),
-    ("Cr", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17),
-    ("GFR", "GFR", "> 60 mL/min", 60, None, True),
-]
-
-blood_rows = []
-for label, col, norm, low, high, *opt in blood_config:
-    higher = opt[0] if opt else False
-    val = get_float(col, person)
-    result, is_abn = flag(val, low, high, higher)
-    blood_rows.append([(label, is_abn), (result, is_abn), (norm, is_abn)])
+    # ==================== ตรวจเคมีเลือดทั่วไป (Blood Chemistry) ====================
+    blood_config = [
+        ("FBS", "FBS", "74 - 106 mg/dl", 74, 106),
+        ("Uric Acid", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2),
+        ("ALK", "ALP", "30 - 120 U/L", 30, 120),
+        ("SGOT", "SGOT", "< 37 U/L", None, 37),
+        ("SGPT", "SGPT", "< 41 U/L", None, 41),
+        ("CHOL", "CHOL", "150 - 200 mg/dl", 150, 200),
+        ("TGL", "TGL", "35 - 150 mg/dl", 35, 150),
+        ("HDL", "HDL", "> 40 mg/dl", 40, None, True),
+        ("LDL", "LDL", "0 - 160 mg/dl", 0, 160),
+        ("BUN", "BUN", "7.9 - 20 mg/dl", 7.9, 20),
+        ("Cr", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17),
+        ("GFR", "GFR", "> 60 mL/min", 60, None, True),
+    ]
+    
+    blood_rows = []
+    for label, col, norm, low, high, *opt in blood_config:
+        higher = opt[0] if opt else False
+        val = get_float(col, person)
+        result, is_abn = flag(val, low, high, higher)
+        blood_rows.append([(label, is_abn), (result, is_abn), (norm, is_abn)])
 
 # ==================== ตาราง Styled Result Table ====================
 def styled_result_table(headers, rows):
