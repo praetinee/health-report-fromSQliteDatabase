@@ -225,6 +225,8 @@ if "person_row" in st.session_state:
 if "person_row" in st.session_state:
     person = st.session_state["person_row"]
     sex = str(person.get("เพศ", "")).strip()
+    if sex not in ["ชาย", "หญิง"]:
+        st.warning("⚠️ เพศไม่ถูกต้องหรือไม่มีข้อมูล กำลังใช้ค่าอ้างอิงเริ่มต้น")
 
     def get_float(col):
         try:
@@ -246,8 +248,15 @@ if "person_row" in st.session_state:
 
 # ==================== ดึงค่าตรวจ CBC ====================
 # ค่ามาตรฐานต่างเพศ
-hb_low = 12 if sex == "หญิง" else 13
-hct_low = 36 if sex == "หญิง" else 39
+if sex == "หญิง":
+    hb_low = 12
+    hct_low = 36
+elif sex == "ชาย":
+    hb_low = 13
+    hct_low = 39
+else:
+    hb_low = 12  # ค่ากลางหรือ safe default
+    hct_low = 36
 
 cbc_config = [
     ("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None),
