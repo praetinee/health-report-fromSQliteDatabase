@@ -244,6 +244,9 @@ if "person_row" in st.session_state:
             return f"{val:.1f}", True
         return f"{val:.1f}", False
 
+# ✅ ดึงค่าตัวแปรเพศก่อนใช้งาน
+sex = str(person.get("เพศ", "")).strip()
+
 # ==================== ดึงค่าตรวจ CBC ====================
 # ค่ามาตรฐานต่างเพศ
 hb_low = 12 if sex == "หญิง" else 13
