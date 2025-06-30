@@ -61,7 +61,7 @@ if submitted:
     if hn.strip():
         try:
             hn_val = float(hn.strip())
-            query = query[np.isclose(query["HN"], hn_val)]
+            query = query[query["HN"].astype(float).apply(lambda x: np.isclose(x, hn_val))]
         except ValueError:
             st.error("❌ HN ต้องเป็นตัวเลข เช่น 12345 หรือ 100.0")
             st.stop()
