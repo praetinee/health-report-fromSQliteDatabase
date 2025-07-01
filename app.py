@@ -105,7 +105,7 @@ if "search_result" in st.session_state:
 def get_float(col, person_data):
     try:
         val = person_data.get(col, "")
-        if val in [None, "-", ""]:
+        if is_empty(val):
             return None
         return float(str(val).replace(",", "").strip())
     except:
@@ -143,6 +143,8 @@ def kidney_advice_from_summary(summary_text):
     return ""
 
 def fbs_advice(fbs_raw):
+    if is_empty(fbs_raw):
+        return ""
     try:
         value = float(str(fbs_raw).replace(",", "").strip())
         if value == 0:
@@ -339,10 +341,13 @@ if "person_row" in st.session_state:
     bp_desc = interpret_bp(sbp, dbp)
     bp_full = f"{sbp_val} - {bp_desc}" if bp_desc != "-" else sbp_val
 
-    pulse = f"{pulse} ครั้ง/นาที" if pulse not in ["-", None, "nan"] else "-"
-    weight = f"{weight} กก." if weight not in ["-", None, "nan"] else "-"
-    height = f"{height} ซม." if height not in ["-", None, "nan"] else "-"
-    waist = f"{waist} ซม." if waist not in ["-", None, "nan"] else "-"
+    def is_empty(val):
+        return str(val).strip().lower() in ["", "-", "none", "nan"]
+    
+    pulse = f"{pulse} ครั้ง/นาที" if not is_empty(pulse) else "-"
+    weight = f"{weight} กก." if not is_empty(weight) else "-"
+    height = f"{height} ซม." if not is_empty(height) else "-"
+    waist = f"{waist} ซม." if not is_empty(waist) else "-"
 
     summary_advice = html.escape(combined_health_advice(bmi_val, sbp, dbp))
 
@@ -382,7 +387,7 @@ if "person_row" in st.session_state:
 def get_float(col, person_data):
     try:
         val = person_data.get(col, "")
-        if val in [None, "-", ""]:
+        if is_empty(val):
             return None
         return float(str(val).replace(",", "").strip())
     except:
