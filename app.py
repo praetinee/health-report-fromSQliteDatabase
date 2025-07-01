@@ -365,7 +365,7 @@ if "person_row" in st.session_state:
             <div><b>ชื่อ-สกุล:</b> {person.get('ชื่อ-สกุล', '-')}</div>
             <div><b>อายุ:</b> {person.get('อายุ', '-')} ปี</div>
             <div><b>เพศ:</b> {person.get('เพศ', '-')}</div>
-            <div><b>HN:</b> {person.get('HN', '-')}</div>
+            <div><b>HN:</b> {str(int(float(person.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person.get('HN', '-')}</div>
             <div><b>หน่วยงาน:</b> {person.get('หน่วยงาน', '-')}</div>
         </div>
         <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; margin-bottom: 16px; text-align: center;">
