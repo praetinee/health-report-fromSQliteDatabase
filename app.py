@@ -665,16 +665,60 @@ if "person_row" in st.session_state:
     
             return "ควรตรวจปัสสาวะซ้ำเพื่อติดตามผล"
     
-        urine_data = {
-            "การตรวจ": ["Albumin (โปรตีน)", "Sugar (น้ำตาล)", "RBC (เม็ดเลือดแดง)", "WBC (เม็ดเลือดขาว)"],
-            "ผลตรวจ": [alb_raw, sugar_raw, rbc_raw, wbc_raw],
-            "การแปลผล": [
-                interpret_alb(alb_raw),
-                interpret_sugar(sugar_raw),
-                interpret_rbc(rbc_raw),
-                interpret_wbc(wbc_raw),
-            ]
-        }
+        urine_tests = [
+            ("สี (Colour)", person.get("Color", "-"), "Yellow, Pale Yellow"),
+            ("น้ำตาล (Sugar)", person.get("sugar", "-"), "Negative"),
+            ("โปรตีน (Albumin)", person.get("Alb", "-"), "Negative, trace"),
+            ("กรด-ด่าง (pH)", person.get("pH", "-"), "5.0 - 8.0"),
+            ("ความถ่วงจำเพาะ (Sp.gr)", person.get("Spgr", "-"), "1.003 - 1.030"),
+            ("เม็ดเลือดแดง (RBC)", person.get("RBC1", "-"), "0 - 2 cell/HPF"),
+            ("เม็ดเลือดขาว (WBC)", person.get("WBC1", "-"), "0 - 5 cell/HPF"),
+            ("เซลล์เยื่อบุผิว (Squam.epit.)", person.get("SQ-epi", "-"), "0 - 10 cell/HPF"),
+            ("อื่นๆ", person.get("ORTER", "-"), "-"),
+        ]
+    
+        urine_df = pd.DataFrame(urine_tests, columns=["ชื่อการตรวจ", "ผลตรวจ", "ค่าปกติ"])
+    
+        def render_urine_html_table(df):
+            html_out = """
+            <style>
+                .urine-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 16px auto;
+                    font-size: 16px;
+                }
+                .urine-table th {
+                    background-color: #2e7d32;
+                    color: white;
+                    padding: 10px;
+                    text-align: center;
+                }
+                .urine-table td {
+                    padding: 10px;
+                    border: 1px solid #ccc;
+                    text-align: center;
+                }
+                .urine-abn {
+                    background-color: rgba(183, 28, 28, 0.15);
+                    font-weight: bold;
+                }
+            </style>
+            <table class='urine-table'>
+                <thead>
+                    <tr><th>ชื่อการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr>
+                </thead>
+                <tbody>
+            """
+            for _, row in df.iterrows():
+                val = str(row["ผลตรวจ"]).strip().lower()
+                is_abnormal = val not in ["-", "negative", "trace", "0", "yellow", "pale yellow", "0-1", "0-2", "1.01", "1.015", "1.02", "1.025"]
+                row_class = "urine-abn" if is_abnormal else ""
+                html_out += f"<tr><td>{row['ชื่อการตรวจ']}</td><td class='{row_class}'>{row['ผลตรวจ']}</td><td>{row['ค่าปกติ']}</td></tr>"
+            html_out += "</tbody></table>"
+            return html_out
+    
+        st.markdown(render_urine_html_table(urine_df), unsafe_allow_html=True)
         urine_df = pd.DataFrame(urine_data)
         st.dataframe(urine_df, use_container_width=True)
     
