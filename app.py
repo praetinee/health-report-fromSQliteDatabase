@@ -588,6 +588,8 @@ left_spacer2, left_col, right_col, right_spacer2 = st.columns([1, 3, 3, 1])
 with left_col:
     st.markdown(render_section_header("ผลการตรวจปัสสาวะ (Urinalysis)"), unsafe_allow_html=True)
 
+if "person_row" in st.session_state:
+    person = st.session_state["person_row"]
     sex = person.get("เพศ", "").strip()
 
     urine_config = [
