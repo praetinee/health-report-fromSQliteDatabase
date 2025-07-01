@@ -672,7 +672,7 @@ if "person_row" in st.session_state:
         ]
         df_urine = pd.DataFrame(urine_data, columns=["ชื่อการตรวจ", "ผลตรวจ", "ค่าปกติ", "การแปลผล"])
     
-        def render_urine_table(df):
+        def render_urine_html_table(df):
             style = """
             <style>
                 .urine-table {
@@ -688,22 +688,29 @@ if "person_row" in st.session_state:
                     text-align: center;
                 }
                 .urine-table td {
-                    padding: 8px;
+                    padding: 10px;
+                    border: 1px solid #444;
                     text-align: center;
-                    border: 1px solid #ccc;
+                    color: white;
                 }
-                .abn {
-                    background-color: rgba(255, 0, 0, 0.1);
+                .urine-abn {
+                    background-color: #4a1a1a;
                     font-weight: bold;
+                }
+                .urine-row {
+                    background-color: rgba(255,255,255,0.02);
                 }
             </style>
             """
-            html = f"{style}<table class='urine-table'><thead><tr><th>ชื่อการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th><th>การแปลผล</th></tr></thead><tbody>"
+            html_out = style + "<table class='urine-table'><thead><tr><th>ชื่อการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead><tbody>"
+        
             for _, row in df.iterrows():
-                abn_class = "abn" if row["การแปลผล"] not in ["-", "ปกติ", "ไม่พบ"] else ""
-                html += f"<tr><td>{row['ชื่อการตรวจ']}</td><td class='{abn_class}'>{row['ผลตรวจ']}</td><td>{row['ค่าปกติ']}</td><td>{row['การแปลผล']}</td></tr>"
-            html += "</tbody></table>"
-            return html
+                val = str(row["ผลตรวจ"]).strip().lower()
+                is_abnormal = val not in ["-", "negative", "trace", "0", "yellow", "pale yellow", "0-1", "0-2", "1.01", "1.015", "1.02", "1.025"]
+                css = "urine-abn" if is_abnormal else "urine-row"
+                html_out += f"<tr class='{css}'><td>{row['ชื่อการตรวจ']}</td><td>{row['ผลตรวจ']}</td><td>{row['ค่าปกติ']}</td></tr>"
+            html_out += "</tbody></table>"
+            return html_out
     
         st.markdown(render_urine_table(df_urine), unsafe_allow_html=True)
     
