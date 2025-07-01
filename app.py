@@ -853,6 +853,8 @@ if "person_row" in st.session_state:
         </table>
     </div>
     """, unsafe_allow_html=True)
+    
+    left_col, right_col = st.columns(2)
 
     with right_col:
         st.markdown(render_section_header("ผลเอกซเรย์", "Chest X-ray"), unsafe_allow_html=True)
