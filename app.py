@@ -702,7 +702,7 @@ if "person_row" in st.session_state:
                 }
             </style>
             """
-            html_out = style + "<table class='urine-table'><thead><tr><th>ชื่อการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead><tbody>"
+            html_out = style + "<table class='urine-table'><thead><tr><th>ชื่อการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th><th>การแปลผล</th></tr></thead><tbody>"
         
             for _, row in df.iterrows():
                 val = str(row["ผลตรวจ"]).strip().lower()
@@ -712,7 +712,7 @@ if "person_row" in st.session_state:
             html_out += "</tbody></table>"
             return html_out
     
-        st.markdown(render_urine_table(df_urine), unsafe_allow_html=True)
+        st.markdown(render_urine_html_table(df_urine), unsafe_allow_html=True)
     
         summary = advice_urine(sex, alb_raw, sugar_raw, rbc_raw, wbc_raw)
         if summary:
