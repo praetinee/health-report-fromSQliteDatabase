@@ -698,9 +698,11 @@ if "person_row" in st.session_state:
                 }
                 .urine-table {
                     width: 100%;
-                    border-collapse: collapse;
+                    border-collapse: separate;
+                    border-spacing: 0; /* สำคัญมาก */
                     font-size: 16px;
                     font-family: "Segoe UI", sans-serif;
+                    overflow: hidden;  /* ช่วยให้ corner ทำงานในบาง browser */
                 }
                 .urine-table thead th {
                     background-color: #1c1c1c;
@@ -720,6 +722,9 @@ if "person_row" in st.session_state:
                 }
                 .urine-row {
                     background-color: rgba(255,255,255,0.02);
+                }
+                .urine-table tr:last-child td {
+                    border-bottom: none;
                 }
             </style>
             """
