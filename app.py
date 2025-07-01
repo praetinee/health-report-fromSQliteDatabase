@@ -602,6 +602,7 @@ if "person_row" in st.session_state:
     """, unsafe_allow_html=True)
 
     # ==================== Urinalysis Section ====================
+    
     st.markdown("""
     <div style='
         background-color: #1b5e20;
@@ -617,6 +618,9 @@ if "person_row" in st.session_state:
         ผลการตรวจปัสสาวะ<br><span style='font-size: 18px; font-weight: normal;'>(Urinalysis)</span>
     </div>
     """, unsafe_allow_html=True)
+
+    # ✅ เพิ่มส่วนแบ่งคอลัมน์
+    left_spacer_ua, col_ua_left, col_ua_right, right_spacer_ua = st.columns([1, 3, 3, 1])
     
     if "person_row" in st.session_state:
         person = st.session_state["person_row"]
@@ -703,6 +707,7 @@ if "person_row" in st.session_state:
             ("เซลล์เยื่อบุผิว (Squam.epit.)", person.get("SQ-epi", "-"), "0 - 10 cell/HPF"),
             ("อื่นๆ", person.get("ORTER", "-"), "-"),
         ]
+    with col_ua_left:
         df_urine = pd.DataFrame(urine_data, columns=["ชื่อการตรวจ", "ผลตรวจ", "ค่าปกติ"])
     
         def render_urine_html_table(df):
@@ -772,3 +777,63 @@ if "person_row" in st.session_state:
             """, unsafe_allow_html=True)
         else:
             st.success("ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ ไม่มีคำแนะนำเพิ่มเติม")
+
+    # ==================== Stool Section ====================
+        def render_section_header(title, subtitle=None):
+            return f"""
+            <div style='
+                background-color: #1b5e20;
+                color: white;
+                text-align: center;
+                padding: 1rem 0.5rem;
+                font-size: 20px;
+                font-weight: bold;
+                font-family: "Segoe UI", sans-serif;
+                border-radius: 8px;
+                margin-top: 2rem;
+                margin-bottom: 1rem;
+            '>
+                {title}{'<br><span style="font-size: 18px; font-weight: normal;">(' + subtitle + ')</span>' if subtitle else ''}
+            </div>
+            """
+        
+        def interpret_stool_exam(val):
+            val = str(val).strip().lower()
+            if val in ["-", "", "normal"]:
+                return "ไม่พบเม็ดเลือดขาวในอุจจาระ ถือว่าปกติ"
+            elif "wbc" in val or "เม็ดเลือดขาว" in val:
+                return "พบเม็ดเลือดขาวในอุจจาระ น่าตรวจซ้ำ"
+            return val
+        
+        def interpret_stool_cs(val):
+            val = str(val).strip().lower()
+            if val in ["-", "", "normal", "ไม่มี", "ไม่พบ"]:
+                return "ไม่พบการติดเชื้อ"
+            return f"พบเชื้อ: {val}"
+        
+        # ✅ ตำแหน่งนี้: ใต้ตารางปัสสาวะ (หรือใน col_ua_right)
+        st.markdown(render_section_header("ผลตรวจอุจจาระ", "Stool Examination"), unsafe_allow_html=True)
+        
+        stool_exam_raw = person.get("Stool exam", "").strip()
+        stool_cs_raw = person.get("Stool C/S", "").strip()
+        
+        exam_text = interpret_stool_exam(stool_exam_raw)
+        cs_text = interpret_stool_cs(stool_cs_raw)
+        
+        st.markdown(f"""
+        <p style='
+            font-size: 16px;
+            line-height: 1.7;
+            margin-bottom: 1rem;
+            background-color: #111;
+            padding: 1rem;
+            border-radius: 6px;
+            color: white;
+        '>
+            <b>ผลตรวจอุจจาระทั่วไป:</b> {exam_text}<br>
+            <b>ผลตรวจอุจจาระเพาะเชื้อ:</b> {cs_text}
+        </p>
+        """, unsafe_allow_html=True)
+
+    with col_ua_right:
+        
