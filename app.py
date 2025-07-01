@@ -113,10 +113,8 @@ def get_float(col, person_data):
         return None
 
 def flag(val, low=None, high=None, higher_is_better=False):
-    if val is None or isinstance(val, str) and val.strip() in ["", "-", "none", "nan"]:
-        return "-", False
     try:
-        val = float(val)
+        val = float(str(val).replace(",", "").strip())
     except:
         return "-", False
 
@@ -128,7 +126,8 @@ def flag(val, low=None, high=None, higher_is_better=False):
     if high is not None and val > high:
         return f"{val:.1f}", True
 
-    return f"{val:.1f}", False  # ✅ อยู่ในช่วง → ไม่ผิดปกติ
+    # ✅ อยู่ในช่วง [low, high] รวมขอบ
+    return f"{val:.1f}", False
 
 # ========== ฟังก์ชันวิเคราะห์ค่าต่าง ๆ (ต้องอยู่ก่อนเรียกใช้) ==========
 def kidney_summary_gfr_only(gfr_raw):
@@ -409,10 +408,8 @@ def get_float(col, person_data):
         return None
 
 def flag(val, low=None, high=None, higher_is_better=False):
-    if val is None or isinstance(val, str) and val.strip() in ["", "-", "none", "nan"]:
-        return "-", False
     try:
-        val = float(val)
+        val = float(str(val).replace(",", "").strip())
     except:
         return "-", False
 
@@ -424,7 +421,8 @@ def flag(val, low=None, high=None, higher_is_better=False):
     if high is not None and val > high:
         return f"{val:.1f}", True
 
-    return f"{val:.1f}", False  # ✅ อยู่ในช่วง → ไม่ผิดปกติ
+    # ✅ อยู่ในช่วง [low, high] รวมขอบ
+    return f"{val:.1f}", False
 
 if "person_row" in st.session_state:
     person = st.session_state["person_row"]
