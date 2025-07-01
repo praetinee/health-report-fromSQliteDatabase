@@ -873,12 +873,15 @@ if "person_row" in st.session_state:
 
     with col_ua_right:
         # ============ X-ray Section ============
-    
+        
+        # ✅ หัวตารางเอกซเรย์
         st.markdown(render_section_header("ผลเอกซเรย์", "Chest X-ray"), unsafe_allow_html=True)
     
+        # ✅ ตรวจว่าเป็นค่าว่างหรือไม่
         def is_empty(val):
             return str(val).strip().lower() in ["", "-", "none", "nan"]
     
+        # ✅ ฟังก์ชันแปลผลเอกซเรย์
         def interpret_cxr(val):
             val = str(val or "").strip()
             if is_empty(val):
@@ -887,12 +890,13 @@ if "person_row" in st.session_state:
                 return f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
             return val
     
-        # กำหนดชื่อคอลัมน์ CXR จากปีที่เลือก
+        # ✅ ดึงชื่อคอลัมน์ CXR ตามปี
         selected_year_int = int(selected_year)
         cxr_col = "CXR" if selected_year_int == 2568 else f"CXR{str(selected_year_int)[-2:]}"
         cxr_raw = person.get(cxr_col, "")
         cxr_result = interpret_cxr(cxr_raw)
     
+        # ✅ แสดงผล
         st.markdown(f"""
         <div style='
             background-color: #111;
