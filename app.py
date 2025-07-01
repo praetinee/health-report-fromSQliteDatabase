@@ -601,13 +601,11 @@ if "person_row" in st.session_state:
         sex = person.get("เพศ", "-").strip()
         year_selected = person.get("Year", "-")
     
-        # Raw values
         alb_raw = person.get("Alb", "-")
         sugar_raw = person.get("sugar", "-")
         rbc_raw = person.get("RBC1", "-")
         wbc_raw = person.get("WBC1", "-")
     
-        # Interpreter
         def interpret_alb(value):
             val = str(value).strip().lower()
             if val == "negative":
@@ -672,7 +670,6 @@ if "person_row" in st.session_state:
     
             return "ควรตรวจปัสสาวะซ้ำเพื่อติดตามผล"
     
-        # DataFrame with interpretation
         urine_data = [
             ("สี (Colour)", person.get("Color", "-"), "Yellow, Pale Yellow"),
             ("น้ำตาล (Sugar)", sugar_raw, "Negative"),
@@ -691,18 +688,14 @@ if "person_row" in st.session_state:
             <style>
                 .urine-container {
                     background-color: #111;
-                    border-radius: 12px;
-                    overflow: hidden;
                     margin-top: 1rem;
                     box-shadow: 0 2px 4px rgba(0,0,0,0.4);
                 }
                 .urine-table {
                     width: 100%;
-                    border-collapse: separate;
-                    border-spacing: 0; /* สำคัญมาก */
+                    border-collapse: collapse;
                     font-size: 16px;
                     font-family: "Segoe UI", sans-serif;
-                    overflow: hidden;  /* ช่วยให้ corner ทำงานในบาง browser */
                 }
                 .urine-table thead th {
                     background-color: #1c1c1c;
@@ -723,33 +716,22 @@ if "person_row" in st.session_state:
                 .urine-row {
                     background-color: rgba(255,255,255,0.02);
                 }
-                .urine-table tr:last-child td {
-                    border-bottom: none;
-                }
-                .urine-table tr:last-child td:first-child {
-                    border-bottom-left-radius: 12px;
-                }
-                
-                .urine-table tr:last-child td:last-child {
-                    border-bottom-right-radius: 12px;
-                }
             </style>
             """
-        
-            table_html = "<div class='urine-container'><table class='urine-table'>"
-            table_html += "<thead><tr><th>ชื่อการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead><tbody>"
-        
+            html = "<div class='urine-container'><table class='urine-table'>"
+            html += "<thead><tr><th>ชื่อการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead><tbody>"
+    
             for _, row in df.iterrows():
                 val = str(row["ผลตรวจ"]).strip().lower()
                 is_abnormal = val not in [
                     "-", "negative", "trace", "0", "none", "yellow", "pale yellow",
                     "0-1", "0-2", "1.01", "1.015", "1.02", "1.025", "1.03"
                 ]
-                row_class = "urine-abn" if is_abnormal else "urine-row"
-                table_html += f"<tr class='{row_class}'><td>{row['ชื่อการตรวจ']}</td><td>{row['ผลตรวจ']}</td><td>{row['ค่าปกติ']}</td></tr>"
-        
-            table_html += "</tbody></table></div>"
-            return style + table_html
+                css_class = "urine-abn" if is_abnormal else "urine-row"
+                html += f"<tr class='{css_class}'><td>{row['ชื่อการตรวจ']}</td><td>{row['ผลตรวจ']}</td><td>{row['ค่าปกติ']}</td></tr>"
+    
+            html += "</tbody></table></div>"
+            return style + html
     
         st.markdown(render_urine_html_table(df_urine), unsafe_allow_html=True)
     
