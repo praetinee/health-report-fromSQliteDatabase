@@ -652,6 +652,12 @@ if "person_row" in st.session_state:
         </div>
         """
     
+    def safe_value(val):
+        val = str(val or "").strip()
+        if val.lower() in ["", "nan", "none", "-"]:
+            return "-"
+        return val
+    
     with st.container():
         left_spacer_ua, col_ua_left, col_ua_right, right_spacer_ua = st.columns([1, 3, 3, 1])
     
@@ -740,95 +746,95 @@ if "person_row" in st.session_state:
             ("เซลล์เยื่อบุผิว (Squam.epit.)", person.get("SQ-epi", "-"), "0 - 10 cell/HPF"),
             ("อื่นๆ", person.get("ORTER", "-"), "-"),
         ]
-
-    st.markdown("""
-    <style>
-        .urine-table, .lab-table {
-            width: 100%;
-            table-layout: fixed;
-        }
-        .urine-table td, .lab-table td {
-            overflow-wrap: break-word;
-        }
-        .stMarkdown {
-            overflow-x: auto;
-        }
-    </style>
-    """, unsafe_allow_html=True)
     
-    with col_ua_left:
-        st.markdown(render_section_header("ผลการตรวจปัสสาวะ", "Urinalysis"), unsafe_allow_html=True)
-
-        df_urine = pd.DataFrame(urine_data, columns=["ชื่อการตรวจ", "ผลตรวจ", "ค่าปกติ"])
+        st.markdown("""
+        <style>
+            .urine-table, .lab-table {
+                width: 100%;
+                table-layout: fixed;
+            }
+            .urine-table td, .lab-table td {
+                overflow-wrap: break-word;
+            }
+            .stMarkdown {
+                overflow-x: auto;
+            }
+        </style>
+        """, unsafe_allow_html=True)
     
-        def render_urine_html_table(df):
-            style = """
-            <style>
-                .urine-container {
-                    background-color: #111;
+        with col_ua_left:
+            st.markdown(render_section_header("ผลการตรวจปัสสาวะ", "Urinalysis"), unsafe_allow_html=True)
+    
+            df_urine = pd.DataFrame(urine_data, columns=["ชื่อการตรวจ", "ผลตรวจ", "ค่าปกติ"])
+    
+            def render_urine_html_table(df):
+                style = """
+                <style>
+                    .urine-container {
+                        background-color: #111;
+                        margin-top: 1rem;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+                    }
+                    .urine-table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        font-size: 16px;
+                        font-family: "Segoe UI", sans-serif;
+                    }
+                    .urine-table thead th {
+                        background-color: #1c1c1c;
+                        color: white;
+                        padding: 12px;
+                        text-align: center;
+                        font-weight: bold;
+                    }
+                    .urine-table td {
+                        padding: 12px;
+                        border: 1px solid #333;
+                        text-align: center;
+                        color: white;
+                    }
+                    .urine-abn {
+                        background-color: rgba(255, 64, 64, 0.25);
+                    }
+                    .urine-row {
+                        background-color: rgba(255,255,255,0.02);
+                    }
+                </style>
+                """
+                html = "<div class='urine-container'><table class='urine-table'>"
+                html += "<thead><tr><th>ชื่อการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead><tbody>"
+    
+                for _, row in df.iterrows():
+                    val = str(row["ผลตรวจ"]).strip().lower()
+                    is_abnormal = val not in [
+                        "-", "negative", "trace", "0", "none", "nan", "",
+                        "yellow", "pale yellow",
+                        "0-1", "0-2", "1.01", "1.015", "1.02", "1.025", "1.03"
+                    ]
+                    css_class = "urine-abn" if is_abnormal else "urine-row"
+                    html += f"<tr class='{css_class}'><td>{row['ชื่อการตรวจ']}</td><td>{safe_value(row['ผลตรวจ'])}</td><td>{row['ค่าปกติ']}</td></tr>"
+    
+                html += "</tbody></table></div>"
+                return style + html
+    
+            st.markdown(render_urine_html_table(df_urine), unsafe_allow_html=True)
+    
+            summary = advice_urine(sex, alb_raw, sugar_raw, rbc_raw, wbc_raw)
+            if summary:
+                st.markdown(f"""
+                <div style='
+                    background-color: rgba(255, 215, 0, 0.2);
+                    padding: 1rem;
+                    border-radius: 6px;
                     margin-top: 1rem;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
-                }
-                .urine-table {
-                    width: 100%;
-                    border-collapse: collapse;
                     font-size: 16px;
-                    font-family: "Segoe UI", sans-serif;
-                }
-                .urine-table thead th {
-                    background-color: #1c1c1c;
-                    color: white;
-                    padding: 12px;
-                    text-align: center;
-                    font-weight: bold;
-                }
-                .urine-table td {
-                    padding: 12px;
-                    border: 1px solid #333;
-                    text-align: center;
-                    color: white;
-                }
-                .urine-abn {
-                    background-color: rgba(255, 64, 64, 0.25); /* สีแดงโปร่งแสง */
-                }
-                .urine-row {
-                    background-color: rgba(255,255,255,0.02);
-                }
-            </style>
-            """
-            html = "<div class='urine-container'><table class='urine-table'>"
-            html += "<thead><tr><th>ชื่อการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead><tbody>"
-    
-            for _, row in df.iterrows():
-                val = str(row["ผลตรวจ"]).strip().lower()
-                is_abnormal = val not in [
-                    "-", "negative", "trace", "0", "none", "nan", "", 
-                    "yellow", "pale yellow",
-                    "0-1", "0-2", "1.01", "1.015", "1.02", "1.025", "1.03"
-                ]
-                css_class = "urine-abn" if is_abnormal else "urine-row"
-                html += f"<tr class='{css_class}'><td>{row['ชื่อการตรวจ']}</td><td>{row['ผลตรวจ']}</td><td>{row['ค่าปกติ']}</td></tr>"
-    
-            html += "</tbody></table></div>"
-            return style + html
-    
-        st.markdown(render_urine_html_table(df_urine), unsafe_allow_html=True)
-    
-        summary = advice_urine(sex, alb_raw, sugar_raw, rbc_raw, wbc_raw)
-        if summary:
-            st.markdown(f"""
-            <div style='
-                background-color: rgba(255, 215, 0, 0.2);
-                padding: 1rem;
-                border-radius: 6px;
-                margin-top: 1rem;
-                font-size: 16px;
-            '>
-                <b>📌 คำแนะนำจากผลตรวจปัสสาวะ ปี {year_selected}:</b><br>{summary}
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            st.success("ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ ไม่มีคำแนะนำเพิ่มเติม")
+                '>
+                    <b>📌 คำแนะนำจากผลตรวจปัสสาวะ ปี {year_selected}:</b><br>{summary}
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.success("ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ ไม่มีคำแนะนำเพิ่มเติม")
 
     with col_ua_left:
         # ==================== Stool Section ====================
