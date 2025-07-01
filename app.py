@@ -798,44 +798,54 @@ if "person_row" in st.session_state:
         """
     
     def interpret_stool_exam(val):
-        val = str(val).strip().lower()
-        if val in ["-", "", "none", "nan", "normal"]:
+        val = str(val or "").strip().lower()
+        if val in ["", "-", "none", "nan"]:
             return "-"
+        elif val == "normal":
+            return "ไม่พบเม็ดเลือดขาวในอุจจาระ ถือว่าปกติ"
         elif "wbc" in val or "เม็ดเลือดขาว" in val:
             return "พบเม็ดเลือดขาวในอุจจาระ น่าตรวจซ้ำ"
         return val
     
-    def interpret_stool_cs(val):
-        val = str(val).strip().lower()
-        if val in ["-", "", "none", "nan", "normal", "ไม่มี", "ไม่พบ"]:
+    def interpret_stool_cs(value):
+        value = str(value or "").strip()
+        if value in ["", "-", "none", "nan"]:
             return "-"
-        return f"พบเชื้อ: {val}"
+        if "ไม่พบ" in value or "ปกติ" in value:
+            return "ไม่พบการติดเชื้อ"
+        return "พบการติดเชื้อในอุจจาระ ให้พบแพทย์เพื่อตรวจรักษาเพิ่มเติม"
     
-    # ✅ ใส่ตรงนี้ ใต้ตาราง UA
-    raw_exam = person.get("Stool exam", "")
-    raw_cs = person.get("Stool C/S", "")
+    # ✅ ดึงค่าดิบจากฐานข้อมูล
+    stool_exam_raw = person.get("Stool exam", "")
+    stool_cs_raw = person.get("Stool C/S", "")
     
-    # ตรวจสอบว่ามีการตรวจจริงหรือไม่
-    valid_exam = str(raw_exam).strip().lower() not in ["", "-", "none", "nan"]
-    valid_cs = str(raw_cs).strip().lower() not in ["", "-", "none", "nan"]
+    exam_text = interpret_stool_exam(stool_exam_raw)
+    cs_text = interpret_stool_cs(stool_cs_raw)
     
-    if valid_exam or valid_cs:
-        exam_text = interpret_stool_exam(raw_exam)
-        cs_text = interpret_stool_cs(raw_cs)
+    # ✅ แสดงหัวตาราง
+    st.markdown(render_section_header("ผลตรวจอุจจาระ", "Stool Examination"), unsafe_allow_html=True)
     
-        st.markdown(render_section_header("ผลตรวจอุจจาระ", "Stool Examination"), unsafe_allow_html=True)
-    
-        st.markdown(f"""
-        <p style='
-            font-size: 16px;
-            line-height: 1.7;
-            margin-bottom: 1rem;
-            background-color: #111;
-            padding: 1rem;
-            border-radius: 6px;
-            color: white;
-        '>
-            {"<b>ผลตรวจอุจจาระทั่วไป:</b> " + exam_text + "<br>" if exam_text != "-" else ""}
-            {"<b>ผลตรวจอุจจาระเพาะเชื้อ:</b> " + cs_text if cs_text != "-" else ""}
-        </p>
-        """, unsafe_allow_html=True)
+    # ✅ แสดงผล
+    st.markdown(f"""
+    <div style='
+        font-size: 16px;
+        line-height: 1.7;
+        margin-bottom: 1rem;
+        background-color: #111;
+        padding: 1rem;
+        border-radius: 6px;
+        color: white;
+    '>
+        <table style='width: 100%; border-collapse: collapse;'>
+            <tr>
+                <td style='padding: 8px; border: 1px solid #333;'><b>ผลตรวจอุจจาระทั่วไป</b></td>
+                <td style='padding: 8px; border: 1px solid #333;'>{exam_text if exam_text != "-" else "ไม่ได้เข้ารับการตรวจ"}</td>
+            </tr>
+            <tr>
+                <td style='padding: 8px; border: 1px solid #333;'><b>ผลตรวจอุจจาระเพาะเชื้อ</b></td>
+                <td style='padding: 8px; border: 1px solid #333;'>{cs_text if cs_text != "-" else "ไม่ได้เข้ารับการตรวจ"}</td>
+            </tr>
+        </table>
+    </div>
+    """, unsafe_allow_html=True)
+
