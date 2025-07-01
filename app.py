@@ -580,7 +580,21 @@ if "person_row" in st.session_state:
     """, unsafe_allow_html=True)
 
     # ==================== Urinalysis Section ====================
-    st.markdown("<h3 style='margin-top:2rem;'>🔬 ผลการตรวจปัสสาวะ (Urinalysis)</h3>", unsafe_allow_html=True)
+    st.markdown("""
+    <div style='
+        background-color: #2e7d32;
+        color: white;
+        text-align: center;
+        padding: 1rem 0.5rem;
+        font-size: 20px;
+        font-weight: bold;
+        font-family: "Segoe UI", sans-serif;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    '>
+        ผลการตรวจปัสสาวะ<br><span style='font-size: 18px; font-weight: normal;'>(Urinalysis)</span>
+    </div>
+    """, unsafe_allow_html=True)
     
     if "person_row" in st.session_state:
         person = st.session_state["person_row"]
@@ -675,27 +689,29 @@ if "person_row" in st.session_state:
         def render_urine_html_table(df):
             style = """
             <style>
+                .urine-container {
+                    background-color: #111;
+                    border-radius: 12px;
+                    overflow: hidden;
+                    margin-top: 1rem;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+                }
                 .urine-table {
                     width: 100%;
                     border-collapse: collapse;
-                    margin-top: 1rem;
                     font-size: 16px;
                     font-family: "Segoe UI", sans-serif;
-                    border-radius: 8px;
-                    overflow: hidden;
                 }
                 .urine-table thead th {
-                    background-color: #2e7d32;
+                    background-color: #1c1c1c;
                     color: white;
                     padding: 12px;
                     text-align: center;
                     font-weight: bold;
-                    border-top-left-radius: 8px;
-                    border-top-right-radius: 8px;
                 }
                 .urine-table td {
                     padding: 12px;
-                    border: 1px solid #444;
+                    border: 1px solid #333;
                     text-align: center;
                     color: white;
                 }
@@ -705,13 +721,11 @@ if "person_row" in st.session_state:
                 .urine-row {
                     background-color: rgba(255,255,255,0.02);
                 }
-                .urine-table tr:last-child td {
-                    border-bottom-left-radius: 8px;
-                    border-bottom-right-radius: 8px;
-                }
             </style>
             """
-            html = style + "<table class='urine-table'><thead><tr><th>ชื่อการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead><tbody>"
+        
+            table_html = "<div class='urine-container'><table class='urine-table'>"
+            table_html += "<thead><tr><th>ชื่อการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead><tbody>"
         
             for _, row in df.iterrows():
                 val = str(row["ผลตรวจ"]).strip().lower()
@@ -720,10 +734,10 @@ if "person_row" in st.session_state:
                     "0-1", "0-2", "1.01", "1.015", "1.02", "1.025", "1.03"
                 ]
                 row_class = "urine-abn" if is_abnormal else "urine-row"
-                html += f"<tr class='{row_class}'><td>{row['ชื่อการตรวจ']}</td><td>{row['ผลตรวจ']}</td><td>{row['ค่าปกติ']}</td></tr>"
+                table_html += f"<tr class='{row_class}'><td>{row['ชื่อการตรวจ']}</td><td>{row['ผลตรวจ']}</td><td>{row['ค่าปกติ']}</td></tr>"
         
-            html += "</tbody></table>"
-            return html
+            table_html += "</tbody></table></div>"
+            return style + table_html
     
         st.markdown(render_urine_html_table(df_urine), unsafe_allow_html=True)
     
