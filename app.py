@@ -660,17 +660,17 @@ if "person_row" in st.session_state:
     
         # DataFrame with interpretation
         urine_data = [
-            ("สี (Colour)", person.get("Color", "-"), "Yellow, Pale Yellow", "-"),
-            ("น้ำตาล (Sugar)", sugar_raw, "Negative", interpret_sugar(sugar_raw)),
-            ("โปรตีน (Albumin)", alb_raw, "Negative, trace", interpret_alb(alb_raw)),
-            ("กรด-ด่าง (pH)", person.get("pH", "-"), "5.0 - 8.0", "-"),
-            ("ความถ่วงจำเพาะ (Sp.gr)", person.get("Spgr", "-"), "1.003 - 1.030", "-"),
-            ("เม็ดเลือดแดง (RBC)", rbc_raw, "0 - 2 cell/HPF", interpret_rbc(rbc_raw)),
-            ("เม็ดเลือดขาว (WBC)", wbc_raw, "0 - 5 cell/HPF", interpret_wbc(wbc_raw)),
-            ("เซลล์เยื่อบุผิว (Squam.epit.)", person.get("SQ-epi", "-"), "0 - 10 cell/HPF", "-"),
-            ("อื่นๆ", person.get("ORTER", "-"), "-", "-"),
+            ("สี (Colour)", person.get("Color", "-"), "Yellow, Pale Yellow"),
+            ("น้ำตาล (Sugar)", sugar_raw, "Negative"),
+            ("โปรตีน (Albumin)", alb_raw, "Negative, trace"),
+            ("กรด-ด่าง (pH)", person.get("pH", "-"), "5.0 - 8.0"),
+            ("ความถ่วงจำเพาะ (Sp.gr)", person.get("Spgr", "-"), "1.003 - 1.030"),
+            ("เม็ดเลือดแดง (RBC)", rbc_raw, "0 - 2 cell/HPF"),
+            ("เม็ดเลือดขาว (WBC)", wbc_raw, "0 - 5 cell/HPF"),
+            ("เซลล์เยื่อบุผิว (Squam.epit.)", person.get("SQ-epi", "-"), "0 - 10 cell/HPF"),
+            ("อื่นๆ", person.get("ORTER", "-"), "-"),
         ]
-        df_urine = pd.DataFrame(urine_data, columns=["ชื่อการตรวจ", "ผลตรวจ", "ค่าปกติ", "การแปลผล"])
+        df_urine = pd.DataFrame(urine_data, columns=["ชื่อการตรวจ", "ผลตรวจ", "ค่าปกติ"])
     
         def render_urine_html_table(df):
             style = """
@@ -702,13 +702,14 @@ if "person_row" in st.session_state:
                 }
             </style>
             """
-            html_out = style + "<table class='urine-table'><thead><tr><th>ชื่อการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th><th>การแปลผล</th></tr></thead><tbody>"
+            html_out = style + "<table class='urine-table'><thead><tr><th>ชื่อการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead><tbody>"
         
             for _, row in df.iterrows():
                 val = str(row["ผลตรวจ"]).strip().lower()
                 is_abnormal = val not in ["-", "negative", "trace", "0", "yellow", "pale yellow", "0-1", "0-2", "1.01", "1.015", "1.02", "1.025"]
                 css = "urine-abn" if is_abnormal else "urine-row"
-                html_out += f"<tr class='{css}'><td>{row['ชื่อการตรวจ']}</td><td>{row['ผลตรวจ']}</td><td>{row['ค่าปกติ']}</td><td>{row['การแปลผล']}</td></tr>"
+                html_out += f"<tr class='{css}'><td>{row['ชื่อการตรวจ']}</td><td>{row['ผลตรวจ']}</td><td>{row['ค่าปกติ']}</td></tr>"
+        
             html_out += "</tbody></table>"
             return html_out
     
