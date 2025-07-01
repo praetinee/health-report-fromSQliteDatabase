@@ -582,111 +582,110 @@ if "person_row" in st.session_state:
 # ==================== Urinalysis Section ====================
 st.markdown("<h3 style='margin-top:2rem;'>🔬 ผลการตรวจปัสสาวะ (Urinalysis)</h3>", unsafe_allow_html=True)
 
-# กำหนดเพศ และปี พ.ศ.
-sex = person.get("เพศ", "").strip()
-year_be = selected_year  # เช่น 2568
-year_suffix = str(year_be)[-2:]  # "68"
+# กรองข้อมูลตามปีที่เลือก (selected_year เป็น พ.ศ. เช่น 2568)
+year_selected = selected_year  # จาก dropdown
+df_year = df[df["Year"] == year_selected]
 
-# ค่าคอลัมน์สำหรับปีนั้น ๆ
-alb_col = f"Alb.UA" if year_be == 2568 else f"Alb.UA{year_suffix}"
-sugar_col = f"Sugar.UA" if year_be == 2568 else f"Sugar.UA{year_suffix}"
-rbc_col = f"RBC.UA" if year_be == 2568 else f"RBC.UA{year_suffix}"
-wbc_col = f"WBC.UA" if year_be == 2568 else f"WBC.UA{year_suffix}"
-
-# ดึงค่าจาก person
-alb_raw = person.get(alb_col, "-")
-sugar_raw = person.get(sugar_col, "-")
-rbc_raw = person.get(rbc_col, "-")
-wbc_raw = person.get(wbc_col, "-")
-
-# ฟังก์ชันแปลผล
-def interpret_alb(value):
-    value = str(value).strip().lower()
-    if value == "negative":
-        return "ไม่พบ"
-    elif value in ["trace", "1+", "2+"]:
-        return "พบโปรตีนในปัสสาวะเล็กน้อย"
-    elif value == "3+":
-        return "พบโปรตีนในปัสสาวะ"
-    return "-"
-
-def interpret_sugar(value):
-    value = str(value).strip().lower()
-    if value == "negative":
-        return "ไม่พบ"
-    elif value == "trace":
-        return "พบน้ำตาลในปัสสาวะเล็กน้อย"
-    elif value in ["1+", "2+", "3+", "4+", "5+", "6+"]:
-        return "พบน้ำตาลในปัสสาวะ"
-    return "-"
-
-def interpret_rbc(value):
-    value = str(value).strip().lower()
-    if value in ["0-1", "negative", "1-2", "2-3", "3-5"]:
-        return "ปกติ"
-    elif value in ["5-10", "10-20"]:
-        return "พบเม็ดเลือดแดงในปัสสาวะเล็กน้อย"
-    return "พบเม็ดเลือดแดงในปัสสาวะ"
-
-def interpret_wbc(value):
-    value = str(value).strip().lower()
-    if value in ["0-1", "negative", "1-2", "2-3", "3-5"]:
-        return "ปกติ"
-    elif value in ["5-10", "10-20"]:
-        return "พบเม็ดเลือดขาวในปัสสาวะเล็กน้อย"
-    return "พบเม็ดเลือดขาวในปัสสาวะ"
-
-def advice_urine(sex, alb, sugar, rbc, wbc):
-    alb_text = interpret_alb(alb)
-    sugar_text = interpret_sugar(sugar)
-    rbc_text = interpret_rbc(rbc)
-    wbc_text = interpret_wbc(wbc)
-
-    if all(x in ["-", "ปกติ", "ไม่พบ", "พบโปรตีนในปัสสาวะเล็กน้อย", "พบน้ำตาลในปัสสาวะเล็กน้อย"]
-           for x in [alb_text, sugar_text, rbc_text, wbc_text]):
-        return ""
-
-    if "พบน้ำตาลในปัสสาวะ" in sugar_text and "เล็กน้อย" not in sugar_text:
-        return "ควรลดการบริโภคน้ำตาล และตรวจระดับน้ำตาลในเลือดเพิ่มเติม"
-
-    if sex == "หญิง" and "พบเม็ดเลือดแดง" in rbc_text and "ปกติ" in wbc_text:
-        return "อาจมีปนเปื้อนจากประจำเดือน แนะนำให้ตรวจซ้ำ"
-
-    if sex == "ชาย" and "พบเม็ดเลือดแดง" in rbc_text and "ปกติ" in wbc_text:
-        return "พบเม็ดเลือดแดงในปัสสาวะ ควรตรวจทางเดินปัสสาวะเพิ่มเติม"
-
-    if "พบเม็ดเลือดขาวในปัสสาวะ" in wbc_text and "เล็กน้อย" not in wbc_text:
-        return "อาจมีการอักเสบของระบบทางเดินปัสสาวะ แนะนำให้ตรวจซ้ำ"
-
-    return "ควรตรวจปัสสาวะซ้ำเพื่อติดตามผล"
-
-# ตารางแสดงผล
-urine_data = {
-    "การตรวจ": ["Albumin (โปรตีน)", "Sugar (น้ำตาล)", "RBC (เม็ดเลือดแดง)", "WBC (เม็ดเลือดขาว)"],
-    "ผลตรวจ": [alb_raw, sugar_raw, rbc_raw, wbc_raw],
-    "การแปลผล": [
-        interpret_alb(alb_raw),
-        interpret_sugar(sugar_raw),
-        interpret_rbc(rbc_raw),
-        interpret_wbc(wbc_raw),
-    ]
-}
-urine_df = pd.DataFrame(urine_data)
-st.dataframe(urine_df, use_container_width=True)
-
-# แสดงคำแนะนำ
-urine_summary = advice_urine(sex, alb_raw, sugar_raw, rbc_raw, wbc_raw)
-if urine_summary:
-    st.markdown(f"""
-    <div style='
-        background-color: rgba(255, 215, 0, 0.2);
-        padding: 1rem;
-        border-radius: 6px;
-        margin-top: 1rem;
-        font-size: 16px;
-    '>
-        <b>📌 คำแนะนำจากผลตรวจปัสสาวะ ปี {year_be}:</b><br>{urine_summary}
-    </div>
-    """, unsafe_allow_html=True)
+if df_year.empty:
+    st.warning(f"ไม่พบข้อมูลผลตรวจสำหรับปี {year_selected}")
 else:
-    st.success("ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ ไม่มีคำแนะนำเพิ่มเติม")
+    person_year = df_year.iloc[0]
+    sex = person_year.get("เพศ", "-").strip()
+
+    # ค่าคงที่ (ไม่มีปีในชื่อคอลัมน์)
+    alb_raw = person_year.get("Alb.UA", "-")
+    sugar_raw = person_year.get("Sugar.UA", "-")
+    rbc_raw = person_year.get("RBC.UA", "-")
+    wbc_raw = person_year.get("WBC.UA", "-")
+
+    # แปลผล
+    def interpret_alb(value):
+        value = str(value).strip().lower()
+        if value == "negative":
+            return "ไม่พบ"
+        elif value in ["trace", "1+", "2+"]:
+            return "พบโปรตีนในปัสสาวะเล็กน้อย"
+        elif value == "3+":
+            return "พบโปรตีนในปัสสาวะ"
+        return "-"
+
+    def interpret_sugar(value):
+        value = str(value).strip().lower()
+        if value == "negative":
+            return "ไม่พบ"
+        elif value == "trace":
+            return "พบน้ำตาลในปัสสาวะเล็กน้อย"
+        elif value in ["1+", "2+", "3+", "4+", "5+", "6+"]:
+            return "พบน้ำตาลในปัสสาวะ"
+        return "-"
+
+    def interpret_rbc(value):
+        value = str(value).strip().lower()
+        if value in ["0-1", "negative", "1-2", "2-3", "3-5"]:
+            return "ปกติ"
+        elif value in ["5-10", "10-20"]:
+            return "พบเม็ดเลือดแดงในปัสสาวะเล็กน้อย"
+        return "พบเม็ดเลือดแดงในปัสสาวะ"
+
+    def interpret_wbc(value):
+        value = str(value).strip().lower()
+        if value in ["0-1", "negative", "1-2", "2-3", "3-5"]:
+            return "ปกติ"
+        elif value in ["5-10", "10-20"]:
+            return "พบเม็ดเลือดขาวในปัสสาวะเล็กน้อย"
+        return "พบเม็ดเลือดขาวในปัสสาวะ"
+
+    def advice_urine(sex, alb, sugar, rbc, wbc):
+        alb_text = interpret_alb(alb)
+        sugar_text = interpret_sugar(sugar)
+        rbc_text = interpret_rbc(rbc)
+        wbc_text = interpret_wbc(wbc)
+
+        if all(x in ["-", "ปกติ", "ไม่พบ", "พบโปรตีนในปัสสาวะเล็กน้อย", "พบน้ำตาลในปัสสาวะเล็กน้อย"]
+               for x in [alb_text, sugar_text, rbc_text, wbc_text]):
+            return ""
+
+        if "พบน้ำตาลในปัสสาวะ" in sugar_text and "เล็กน้อย" not in sugar_text:
+            return "ควรลดการบริโภคน้ำตาล และตรวจระดับน้ำตาลในเลือดเพิ่มเติม"
+
+        if sex == "หญิง" and "พบเม็ดเลือดแดง" in rbc_text and "ปกติ" in wbc_text:
+            return "อาจมีปนเปื้อนจากประจำเดือน แนะนำให้ตรวจซ้ำ"
+
+        if sex == "ชาย" and "พบเม็ดเลือดแดง" in rbc_text and "ปกติ" in wbc_text:
+            return "พบเม็ดเลือดแดงในปัสสาวะ ควรตรวจทางเดินปัสสาวะเพิ่มเติม"
+
+        if "พบเม็ดเลือดขาวในปัสสาวะ" in wbc_text and "เล็กน้อย" not in wbc_text:
+            return "อาจมีการอักเสบของระบบทางเดินปัสสาวะ แนะนำให้ตรวจซ้ำ"
+
+        return "ควรตรวจปัสสาวะซ้ำเพื่อติดตามผล"
+
+    # ตารางแสดงผล
+    urine_data = {
+        "การตรวจ": ["Albumin (โปรตีน)", "Sugar (น้ำตาล)", "RBC (เม็ดเลือดแดง)", "WBC (เม็ดเลือดขาว)"],
+        "ผลตรวจ": [alb_raw, sugar_raw, rbc_raw, wbc_raw],
+        "การแปลผล": [
+            interpret_alb(alb_raw),
+            interpret_sugar(sugar_raw),
+            interpret_rbc(rbc_raw),
+            interpret_wbc(wbc_raw),
+        ]
+    }
+    urine_df = pd.DataFrame(urine_data)
+    st.dataframe(urine_df, use_container_width=True)
+
+    # คำแนะนำ
+    urine_summary = advice_urine(sex, alb_raw, sugar_raw, rbc_raw, wbc_raw)
+    if urine_summary:
+        st.markdown(f"""
+        <div style='
+            background-color: rgba(255, 215, 0, 0.2);
+            padding: 1rem;
+            border-radius: 6px;
+            margin-top: 1rem;
+            font-size: 16px;
+        '>
+            <b>📌 คำแนะนำจากผลตรวจปัสสาวะ ปี {year_selected}:</b><br>{urine_summary}
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.success("ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ ไม่มีคำแนะนำเพิ่มเติม")
