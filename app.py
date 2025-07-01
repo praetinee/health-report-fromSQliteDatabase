@@ -856,11 +856,10 @@ if "person_row" in st.session_state:
     
     left_col, right_col = st.columns(2)
 
-    with right_col:
-        st.markdown(render_section_header("ผลเอกซเรย์", "Chest X-ray"), unsafe_allow_html=True)
+    with col_ua_right:
+        # ============ X-ray Section ============
     
-        def get_cxr_col_name(year):
-            return "CXR" if year == 2568 else f"CXR{str(year)[-2:]}"  # เช่น CXR68, CXR67
+        st.markdown(render_section_header("ผลเอกซเรย์", "Chest X-ray"), unsafe_allow_html=True)
     
         def is_empty(val):
             return str(val).strip().lower() in ["", "-", "none", "nan"]
@@ -869,13 +868,13 @@ if "person_row" in st.session_state:
             val = str(val or "").strip()
             if is_empty(val):
                 return "ไม่ได้เข้ารับการตรวจเอกซเรย์"
-            # เพิ่มตรรกะการแปลผลหากต้องการเจาะลึก (เช่น มีคำว่า "ผิดปกติ")
             if any(keyword in val.lower() for keyword in ["ผิดปกติ", "ฝ้า", "รอย", "abnormal", "infiltrate", "lesion"]):
                 return f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
             return val
     
-        selected_year_int = int(selected_year)  # เช่น 2568
-        cxr_col = get_cxr_col_name(selected_year_int)
+        # กำหนดชื่อคอลัมน์ CXR จากปีที่เลือก
+        selected_year_int = int(selected_year)
+        cxr_col = "CXR" if selected_year_int == 2568 else f"CXR{str(selected_year_int)[-2:]}"
         cxr_raw = person.get(cxr_col, "")
         cxr_result = interpret_cxr(cxr_raw)
     
@@ -892,5 +891,3 @@ if "person_row" in st.session_state:
             <b>ผลการตรวจ:</b> {cxr_result}
         </div>
         """, unsafe_allow_html=True)
-
-        
