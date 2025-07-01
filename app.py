@@ -979,3 +979,90 @@ if "person_row" in st.session_state:
             <b>ผลการตรวจ:</b> {ekg_result}
         </div>
         """, unsafe_allow_html=True)
+
+        # === Helper: ป้องกันค่าว่าง
+        def safe_text(val):
+            return "-" if str(val).strip().lower() in ["", "none", "nan", "-"] else str(val).strip()
+        
+        # === Section: Hepatitis A ===
+        st.markdown(render_section_header("ผลการตรวจไวรัสตับอักเสบเอ (Viral hepatitis A)"), unsafe_allow_html=True)
+        
+        hep_a_raw = safe_text(person.get("Hepatitis A"))
+        st.markdown(f"""
+        <div style='
+            font-size: 16px;
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+            background-color: rgba(255,255,255,0.05);
+        '>
+            {hep_a_raw}
+        </div>
+        """, unsafe_allow_html=True)
+        
+        
+        # === Section: Hepatitis B ===
+        st.markdown(render_section_header("ผลการตรวจไวรัสตับอักเสบบี (Viral hepatitis B)"), unsafe_allow_html=True)
+        
+        hbsag_raw = safe_text(person.get("HbsAg"))
+        hbsab_raw = safe_text(person.get("HbsAb"))
+        hbcab_raw = safe_text(person.get("HBcAB"))
+        
+        # ตกแต่งตารางให้ responsive
+        st.markdown(f"""
+        <div style="overflow-x: auto; margin-bottom: 1rem;">
+        <table style='
+            width: 100%;
+            font-size: 16px;
+            text-align: center;
+            border-collapse: collapse;
+            min-width: 300px;
+        '>
+            <thead>
+                <tr style='border-bottom: 1px solid #ccc;'>
+                    <th style="padding: 8px;">HBsAg</th>
+                    <th style="padding: 8px;">HBsAb</th>
+                    <th style="padding: 8px;">HBcAb</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding: 8px;">{hbsag_raw}</td>
+                    <td style="padding: 8px;">{hbsab_raw}</td>
+                    <td style="padding: 8px;">{hbcab_raw}</td>
+                </tr>
+            </tbody>
+        </table>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        
+        # ฟังก์ชันคำแนะนำ
+        def hepatitis_b_advice(hbsag, hbsab, hbcab):
+            hbsag = hbsag.lower()
+            hbsab = hbsab.lower()
+            hbcab = hbcab.lower()
+        
+            if "positive" in hbsag:
+                return "ติดเชื้อไวรัสตับอักเสบบี"
+            elif "positive" in hbsab and "positive" not in hbsag:
+                return "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี"
+            elif "positive" in hbcab and "positive" not in hbsab:
+                return "เคยติดเชื้อแต่ไม่มีภูมิคุ้มกันในปัจจุบัน"
+            elif all(x == "negative" for x in [hbsag, hbsab, hbcab]):
+                return "ไม่มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี"
+            return "ไม่สามารถสรุปผลชัดเจน แนะนำให้พบแพทย์เพื่อประเมินซ้ำ"
+        
+        # แสดงคำแนะนำ
+        advice = hepatitis_b_advice(hbsag_raw, hbsab_raw, hbcab_raw)
+        st.markdown(f"""
+        <div style='
+            font-size: 16px;
+            padding: 1rem;
+            border-radius: 6px;
+            background-color: rgba(255, 215, 0, 0.15);
+            margin-bottom: 1.5rem;
+        '>
+            <b>คำแนะนำ:</b> {advice}
+        </div>
+        """, unsafe_allow_html=True)
