@@ -708,7 +708,7 @@ if "person_row" in st.session_state:
                 val = str(row["ผลตรวจ"]).strip().lower()
                 is_abnormal = val not in ["-", "negative", "trace", "0", "yellow", "pale yellow", "0-1", "0-2", "1.01", "1.015", "1.02", "1.025"]
                 css = "urine-abn" if is_abnormal else "urine-row"
-                html_out += f"<tr class='{css}'><td>{row['ชื่อการตรวจ']}</td><td>{row['ผลตรวจ']}</td><td>{row['ค่าปกติ']}</td></tr>"
+                html_out += f"<tr class='{css}'><td>{row['ชื่อการตรวจ']}</td><td>{row['ผลตรวจ']}</td><td>{row['ค่าปกติ']}</td><td>{row['การแปลผล']}</td></tr>"
             html_out += "</tbody></table>"
             return html_out
     
