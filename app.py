@@ -337,14 +337,14 @@ if "person_row" in st.session_state:
     except:
         bmi_val = None
 
-    sbp_val = f"{sbp}/{dbp} ม.ม.ปรอท" if sbp and dbp else "-"
+    sbp_val = f"{sbp}/{dbp} ม.ม.ปรอท" if sbp is not None and dbp is not None else "-"
     bp_desc = interpret_bp(sbp, dbp)
     bp_full = f"{sbp_val} - {bp_desc}" if bp_desc != "-" else sbp_val
 
     def is_empty(val):
         return str(val).strip().lower() in ["", "-", "none", "nan"]
     
-    pulse = f"{pulse} ครั้ง/นาที" if not is_empty(pulse) else "-"
+    pulse = f"{pulse_val} ครั้ง/นาที" if pulse_val is not None else "-"
     weight = f"{weight} กก." if not is_empty(weight) else "-"
     height = f"{height} ซม." if not is_empty(height) else "-"
     waist = f"{waist} ซม." if not is_empty(waist) else "-"
