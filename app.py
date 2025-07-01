@@ -854,3 +854,41 @@ if "person_row" in st.session_state:
     </div>
     """, unsafe_allow_html=True)
 
+    with right_col:
+        st.markdown(render_section_header("ผลเอกซเรย์", "Chest X-ray"), unsafe_allow_html=True)
+    
+        def get_cxr_col_name(year):
+            return "CXR" if year == 2568 else f"CXR{str(year)[-2:]}"  # เช่น CXR68, CXR67
+    
+        def is_empty(val):
+            return str(val).strip().lower() in ["", "-", "none", "nan"]
+    
+        def interpret_cxr(val):
+            val = str(val or "").strip()
+            if is_empty(val):
+                return "ไม่ได้เข้ารับการตรวจเอกซเรย์"
+            # เพิ่มตรรกะการแปลผลหากต้องการเจาะลึก (เช่น มีคำว่า "ผิดปกติ")
+            if any(keyword in val.lower() for keyword in ["ผิดปกติ", "ฝ้า", "รอย", "abnormal", "infiltrate", "lesion"]):
+                return f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
+            return val
+    
+        selected_year_int = int(selected_year)  # เช่น 2568
+        cxr_col = get_cxr_col_name(selected_year_int)
+        cxr_raw = person.get(cxr_col, "")
+        cxr_result = interpret_cxr(cxr_raw)
+    
+        st.markdown(f"""
+        <div style='
+            background-color: #111;
+            color: white;
+            font-size: 16px;
+            line-height: 1.6;
+            padding: 1.25rem;
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+        '>
+            <b>ผลการตรวจ:</b> {cxr_result}
+        </div>
+        """, unsafe_allow_html=True)
+
+        
