@@ -802,7 +802,8 @@ if "person_row" in st.session_state:
             for _, row in df.iterrows():
                 val = str(row["ผลตรวจ"]).strip().lower()
                 is_abnormal = val not in [
-                    "-", "negative", "trace", "0", "none", "yellow", "pale yellow",
+                    "-", "negative", "trace", "0", "none", "nan", "", 
+                    "yellow", "pale yellow",
                     "0-1", "0-2", "1.01", "1.015", "1.02", "1.025", "1.03"
                 ]
                 css_class = "urine-abn" if is_abnormal else "urine-row"
