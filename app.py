@@ -547,10 +547,12 @@ if "person_row" in st.session_state:
     left_spacer, col1, col2, right_spacer = st.columns([1, 3, 3, 1])
 
     with col1:
-        st.markdown(render_lab_section("ผลตรวจ CBC", "Complete Blood Count", ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows), unsafe_allow_html=True)
+        st.markdown(render_section_header("ผลตรวจ CBC", "Complete Blood Count"), unsafe_allow_html=True)
+        st.markdown(render_lab_section("", "", ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows), unsafe_allow_html=True)
     
     with col2:
-        st.markdown(render_lab_section("ผลตรวจเคมีเลือด", "Blood Chemistry", ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows), unsafe_allow_html=True)
+        st.markdown(render_section_header("ผลตรวจเคมีเลือด", "Blood Chemistry"), unsafe_allow_html=True)
+        st.markdown(render_lab_section("", "", ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows), unsafe_allow_html=True)
 
     # ==================== รวมคำแนะนำ ====================
     gfr_raw = person.get("GFR", "")
