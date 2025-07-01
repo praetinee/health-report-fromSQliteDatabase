@@ -450,10 +450,10 @@ if "person_row" in st.session_state:
         result, is_abn = flag(val, low, high, higher)
         blood_rows.append([(label, is_abn), (result, is_abn), (norm, is_abn)])
 
-    def styled_result_table(headers, rows):
+    def render_lab_section(title, subtitle, headers, rows):
         style = """
         <style>
-            .lab-table-container {
+            .lab-container {
                 background-color: #111;
                 margin-top: 1rem;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.4);
@@ -485,27 +485,40 @@ if "person_row" in st.session_state:
             }
         </style>
         """
-        html = "<div class='lab-table-container'><table class='lab-table'>"
+        html = f"""
+        <div style='
+            background-color: #2e7d32;
+            color: white;
+            text-align: center;
+            padding: 1rem 0.5rem;
+            font-size: 20px;
+            font-weight: bold;
+            font-family: "Segoe UI", sans-serif;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        '>
+            {title}<br><span style='font-size: 18px; font-weight: normal;'>({subtitle})</span>
+        </div>
+        """
+    
+        html += "<div class='lab-container'><table class='lab-table'>"
         html += "<thead><tr>" + "".join(f"<th>{h}</th>" for h in headers) + "</tr></thead><tbody>"
+    
         for row in rows:
-            row_cells = ""
-            is_abn_row = any(flag for _, flag in row)
-            css_class = "lab-abn" if is_abn_row else "lab-row"
-            for cell, _ in row:
-                row_cells += f"<td class='{css_class}'>{cell}</td>"
-            html += f"<tr>{row_cells}</tr>"
+            is_abn = any(flag for _, flag in row)
+            row_class = "lab-abn" if is_abn else "lab-row"
+            html += "<tr>" + "".join(f"<td class='{row_class}'>{cell}</td>" for cell, _ in row) + "</tr>"
+    
         html += "</tbody></table></div>"
         return style + html
 
     left_spacer, col1, col2, right_spacer = st.columns([1, 3, 3, 1])
 
     with col1:
-        st.markdown("<h4>ผลตรวจ CBC</h4>", unsafe_allow_html=True)
-        st.markdown(styled_result_table(["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows), unsafe_allow_html=True)
-
+        st.markdown(render_lab_section("ผลตรวจ CBC", "Complete Blood Count", ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows), unsafe_allow_html=True)
+    
     with col2:
-        st.markdown("<h4>ผลตรวจเคมีเลือด</h4>", unsafe_allow_html=True)
-        st.markdown(styled_result_table(["การตรวจ", "ผล", "ค่าปกติ"], blood_rows), unsafe_allow_html=True)
+        st.markdown(render_lab_section("ผลตรวจเคมีเลือด", "Blood Chemistry", ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows), unsafe_allow_html=True)
 
     # ==================== รวมคำแนะนำ ====================
     gfr_raw = person.get("GFR", "")
