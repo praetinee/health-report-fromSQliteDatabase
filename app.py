@@ -607,7 +607,24 @@ if "person_row" in st.session_state:
     """, unsafe_allow_html=True)
 
     # ==================== Urinalysis Section ====================
-
+    def render_section_header(title, subtitle=None):
+        return f"""
+        <div style='
+            background-color: #1b5e20;
+            color: white;
+            text-align: center;
+            padding: 1rem 0.5rem;
+            font-size: 20px;
+            font-weight: bold;
+            font-family: "Segoe UI", sans-serif;
+            border-radius: 8px;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        '>
+            {title}{'<br><span style="font-size: 18px; font-weight: normal;">(' + subtitle + ')</span>' if subtitle else ''}
+        </div>
+        """
+    
     with st.container():
         left_spacer_ua, col_ua_left, col_ua_right, right_spacer_ua = st.columns([1, 3, 3, 1])
     
