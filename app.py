@@ -804,7 +804,7 @@ if "person_row" in st.session_state:
         elif val == "normal":
             return "ไม่พบเม็ดเลือดขาวในอุจจาระ ถือว่าปกติ"
         elif "wbc" in val or "เม็ดเลือดขาว" in val:
-            return "พบเม็ดเลือดขาวในอุจจาระ น่าตรวจซ้ำ"
+            return "พบเม็ดเลือดขาวในอุจจาระ นัดตรวจซ้ำ"
         return val
     
     def interpret_stool_cs(value):
