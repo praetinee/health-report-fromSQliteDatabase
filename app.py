@@ -635,6 +635,11 @@ if "person_row" in st.session_state:
 
     # ==================== Urinalysis Section ====================
     def render_section_header(title, subtitle=None):
+        if subtitle:
+            full_title = f"{title} <span style='font-weight: normal;'>({subtitle})</span>"
+        else:
+            full_title = title
+    
         return f"""
         <div style='
             background-color: #1b5e20;
@@ -648,7 +653,7 @@ if "person_row" in st.session_state:
             margin-top: 2rem;
             margin-bottom: 1rem;
         '>
-            {title}{'<br><span style="font-size: 18px; font-weight: normal;">(' + subtitle + ')</span>' if subtitle else ''}
+            {full_title}
         </div>
         """
     
