@@ -596,16 +596,20 @@ if "person_row" in st.session_state:
         # ฟังก์ชันตีความผล (เหมือนเดิม)
         def interpret_alb(value):
             value = str(value).strip().lower()
+            if value in ["-", "none", "nan", ""]:
+                return "-"
             if value == "negative":
                 return "ไม่พบ"
             elif value in ["trace", "1+", "2+"]:
                 return "พบโปรตีนในปัสสาวะเล็กน้อย"
-            elif value == "3+":
+            elif value in ["3+", "4+"]:
                 return "พบโปรตีนในปัสสาวะ"
             return "-"
-    
+        
         def interpret_sugar(value):
             value = str(value).strip().lower()
+            if value in ["-", "none", "nan", ""]:
+                return "-"
             if value == "negative":
                 return "ไม่พบ"
             elif value == "trace":
@@ -613,17 +617,21 @@ if "person_row" in st.session_state:
             elif value in ["1+", "2+", "3+", "4+", "5+", "6+"]:
                 return "พบน้ำตาลในปัสสาวะ"
             return "-"
-    
+        
         def interpret_rbc(value):
             value = str(value).strip().lower()
+            if value in ["-", "none", "nan", ""]:
+                return "-"
             if value in ["0-1", "negative", "1-2", "2-3", "3-5"]:
                 return "ปกติ"
             elif value in ["5-10", "10-20"]:
                 return "พบเม็ดเลือดแดงในปัสสาวะเล็กน้อย"
             return "พบเม็ดเลือดแดงในปัสสาวะ"
-    
+        
         def interpret_wbc(value):
             value = str(value).strip().lower()
+            if value in ["-", "none", "nan", ""]:
+                return "-"
             if value in ["0-1", "negative", "1-2", "2-3", "3-5"]:
                 return "ปกติ"
             elif value in ["5-10", "10-20"]:
@@ -651,6 +659,9 @@ if "person_row" in st.session_state:
     
             if "พบเม็ดเลือดขาวในปัสสาวะ" in wbc_text and "เล็กน้อย" not in wbc_text:
                 return "อาจมีการอักเสบของระบบทางเดินปัสสาวะ แนะนำให้ตรวจซ้ำ"
+            if all(x in ["-", "ปกติ", "ไม่พบ", "พบโปรตีนในปัสสาวะเล็กน้อย", "พบน้ำตาลในปัสสาวะเล็กน้อย"]
+                   for x in [alb_text, sugar_text, rbc_text, wbc_text]):
+                return ""
     
             return "ควรตรวจปัสสาวะซ้ำเพื่อติดตามผล"
     
