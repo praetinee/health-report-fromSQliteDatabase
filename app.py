@@ -712,7 +712,24 @@ if "person_row" in st.session_state:
             ("เซลล์เยื่อบุผิว (Squam.epit.)", person.get("SQ-epi", "-"), "0 - 10 cell/HPF"),
             ("อื่นๆ", person.get("ORTER", "-"), "-"),
         ]
+
+    st.markdown("""
+    <style>
+        .urine-table, .lab-table {
+            width: 100%;
+            table-layout: fixed;
+        }
+        .urine-table td, .lab-table td {
+            overflow-wrap: break-word;
+        }
+        .stMarkdown {
+            overflow-x: auto;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
     with col_ua_left:
+
         df_urine = pd.DataFrame(urine_data, columns=["ชื่อการตรวจ", "ผลตรวจ", "ค่าปกติ"])
     
         def render_urine_html_table(df):
@@ -853,8 +870,6 @@ if "person_row" in st.session_state:
         </table>
     </div>
     """, unsafe_allow_html=True)
-    
-    left_col, right_col = st.columns(2)
 
     with col_ua_right:
         # ============ X-ray Section ============
