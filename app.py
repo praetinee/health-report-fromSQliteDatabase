@@ -478,7 +478,7 @@ if "person_row" in st.session_state:
                 color: white;
             }
             .lab-abn {
-                background-color: #4a1a1a;
+                background-color: rgba(255, 64, 64, 0.25); /* สีแดงโปร่งแสง */
             }
             .lab-row {
                 background-color: rgba(255,255,255,0.02);
@@ -487,7 +487,7 @@ if "person_row" in st.session_state:
         """
         html = f"""
         <div style='
-            background-color: #2e7d32;
+            background-color: #1b5e20;
             color: white;
             text-align: center;
             padding: 1rem 0.5rem;
@@ -604,7 +604,7 @@ if "person_row" in st.session_state:
     # ==================== Urinalysis Section ====================
     st.markdown("""
     <div style='
-        background-color: #2e7d32;
+        background-color: #1b5e20;
         color: white;
         text-align: center;
         padding: 1rem 0.5rem;
@@ -733,7 +733,7 @@ if "person_row" in st.session_state:
                     color: white;
                 }
                 .urine-abn {
-                    background-color: #4a1a1a;
+                    background-color: rgba(255, 64, 64, 0.25); /* สีแดงโปร่งแสง */
                 }
                 .urine-row {
                     background-color: rgba(255,255,255,0.02);
