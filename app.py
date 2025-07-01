@@ -343,7 +343,12 @@ if "person_row" in st.session_state:
 
     def is_empty(val):
         return str(val).strip().lower() in ["", "-", "none", "nan"]
-    
+    # ดึงค่าและแปลงชีพจรให้เป็นจำนวนเต็ม ไม่มีทศนิยม
+    try:
+        pulse_val = int(float(person.get("pulse", 0)))
+    except:
+        pulse_val = None
+
     pulse = f"{pulse_val} ครั้ง/นาที" if pulse_val is not None else "-"
     weight = f"{weight} กก." if not is_empty(weight) else "-"
     height = f"{height} ซม." if not is_empty(height) else "-"
