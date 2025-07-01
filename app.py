@@ -43,6 +43,7 @@ def load_sqlite_data():
 df = load_sqlite_data()
 
 # ==================== UI SEARCH FORM ====================
+st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 st.markdown("<h1 style='text-align:center;'>ระบบรายงานผลตรวจสุขภาพ</h1>", unsafe_allow_html=True)
 st.markdown("<h4 style='text-align:center; color:gray;'>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม รพ.สันทราย -</h4>", unsafe_allow_html=True)
 
