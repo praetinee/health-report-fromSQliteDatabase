@@ -726,6 +726,13 @@ if "person_row" in st.session_state:
                 .urine-table tr:last-child td {
                     border-bottom: none;
                 }
+                .urine-table tr:last-child td:first-child {
+                    border-bottom-left-radius: 12px;
+                }
+                
+                .urine-table tr:last-child td:last-child {
+                    border-bottom-right-radius: 12px;
+                }
             </style>
             """
         
