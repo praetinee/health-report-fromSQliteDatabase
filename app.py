@@ -603,6 +603,29 @@ if "person_row" in st.session_state:
         ("เซลล์เยื่อบุผิว (Squam.epit.)", person.get("SQ-epi", ""), "0 - 10 cell/HPF"),
         ("อื่นๆ", person.get("ORTER", ""), "-"),
     ]
+def flag_urine_value(value, normal_range):
+    if pd.isna(value) or value in ["-", ""]:
+        return "-", False
+
+    value = str(value).strip().lower()
+    normal_range = str(normal_range).strip().lower()
+
+    if " - " in normal_range:
+        try:
+            low, high = [float(x) for x in normal_range.replace("cell/hpf", "").strip().split(" - ")]
+            numeric_value = float(str(value).split()[0])
+            is_abnormal = numeric_value < low or numeric_value > high
+            return f"{value}", is_abnormal
+        except:
+            return f"{value}", False
+    elif "," in normal_range:
+        normal_values = [x.strip().lower() for x in normal_range.split(",")]
+        is_abnormal = value not in normal_values
+        return f"{value}", is_abnormal
+    elif value != normal_range:
+        return f"{value}", True
+
+    return f"{value}", False
 
     urine_rows = []
     for name, value, normal in urine_config:
