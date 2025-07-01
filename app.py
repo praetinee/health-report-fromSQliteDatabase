@@ -814,8 +814,8 @@ if "person_row" in st.session_state:
         # ✅ ตำแหน่งนี้: ใต้ตารางปัสสาวะ (หรือใน col_ua_right)
         st.markdown(render_section_header("ผลตรวจอุจจาระ", "Stool Examination"), unsafe_allow_html=True)
         
-        stool_exam_raw = person.get("Stool exam", "").strip()
-        stool_cs_raw = person.get("Stool C/S", "").strip()
+        stool_exam_raw = str(person.get("Stool exam", "") or "").strip()
+        stool_cs_raw = str(person.get("Stool C/S", "") or "").strip()
         
         exam_text = interpret_stool_exam(stool_exam_raw)
         cs_text = interpret_stool_cs(stool_cs_raw)
