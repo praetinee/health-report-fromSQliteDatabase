@@ -582,110 +582,103 @@ if "person_row" in st.session_state:
     # ==================== Urinalysis Section ====================
     st.markdown("<h3 style='margin-top:2rem;'>🔬 ผลการตรวจปัสสาวะ (Urinalysis)</h3>", unsafe_allow_html=True)
     
-    year_selected = person.get("Year", None)
-    if year_selected is None:
-        st.warning("ไม่พบปีของผลตรวจในข้อมูล")
-    else:
+    if "person_row" in st.session_state:
+        person = st.session_state["person_row"]
         sex = person.get("เพศ", "-").strip()
+        year_selected = person.get("Year", "-")
     
-        alb_raw = person.get("Alb.UA", "-")
-        sugar_raw = person.get("Sugar.UA", "-")
-        rbc_raw = person.get("RBC.UA", "-")
-        wbc_raw = person.get("WBC.UA", "-")
+        # Raw values
+        alb_raw = person.get("Alb", "-")
+        sugar_raw = person.get("sugar", "-")
+        rbc_raw = person.get("RBC1", "-")
+        wbc_raw = person.get("WBC1", "-")
     
-        # ฟังก์ชันตีความผล (เหมือนเดิม)
+        # Interpreter
         def interpret_alb(value):
-            value = str(value).strip().lower()
-            if value in ["-", "none", "nan", ""]:
-                return "-"
-            if value == "negative":
+            val = str(value).strip().lower()
+            if val == "negative":
                 return "ไม่พบ"
-            elif value in ["trace", "1+", "2+"]:
+            elif val in ["trace", "1+", "2+"]:
                 return "พบโปรตีนในปัสสาวะเล็กน้อย"
-            elif value in ["3+", "4+"]:
+            elif val in ["3+", "4+"]:
                 return "พบโปรตีนในปัสสาวะ"
             return "-"
-        
+    
         def interpret_sugar(value):
-            value = str(value).strip().lower()
-            if value in ["-", "none", "nan", ""]:
-                return "-"
-            if value == "negative":
+            val = str(value).strip().lower()
+            if val == "negative":
                 return "ไม่พบ"
-            elif value == "trace":
+            elif val == "trace":
                 return "พบน้ำตาลในปัสสาวะเล็กน้อย"
-            elif value in ["1+", "2+", "3+", "4+", "5+", "6+"]:
+            elif val in ["1+", "2+", "3+", "4+", "5+", "6+"]:
                 return "พบน้ำตาลในปัสสาวะ"
             return "-"
-        
+    
         def interpret_rbc(value):
-            value = str(value).strip().lower()
-            if value in ["-", "none", "nan", ""]:
-                return "-"
-            if value in ["0-1", "negative", "1-2", "2-3", "3-5"]:
+            val = str(value).strip().lower()
+            if val in ["0-1", "negative", "1-2", "2-3", "3-5"]:
                 return "ปกติ"
-            elif value in ["5-10", "10-20"]:
+            elif val in ["5-10", "10-20"]:
                 return "พบเม็ดเลือดแดงในปัสสาวะเล็กน้อย"
-            return "พบเม็ดเลือดแดงในปัสสาวะ"
-        
+            elif val not in ["-", "none", "nan", ""]:
+                return "พบเม็ดเลือดแดงในปัสสาวะ"
+            return "-"
+    
         def interpret_wbc(value):
-            value = str(value).strip().lower()
-            if value in ["-", "none", "nan", ""]:
-                return "-"
-            if value in ["0-1", "negative", "1-2", "2-3", "3-5"]:
+            val = str(value).strip().lower()
+            if val in ["0-1", "negative", "1-2", "2-3", "3-5"]:
                 return "ปกติ"
-            elif value in ["5-10", "10-20"]:
+            elif val in ["5-10", "10-20"]:
                 return "พบเม็ดเลือดขาวในปัสสาวะเล็กน้อย"
-            return "พบเม็ดเลือดขาวในปัสสาวะ"
+            elif val not in ["-", "none", "nan", ""]:
+                return "พบเม็ดเลือดขาวในปัสสาวะ"
+            return "-"
     
         def advice_urine(sex, alb, sugar, rbc, wbc):
-            alb_text = interpret_alb(alb)
-            sugar_text = interpret_sugar(sugar)
-            rbc_text = interpret_rbc(rbc)
-            wbc_text = interpret_wbc(wbc)
+            alb_t = interpret_alb(alb)
+            sugar_t = interpret_sugar(sugar)
+            rbc_t = interpret_rbc(rbc)
+            wbc_t = interpret_wbc(wbc)
     
             if all(x in ["-", "ปกติ", "ไม่พบ", "พบโปรตีนในปัสสาวะเล็กน้อย", "พบน้ำตาลในปัสสาวะเล็กน้อย"]
-                   for x in [alb_text, sugar_text, rbc_text, wbc_text]):
+                   for x in [alb_t, sugar_t, rbc_t, wbc_t]):
                 return ""
     
-            if "พบน้ำตาลในปัสสาวะ" in sugar_text and "เล็กน้อย" not in sugar_text:
+            if "พบน้ำตาลในปัสสาวะ" in sugar_t and "เล็กน้อย" not in sugar_t:
                 return "ควรลดการบริโภคน้ำตาล และตรวจระดับน้ำตาลในเลือดเพิ่มเติม"
     
-            if sex == "หญิง" and "พบเม็ดเลือดแดง" in rbc_text and "ปกติ" in wbc_text:
+            if sex == "หญิง" and "พบเม็ดเลือดแดง" in rbc_t and "ปกติ" in wbc_t:
                 return "อาจมีปนเปื้อนจากประจำเดือน แนะนำให้ตรวจซ้ำ"
     
-            if sex == "ชาย" and "พบเม็ดเลือดแดง" in rbc_text and "ปกติ" in wbc_text:
+            if sex == "ชาย" and "พบเม็ดเลือดแดง" in rbc_t and "ปกติ" in wbc_t:
                 return "พบเม็ดเลือดแดงในปัสสาวะ ควรตรวจทางเดินปัสสาวะเพิ่มเติม"
     
-            if "พบเม็ดเลือดขาวในปัสสาวะ" in wbc_text and "เล็กน้อย" not in wbc_text:
+            if "พบเม็ดเลือดขาว" in wbc_t and "เล็กน้อย" not in wbc_t:
                 return "อาจมีการอักเสบของระบบทางเดินปัสสาวะ แนะนำให้ตรวจซ้ำ"
-            if all(x in ["-", "ปกติ", "ไม่พบ", "พบโปรตีนในปัสสาวะเล็กน้อย", "พบน้ำตาลในปัสสาวะเล็กน้อย"]
-                   for x in [alb_text, sugar_text, rbc_text, wbc_text]):
-                return ""
     
             return "ควรตรวจปัสสาวะซ้ำเพื่อติดตามผล"
     
-        urine_tests = [
-            ("สี (Colour)", person.get("Color", "-"), "Yellow, Pale Yellow"),
-            ("น้ำตาล (Sugar)", person.get("sugar", "-"), "Negative"),
-            ("โปรตีน (Albumin)", person.get("Alb", "-"), "Negative, trace"),
-            ("กรด-ด่าง (pH)", person.get("pH", "-"), "5.0 - 8.0"),
-            ("ความถ่วงจำเพาะ (Sp.gr)", person.get("Spgr", "-"), "1.003 - 1.030"),
-            ("เม็ดเลือดแดง (RBC)", person.get("RBC1", "-"), "0 - 2 cell/HPF"),
-            ("เม็ดเลือดขาว (WBC)", person.get("WBC1", "-"), "0 - 5 cell/HPF"),
-            ("เซลล์เยื่อบุผิว (Squam.epit.)", person.get("SQ-epi", "-"), "0 - 10 cell/HPF"),
-            ("อื่นๆ", person.get("ORTER", "-"), "-"),
+        # DataFrame with interpretation
+        urine_data = [
+            ("สี (Colour)", person.get("Color", "-"), "Yellow, Pale Yellow", "-"),
+            ("น้ำตาล (Sugar)", sugar_raw, "Negative", interpret_sugar(sugar_raw)),
+            ("โปรตีน (Albumin)", alb_raw, "Negative, trace", interpret_alb(alb_raw)),
+            ("กรด-ด่าง (pH)", person.get("pH", "-"), "5.0 - 8.0", "-"),
+            ("ความถ่วงจำเพาะ (Sp.gr)", person.get("Spgr", "-"), "1.003 - 1.030", "-"),
+            ("เม็ดเลือดแดง (RBC)", rbc_raw, "0 - 2 cell/HPF", interpret_rbc(rbc_raw)),
+            ("เม็ดเลือดขาว (WBC)", wbc_raw, "0 - 5 cell/HPF", interpret_wbc(wbc_raw)),
+            ("เซลล์เยื่อบุผิว (Squam.epit.)", person.get("SQ-epi", "-"), "0 - 10 cell/HPF", "-"),
+            ("อื่นๆ", person.get("ORTER", "-"), "-", "-"),
         ]
+        df_urine = pd.DataFrame(urine_data, columns=["ชื่อการตรวจ", "ผลตรวจ", "ค่าปกติ", "การแปลผล"])
     
-        urine_df = pd.DataFrame(urine_tests, columns=["ชื่อการตรวจ", "ผลตรวจ", "ค่าปกติ"])
-    
-        def render_urine_html_table(df):
-            html_out = """
+        def render_urine_table(df):
+            style = """
             <style>
                 .urine-table {
                     width: 100%;
                     border-collapse: collapse;
-                    margin: 16px auto;
+                    margin-top: 1rem;
                     font-size: 16px;
                 }
                 .urine-table th {
@@ -695,35 +688,27 @@ if "person_row" in st.session_state:
                     text-align: center;
                 }
                 .urine-table td {
-                    padding: 10px;
-                    border: 1px solid #ccc;
+                    padding: 8px;
                     text-align: center;
+                    border: 1px solid #ccc;
                 }
-                .urine-abn {
-                    background-color: rgba(183, 28, 28, 0.15);
+                .abn {
+                    background-color: rgba(255, 0, 0, 0.1);
                     font-weight: bold;
                 }
             </style>
-            <table class='urine-table'>
-                <thead>
-                    <tr><th>ชื่อการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr>
-                </thead>
-                <tbody>
             """
+            html = f"{style}<table class='urine-table'><thead><tr><th>ชื่อการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th><th>การแปลผล</th></tr></thead><tbody>"
             for _, row in df.iterrows():
-                val = str(row["ผลตรวจ"]).strip().lower()
-                is_abnormal = val not in ["-", "negative", "trace", "0", "yellow", "pale yellow", "0-1", "0-2", "1.01", "1.015", "1.02", "1.025"]
-                row_class = "urine-abn" if is_abnormal else ""
-                html_out += f"<tr><td>{row['ชื่อการตรวจ']}</td><td class='{row_class}'>{row['ผลตรวจ']}</td><td>{row['ค่าปกติ']}</td></tr>"
-            html_out += "</tbody></table>"
-            return html_out
+                abn_class = "abn" if row["การแปลผล"] not in ["-", "ปกติ", "ไม่พบ"] else ""
+                html += f"<tr><td>{row['ชื่อการตรวจ']}</td><td class='{abn_class}'>{row['ผลตรวจ']}</td><td>{row['ค่าปกติ']}</td><td>{row['การแปลผล']}</td></tr>"
+            html += "</tbody></table>"
+            return html
     
-        st.markdown(render_urine_html_table(urine_df), unsafe_allow_html=True)
-        urine_df = pd.DataFrame(urine_data)
-        st.dataframe(urine_df, use_container_width=True)
+        st.markdown(render_urine_table(df_urine), unsafe_allow_html=True)
     
-        urine_summary = advice_urine(sex, alb_raw, sugar_raw, rbc_raw, wbc_raw)
-        if urine_summary:
+        summary = advice_urine(sex, alb_raw, sugar_raw, rbc_raw, wbc_raw)
+        if summary:
             st.markdown(f"""
             <div style='
                 background-color: rgba(255, 215, 0, 0.2);
@@ -732,7 +717,7 @@ if "person_row" in st.session_state:
                 margin-top: 1rem;
                 font-size: 16px;
             '>
-                <b>📌 คำแนะนำจากผลตรวจปัสสาวะ ปี {year_selected}:</b><br>{urine_summary}
+                <b>📌 คำแนะนำจากผลตรวจปัสสาวะ ปี {year_selected}:</b><br>{summary}
             </div>
             """, unsafe_allow_html=True)
         else:
