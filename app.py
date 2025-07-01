@@ -916,3 +916,39 @@ if "person_row" in st.session_state:
             <b>ผลการตรวจ:</b> {cxr_result}
         </div>
         """, unsafe_allow_html=True)
+
+        # ==================== EKG Section ====================
+        st.markdown(render_section_header("ผลคลื่นไฟฟ้าหัวใจ", "EKG"), unsafe_allow_html=True)
+
+        def get_ekg_col_name(year):
+            return "EKG" if year == 2568 else f"EKG{str(year)[-2:]}"  # เช่น EKG68, EKG67
+
+        def is_empty(val):
+            return str(val).strip().lower() in ["", "-", "none", "nan"]
+
+        def interpret_ekg(val):
+            val = str(val or "").strip()
+            if is_empty(val):
+                return "ไม่ได้เข้ารับการตรวจคลื่นไฟฟ้าหัวใจ"
+            if any(x in val.lower() for x in ["ผิดปกติ", "abnormal", "arrhythmia"]):
+                return f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
+            return val
+
+        selected_year_int = int(selected_year)
+        ekg_col = get_ekg_col_name(selected_year_int)
+        ekg_raw = person.get(ekg_col, "")
+        ekg_result = interpret_ekg(ekg_raw)
+
+        st.markdown(f"""
+        <div style='
+            background-color: #111;
+            color: white;
+            font-size: 16px;
+            line-height: 1.6;
+            padding: 1.25rem;
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+        '>
+            <b>ผลการตรวจ:</b> {ekg_result}
+        </div>
+        """, unsafe_allow_html=True)
