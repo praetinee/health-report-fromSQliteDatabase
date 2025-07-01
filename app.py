@@ -607,25 +607,9 @@ if "person_row" in st.session_state:
     """, unsafe_allow_html=True)
 
     # ==================== Urinalysis Section ====================
-    
-    st.markdown("""
-    <div style='
-        background-color: #1b5e20;
-        color: white;
-        text-align: center;
-        padding: 1rem 0.5rem;
-        font-size: 20px;
-        font-weight: bold;
-        font-family: "Segoe UI", sans-serif;
-        border-radius: 8px;
-        margin-bottom: 1rem;
-    '>
-        ผลการตรวจปัสสาวะ<br><span style='font-size: 18px; font-weight: normal;'>(Urinalysis)</span>
-    </div>
-    """, unsafe_allow_html=True)
 
-    # ✅ เพิ่มส่วนแบ่งคอลัมน์
-    left_spacer_ua, col_ua_left, col_ua_right, right_spacer_ua = st.columns([1, 3, 3, 1])
+    with st.container():
+        left_spacer_ua, col_ua_left, col_ua_right, right_spacer_ua = st.columns([1, 3, 3, 1])
     
     if "person_row" in st.session_state:
         person = st.session_state["person_row"]
@@ -729,6 +713,7 @@ if "person_row" in st.session_state:
     """, unsafe_allow_html=True)
     
     with col_ua_left:
+        st.markdown(render_section_header("ผลการตรวจปัสสาวะ", "Urinalysis"), unsafe_allow_html=True)
 
         df_urine = pd.DataFrame(urine_data, columns=["ชื่อการตรวจ", "ผลตรวจ", "ค่าปกติ"])
     
