@@ -427,16 +427,16 @@ if "person_row" in st.session_state:
         hct_low = 36
 
     cbc_config = [
-    ("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None),
-    ("ฮีมาโทคริต (Hct)", "HCT", "ชาย > 39%, หญิง > 36%", hct_low, None),
-    ("เม็ดเลือดขาว (wbc)", "WBC (cumm)", "4,000 - 10,000 /cu.mm", 4000, 10000),
-    ("นิวโทรฟิล (Neutrophil)", "Neutrophil(%)", "43 - 70%", 43, 70),
-    ("ลิมโฟไซต์ (Lymphocyte)", "Lymphocyte(%)", "20 - 44%", 20, 44),
-    ("โมโนไซต์ (Monocyte)", "Monocyte(%)", "3 - 9%", 3, 9),
-    ("อีโอซิโนฟิล (Eosinophil)", "Eosinophil(%)", "0 - 9%", 0, 9),
-    ("เบโซฟิล (Basophil)", "Basophil(%)", "0 - 3%", 0, 3),
-    ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150,000 - 500,000 /cu.mm", 150000, 500000),
-]
+        ("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None),
+        ("ฮีมาโทคริต (Hct)", "HCT", "ชาย > 39%, หญิง > 36%", hct_low, None),
+        ("เม็ดเลือดขาว (wbc)", "WBC (cumm)", "4,000 - 10,000 /cu.mm", 4000, 10000),
+        ("นิวโทรฟิล (Neutrophil)", "Ne (%)", "43 - 70%", 43, 70),
+        ("ลิมโฟไซต์ (Lymphocyte)", "Ly (%)", "20 - 44%", 20, 44),
+        ("โมโนไซต์ (Monocyte)", "M", "3 - 9%", 3, 9),
+        ("อีโอซิโนฟิล (Eosinophil)", "Eo", "0 - 9%", 0, 9),
+        ("เบโซฟิล (Basophil)", "BA", "0 - 3%", 0, 3),
+        ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150,000 - 500,000 /cu.mm", 150000, 500000),
+    ]
 
     cbc_rows = []
     for label, col, norm, low, high in cbc_config:
