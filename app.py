@@ -451,42 +451,50 @@ if "person_row" in st.session_state:
         blood_rows.append([(label, is_abn), (result, is_abn), (norm, is_abn)])
 
     def styled_result_table(headers, rows):
-        header_html = "".join([f"<th>{h}</th>" for h in headers])
-        html_out = f"""
+        style = """
         <style>
-            .styled-wrapper {{
-                max-width: 820px; margin: 0 auto;
-            }}
-            .styled-result {{
-                width: 100%; border-collapse: collapse;
-            }}
-            .styled-result th {{
-                background-color: #111; color: white;
-                padding: 6px 12px; text-align: center;
-            }}
-            .styled-result td {{
-                padding: 6px 12px; vertical-align: middle;
-            }}
-            .styled-result td:nth-child(2) {{
+            .lab-table-container {
+                background-color: #111;
+                margin-top: 1rem;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+            }
+            .lab-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 16px;
+                font-family: "Segoe UI", sans-serif;
+            }
+            .lab-table thead th {
+                background-color: #1c1c1c;
+                color: white;
+                padding: 12px;
                 text-align: center;
-            }}
-            .abn {{
-                background-color: rgba(255, 0, 0, 0.15);
-            }}
+                font-weight: bold;
+            }
+            .lab-table td {
+                padding: 12px;
+                border: 1px solid #333;
+                text-align: center;
+                color: white;
+            }
+            .lab-abn {
+                background-color: #4a1a1a;
+            }
+            .lab-row {
+                background-color: rgba(255,255,255,0.02);
+            }
         </style>
-        <div class="styled-wrapper">
-            <table class='styled-result'>
-                <thead><tr>{header_html}</tr></thead>
-                <tbody>
         """
+        html_out = "<div class='lab-table-container'><table class='lab-table'>"
+        html_out += "<thead><tr>" + "".join(f"<th>{h}</th>" for h in headers) + "</tr></thead><tbody>"
         for row in rows:
-            row_html = ""
+            html_out += "<tr>"
             for cell, is_abn in row:
-                css = " class='abn'" if is_abn else ""
-                row_html += f"<td{css}>{cell}</td>"
-            html_out += f"<tr>{row_html}</tr>"
+                css = "lab-abn" if is_abn else "lab-row"
+                html_out += f"<td class='{css}'>{cell}</td>"
+            html_out += "</tr>"
         html_out += "</tbody></table></div>"
-        return html_out
+        return style + html_out
 
     left_spacer, col1, col2, right_spacer = st.columns([1, 3, 3, 1])
 
