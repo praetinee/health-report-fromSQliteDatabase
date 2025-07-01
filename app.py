@@ -266,6 +266,29 @@ def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
 
     return " ".join(advice_parts)
 
+# === เพิ่มฟังก์ชันตรงนี้ ===
+def render_section_header(title, subtitle=None):
+    if subtitle:
+        full_title = f"{title} <span style='font-weight: normal;'>({subtitle})</span>"
+    else:
+        full_title = title
+
+    return f"""
+    <div style='
+        background-color: #1b5e20;
+        color: white;
+        text-align: center;
+        padding: 1rem 0.5rem;
+        font-size: 20px;
+        font-weight: bold;
+        font-family: "Segoe UI", sans-serif;
+        border-radius: 8px;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+    '>
+        {full_title}
+    </div>
+    """
 if "person_row" in st.session_state:
     person = st.session_state["person_row"]
     year_display = person.get("Year", "-")
