@@ -680,38 +680,50 @@ if "person_row" in st.session_state:
                     border-collapse: collapse;
                     margin-top: 1rem;
                     font-size: 16px;
+                    font-family: "Segoe UI", sans-serif;
+                    border-radius: 8px;
+                    overflow: hidden;
                 }
-                .urine-table th {
+                .urine-table thead th {
                     background-color: #2e7d32;
                     color: white;
-                    padding: 10px;
+                    padding: 12px;
                     text-align: center;
+                    font-weight: bold;
+                    border-top-left-radius: 8px;
+                    border-top-right-radius: 8px;
                 }
                 .urine-table td {
-                    padding: 10px;
+                    padding: 12px;
                     border: 1px solid #444;
                     text-align: center;
                     color: white;
                 }
                 .urine-abn {
                     background-color: #4a1a1a;
-                    font-weight: bold;
                 }
                 .urine-row {
                     background-color: rgba(255,255,255,0.02);
                 }
+                .urine-table tr:last-child td {
+                    border-bottom-left-radius: 8px;
+                    border-bottom-right-radius: 8px;
+                }
             </style>
             """
-            html_out = style + "<table class='urine-table'><thead><tr><th>ชื่อการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead><tbody>"
+            html = style + "<table class='urine-table'><thead><tr><th>ชื่อการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead><tbody>"
         
             for _, row in df.iterrows():
                 val = str(row["ผลตรวจ"]).strip().lower()
-                is_abnormal = val not in ["-", "negative", "trace", "0", "yellow", "pale yellow", "0-1", "0-2", "1.01", "1.015", "1.02", "1.025"]
-                css = "urine-abn" if is_abnormal else "urine-row"
-                html_out += f"<tr class='{css}'><td>{row['ชื่อการตรวจ']}</td><td>{row['ผลตรวจ']}</td><td>{row['ค่าปกติ']}</td></tr>"
+                is_abnormal = val not in [
+                    "-", "negative", "trace", "0", "none", "yellow", "pale yellow",
+                    "0-1", "0-2", "1.01", "1.015", "1.02", "1.025", "1.03"
+                ]
+                row_class = "urine-abn" if is_abnormal else "urine-row"
+                html += f"<tr class='{row_class}'><td>{row['ชื่อการตรวจ']}</td><td>{row['ผลตรวจ']}</td><td>{row['ค่าปกติ']}</td></tr>"
         
-            html_out += "</tbody></table>"
-            return html_out
+            html += "</tbody></table>"
+            return html
     
         st.markdown(render_urine_html_table(df_urine), unsafe_allow_html=True)
     
