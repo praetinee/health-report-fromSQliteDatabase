@@ -802,76 +802,80 @@ if "person_row" in st.session_state:
         else:
             st.success("ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ ไม่มีคำแนะนำเพิ่มเติม")
 
-    # ==================== Stool Section ====================
-    def render_section_header(title, subtitle=None):
-        return f"""
-        <div style='
-            background-color: #1b5e20;
-            color: white;
-            text-align: center;
-            padding: 1rem 0.5rem;
-            font-size: 20px;
-            font-weight: bold;
-            font-family: "Segoe UI", sans-serif;
-            border-radius: 8px;
-            margin-top: 2rem;
-            margin-bottom: 1rem;
-        '>
-            {title}{'<br><span style="font-size: 18px; font-weight: normal;">(' + subtitle + ')</span>' if subtitle else ''}
-        </div>
-        """
+    with col_ua_left:
+        # ==================== Stool Section ====================
+        st.markdown(render_section_header("ผลตรวจอุจจาระ", "Stool Examination"), unsafe_allow_html=True)
     
-    def interpret_stool_exam(val):
-        val = str(val or "").strip().lower()
-        if val in ["", "-", "none", "nan"]:
-            return "-"
-        elif val == "normal":
-            return "ไม่พบเม็ดเลือดขาวในอุจจาระ ถือว่าปกติ"
-        elif "wbc" in val or "เม็ดเลือดขาว" in val:
-            return "พบเม็ดเลือดขาวในอุจจาระ นัดตรวจซ้ำ"
-        return val
+        stool_exam_raw = person.get("Stool exam", "")
+        stool_cs_raw = person.get("Stool C/S", "")
     
-    def interpret_stool_cs(value):
-        value = str(value or "").strip()
-        if value in ["", "-", "none", "nan"]:
-            return "-"
-        if "ไม่พบ" in value or "ปกติ" in value:
-            return "ไม่พบการติดเชื้อ"
-        return "พบการติดเชื้อในอุจจาระ ให้พบแพทย์เพื่อตรวจรักษาเพิ่มเติม"
+        def interpret_stool_exam(val):
+            val = str(val or "").strip().lower()
+            if val in ["", "-", "none", "nan"]:
+                return "-"
+            elif val == "normal":
+                return "ไม่พบเม็ดเลือดขาวในอุจจาระ ถือว่าปกติ"
+            elif "wbc" in val or "เม็ดเลือดขาว" in val:
+                return "พบเม็ดเลือดขาวในอุจจาระ นัดตรวจซ้ำ"
+            return val
     
-    # ✅ ดึงค่าดิบจากฐานข้อมูล
-    stool_exam_raw = person.get("Stool exam", "")
-    stool_cs_raw = person.get("Stool C/S", "")
+        def interpret_stool_cs(value):
+            value = str(value or "").strip()
+            if value in ["", "-", "none", "nan"]:
+                return "-"
+            if "ไม่พบ" in value or "ปกติ" in value:
+                return "ไม่พบการติดเชื้อ"
+            return "พบการติดเชื้อในอุจจาระ ให้พบแพทย์เพื่อตรวจรักษาเพิ่มเติม"
     
-    exam_text = interpret_stool_exam(stool_exam_raw)
-    cs_text = interpret_stool_cs(stool_cs_raw)
+        exam_text = interpret_stool_exam(stool_exam_raw)
+        cs_text = interpret_stool_cs(stool_cs_raw)
     
-    # ✅ แสดงหัวตาราง
-    st.markdown(render_section_header("ผลตรวจอุจจาระ", "Stool Examination"), unsafe_allow_html=True)
+        def render_stool_html_table(exam, cs):
+            style = """
+            <style>
+                .stool-container {
+                    background-color: #111;
+                    margin-top: 1rem;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+                }
+                .stool-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    font-size: 16px;
+                    font-family: "Segoe UI", sans-serif;
+                }
+                .stool-table th {
+                    background-color: #1c1c1c;
+                    color: white;
+                    padding: 12px;
+                    text-align: left;
+                    font-weight: bold;
+                    width: 40%;
+                }
+                .stool-table td {
+                    padding: 12px;
+                    border: 1px solid #333;
+                    color: white;
+                }
+            </style>
+            """
+            html = f"""
+            <div class='stool-container'>
+                <table class='stool-table'>
+                    <tr>
+                        <th>ผลตรวจอุจจาระทั่วไป</th>
+                        <td>{exam if exam != "-" else "ไม่ได้เข้ารับการตรวจ"}</td>
+                    </tr>
+                    <tr>
+                        <th>ผลตรวจอุจจาระเพาะเชื้อ</th>
+                        <td>{cs if cs != "-" else "ไม่ได้เข้ารับการตรวจ"}</td>
+                    </tr>
+                </table>
+            </div>
+            """
+            return style + html
     
-    # ✅ แสดงผล
-    st.markdown(f"""
-    <div style='
-        font-size: 16px;
-        line-height: 1.7;
-        margin-bottom: 1rem;
-        background-color: #111;
-        padding: 1rem;
-        border-radius: 6px;
-        color: white;
-    '>
-        <table style='width: 100%; border-collapse: collapse;'>
-            <tr>
-                <td style='padding: 8px; border: 1px solid #333;'><b>ผลตรวจอุจจาระทั่วไป</b></td>
-                <td style='padding: 8px; border: 1px solid #333;'>{exam_text if exam_text != "-" else "ไม่ได้เข้ารับการตรวจ"}</td>
-            </tr>
-            <tr>
-                <td style='padding: 8px; border: 1px solid #333;'><b>ผลตรวจอุจจาระเพาะเชื้อ</b></td>
-                <td style='padding: 8px; border: 1px solid #333;'>{cs_text if cs_text != "-" else "ไม่ได้เข้ารับการตรวจ"}</td>
-            </tr>
-        </table>
-    </div>
-    """, unsafe_allow_html=True)
+        st.markdown(render_stool_html_table(exam_text, cs_text), unsafe_allow_html=True)
 
     with col_ua_right:
         # ============ X-ray Section ============
