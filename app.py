@@ -834,6 +834,4 @@ if "person_row" in st.session_state:
             <b>ผลตรวจอุจจาระเพาะเชื้อ:</b> {cs_text}
         </p>
         """, unsafe_allow_html=True)
-
-    with col_ua_right:
         
