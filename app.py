@@ -485,16 +485,17 @@ if "person_row" in st.session_state:
             }
         </style>
         """
-        html_out = "<div class='lab-table-container'><table class='lab-table'>"
-        html_out += "<thead><tr>" + "".join(f"<th>{h}</th>" for h in headers) + "</tr></thead><tbody>"
+        html = "<div class='lab-table-container'><table class='lab-table'>"
+        html += "<thead><tr>" + "".join(f"<th>{h}</th>" for h in headers) + "</tr></thead><tbody>"
         for row in rows:
-            html_out += "<tr>"
-            for cell, is_abn in row:
-                css = "lab-abn" if is_abn else "lab-row"
-                html_out += f"<td class='{css}'>{cell}</td>"
-            html_out += "</tr>"
-        html_out += "</tbody></table></div>"
-        return style + html_out
+            row_cells = ""
+            is_abn_row = any(flag for _, flag in row)
+            css_class = "lab-abn" if is_abn_row else "lab-row"
+            for cell, _ in row:
+                row_cells += f"<td class='{css_class}'>{cell}</td>"
+            html += f"<tr>{row_cells}</tr>"
+        html += "</tbody></table></div>"
+        return style + html
 
     left_spacer, col1, col2, right_spacer = st.columns([1, 3, 3, 1])
 
