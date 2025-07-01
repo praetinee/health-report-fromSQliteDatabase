@@ -819,19 +819,23 @@ if "person_row" in st.session_state:
                 return style + html
     
             st.markdown(render_urine_html_table(df_urine), unsafe_allow_html=True)
-    
+            def is_all_urine_data_missing(data):
+                return all(str(x).strip().lower() in ["", "-", "nan", "none"] for _, x, _ in data)
+
             summary = advice_urine(sex, alb_raw, sugar_raw, rbc_raw, wbc_raw)
-            if summary:
+            if is_all_urine_data_missing(urine_data):
+                pass  # ไม่แสดงอะไรเลย
+            elif summary:
                 st.markdown(f"""
-                <div style='
-                    background-color: rgba(255, 215, 0, 0.2);
-                    padding: 1rem;
-                    border-radius: 6px;
-                    margin-top: 1rem;
-                    font-size: 16px;
-                '>
-                    <b>📌 คำแนะนำจากผลตรวจปัสสาวะ ปี {year_selected}:</b><br>{summary}
-                </div>
+                    <div style='
+                        background-color: rgba(255, 215, 0, 0.2);
+                        padding: 1rem;
+                        border-radius: 6px;
+                        margin-top: 1rem;
+                        font-size: 16px;
+                    '>
+                        <b>📌 คำแนะนำจากผลตรวจปัสสาวะ ปี {year_selected}:</b><br>{summary}
+                    </div>
                 """, unsafe_allow_html=True)
             else:
                 st.success("ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ ไม่มีคำแนะนำเพิ่มเติม")
