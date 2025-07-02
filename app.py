@@ -767,54 +767,45 @@ if "person_row" in st.session_state:
                 return "พบน้ำตาลในปัสสาวะ"
             return "-"
     
+        def parse_range_or_number(val):
+            val = val.replace("cell/hpf", "").replace("cells/hpf", "").replace("cell", "").strip().lower()
+            try:
+                if "-" in val:
+                    low, high = map(float, val.split("-"))
+                    return low, high
+                else:
+                    num = float(val)
+                    return num, num
+            except:
+                return None, None
+    
         def interpret_rbc(value):
             val = str(value or "").strip().lower()
             if val in ["-", "", "none", "nan"]:
                 return "-"
-            try:
-                # แยกตัวเลขช่วง เช่น "0-2", "1-3"
-                parts = val.replace("cell/hpf", "").replace("cells/hpf", "").replace("cell", "").strip().split("-")
-                if len(parts) == 2:
-                    low = float(parts[0])
-                    high = float(parts[1])
-                    if high <= 2:
-                        return "ปกติ"
-                    elif high <= 5:
-                        return "พบเม็ดเลือดแดงในปัสสาวะเล็กน้อย"
-                    else:
-                        return "พบเม็ดเลือดแดงในปัสสาวะ"
-                elif float(val) <= 2:
-                    return "ปกติ"
-                elif float(val) <= 5:
-                    return "พบเม็ดเลือดแดงในปัสสาวะเล็กน้อย"
-                else:
-                    return "พบเม็ดเลือดแดงในปัสสาวะ"
-            except:
+            low, high = parse_range_or_number(val)
+            if high is None:
                 return value
+            if high <= 2:
+                return "ปกติ"
+            elif high <= 5:
+                return "พบเม็ดเลือดแดงในปัสสาวะเล็กน้อย"
+            else:
+                return "พบเม็ดเลือดแดงในปัสสาวะ"
     
         def interpret_wbc(value):
             val = str(value or "").strip().lower()
             if val in ["-", "", "none", "nan"]:
                 return "-"
-            try:
-                parts = val.replace("cell/hpf", "").replace("cells/hpf", "").replace("cell", "").strip().split("-")
-                if len(parts) == 2:
-                    low = float(parts[0])
-                    high = float(parts[1])
-                    if high <= 5:
-                        return "ปกติ"
-                    elif high <= 10:
-                        return "พบเม็ดเลือดขาวในปัสสาวะเล็กน้อย"
-                    else:
-                        return "พบเม็ดเลือดขาวในปัสสาวะ"
-                elif float(val) <= 5:
-                    return "ปกติ"
-                elif float(val) <= 10:
-                    return "พบเม็ดเลือดขาวในปัสสาวะเล็กน้อย"
-                else:
-                    return "พบเม็ดเลือดขาวในปัสสาวะ"
-            except:
+            low, high = parse_range_or_number(val)
+            if high is None:
                 return value
+            if high <= 5:
+                return "ปกติ"
+            elif high <= 10:
+                return "พบเม็ดเลือดขาวในปัสสาวะเล็กน้อย"
+            else:
+                return "พบเม็ดเลือดขาวในปัสสาวะ"
     
         def advice_urine(sex, alb, sugar, rbc, wbc):
             alb_t = interpret_alb(alb)
@@ -869,30 +860,42 @@ if "person_row" in st.session_state:
     
         with col_ua_left:
             st.markdown(render_section_header("ผลการตรวจปัสสาวะ", "Urinalysis"), unsafe_allow_html=True)
-    
             df_urine = pd.DataFrame(urine_data, columns=["ชื่อการตรวจ", "ผลตรวจ", "ค่าปกติ"])
     
             def is_urine_abnormal(test_name, value, normal_range):
-                val_clean = str(value or "").strip().lower()
-                if val_clean in ["", "-", "none", "nan", "null"]:
+                val = str(value or "").strip().lower()
+                if val in ["", "-", "none", "nan", "null"]:
                     return False
-            
-                try:
-                    val = float(val_clean)
-                    if test_name == "กรด-ด่าง (pH)":
-                        return not (5.0 <= val <= 8.0)
-                    elif test_name == "ความถ่วงจำเพาะ (Sp.gr)":
-                        return not (1.003 <= val <= 1.030)
-                except:
-                    pass
-            
-                return val_clean not in [
-                    "-", "negative", "trace", "0", "none", "nan", "",
-                    "yellow", "pale yellow", "colorless", "paleyellow", "light yellow"
-                    "0-1", "0-2", "1-2", "2-3", "3-5", "0-5", "0-10",
-                    "1.01", "1.015", "1.02", "1.025", "1.03"
-                ]
-            
+    
+                if test_name == "กรด-ด่าง (pH)":
+                    try:
+                        return not (5.0 <= float(val) <= 8.0)
+                    except:
+                        return True
+    
+                if test_name == "ความถ่วงจำเพาะ (Sp.gr)":
+                    try:
+                        return not (1.003 <= float(val) <= 1.030)
+                    except:
+                        return True
+    
+                if test_name == "เม็ดเลือดแดง (RBC)":
+                    return "พบ" in interpret_rbc(val).lower()
+    
+                if test_name == "เม็ดเลือดขาว (WBC)":
+                    return "พบ" in interpret_wbc(val).lower()
+    
+                if test_name == "น้ำตาล (Sugar)":
+                    return interpret_sugar(val).lower() != "ไม่พบ"
+    
+                if test_name == "โปรตีน (Albumin)":
+                    return interpret_alb(val).lower() != "ไม่พบ"
+    
+                if test_name == "สี (Colour)":
+                    return val not in ["yellow", "pale yellow", "colorless", "paleyellow", "light yellow"]
+    
+                return False
+    
             def render_urine_html_table(df):
                 style = """
                 <style>
@@ -930,22 +933,21 @@ if "person_row" in st.session_state:
                 """
                 html = "<div class='urine-container'><table class='urine-table'>"
                 html += "<thead><tr><th>ชื่อการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead><tbody>"
-            
                 for _, row in df.iterrows():
-                    is_abnormal = is_urine_abnormal(row["ชื่อการตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"])
-                    css_class = "urine-abn" if is_abnormal else "urine-row"
+                    is_abn = is_urine_abnormal(row["ชื่อการตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"])
+                    css_class = "urine-abn" if is_abn else "urine-row"
                     html += f"<tr class='{css_class}'><td>{row['ชื่อการตรวจ']}</td><td>{safe_value(row['ผลตรวจ'])}</td><td>{row['ค่าปกติ']}</td></tr>"
-            
                 html += "</tbody></table></div>"
                 return style + html
     
             st.markdown(render_urine_html_table(df_urine), unsafe_allow_html=True)
+    
             def is_all_urine_data_missing(data):
                 return all(str(x).strip().lower() in ["", "-", "nan", "none"] for _, x, _ in data)
-
+    
             summary = advice_urine(sex, alb_raw, sugar_raw, rbc_raw, wbc_raw)
             if is_all_urine_data_missing(urine_data):
-                pass  # ไม่แสดงอะไรเลย
+                pass
             elif summary:
                 st.markdown(f"""
                     <div style='
@@ -961,7 +963,6 @@ if "person_row" in st.session_state:
             else:
                 st.success("ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ ไม่มีคำแนะนำเพิ่มเติม")
 
-    with col_ua_left:
         # ==================== Stool Section ====================
         st.markdown(render_section_header("ผลตรวจอุจจาระ", "Stool Examination"), unsafe_allow_html=True)
     
