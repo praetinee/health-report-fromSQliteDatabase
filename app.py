@@ -46,24 +46,31 @@ df = load_sqlite_data()
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 st.markdown("""
     <style>
-    html, body, .stApp, body > div {
+    /* ปิด scrollbar ทุกชนิด ทุก container */
+    html, body, .stApp, .main, .block-container, .css-18e3th9, .css-1outpf7 {
         overflow: hidden !important;
     }
+
+    /* ซ่อน scrollbar จริง */
     ::-webkit-scrollbar {
         display: none !important;
     }
+
+    /* Force layout container ไม่ให้เลื่อน */
+    .css-18e3th9, .css-1outpf7 {
+        height: 100vh !important;
+        max-height: 100vh !important;
+        overflow: hidden !important;
+    }
+
+    /* เผื่อ style เดิมยังติดไว้ที่บาง container */
+    div[style*="overflow"] {
+        overflow: hidden !important;
+        max-height: 100vh !important;
+    }
     </style>
-    <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const elements = document.querySelectorAll('*');
-        elements.forEach(el => {
-            el.style.overflow = 'hidden';
-            el.style.overflowX = 'hidden';
-            el.style.overflowY = 'hidden';
-        });
-    });
-    </script>
 """, unsafe_allow_html=True)
+
 st.markdown("<h1 style='text-align:center;'>ระบบรายงานผลตรวจสุขภาพ</h1>", unsafe_allow_html=True)
 st.markdown("<h4 style='text-align:center; color:gray;'>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม รพ.สันทราย -</h4>", unsafe_allow_html=True)
 
