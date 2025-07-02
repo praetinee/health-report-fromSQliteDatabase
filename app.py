@@ -1099,53 +1099,74 @@ if "person_row" in st.session_state:
         # --- Extract extra info ---
 
         import re
-        from dateutil import parser
+        from datetime import datetime
         
-        def normalize_date(val):
-            if not val or str(val).strip().lower() in ["", "-", "none", "null", "nan"]:
+        THAI_MONTHS = {
+            "ม.ค": 1, "มกราคม": 1,
+            "ก.พ": 2, "กพ": 2, "กุมภาพันธ์": 2,
+            "มี.ค": 3, "มีนาคม": 3,
+            "เม.ย": 4, "เมษายน": 4,
+            "พ.ค": 5, "พฤษภาคม": 5,
+            "มิ.ย": 6, "มิถุนายน": 6,
+            "ก.ค": 7, "กรกฎาคม": 7,
+            "ส.ค": 8, "สิงหาคม": 8,
+            "ก.ย": 9, "กันยายน": 9,
+            "ต.ค": 10, "ตุลาคม": 10,
+            "พ.ย": 11, "พฤศจิกายน": 11,
+            "ธ.ค": 12, "ธันวาคม": 12
+        }
+        
+        def normalize_date(text):
+            if not text or str(text).strip().lower() in ["-", "none", "null", "nan"]:
                 return "-"
         
-            text = str(val).strip()
+            text = str(text).strip()
         
-            # ลอง parse วันก่อน
-            try:
-                dt = parser.parse(text, dayfirst=True, fuzzy=True)
-            except:
-                return "-"
+            # ดึงปีไทยแบบเต็ม
+            year_match = re.search(r"\b(25\d{2})\b", text)
+            if not year_match:
+                # ปี ค.ศ. หรือปีแบบย่อ 2 หลัก
+                year_match = re.search(r"\b(\d{2,4})\b", text)
         
-            # ตรวจว่าเป็นปี พ.ศ. หรือ ค.ศ.
-            year = dt.year
-            thai_year = year
-            if year < 2400:  # ถ้าเป็น พ.ศ. แบบย่อ เช่น 66 → ค.ศ. 2066 → ต้องปรับ
-                if year < 100:  # แก้ปีสั้น เช่น 66 เป็น 2566
-                    thai_year = year + 2500 if year < 80 else year + 2400
-                else:
-                    return "-"  # ไม่แน่ใจปี
+            year = None
+            if year_match:
+                raw_year = int(year_match.group(1))
+                if raw_year < 100:  # ปีแบบย่อ
+                    year = raw_year + 2500 if raw_year < 80 else raw_year + 2400
+                elif 1000 <= raw_year < 2100:
+                    year = raw_year + 543  # ค.ศ. → พ.ศ.
+                elif 2500 <= raw_year <= 2600:
+                    year = raw_year
         
-            elif year < 2100:
-                # เป็นปี ค.ศ. แน่นอน เช่น 2024 → +543 เป็น พ.ศ.
-                thai_year = year + 543
+            # หาวันที่
+            day_match = re.search(r"\b(\d{1,2})(?:[^\d]|$)", text)
+            has_day = bool(day_match)
         
-            # ฟอร์แมตเป็น: 1 มกราคม 2567 (ไม่มีเลข 0 นำหน้า)
-            day = dt.day
-            month = dt.strftime("%B")  # ชื่อเดือนเต็ม (ภาษาอังกฤษ)
-            month_th = {
-                "January": "มกราคม",
-                "February": "กุมภาพันธ์",
-                "March": "มีนาคม",
-                "April": "เมษายน",
-                "May": "พฤษภาคม",
-                "June": "มิถุนายน",
-                "July": "กรกฎาคม",
-                "August": "สิงหาคม",
-                "September": "กันยายน",
-                "October": "ตุลาคม",
-                "November": "พฤศจิกายน",
-                "December": "ธันวาคม"
-            }.get(month, month)
+            # หาเดือน
+            month = None
+            for name, num in THAI_MONTHS.items():
+                if name in text:
+                    month = num
+                    break
         
-            return f"{day} {month_th} {thai_year}"
+            # มีแค่ปี → แสดงเฉพาะ "พ.ศ. xxxx"
+            if year and not has_day and not month:
+                return f"พ.ศ. {year}"
         
+            # สร้างวันที่เต็ม
+            if year:
+                day = int(day_match.group(1)) if has_day else 1
+                month = month or 1
+                try:
+                    dt = datetime(year, month, day)
+                    thai_month = [k for k, v in THAI_MONTHS.items() if v == month and len(k) > 3]
+                    month_name = thai_month[0] if thai_month else "-"
+                    return f"{dt.day} {month_name} {dt.year}"
+                except:
+                    return f"พ.ศ. {year}"
+        
+            return "-"
+    
         hep_check_date_raw = person.get("ปีตรวจHEP")
         hep_check_date = normalize_date(hep_check_date_raw)
         
