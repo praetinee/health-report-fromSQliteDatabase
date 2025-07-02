@@ -859,7 +859,7 @@ if "person_row" in st.session_state:
             
                 return val_clean not in [
                     "-", "negative", "trace", "0", "none", "nan", "",
-                    "yellow", "pale yellow", "colorless",   # ✅ เพิ่ม colorless ตรงนี้
+                    "yellow", "pale yellow", "colorless", "paleyellow", "light yellow   # ✅ เพิ่ม colorless ตรงนี้
                     "0-1", "0-2", "1-2", "2-3", "3-5", "0-5", "0-10",
                     "1.01", "1.015", "1.02", "1.025", "1.03"
                 ]
