@@ -44,6 +44,26 @@ df = load_sqlite_data()
 
 # ==================== UI SEARCH FORM ====================
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
+st.markdown("""
+    <style>
+    html, body, .stApp, body > div {
+        overflow: hidden !important;
+    }
+    ::-webkit-scrollbar {
+        display: none !important;
+    }
+    </style>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const elements = document.querySelectorAll('*');
+        elements.forEach(el => {
+            el.style.overflow = 'hidden';
+            el.style.overflowX = 'hidden';
+            el.style.overflowY = 'hidden';
+        });
+    });
+    </script>
+""", unsafe_allow_html=True)
 st.markdown("<h1 style='text-align:center;'>ระบบรายงานผลตรวจสุขภาพ</h1>", unsafe_allow_html=True)
 st.markdown("<h4 style='text-align:center; color:gray;'>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม รพ.สันทราย -</h4>", unsafe_allow_html=True)
 
