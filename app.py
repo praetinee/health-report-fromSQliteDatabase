@@ -1158,3 +1158,43 @@ if "person_row" in st.session_state:
             <b>คำแนะนำ:</b> {advice}
         </div>
         """, unsafe_allow_html=True)
+
+left_spacer3, doctor_col, right_spacer3 = st.columns([1, 6, 1])
+
+with doctor_col:
+    st.markdown(f"""
+    <div style='
+        background-color: #1b5e20;
+        color: white;
+        padding: 1.5rem 2rem;
+        border-radius: 8px;
+        font-size: 18px;
+        line-height: 1.6;
+        margin-top: 2rem;
+        margin-bottom: 2rem;
+        font-family: "Segoe UI", sans-serif;
+    '>
+        <b>📌 สรุปความเห็นของแพทย์:</b> <i>(ยังไม่ได้เชื่อมคอลัมน์)</i>
+    </div>
+
+    <div style='
+        margin-top: 3rem;
+        text-align: right;
+        padding-right: 1rem;
+    '>
+        <div style='
+            display: inline-block;
+            text-align: center;
+            width: 340px;
+        '>
+            <div style='
+                border-bottom: 1px dotted #ccc;
+                margin-bottom: 0.5rem;
+                width: 100%;
+            '></div>
+            <div style='white-space: nowrap;'>นายแพทย์นพรัตน์ รัชฎาพร</div>
+            <div style='white-space: nowrap;'>เลขที่ใบอนุญาตผู้ประกอบวิชาชีพเวชกรรม ว.26674</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
