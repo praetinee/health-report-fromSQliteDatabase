@@ -1220,8 +1220,8 @@ if "person_row" in st.session_state:
             line-height: 1.8;
         '>
             <b>วันที่ตรวจภูมิคุ้มกัน:</b> {hep_check_date}<br>
-            <b>ประวัติโรคไวรัสตับอักเสบบี:</b> {hep_history}<br>
-            <b>ประวัติการได้รับวัคซีน:</b> {hep_vaccine}
+            <b>ประวัติโรคไวรัสตับอักเสบบี ปี พ.ศ. {year_selected}:</b> {hep_history}<br>
+            <b>ประวัติการได้รับวัคซีนในปี พ.ศ. {year_selected}:</b> {hep_vaccine}
         </div>
         """, unsafe_allow_html=True)
         
