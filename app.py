@@ -875,12 +875,23 @@ if "person_row" in st.session_state:
                 html += "<thead><tr><th>ชื่อการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead><tbody>"
     
                 for _, row in df.iterrows():
-                    val = str(row["ผลตรวจ"]).strip().lower()
-                    is_abnormal = val not in [
-                        "-", "negative", "trace", "0", "none", "nan", "",
-                        "yellow", "pale yellow", "colorless",
-                        "0-1", "0-2", "1.01", "1.015", "1.02", "1.025", "1.03"
-                    ]
+                    def is_urine_abnormal(test_name, value, normal_range):
+                        try:
+                            val = float(value)
+                            if test_name == "กรด-ด่าง (pH)":
+                                return not (5.0 <= val <= 8.0)
+                            elif test_name == "ความถ่วงจำเพาะ (Sp.gr)":
+                                return not (1.003 <= val <= 1.030)
+                        except:
+                            pass
+                    
+                        val = str(value).strip().lower()
+                        return val not in [
+                            "-", "negative", "trace", "0", "none", "nan", "",
+                            "yellow", "pale yellow",
+                            "0-1", "0-2", "1.01", "1.015", "1.02", "1.025", "1.03"
+                        ]
+
                     css_class = "urine-abn" if is_abnormal else "urine-row"
                     html += f"<tr class='{css_class}'><td>{row['ชื่อการตรวจ']}</td><td>{safe_value(row['ผลตรวจ'])}</td><td>{row['ค่าปกติ']}</td></tr>"
     
