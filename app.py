@@ -45,35 +45,16 @@ df = load_sqlite_data()
 # ==================== UI SEARCH FORM ====================
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 st.markdown("""
-    <style>
-    /* ปิด scrollbar ทุกแบบ */
-    html, body, .stApp {
-        overflow: hidden !important;
-        height: 100vh !important;
-    }
+<style>
+/* ลบ scrollbar ที่แอบแทรกใน div ต่างๆ เช่น markdown/table */
+div[style*="overflow-x: auto"] {
+    overflow-x: visible !important;
+}
 
-    /* layout containers หลักของ Streamlit */
-    section.main, .block-container, .css-uf99v8, .css-1dp5vir, .css-1kyxreq {
-        overflow: hidden !important;
-        max-height: 100vh !important;
-    }
-
-    /* ซ่อน scrollbar จริงๆ */
-    ::-webkit-scrollbar {
-        width: 0px;
-        height: 0px;
-        display: none;
-    }
-
-    /* บางกรณี Streamlit จะใช้ div แบบ inline-style overflow-x:auto */
-    div[style*="overflow-x"] {
-        overflow-x: hidden !important;
-    }
-
-    div[style*="overflow-y"] {
-        overflow-y: hidden !important;
-    }
-    </style>
+div[style*="overflow-y: auto"] {
+    overflow-y: visible !important;
+}
+</style>
 """, unsafe_allow_html=True)
 
 st.markdown("<h1 style='text-align:center;'>ระบบรายงานผลตรวจสุขภาพ</h1>", unsafe_allow_html=True)
