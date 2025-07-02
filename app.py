@@ -46,27 +46,32 @@ df = load_sqlite_data()
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 st.markdown("""
     <style>
-    /* ปิด scrollbar ทุกชนิด ทุก container */
-    html, body, .stApp, .main, .block-container, .css-18e3th9, .css-1outpf7 {
+    /* ปิด scrollbar ทุกแบบ */
+    html, body, .stApp {
         overflow: hidden !important;
-    }
-
-    /* ซ่อน scrollbar จริง */
-    ::-webkit-scrollbar {
-        display: none !important;
-    }
-
-    /* Force layout container ไม่ให้เลื่อน */
-    .css-18e3th9, .css-1outpf7 {
         height: 100vh !important;
-        max-height: 100vh !important;
-        overflow: hidden !important;
     }
 
-    /* เผื่อ style เดิมยังติดไว้ที่บาง container */
-    div[style*="overflow"] {
+    /* layout containers หลักของ Streamlit */
+    section.main, .block-container, .css-uf99v8, .css-1dp5vir, .css-1kyxreq {
         overflow: hidden !important;
         max-height: 100vh !important;
+    }
+
+    /* ซ่อน scrollbar จริงๆ */
+    ::-webkit-scrollbar {
+        width: 0px;
+        height: 0px;
+        display: none;
+    }
+
+    /* บางกรณี Streamlit จะใช้ div แบบ inline-style overflow-x:auto */
+    div[style*="overflow-x"] {
+        overflow-x: hidden !important;
+    }
+
+    div[style*="overflow-y"] {
+        overflow-y: hidden !important;
     }
     </style>
 """, unsafe_allow_html=True)
