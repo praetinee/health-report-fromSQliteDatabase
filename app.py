@@ -1108,10 +1108,22 @@ if "person_row" in st.session_state:
             except:
                 return "-"
         
+        from dateutil import parser
+
+        def normalize_date(val):
+            if not val or str(val).strip().lower() in ["", "-", "none", "nan", "null"]:
+                return "-"
+            try:
+                dt = parser.parse(str(val), dayfirst=True, fuzzy=True)
+                return dt.strftime("%d/%m/%Y")
+            except:
+                return "-"
+        
         # --- Extract extra info ---
         hep_check_date_raw = person.get("ปีตรวจ HEP", "")
         hep_check_date = normalize_date(hep_check_date_raw)
         
+        hep_history = safe_text(person.get("สรุปประวัติ Hepb"))
         hep_vaccine = safe_text(person.get("วัคซีน hep b 67"))
         
         # --- Render Section Header ---
@@ -1150,7 +1162,7 @@ if "person_row" in st.session_state:
         </div>
         """, unsafe_allow_html=True)
         
-        # --- Show vaccine + check date ---
+        # --- Show extra info ---
         st.markdown(f"""
         <div style='
             font-size: 16px;
@@ -1158,8 +1170,10 @@ if "person_row" in st.session_state:
             background-color: rgba(255,255,255,0.05);
             border-radius: 6px;
             margin-bottom: 1.5rem;
+            line-height: 1.8;
         '>
             <b>วันที่ตรวจภูมิคุ้มกัน:</b> {hep_check_date}<br>
+            <b>ประวัติโรคไวรัสตับอักเสบบี:</b> {hep_history}<br>
             <b>ประวัติการได้รับวัคซีน:</b> {hep_vaccine}
         </div>
         """, unsafe_allow_html=True)
