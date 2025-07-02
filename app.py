@@ -1171,7 +1171,7 @@ if "person_row" in st.session_state:
         hep_check_date = normalize_date(hep_check_date_raw)
         
         hep_history = safe_text(person.get("สรุปประวัติ Hepb"))
-        hep_vaccine = safe_text(person.get("วัคซีน hep b 67"))
+        hep_vaccine = safe_text(person.get("วัคซีนhep b 67"))
         
         # --- Render Section Header ---
         st.markdown(render_section_header("ผลการตรวจไวรัสตับอักเสบบี (Viral hepatitis B)"), unsafe_allow_html=True)
