@@ -386,8 +386,9 @@ if "person_row" in st.session_state:
         # ✅ ถ้าไม่มีข้อมูลเลย: ไม่ให้คำแนะนำ
         if not bmi_text and not bp_text:
             return ""
-    
-        if "ปกติ" in bmi_text and not bp_text:
+        if bmi is None and sbp is None and dbp is None:
+            return ""
+        if bmi is not None and "ปกติ" in bmi_text and not bp_text:
             return "น้ำหนักอยู่ในเกณฑ์ดี ควรรักษาพฤติกรรมสุขภาพนี้ต่อไป"
         if not bmi_text and bp_text:
             return f"{bp_text} แนะนำให้ดูแลสุขภาพ และติดตามค่าความดันอย่างสม่ำเสมอ"
