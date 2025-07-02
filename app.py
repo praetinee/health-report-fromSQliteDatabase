@@ -1253,7 +1253,8 @@ if "person_row" in st.session_state:
             <b>คำแนะนำ:</b> {advice}
         </div>
         """, unsafe_allow_html=True)
-
+        
+#=============== ความเห็นแพทย์ =======================
 if "person_row" in st.session_state:
     person = st.session_state["person_row"]
     doctor_suggestion = str(person.get("DOCTER suggest", "")).strip()
