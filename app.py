@@ -352,6 +352,9 @@ if "person_row" in st.session_state:
             return "-"
 
     def combined_health_advice(bmi, sbp, dbp):
+        if is_empty(bmi) and is_empty(sbp) and is_empty(dbp):
+            return ""
+    
         try:
             bmi = float(bmi)
         except:
@@ -383,11 +386,6 @@ if "person_row" in st.session_state:
             elif sbp >= 120 or dbp >= 80:
                 bp_text = "ความดันโลหิตเริ่มสูง"
     
-        # ✅ ถ้าไม่มีข้อมูลเลย: ไม่ให้คำแนะนำ
-        if not bmi_text and not bp_text:
-            return ""
-        if bmi is None and sbp is None and dbp is None:
-            return ""
         if bmi is not None and "ปกติ" in bmi_text and not bp_text:
             return "น้ำหนักอยู่ในเกณฑ์ดี ควรรักษาพฤติกรรมสุขภาพนี้ต่อไป"
         if not bmi_text and bp_text:
