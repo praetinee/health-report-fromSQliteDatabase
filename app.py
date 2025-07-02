@@ -1164,8 +1164,13 @@ if "person_row" in st.session_state:
         """, unsafe_allow_html=True)
 
 if "person_row" in st.session_state:
+    person = st.session_state["person_row"]
+    doctor_suggestion = str(person.get("DOCTER suggest", "")).strip()
+    if doctor_suggestion.lower() in ["", "-", "none", "nan", "null"]:
+        doctor_suggestion = "<i>ไม่มีคำแนะนำจากแพทย์</i>"
+
     left_spacer3, doctor_col, right_spacer3 = st.columns([1, 6, 1])
-    
+
     with doctor_col:
         st.markdown(f"""
         <div style='
@@ -1179,9 +1184,9 @@ if "person_row" in st.session_state:
             margin-bottom: 2rem;
             font-family: "Segoe UI", sans-serif;
         '>
-            <b> สรุปความเห็นของแพทย์:</b> <i>(ยังไม่ได้เชื่อมคอลัมน์)</i>
+            <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
         </div>
-    
+
         <div style='
             margin-top: 3rem;
             text-align: right;
@@ -1202,4 +1207,3 @@ if "person_row" in st.session_state:
             </div>
         </div>
         """, unsafe_allow_html=True)
-    
