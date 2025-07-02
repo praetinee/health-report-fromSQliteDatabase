@@ -1097,7 +1097,7 @@ if "person_row" in st.session_state:
         """, unsafe_allow_html=True)
               
         # --- Extract extra info ---
-        hep_check_date = safe_text(person.get("ปีตรวจ HEP"))        
+        hep_check_date = safe_text(person.get("ปีตรวจHEP"))        
         hep_history = safe_text(person.get("สรุปประวัติ Hepb"))
         hep_vaccine = safe_text(person.get("วัคซีน hep b 67"))
         
