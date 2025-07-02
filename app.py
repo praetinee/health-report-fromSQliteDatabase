@@ -678,21 +678,24 @@ if "person_row" in st.session_state:
 
         return "<div style='margin-bottom: 0.75rem;'>" + "</div><div style='margin-bottom: 0.75rem;'>".join(output) + "</div>"
 
-    st.markdown(f"""
-    <div style="
-        background-color: rgba(33, 150, 243, 0.15);
-        padding: 2rem 2.5rem;
-        border-radius: 10px;
-        font-size: 16px;
-        line-height: 1.5;
-        color: inherit;
-    ">
-        <div style="font-size: 18px; font-weight: bold; margin-bottom: 1.5rem;">
-            📋 คำแนะนำจากผลตรวจสุขภาพ
+    spacer_l, main_col, spacer_r = st.columns([1, 6, 1])
+
+    with main_col:
+        st.markdown(f"""
+        <div style="
+            background-color: rgba(33, 150, 243, 0.15);
+            padding: 2rem 2.5rem;
+            border-radius: 10px;
+            font-size: 16px;
+            line-height: 1.5;
+            color: inherit;
+        ">
+            <div style="font-size: 18px; font-weight: bold; margin-bottom: 1.5rem;">
+                📋 คำแนะนำจากผลตรวจสุขภาพ
+            </div>
+            {merge_final_advice_grouped(advice_list)}
         </div>
-        {merge_final_advice_grouped(advice_list)}
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
     # ==================== Urinalysis Section ====================
     def render_section_header(title, subtitle=None):
