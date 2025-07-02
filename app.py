@@ -361,31 +361,32 @@ if "person_row" in st.session_state:
             dbp = float(dbp)
         except:
             sbp = dbp = None
-
-        if bmi is None:
-            bmi_text = ""
-        elif bmi > 30:
-            bmi_text = "น้ำหนักเกินมาตรฐานมาก"
-        elif bmi >= 25:
-            bmi_text = "น้ำหนักเกินมาตรฐาน"
-        elif bmi < 18.5:
-            bmi_text = "น้ำหนักน้อยกว่ามาตรฐาน"
-        else:
-            bmi_text = "น้ำหนักอยู่ในเกณฑ์ปกติ"
-
-        if sbp is None or dbp is None:
-            bp_text = ""
-        elif sbp >= 160 or dbp >= 100:
-            bp_text = "ความดันโลหิตอยู่ในระดับสูงมาก"
-        elif sbp >= 140 or dbp >= 90:
-            bp_text = "ความดันโลหิตอยู่ในระดับสูง"
-        elif sbp >= 120 or dbp >= 80:
-            bp_text = "ความดันโลหิตเริ่มสูง"
-        else:
-            bp_text = ""
-
+    
+        bmi_text = ""
+        bp_text = ""
+    
+        if bmi is not None:
+            if bmi > 30:
+                bmi_text = "น้ำหนักเกินมาตรฐานมาก"
+            elif bmi >= 25:
+                bmi_text = "น้ำหนักเกินมาตรฐาน"
+            elif bmi < 18.5:
+                bmi_text = "น้ำหนักน้อยกว่ามาตรฐาน"
+            else:
+                bmi_text = "น้ำหนักอยู่ในเกณฑ์ปกติ"
+    
+        if sbp is not None and dbp is not None:
+            if sbp >= 160 or dbp >= 100:
+                bp_text = "ความดันโลหิตอยู่ในระดับสูงมาก"
+            elif sbp >= 140 or dbp >= 90:
+                bp_text = "ความดันโลหิตอยู่ในระดับสูง"
+            elif sbp >= 120 or dbp >= 80:
+                bp_text = "ความดันโลหิตเริ่มสูง"
+    
+        # ✅ ถ้าไม่มีข้อมูลเลย: ไม่ให้คำแนะนำ
         if not bmi_text and not bp_text:
-            return "ไม่พบข้อมูลเพียงพอในการประเมินสุขภาพ"
+            return ""
+    
         if "ปกติ" in bmi_text and not bp_text:
             return "น้ำหนักอยู่ในเกณฑ์ดี ควรรักษาพฤติกรรมสุขภาพนี้ต่อไป"
         if not bmi_text and bp_text:
@@ -433,8 +434,8 @@ if "person_row" in st.session_state:
     waist = f"{waist} ซม." if not is_empty(waist) else "-"
 
     advice_text = combined_health_advice(bmi_val, sbp, dbp)
-    summary_advice = html.escape(advice_text) if advice_text else "-"
-
+    summary_advice = html.escape(advice_text) if advice_text else ""
+    
     # ===== แสดงผล =====
     st.markdown(f"""
     <div style="font-size: 18px; line-height: 1.8; color: inherit; padding: 24px 8px;">
@@ -459,7 +460,7 @@ if "person_row" in st.session_state:
             <div><b>ความดันโลหิต:</b> {bp_full}</div>
             <div><b>ชีพจร:</b> {pulse}</div>
         </div>
-        {"<div style='margin-top: 16px; text-align: center;'><b>คำแนะนำ:</b> " + summary_advice + "</div>" if summary_advice != "-" else ""}
+        {f"<div style='margin-top: 16px; text-align: center;'><b>คำแนะนำ:</b> {summary_advice}</div>" if summary_advice else ""}
     </div>
     """, unsafe_allow_html=True)
 
