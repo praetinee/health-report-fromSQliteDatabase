@@ -768,24 +768,53 @@ if "person_row" in st.session_state:
             return "-"
     
         def interpret_rbc(value):
-            val = str(value).strip().lower()
-            if val in ["0-1", "negative", "1-2", "2-3", "3-5"]:
-                return "ปกติ"
-            elif val in ["5-10", "10-20"]:
-                return "พบเม็ดเลือดแดงในปัสสาวะเล็กน้อย"
-            elif val not in ["-", "none", "nan", ""]:
-                return "พบเม็ดเลือดแดงในปัสสาวะ"
-            return "-"
+            val = str(value or "").strip().lower()
+            if val in ["-", "", "none", "nan"]:
+                return "-"
+            try:
+                # แยกตัวเลขช่วง เช่น "0-2", "1-3"
+                parts = val.replace("cell/hpf", "").replace("cells/hpf", "").replace("cell", "").strip().split("-")
+                if len(parts) == 2:
+                    low = float(parts[0])
+                    high = float(parts[1])
+                    if high <= 2:
+                        return "ปกติ"
+                    elif high <= 5:
+                        return "พบเม็ดเลือดแดงในปัสสาวะเล็กน้อย"
+                    else:
+                        return "พบเม็ดเลือดแดงในปัสสาวะ"
+                elif float(val) <= 2:
+                    return "ปกติ"
+                elif float(val) <= 5:
+                    return "พบเม็ดเลือดแดงในปัสสาวะเล็กน้อย"
+                else:
+                    return "พบเม็ดเลือดแดงในปัสสาวะ"
+            except:
+                return value
     
         def interpret_wbc(value):
-            val = str(value).strip().lower()
-            if val in ["0-1", "negative", "1-2", "2-3", "3-5"]:
-                return "ปกติ"
-            elif val in ["5-10", "10-20"]:
-                return "พบเม็ดเลือดขาวในปัสสาวะเล็กน้อย"
-            elif val not in ["-", "none", "nan", ""]:
-                return "พบเม็ดเลือดขาวในปัสสาวะ"
-            return "-"
+            val = str(value or "").strip().lower()
+            if val in ["-", "", "none", "nan"]:
+                return "-"
+            try:
+                parts = val.replace("cell/hpf", "").replace("cells/hpf", "").replace("cell", "").strip().split("-")
+                if len(parts) == 2:
+                    low = float(parts[0])
+                    high = float(parts[1])
+                    if high <= 5:
+                        return "ปกติ"
+                    elif high <= 10:
+                        return "พบเม็ดเลือดขาวในปัสสาวะเล็กน้อย"
+                    else:
+                        return "พบเม็ดเลือดขาวในปัสสาวะ"
+                elif float(val) <= 5:
+                    return "ปกติ"
+                elif float(val) <= 10:
+                    return "พบเม็ดเลือดขาวในปัสสาวะเล็กน้อย"
+                else:
+                    return "พบเม็ดเลือดขาวในปัสสาวะ"
+            except:
+                return value
     
         def advice_urine(sex, alb, sugar, rbc, wbc):
             alb_t = interpret_alb(alb)
