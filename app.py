@@ -44,17 +44,18 @@ df = load_sqlite_data()
 
 # ==================== UI SEARCH FORM ====================
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
+# 🔧 ซ่อน scrollbar ที่ไม่จำเป็นในกล่องผลตรวจ / คำแนะนำ
 st.markdown("""
-<style>
-/* ลบ scrollbar ที่แอบแทรกใน div ต่างๆ เช่น markdown/table */
-div[style*="overflow-x: auto"] {
-    overflow-x: visible !important;
-}
-
-div[style*="overflow-y: auto"] {
-    overflow-y: visible !important;
-}
-</style>
+    <style>
+    /* ซ่อน scrollbar ทั่วไป */
+    div[data-testid="stMarkdownContainer"] {
+        scrollbar-width: none;           /* Firefox */
+        overflow: visible !important;    /* สำคัญ: ไม่ให้ scroll เกิด */
+    }
+    div[data-testid="stMarkdownContainer"]::-webkit-scrollbar {
+        display: none;                   /* Chrome/Safari */
+    }
+    </style>
 """, unsafe_allow_html=True)
 
 st.markdown("<h1 style='text-align:center;'>ระบบรายงานผลตรวจสุขภาพ</h1>", unsafe_allow_html=True)
