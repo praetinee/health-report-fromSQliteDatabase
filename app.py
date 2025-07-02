@@ -845,8 +845,8 @@ if "person_row" in st.session_state:
     
             def is_urine_abnormal(test_name, value, normal_range):
                 val_clean = str(value or "").strip().lower()
-                if val_clean in ["", "-", "none", "nan"]:
-                    return False  # ❌ ค่าว่างหรือไม่มีการตรวจ ไม่ถือว่าผิดปกติ
+                if val_clean in ["", "-", "none", "nan", "null"]:
+                    return False
             
                 try:
                     val = float(val_clean)
@@ -857,12 +857,11 @@ if "person_row" in st.session_state:
                 except:
                     pass
             
-                # เงื่อนไขค่าอื่น ๆ ที่เป็นตัวอักษร เช่น positive/trace
                 return val_clean not in [
-                    "-", "negative", "trace", "0", "none", "nan", "",  # ค่าว่าง
-                    "yellow", "pale yellow",                           # สี
-                    "0-1", "0-2", "1-2", "2-3", "3-5", "0-5", "0-10",   # เซลล์
-                    "1.01", "1.015", "1.02", "1.025", "1.03"           # sp.gr บาง lab รายงานแบบ string
+                    "-", "negative", "trace", "0", "none", "nan", "",
+                    "yellow", "pale yellow", "colorless",   # ✅ เพิ่ม colorless ตรงนี้
+                    "0-1", "0-2", "1-2", "2-3", "3-5", "0-5", "0-10",
+                    "1.01", "1.015", "1.02", "1.025", "1.03"
                 ]
             
             def render_urine_html_table(df):
