@@ -1097,14 +1097,32 @@ if "person_row" in st.session_state:
         """, unsafe_allow_html=True)
         
         
-        # === Section: Hepatitis B ===
+        from dateutil import parser
+
+        def normalize_date(val):
+            if not val or str(val).strip().lower() in ["", "none", "nan", "null", "-"]:
+                return "-"
+            try:
+                dt = parser.parse(str(val), dayfirst=True, fuzzy=True)
+                return dt.strftime("%d/%m/%Y")
+            except:
+                return "-"
+        
+        # --- Extract extra info ---
+        hep_check_date_raw = person.get("ปีตรวจ HEP", "")
+        hep_check_date = normalize_date(hep_check_date_raw)
+        
+        hep_vaccine = safe_text(person.get("วัคซีน hep b 67"))
+        
+        # --- Render Section Header ---
         st.markdown(render_section_header("ผลการตรวจไวรัสตับอักเสบบี (Viral hepatitis B)"), unsafe_allow_html=True)
         
+        # --- Extract Hepatitis Results ---
         hbsag_raw = safe_text(person.get("HbsAg"))
         hbsab_raw = safe_text(person.get("HbsAb"))
         hbcab_raw = safe_text(person.get("HBcAB"))
         
-        # ตกแต่งตารางให้ responsive
+        # --- Show Table ---
         st.markdown(f"""
         <div style="margin-bottom: 1rem;">
         <table style='
@@ -1132,8 +1150,21 @@ if "person_row" in st.session_state:
         </div>
         """, unsafe_allow_html=True)
         
+        # --- Show vaccine + check date ---
+        st.markdown(f"""
+        <div style='
+            font-size: 16px;
+            padding: 0.75rem 1rem;
+            background-color: rgba(255,255,255,0.05);
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+        '>
+            <b>วันที่ตรวจภูมิคุ้มกัน:</b> {hep_check_date}<br>
+            <b>ประวัติการได้รับวัคซีน:</b> {hep_vaccine}
+        </div>
+        """, unsafe_allow_html=True)
         
-        # ฟังก์ชันคำแนะนำ
+        # --- Advice ---
         def hepatitis_b_advice(hbsag, hbsab, hbcab):
             hbsag = hbsag.lower()
             hbsab = hbsab.lower()
@@ -1149,7 +1180,6 @@ if "person_row" in st.session_state:
                 return "ไม่มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี"
             return "ไม่สามารถสรุปผลชัดเจน แนะนำให้พบแพทย์เพื่อประเมินซ้ำ"
         
-        # แสดงคำแนะนำ
         advice = hepatitis_b_advice(hbsag_raw, hbsab_raw, hbcab_raw)
         st.markdown(f"""
         <div style='
