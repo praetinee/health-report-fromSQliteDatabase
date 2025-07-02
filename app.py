@@ -1096,21 +1096,8 @@ if "person_row" in st.session_state:
         </div>
         """, unsafe_allow_html=True)
               
-        from dateutil import parser
-
-        def normalize_date(val):
-            if not val or str(val).strip().lower() in ["", "-", "none", "nan", "null"]:
-                return "-"
-            try:
-                dt = parser.parse(str(val), dayfirst=True, fuzzy=True)
-                return dt.strftime("%d/%m/%Y")
-            except:
-                return "-"
-        
         # --- Extract extra info ---
-        hep_check_date_raw = person.get("ปีตรวจ HEP", "")
-        hep_check_date = normalize_date(hep_check_date_raw)
-        
+        hep_check_date = safe_text(person.get("ปีตรวจ HEP"))        
         hep_history = safe_text(person.get("สรุปประวัติ Hepb"))
         hep_vaccine = safe_text(person.get("วัคซีน hep b 67"))
         
