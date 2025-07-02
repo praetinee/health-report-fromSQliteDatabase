@@ -25,7 +25,7 @@ def load_sqlite_data():
         tmp.close()
 
         conn = sqlite3.connect(tmp.name)
-        df = pd.read_sql_query("SELECT * FROM health_data", conn)
+        df = pd.read_sql("SELECT * FROM health_data WHERE HN = ?", conn, params=(hn_input,))
         conn.close()
 
         # Strip & แปลงชนิดข้อมูลสำคัญ
