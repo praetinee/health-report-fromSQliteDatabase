@@ -44,16 +44,40 @@ df = load_sqlite_data()
 
 # ==================== UI SEARCH FORM ====================
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
-# 🔧 ซ่อน scrollbar ที่ไม่จำเป็นในกล่องผลตรวจ / คำแนะนำ
 st.markdown("""
     <style>
-    /* ซ่อน scrollbar ทั่วไป */
-    div[data-testid="stMarkdownContainer"] {
-        scrollbar-width: none;           /* Firefox */
-        overflow: visible !important;    /* สำคัญ: ไม่ให้ scroll เกิด */
+    /* ปิด scrollbar เฉพาะ markdown ทุกตัว */
+    div.stMarkdown {
+        overflow: visible !important;
     }
-    div[data-testid="stMarkdownContainer"]::-webkit-scrollbar {
-        display: none;                   /* Chrome/Safari */
+
+    /* ปิด scrollbar บน container ที่ Streamlit ห่อให้ */
+    section.main > div {
+        overflow-y: visible !important;
+    }
+
+    /* บังคับไม่ให้ wrap scroll container */
+    [data-testid="stVerticalBlock"] {
+        overflow: visible !important;
+    }
+
+    /* ปิด scrollbar ที่ WebKit (Chrome/Safari) */
+    ::-webkit-scrollbar {
+        width: 0px;
+        background: transparent;
+    }
+
+    /* ปิด scrollbar ของ container markdown ที่แสดงผลแนะนำ */
+    div[style*="overflow: auto"] {
+        overflow: visible !important;
+    }
+
+    div[style*="overflow-x: auto"] {
+        overflow-x: visible !important;
+    }
+
+    div[style*="overflow-y: auto"] {
+        overflow-y: visible !important;
     }
     </style>
 """, unsafe_allow_html=True)
