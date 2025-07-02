@@ -836,6 +836,23 @@ if "person_row" in st.session_state:
     
             df_urine = pd.DataFrame(urine_data, columns=["ชื่อการตรวจ", "ผลตรวจ", "ค่าปกติ"])
     
+            def is_urine_abnormal(test_name, value, normal_range):
+                try:
+                    val = float(value)
+                    if test_name == "กรด-ด่าง (pH)":
+                        return not (5.0 <= val <= 8.0)
+                    elif test_name == "ความถ่วงจำเพาะ (Sp.gr)":
+                        return not (1.003 <= val <= 1.030)
+                except:
+                    pass
+            
+                val = str(value).strip().lower()
+                return val not in [
+                    "-", "negative", "trace", "0", "none", "nan", "",
+                    "yellow", "pale yellow",
+                    "0-1", "0-2", "1.01", "1.015", "1.02", "1.025", "1.03"
+                ]
+            
             def render_urine_html_table(df):
                 style = """
                 <style>
@@ -873,28 +890,12 @@ if "person_row" in st.session_state:
                 """
                 html = "<div class='urine-container'><table class='urine-table'>"
                 html += "<thead><tr><th>ชื่อการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead><tbody>"
-    
+            
                 for _, row in df.iterrows():
-                    def is_urine_abnormal(test_name, value, normal_range):
-                        try:
-                            val = float(value)
-                            if test_name == "กรด-ด่าง (pH)":
-                                return not (5.0 <= val <= 8.0)
-                            elif test_name == "ความถ่วงจำเพาะ (Sp.gr)":
-                                return not (1.003 <= val <= 1.030)
-                        except:
-                            pass
-                    
-                        val = str(value).strip().lower()
-                        return val not in [
-                            "-", "negative", "trace", "0", "none", "nan", "",
-                            "yellow", "pale yellow",
-                            "0-1", "0-2", "1.01", "1.015", "1.02", "1.025", "1.03"
-                        ]
-
+                    is_abnormal = is_urine_abnormal(row["ชื่อการตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"])
                     css_class = "urine-abn" if is_abnormal else "urine-row"
                     html += f"<tr class='{css_class}'><td>{row['ชื่อการตรวจ']}</td><td>{safe_value(row['ผลตรวจ'])}</td><td>{row['ค่าปกติ']}</td></tr>"
-    
+            
                 html += "</tbody></table></div>"
                 return style + html
     
