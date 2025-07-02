@@ -7,6 +7,9 @@ import tempfile
 import html  # ใช้สำหรับ html.escape()
 import numpy as np
 
+def is_empty(val):
+    return str(val).strip().lower() in ["", "-", "none", "nan", "null"]
+
 @st.cache_data(ttl=600)
 def load_sqlite_data():
     try:
@@ -418,8 +421,6 @@ if "person_row" in st.session_state:
         bp_desc = interpret_bp(sbp, dbp)
         bp_full = f"{bp_val} - {bp_desc}" if bp_desc != "-" else bp_val
 
-    def is_empty(val):
-        return str(val).strip().lower() in ["", "-", "none", "nan"]
     # ดึงค่าและแปลงชีพจรให้เป็นจำนวนเต็ม ไม่มีทศนิยม
     try:
         pulse_val = int(float(person.get("pulse", 0)))
@@ -1013,10 +1014,6 @@ if "person_row" in st.session_state:
         # ✅ หัวตารางเอกซเรย์
         st.markdown(render_section_header("ผลเอกซเรย์", "Chest X-ray"), unsafe_allow_html=True)
     
-        # ✅ ตรวจว่าเป็นค่าว่างหรือไม่
-        def is_empty(val):
-            return str(val).strip().lower() in ["", "-", "none", "nan"]
-    
         # ✅ ฟังก์ชันแปลผลเอกซเรย์
         def interpret_cxr(val):
             val = str(val or "").strip()
@@ -1052,9 +1049,6 @@ if "person_row" in st.session_state:
 
         def get_ekg_col_name(year):
             return "EKG" if year == 2568 else f"EKG{str(year)[-2:]}"  # เช่น EKG68, EKG67
-
-        def is_empty(val):
-            return str(val).strip().lower() in ["", "-", "none", "nan"]
 
         def interpret_ekg(val):
             val = str(val or "").strip()
