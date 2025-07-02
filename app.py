@@ -1098,16 +1098,53 @@ if "person_row" in st.session_state:
               
         # --- Extract extra info ---
 
+        import re
         from dateutil import parser
-
+        
         def normalize_date(val):
-            if not val or str(val).strip().lower() in ["", "-", "none", "nan", "null"]:
+            if not val or str(val).strip().lower() in ["", "-", "none", "null", "nan"]:
                 return "-"
+        
+            text = str(val).strip()
+        
+            # ลอง parse วันก่อน
             try:
-                dt = parser.parse(str(val), dayfirst=True, fuzzy=True)
-                return dt.strftime("%d/%m/%Y")
+                dt = parser.parse(text, dayfirst=True, fuzzy=True)
             except:
                 return "-"
+        
+            # ตรวจว่าเป็นปี พ.ศ. หรือ ค.ศ.
+            year = dt.year
+            thai_year = year
+            if year < 2400:  # ถ้าเป็น พ.ศ. แบบย่อ เช่น 66 → ค.ศ. 2066 → ต้องปรับ
+                if year < 100:  # แก้ปีสั้น เช่น 66 เป็น 2566
+                    thai_year = year + 2500 if year < 80 else year + 2400
+                else:
+                    return "-"  # ไม่แน่ใจปี
+        
+            elif year < 2100:
+                # เป็นปี ค.ศ. แน่นอน เช่น 2024 → +543 เป็น พ.ศ.
+                thai_year = year + 543
+        
+            # ฟอร์แมตเป็น: 1 มกราคม 2567 (ไม่มีเลข 0 นำหน้า)
+            day = dt.day
+            month = dt.strftime("%B")  # ชื่อเดือนเต็ม (ภาษาอังกฤษ)
+            month_th = {
+                "January": "มกราคม",
+                "February": "กุมภาพันธ์",
+                "March": "มีนาคม",
+                "April": "เมษายน",
+                "May": "พฤษภาคม",
+                "June": "มิถุนายน",
+                "July": "กรกฎาคม",
+                "August": "สิงหาคม",
+                "September": "กันยายน",
+                "October": "ตุลาคม",
+                "November": "พฤศจิกายน",
+                "December": "ธันวาคม"
+            }.get(month, month)
+        
+            return f"{day} {month_th} {thai_year}"
         
         hep_check_date_raw = person.get("ปีตรวจHEP")
         hep_check_date = normalize_date(hep_check_date_raw)
