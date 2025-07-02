@@ -409,7 +409,14 @@ if "person_row" in st.session_state:
 
     sbp_val = f"{sbp}/{dbp} ม.ม.ปรอท" if sbp is not None and dbp is not None else "-"
     bp_desc = interpret_bp(sbp, dbp)
-    bp_full = f"{sbp_val} - {bp_desc}" if bp_desc != "-" else sbp_val
+    if is_empty(sbp) or is_empty(dbp):
+        bp_val = "-"
+        bp_desc = "-"
+        bp_full = "-"
+    else:
+        bp_val = f"{sbp}/{dbp} ม.ม.ปรอท"
+        bp_desc = interpret_bp(sbp, dbp)
+        bp_full = f"{bp_val} - {bp_desc}" if bp_desc != "-" else bp_val
 
     def is_empty(val):
         return str(val).strip().lower() in ["", "-", "none", "nan"]
@@ -424,7 +431,8 @@ if "person_row" in st.session_state:
     height = f"{height} ซม." if not is_empty(height) else "-"
     waist = f"{waist} ซม." if not is_empty(waist) else "-"
 
-    summary_advice = html.escape(combined_health_advice(bmi_val, sbp, dbp))
+    advice_text = combined_health_advice(bmi_val, sbp, dbp)
+    summary_advice = html.escape(advice_text) if advice_text else "-"
 
     # ===== แสดงผล =====
     st.markdown(f"""
@@ -450,9 +458,7 @@ if "person_row" in st.session_state:
             <div><b>ความดันโลหิต:</b> {bp_full}</div>
             <div><b>ชีพจร:</b> {pulse}</div>
         </div>
-        <div style="margin-top: 16px; text-align: center;">
-            <b>คำแนะนำ:</b> {summary_advice}
-        </div>
+        {"<div style='margin-top: 16px; text-align: center;'><b>คำแนะนำ:</b> " + summary_advice + "</div>" if summary_advice != "-" else ""}
     </div>
     """, unsafe_allow_html=True)
 
@@ -837,8 +843,12 @@ if "person_row" in st.session_state:
             df_urine = pd.DataFrame(urine_data, columns=["ชื่อการตรวจ", "ผลตรวจ", "ค่าปกติ"])
     
             def is_urine_abnormal(test_name, value, normal_range):
+                val_clean = str(value or "").strip().lower()
+                if val_clean in ["", "-", "none", "nan"]:
+                    return False  # ❌ ค่าว่างหรือไม่มีการตรวจ ไม่ถือว่าผิดปกติ
+            
                 try:
-                    val = float(value)
+                    val = float(val_clean)
                     if test_name == "กรด-ด่าง (pH)":
                         return not (5.0 <= val <= 8.0)
                     elif test_name == "ความถ่วงจำเพาะ (Sp.gr)":
@@ -846,11 +856,12 @@ if "person_row" in st.session_state:
                 except:
                     pass
             
-                val = str(value).strip().lower()
-                return val not in [
-                    "-", "negative", "trace", "0", "none", "nan", "",
-                    "yellow", "pale yellow",
-                    "0-1", "0-2", "1.01", "1.015", "1.02", "1.025", "1.03"
+                # เงื่อนไขค่าอื่น ๆ ที่เป็นตัวอักษร เช่น positive/trace
+                return val_clean not in [
+                    "-", "negative", "trace", "0", "none", "nan", "",  # ค่าว่าง
+                    "yellow", "pale yellow",                           # สี
+                    "0-1", "0-2", "1-2", "2-3", "3-5", "0-5", "0-10",   # เซลล์
+                    "1.01", "1.015", "1.02", "1.025", "1.03"           # sp.gr บาง lab รายงานแบบ string
                 ]
             
             def render_urine_html_table(df):
