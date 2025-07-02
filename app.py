@@ -1095,19 +1095,7 @@ if "person_row" in st.session_state:
             {hep_a_raw}
         </div>
         """, unsafe_allow_html=True)
-        
-        
-        from dateutil import parser
-
-        def normalize_date(val):
-            if not val or str(val).strip().lower() in ["", "none", "nan", "null", "-"]:
-                return "-"
-            try:
-                dt = parser.parse(str(val), dayfirst=True, fuzzy=True)
-                return dt.strftime("%d/%m/%Y")
-            except:
-                return "-"
-        
+              
         from dateutil import parser
 
         def normalize_date(val):
