@@ -984,6 +984,7 @@ if "person_row" in st.session_state:
                 st.markdown(f"""
                     <div style='
                         background-color: rgba(255, 215, 0, 0.2);
+                        color: var(--text-color);
                         padding: 1rem;
                         border-radius: 6px;
                         margin-top: 1rem;
