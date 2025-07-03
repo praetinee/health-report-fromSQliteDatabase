@@ -1303,8 +1303,14 @@ if "person_row" in st.session_state:
             return "ไม่สามารถสรุปผลชัดเจน แนะนำให้พบแพทย์เพื่อประเมินซ้ำ"
         
         advice = hepatitis_b_advice(hbsag_raw, hbsab_raw, hbcab_raw)
-        advice_background = "rgba(33, 53, 41, 0.9)" if "มีภูมิคุ้มกัน" in advice else "rgba(255, 215, 0, 0.2)"
-
+        
+        # ✅ กำหนดสีพื้นหลังโปร่งแสงให้กลืนธีม แบบเดียวกับปัสสาวะ
+        advice_background = (
+            "rgba(33, 53, 41, 0.9)" if "มีภูมิคุ้มกัน" in advice
+            else "rgba(255, 215, 0, 0.2)"
+        )
+        
+        # ✅ กล่องคำแนะนำ ใช้สีตัวอักษรที่ปรับตามธีม
         st.markdown(f"""
         <div style='
             font-size: 16px;
