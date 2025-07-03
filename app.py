@@ -915,7 +915,7 @@ if "person_row" in st.session_state:
                 style = """
                 <style>
                     .urine-container {
-                        background-color: #111;
+                        background-color: var(--background-color);
                         margin-top: 1rem;
                         box-shadow: 0 2px 4px rgba(0,0,0,0.4);
                     }
@@ -926,17 +926,17 @@ if "person_row" in st.session_state:
                         font-family: "Segoe UI", sans-serif;
                     }
                     .urine-table thead th {
-                        background-color: #1c1c1c;
-                        color: white;
+                        background-color: var(--secondary-background-color);
+                        color: var(--text-color);
                         padding: 12px;
                         text-align: center;
                         font-weight: bold;
                     }
                     .urine-table td {
                         padding: 12px;
-                        border: 1px solid #333;
+                        border: 1px solid var(--secondary-background-color);
                         text-align: center;
-                        color: white;
+                        color: var(--text-color);
                     }
                     .urine-abn {
                         background-color: rgba(255, 64, 64, 0.25);
@@ -1009,7 +1009,7 @@ if "person_row" in st.session_state:
                 style = """
                 <style>
                     .stool-container {
-                        background-color: #111;
+                        background-color: var(--background-color);
                         margin-top: 1rem;
                         box-shadow: 0 2px 4px rgba(0,0,0,0.4);
                     }
@@ -1020,8 +1020,8 @@ if "person_row" in st.session_state:
                         font-family: "Segoe UI", sans-serif;
                     }
                     .stool-table th {
-                        background-color: #1c1c1c;
-                        color: white;
+                        background-color: var(--secondary-background-color);
+                        color: var(--text-color);
                         padding: 12px;
                         text-align: left;
                         font-weight: bold;
@@ -1029,8 +1029,8 @@ if "person_row" in st.session_state:
                     }
                     .stool-table td {
                         padding: 12px;
-                        border: 1px solid #333;
-                        color: white;
+                        border: 1px solid var(--secondary-background-color);
+                        color: var(--text-color);
                     }
                 </style>
                 """
