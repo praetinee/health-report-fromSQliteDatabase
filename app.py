@@ -622,8 +622,12 @@ if "person_row" in st.session_state:
         for row in rows:
             is_abn = any(flag for _, flag in row)
             row_class = "lab-abn" if is_abn else "lab-row"
-            html += "<tr>" + "".join(f"<td class='{row_class}'>{cell}</td>" for cell, _ in row) + "</tr>"
-    
+            
+            html += f"<tr>"
+            html += f"<td class='{row_class}' style='text-align: left;'>{row[0][0]}</td>"  # ชื่อการตรวจ
+            html += f"<td class='{row_class}'>{row[1][0]}</td>"  # ผล
+            html += f"<td class='{row_class}' style='text-align: left;'>{row[2][0]}</td>"  # ค่าปกติ
+            html += f"</tr>"
         html += "</tbody></table></div>"
         return style + html
 
@@ -1043,7 +1047,7 @@ if "person_row" in st.session_state:
                     <table class='stool-table'>
                         <tr>
                             <th>ผลตรวจอุจจาระทั่วไป</th>
-                            <td>{exam if exam != "-" else "ไม่ได้เข้ารับการตรวจ"}</td>
+                            <td style='text-align: left;'>{exam if exam != "-" else "ไม่ได้เข้ารับการตรวจ"}</td>
                         </tr>
                         <tr>
                             <th>ผลตรวจอุจจาระเพาะเชื้อ</th>
