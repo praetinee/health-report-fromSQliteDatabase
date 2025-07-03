@@ -581,8 +581,8 @@ if "person_row" in st.session_state:
                 color: var(--text-color);  /* แทน white */
             }
             .lab-table thead th {
-                background-color: #1c1c1c;
-                color: white; /* ✅ คงไว้เพราะเป็นแถบหัว */
+                background-color: var(--secondary-background-color);
+                color: var(--text-color);
                 padding: 12px;
                 text-align: center;
                 font-weight: bold;
