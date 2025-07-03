@@ -130,7 +130,13 @@ if "search_result" in st.session_state:
         format_func=lambda y: f"พ.ศ. {y}"
     )
 
-    person_year_df = results_df[results_df["Year"] == selected_year]
+    selected_hn = results_df.iloc[0]["HN"]  # ดึง HN ของคนที่ค้นเจอ
+
+    person_year_df = results_df[
+        (results_df["Year"] == selected_year) &
+        (results_df["HN"] == selected_hn)
+    ]
+
     person_year_df = person_year_df.drop_duplicates(subset=["HN", "วันที่ตรวจ"])
 
     exam_dates = person_year_df["วันที่ตรวจ"].dropna().unique()
