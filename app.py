@@ -706,7 +706,7 @@ if "person_row" in st.session_state:
     with main_col:
         final_advice_html = merge_final_advice_grouped(advice_list)
         has_advice = "ไม่พบคำแนะนำเพิ่มเติม" not in final_advice_html
-        background_color = "rgba(255, 243, 205, 0.85)" if has_advice else "rgba(209, 236, 221, 0.85)"
+        background_color = "rgba(255, 243, 205, 0.8)" if has_advice else "rgba(209, 236, 221, 0.85)"
         
         st.markdown(f"""
         <div style="
