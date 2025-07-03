@@ -582,13 +582,13 @@ if "person_row" in st.session_state:
             .lab-table thead th {
                 background-color: var(--secondary-background-color);
                 color: var(--text-color);
-                padding: 4px 4px;
+                padding: 1px 4px;
                 text-align: center;
                 font-weight: bold;
                 border: 1px solid transparent;
             }
             .lab-table td {
-                padding: 4px 4px;
+                padding: 1px 4px;
                 border: 1px solid transparent;
                 text-align: center;
             }
