@@ -571,7 +571,6 @@ if "person_row" in st.session_state:
             .lab-container {
                 background-color: var(--background-color);  /* ใช้สีจากธีม */
                 margin-top: 1rem;
-                box-shadow: none;
             }
             .lab-table {
                 width: 100%;
@@ -918,7 +917,6 @@ if "person_row" in st.session_state:
                     .urine-container {
                         background-color: var(--background-color);
                         margin-top: 1rem;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.4);
                     }
                     .urine-table {
                         width: 100%;
@@ -1013,7 +1011,6 @@ if "person_row" in st.session_state:
                     .stool-container {
                         background-color: var(--background-color);
                         margin-top: 1rem;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.4);
                     }
                     .stool-table {
                         width: 100%;
