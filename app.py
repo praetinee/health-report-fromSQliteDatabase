@@ -1028,6 +1028,7 @@ if "person_row" in st.session_state:
                         text-align: left;
                         font-weight: bold;
                         width: 40%;
+                        border: 1px solid transparent;
                     }
                     .stool-table td {
                         padding: 12px;
@@ -1239,17 +1240,17 @@ if "person_row" in st.session_state:
             min-width: 300px;
         '>
             <thead>
-                <tr style='border-bottom: 1px solid transparent #ccc;'>
-                    <th style="padding: 8px;">HBsAg</th>
-                    <th style="padding: 8px;">HBsAb</th>
-                    <th style="padding: 8px;">HBcAb</th>
+                <tr>
+                    <th style="padding: 8px; border: 1px solid transparent;">HBsAg</th>
+                    <th style="padding: 8px; border: 1px solid transparent;">HBsAb</th>
+                    <th style="padding: 8px; border: 1px solid transparent;">HBcAb</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td style="padding: 8px;">{hbsag_raw}</td>
-                    <td style="padding: 8px;">{hbsab_raw}</td>
-                    <td style="padding: 8px;">{hbcab_raw}</td>
+                    <td style="padding: 8px; border: 1px solid transparent;">{hbsag_raw}</td>
+                    <td style="padding: 8px; border: 1px solid transparent;">{hbsab_raw}</td>
+                    <td style="padding: 8px; border: 1px solid transparent;">{hbcab_raw}</td>
                 </tr>
             </tbody>
         </table>
