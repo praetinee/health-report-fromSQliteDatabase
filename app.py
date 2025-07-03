@@ -1304,6 +1304,7 @@ if "person_row" in st.session_state:
         
         advice = hepatitis_b_advice(hbsag_raw, hbsab_raw, hbcab_raw)
         advice_background = "rgba(33, 53, 41, 0.9)" if "มีภูมิคุ้มกัน" in advice else "rgba(255, 215, 0, 0.2)"
+
         st.markdown(f"""
         <div style='
             font-size: 16px;
