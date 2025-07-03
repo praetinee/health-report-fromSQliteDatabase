@@ -1313,21 +1313,17 @@ if "person_row" in st.session_state:
         st.markdown("""
         <style>
         .hep-box {
-            color: var(--text-color) !important;
+            color: inherit !important;
+            font-size: 16px;
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
         }
         </style>
         """, unsafe_allow_html=True)
         
-        # แล้วแก้เป็น
         st.markdown(f"""
-        <div class="hep-box" style='
-            font-size: 16px;
-            padding: 1rem;
-            border-radius: 6px;
-            background-color: {advice_background};
-            margin-bottom: 1.5rem;
-            color: var(--text-color);
-        '>
+        <div class="hep-box" style="background-color: {advice_background};">
             <b>คำแนะนำ:</b> {advice}
         </div>
         """, unsafe_allow_html=True)
