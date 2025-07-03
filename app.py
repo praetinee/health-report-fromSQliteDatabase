@@ -582,13 +582,13 @@ if "person_row" in st.session_state:
             .lab-table thead th {
                 background-color: var(--secondary-background-color);
                 color: var(--text-color);
-                padding: 1px 4px;
+                padding: 3px 3px;
                 text-align: center;
                 font-weight: bold;
                 border: 1px solid transparent;
             }
             .lab-table td {
-                padding: 1px 4px;
+                padding: 3px 3px;
                 border: 1px solid transparent;
                 text-align: center;
             }
@@ -935,13 +935,13 @@ if "person_row" in st.session_state:
                     .urine-table thead th {
                         background-color: var(--secondary-background-color);
                         color: var(--text-color);
-                        padding: 8px 10px;
+                        padding: 3px 3px;
                         text-align: center;
                         font-weight: bold;
                         border: 1px solid transparent;
                     }
                     .urine-table td {
-                        padding: 8px 10px;
+                        padding: 3px 3px;
                         border: 1px solid transparent;  /* 👈 เส้นยังอยู่แต่โปร่งใส */
                         text-align: center;
                         color: var(--text-color);
@@ -1038,14 +1038,14 @@ if "person_row" in st.session_state:
                     .stool-table th {
                         background-color: var(--secondary-background-color);
                         color: var(--text-color);
-                        padding: 8px 10px;
+                        padding: 3px 3px;
                         text-align: left;
                         font-weight: bold;
                         width: 40%;
                         border: 1px solid transparent;
                     }
                     .stool-table td {
-                        padding: 8px 10px;
+                        padding: 3px 3px;
                         border: 1px solid transparent;  /* 👈 เส้นยังอยู่แต่โปร่งใส */
                         color: var(--text-color);
                     }
