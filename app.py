@@ -589,7 +589,7 @@ if "person_row" in st.session_state:
             }
             .lab-table td {
                 padding: 12px;
-                border: 1px solid #333;
+                border: 1px solid transparent;
                 text-align: center;
             }
             .lab-abn {
