@@ -456,8 +456,8 @@ if "person_row" in st.session_state:
         <div style="text-align: center; font-size: 22px; font-weight: bold;">รายงานผลการตรวจสุขภาพ</div>
         <div style="text-align: center;">วันที่ตรวจ: {check_date or "-"}</div>
         <div style="text-align: center; margin-top: 10px;">
-            โรงพยาบาลสันทราย 201 หมู่ที่ 11 ถนน เชียงใหม่ - พร้าว ตำบลหนองหาร อำเภอสันทราย เชียงใหม่ 50290<br>
-            ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167
+            โรงพยาบาลสันทราย 201 หมู่ที่ 11 ถนน เชียงใหม่ - พร้าว<br>
+            ตำบลหนองหาร อำเภอสันทราย เชียงใหม่ 50290 ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167
         </div>
         <hr style="margin: 24px 0;">
         <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; margin-bottom: 20px; text-align: center;">
@@ -571,6 +571,7 @@ if "person_row" in st.session_state:
             .lab-container {
                 background-color: var(--background-color);  /* ใช้สีจากธีม */
                 margin-top: 1rem;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.4);
             }
             .lab-table {
                 width: 100%;
@@ -585,11 +586,10 @@ if "person_row" in st.session_state:
                 padding: 12px;
                 text-align: center;
                 font-weight: bold;
-                border: 1px solid transparent;
             }
             .lab-table td {
                 padding: 12px;
-                border: 1px solid transparent;
+                border: 1px solid #333;
                 text-align: center;
             }
             .lab-abn {
@@ -622,12 +622,8 @@ if "person_row" in st.session_state:
         for row in rows:
             is_abn = any(flag for _, flag in row)
             row_class = "lab-abn" if is_abn else "lab-row"
-            
-            html += f"<tr>"
-            html += f"<td class='{row_class}' style='text-align: left;'>{row[0][0]}</td>"  # การตรวจ
-            html += f"<td class='{row_class}'>{row[1][0]}</td>"  # ผล
-            html += f"<td class='{row_class}' style='text-align: left;'>{row[2][0]}</td>"  # ค่าปกติ
-            html += f"</tr>"
+            html += "<tr>" + "".join(f"<td class='{row_class}'>{cell}</td>" for cell, _ in row) + "</tr>"
+    
         html += "</tbody></table></div>"
         return style + html
 
@@ -732,7 +728,7 @@ if "person_row" in st.session_state:
     
         return f"""
         <div style='
-            background-color: rgba(255, 215, 0, 0.2);
+            background-color: #1b5e20;
             color: white;
             text-align: center;
             padding: 1rem 0.5rem;
@@ -879,7 +875,7 @@ if "person_row" in st.session_state:
     
         with col_ua_left:
             st.markdown(render_section_header("ผลการตรวจปัสสาวะ", "Urinalysis"), unsafe_allow_html=True)
-            df_urine = pd.DataFrame(urine_data, columns=["การตรวจ", "ผลตรวจ", "ค่าปกติ"])
+            df_urine = pd.DataFrame(urine_data, columns=["ชื่อการตรวจ", "ผลตรวจ", "ค่าปกติ"])
     
             def is_urine_abnormal(test_name, value, normal_range):
                 val = str(value or "").strip().lower()
@@ -921,6 +917,7 @@ if "person_row" in st.session_state:
                     .urine-container {
                         background-color: var(--background-color);
                         margin-top: 1rem;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.4);
                     }
                     .urine-table {
                         width: 100%;
@@ -934,11 +931,10 @@ if "person_row" in st.session_state:
                         padding: 12px;
                         text-align: center;
                         font-weight: bold;
-                        border: 1px solid transparent;
                     }
                     .urine-table td {
                         padding: 12px;
-                        border: 1px solid transparent;  /* 👈 เส้นยังอยู่แต่โปร่งใส */
+                        border: 1px solid var(--secondary-background-color);
                         text-align: center;
                         color: var(--text-color);
                     }
@@ -951,15 +947,11 @@ if "person_row" in st.session_state:
                 </style>
                 """
                 html = "<div class='urine-container'><table class='urine-table'>"
-                html += "<thead><tr><th>การตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead><tbody>"
+                html += "<thead><tr><th>ชื่อการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead><tbody>"
                 for _, row in df.iterrows():
-                    is_abn = is_urine_abnormal(row["การตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"])
+                    is_abn = is_urine_abnormal(row["ชื่อการตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"])
                     css_class = "urine-abn" if is_abn else "urine-row"
-                    html += f"<tr class='{css_class}'>"
-                    html += f"<td style='text-align: left;'>{row['การตรวจ']}</td>"
-                    html += f"<td>{safe_value(row['ผลตรวจ'])}</td>"
-                    html += f"<td style='text-align: left;'>{row['ค่าปกติ']}</td>"
-                    html += "</tr>"
+                    html += f"<tr class='{css_class}'><td>{row['ชื่อการตรวจ']}</td><td>{safe_value(row['ผลตรวจ'])}</td><td>{row['ค่าปกติ']}</td></tr>"
                 html += "</tbody></table></div>"
                 return style + html
     
@@ -1019,6 +1011,7 @@ if "person_row" in st.session_state:
                     .stool-container {
                         background-color: var(--background-color);
                         margin-top: 1rem;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.4);
                     }
                     .stool-table {
                         width: 100%;
@@ -1033,11 +1026,10 @@ if "person_row" in st.session_state:
                         text-align: left;
                         font-weight: bold;
                         width: 40%;
-                        border: 1px solid transparent;
                     }
                     .stool-table td {
                         padding: 12px;
-                        border: 1px solid transparent;  /* 👈 เส้นยังอยู่แต่โปร่งใส */
+                        border: 1px solid var(--secondary-background-color);
                         color: var(--text-color);
                     }
                 </style>
@@ -1047,7 +1039,7 @@ if "person_row" in st.session_state:
                     <table class='stool-table'>
                         <tr>
                             <th>ผลตรวจอุจจาระทั่วไป</th>
-                            <td style='text-align: left;'>{exam if exam != "-" else "ไม่ได้เข้ารับการตรวจ"}</td>
+                            <td>{exam if exam != "-" else "ไม่ได้เข้ารับการตรวจ"}</td>
                         </tr>
                         <tr>
                             <th>ผลตรวจอุจจาระเพาะเชื้อ</th>
@@ -1149,7 +1141,7 @@ if "person_row" in st.session_state:
         </div>
         """, unsafe_allow_html=True)
               
-        # --- Section: Hepatitis B ---
+        # --- Extract extra info ---
 
         import re
         from datetime import datetime
@@ -1245,17 +1237,17 @@ if "person_row" in st.session_state:
             min-width: 300px;
         '>
             <thead>
-                <tr>
-                    <th style="padding: 8px; border: 1px solid transparent;">HBsAg</th>
-                    <th style="padding: 8px; border: 1px solid transparent;">HBsAb</th>
-                    <th style="padding: 8px; border: 1px solid transparent;">HBcAb</th>
+                <tr style='border-bottom: 1px solid #ccc;'>
+                    <th style="padding: 8px;">HBsAg</th>
+                    <th style="padding: 8px;">HBsAb</th>
+                    <th style="padding: 8px;">HBcAb</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td style="padding: 8px; border: 1px solid transparent;">{hbsag_raw}</td>
-                    <td style="padding: 8px; border: 1px solid transparent;">{hbsab_raw}</td>
-                    <td style="padding: 8px; border: 1px solid transparent;">{hbcab_raw}</td>
+                    <td style="padding: 8px;">{hbsag_raw}</td>
+                    <td style="padding: 8px;">{hbsab_raw}</td>
+                    <td style="padding: 8px;">{hbcab_raw}</td>
                 </tr>
             </tbody>
         </table>
@@ -1333,7 +1325,7 @@ if "person_row" in st.session_state:
         </div>
 
         <div style='
-            margin-top: 7rem;
+            margin-top: 3rem;
             text-align: right;
             padding-right: 1rem;
         '>
