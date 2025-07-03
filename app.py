@@ -691,8 +691,7 @@ if "person_row" in st.session_state:
                 groups["ไขมัน"].append(msg)
             else:
                 groups["อื่นๆ"].append(msg)
-
-        output.append(f"<b>{title}:</b> {' '.join(unique_msgs)}")
+                    output.append(f"<b>{title}:</b> {' '.join(unique_msgs)}")
 
         if not output:
             return "ไม่พบคำแนะนำเพิ่มเติมจากผลตรวจ"
