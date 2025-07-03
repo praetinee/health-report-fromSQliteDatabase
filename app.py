@@ -456,8 +456,8 @@ if "person_row" in st.session_state:
         <div style="text-align: center; font-size: 22px; font-weight: bold;">รายงานผลการตรวจสุขภาพ</div>
         <div style="text-align: center;">วันที่ตรวจ: {check_date or "-"}</div>
         <div style="text-align: center; margin-top: 10px;">
-            โรงพยาบาลสันทราย 201 หมู่ที่ 11 ถนน เชียงใหม่ - พร้าว<br>
-            ตำบลหนองหาร อำเภอสันทราย เชียงใหม่ 50290 ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167
+            โรงพยาบาลสันทราย 201 หมู่ที่ 11 ถนน เชียงใหม่ - พร้าว ตำบลหนองหาร อำเภอสันทราย เชียงใหม่ 50290<br>
+            ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167
         </div>
         <hr style="margin: 24px 0;">
         <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; margin-bottom: 20px; text-align: center;">
@@ -571,7 +571,6 @@ if "person_row" in st.session_state:
             .lab-container {
                 background-color: var(--background-color);  /* ใช้สีจากธีม */
                 margin-top: 1rem;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.4);
             }
             .lab-table {
                 width: 100%;
@@ -586,10 +585,11 @@ if "person_row" in st.session_state:
                 padding: 12px;
                 text-align: center;
                 font-weight: bold;
+                border: 1px solid transparent;
             }
             .lab-table td {
                 padding: 12px;
-                border: 1px solid #333;
+                border: 1px solid transparent;
                 text-align: center;
             }
             .lab-abn {
@@ -917,7 +917,6 @@ if "person_row" in st.session_state:
                     .urine-container {
                         background-color: var(--background-color);
                         margin-top: 1rem;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.4);
                     }
                     .urine-table {
                         width: 100%;
@@ -931,10 +930,11 @@ if "person_row" in st.session_state:
                         padding: 12px;
                         text-align: center;
                         font-weight: bold;
+                        border: 1px solid transparent;
                     }
                     .urine-table td {
                         padding: 12px;
-                        border: 1px solid var(--secondary-background-color);
+                        border: 1px solid transparent;  /* 👈 เส้นยังอยู่แต่โปร่งใส */
                         text-align: center;
                         color: var(--text-color);
                     }
@@ -1011,7 +1011,6 @@ if "person_row" in st.session_state:
                     .stool-container {
                         background-color: var(--background-color);
                         margin-top: 1rem;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.4);
                     }
                     .stool-table {
                         width: 100%;
@@ -1026,10 +1025,11 @@ if "person_row" in st.session_state:
                         text-align: left;
                         font-weight: bold;
                         width: 40%;
+                        border: 1px solid transparent;
                     }
                     .stool-table td {
                         padding: 12px;
-                        border: 1px solid var(--secondary-background-color);
+                        border: 1px solid transparent;  /* 👈 เส้นยังอยู่แต่โปร่งใส */
                         color: var(--text-color);
                     }
                 </style>
@@ -1237,17 +1237,17 @@ if "person_row" in st.session_state:
             min-width: 300px;
         '>
             <thead>
-                <tr style='border-bottom: 1px solid #ccc;'>
-                    <th style="padding: 8px;">HBsAg</th>
-                    <th style="padding: 8px;">HBsAb</th>
-                    <th style="padding: 8px;">HBcAb</th>
+                <tr>
+                    <th style="padding: 8px; border: 1px solid transparent;">HBsAg</th>
+                    <th style="padding: 8px; border: 1px solid transparent;">HBsAb</th>
+                    <th style="padding: 8px; border: 1px solid transparent;">HBcAb</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td style="padding: 8px;">{hbsag_raw}</td>
-                    <td style="padding: 8px;">{hbsab_raw}</td>
-                    <td style="padding: 8px;">{hbcab_raw}</td>
+                    <td style="padding: 8px; border: 1px solid transparent;">{hbsag_raw}</td>
+                    <td style="padding: 8px; border: 1px solid transparent;">{hbsab_raw}</td>
+                    <td style="padding: 8px; border: 1px solid transparent;">{hbcab_raw}</td>
                 </tr>
             </tbody>
         </table>
@@ -1325,7 +1325,7 @@ if "person_row" in st.session_state:
         </div>
 
         <div style='
-            margin-top: 3rem;
+            margin-top: 7rem;
             text-align: right;
             padding-right: 1rem;
         '>
