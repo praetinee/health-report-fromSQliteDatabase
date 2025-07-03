@@ -624,7 +624,7 @@ if "person_row" in st.session_state:
             row_class = "lab-abn" if is_abn else "lab-row"
             
             html += f"<tr>"
-            html += f"<td class='{row_class}' style='text-align: left;'>{row[0][0]}</td>"  # ชื่อการตรวจ
+            html += f"<td class='{row_class}' style='text-align: left;'>{row[0][0]}</td>"  # การตรวจ
             html += f"<td class='{row_class}'>{row[1][0]}</td>"  # ผล
             html += f"<td class='{row_class}' style='text-align: left;'>{row[2][0]}</td>"  # ค่าปกติ
             html += f"</tr>"
