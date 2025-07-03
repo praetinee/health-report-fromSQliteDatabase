@@ -1310,9 +1310,17 @@ if "person_row" in st.session_state:
             else "rgba(255, 215, 0, 0.2)"
         )
         
-        # ✅ กล่องคำแนะนำ ใช้สีตัวอักษรที่ปรับตามธีม
+        st.markdown("""
+        <style>
+        .hep-box {
+            color: var(--text-color) !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        # แล้วแก้เป็น
         st.markdown(f"""
-        <div style='
+        <div class="hep-box" style='
             font-size: 16px;
             padding: 1rem;
             border-radius: 6px;
