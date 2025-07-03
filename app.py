@@ -457,7 +457,7 @@ if "person_row" in st.session_state:
         <div style="text-align: center;">วันที่ตรวจ: {check_date or "-"}</div>
         <div style="text-align: center; margin-top: 10px;">
             โรงพยาบาลสันทราย 201 หมู่ที่ 11 ถนน เชียงใหม่ - พร้าว<br>
-            ตำบลหนองหาร อำเภอสันทราย เชียงใหม่ 50290 โทร 053 921 199 ต่อ 167
+            ตำบลหนองหาร อำเภอสันทราย เชียงใหม่ 50290 ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167
         </div>
         <hr style="margin: 24px 0;">
         <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; margin-bottom: 20px; text-align: center;">
