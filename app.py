@@ -724,7 +724,7 @@ if "person_row" in st.session_state:
             line-height: 1.5;
             color: inherit;
         ">
-            <div style="font-size: 18px; font-weight: bold; margin-bottom: 1.5rem;">
+            <div style="font-size: 18px; font-weight: bold; margin-bottom: 0.5rem;">
                 📋 คำแนะนำจากผลตรวจสุขภาพ
             </div>
             {final_advice_html}
