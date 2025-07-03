@@ -131,17 +131,17 @@ if "search_result" in st.session_state:
     )
 
     person_year_df = results_df[results_df["Year"] == selected_year]
+    person_year_df = person_year_df.drop_duplicates(subset=["HN", "วันที่ตรวจ"])
 
     exam_dates = person_year_df["วันที่ตรวจ"].dropna().unique()
-    selected_row = None
-
-    if len(person_year_df) > 1:
+    
+    if len(exam_dates) > 1:
         for idx, row in person_year_df.iterrows():
             label = str(row["วันที่ตรวจ"]).strip() if pd.notna(row["วันที่ตรวจ"]) else f"ครั้งที่ {idx+1}"
             if st.button(label, key=f"checkup_{idx}"):
                 st.session_state["person_row"] = row.to_dict()
                 st.session_state["selected_row_found"] = True
-    else:
+    elif len(person_year_df) == 1:
         st.session_state["person_row"] = person_year_df.iloc[0].to_dict()
         st.session_state["selected_row_found"] = True
 
