@@ -879,7 +879,7 @@ if "person_row" in st.session_state:
     
         with col_ua_left:
             st.markdown(render_section_header("ผลการตรวจปัสสาวะ", "Urinalysis"), unsafe_allow_html=True)
-            df_urine = pd.DataFrame(urine_data, columns=["ชื่อการตรวจ", "ผลตรวจ", "ค่าปกติ"])
+            df_urine = pd.DataFrame(urine_data, columns=["การตรวจ", "ผลตรวจ", "ค่าปกติ"])
     
             def is_urine_abnormal(test_name, value, normal_range):
                 val = str(value or "").strip().lower()
@@ -951,12 +951,12 @@ if "person_row" in st.session_state:
                 </style>
                 """
                 html = "<div class='urine-container'><table class='urine-table'>"
-                html += "<thead><tr><th>ชื่อการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead><tbody>"
+                html += "<thead><tr><th>การตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead><tbody>"
                 for _, row in df.iterrows():
-                    is_abn = is_urine_abnormal(row["ชื่อการตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"])
+                    is_abn = is_urine_abnormal(row["การตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"])
                     css_class = "urine-abn" if is_abn else "urine-row"
                     html += f"<tr class='{css_class}'>"
-                    html += f"<td style='text-align: left;'>{row['ชื่อการตรวจ']}</td>"
+                    html += f"<td style='text-align: left;'>{row['การตรวจ']}</td>"
                     html += f"<td>{safe_value(row['ผลตรวจ'])}</td>"
                     html += f"<td style='text-align: left;'>{row['ค่าปกติ']}</td>"
                     html += "</tr>"
