@@ -569,7 +569,7 @@ if "person_row" in st.session_state:
         style = """
         <style>
             .lab-container {
-                background-color: #111;
+                background-color: var(--background-color);  /* ใช้สีจากธีม */
                 margin-top: 1rem;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.4);
             }
@@ -578,10 +578,11 @@ if "person_row" in st.session_state:
                 border-collapse: collapse;
                 font-size: 16px;
                 font-family: "Segoe UI", sans-serif;
+                color: var(--text-color);  /* แทน white */
             }
             .lab-table thead th {
                 background-color: #1c1c1c;
-                color: white;
+                color: white; /* ✅ คงไว้เพราะเป็นแถบหัว */
                 padding: 12px;
                 text-align: center;
                 font-weight: bold;
@@ -590,7 +591,6 @@ if "person_row" in st.session_state:
                 padding: 12px;
                 border: 1px solid #333;
                 text-align: center;
-                color: white;
             }
             .lab-abn {
                 background-color: rgba(255, 64, 64, 0.25); /* สีแดงโปร่งแสง */
