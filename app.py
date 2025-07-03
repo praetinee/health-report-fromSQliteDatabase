@@ -1305,12 +1305,21 @@ if "person_row" in st.session_state:
             return "ไม่สามารถสรุปผลชัดเจน แนะนำให้พบแพทย์เพื่อประเมินซ้ำ"
         
         advice = hepatitis_b_advice(hbsag_raw, hbsab_raw, hbcab_raw)
+        
+        # 🌈 เปลี่ยนสีพื้นหลังตามคำแนะนำ
+        if advice.strip() == "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี":
+            bg_color = "rgba(200, 255, 200, 0.15)"  # สีเขียวโปร่งแสง
+        else:
+            bg_color = "rgba(255, 215, 0, 0.15)"    # สีเหลืองโปร่งแสง
+        
         st.markdown(f"""
         <div style='
             font-size: 16px;
-            padding: 1rem;
+            line-height: 1.6;
+            padding: 1rem 1.5rem;
             border-radius: 6px;
-            background-color: rgba(255, 215, 0, 0.15);
+            background-color: {bg_color};
+            color: var(--text-color);
             margin-bottom: 1.5rem;
         '>
             <b>คำแนะนำ:</b> {advice}
