@@ -110,6 +110,9 @@ if submitted:
     if full_name.strip():
         query = query[query["ชื่อ-สกุล"].str.strip() == full_name.strip()]
 
+    # 🧹 Reset ปุ่มที่เคยเลือกไว้ก่อนหน้าทุกครั้งที่ค้นหาใหม่
+    st.session_state.pop("selected_index", None)
+    
     if query.empty:
         st.error("❌ ไม่พบข้อมูล กรุณาตรวจสอบอีกครั้ง")
         st.session_state.pop("search_result", None)
@@ -133,11 +136,12 @@ if "search_result" in st.session_state:
     # ถ้ามีมากกว่า 1 วันที่ตรวจในปีเดียวกัน → แสดงปุ่มเลือกครั้ง
     exam_dates = person_year_df["วันที่ตรวจ"].dropna().unique()
     if len(person_year_df) > 1:
-        date_buttons = []
         for idx, row in person_year_df.iterrows():
             label = row["วันที่ตรวจ"] if pd.notna(row["วันที่ตรวจ"]) else f"ครั้งที่ {idx+1}"
             if st.button(label, key=f"checkup_{idx}"):
-                st.session_state["person_row"] = row.to_dict()
+                st.session_state["selected_index"] = idx
+    if "selected_index" in st.session_state:
+        st.session_state["person_row"] = person_year_df.iloc[st.session_state["selected_index"]].to_dict()
     else:
         st.session_state["person_row"] = person_year_df.iloc[0].to_dict()
 
