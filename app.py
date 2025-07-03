@@ -586,6 +586,7 @@ if "person_row" in st.session_state:
                 padding: 12px;
                 text-align: center;
                 font-weight: bold;
+                border: 1px solid transparent;
             }
             .lab-table td {
                 padding: 12px;
@@ -931,6 +932,7 @@ if "person_row" in st.session_state:
                         padding: 12px;
                         text-align: center;
                         font-weight: bold;
+                        border: 1px solid transparent;
                     }
                     .urine-table td {
                         padding: 12px;
