@@ -1306,7 +1306,7 @@ if "person_row" in st.session_state:
         
         # ✅ กำหนดสีพื้นหลังโปร่งแสงให้กลืนธีม แบบเดียวกับปัสสาวะ
         advice_background = (
-            "rgba(33, 53, 41, 0.9)" if "มีภูมิคุ้มกัน" in advice
+            "rgba(33, 53, 41, 0.4)" if "มีภูมิคุ้มกัน" in advice
             else "rgba(255, 215, 0, 0.2)"
         )
         
