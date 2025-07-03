@@ -452,8 +452,8 @@ if "person_row" in st.session_state:
     
     # ===== แสดงผล =====
     st.markdown(f"""
-    <div style="font-size: 28px; line-height: 1.8; color: inherit; padding: 24px 8px;">
-        <div style="text-align: center; font-size: 22px; font-weight: bold;">รายงานผลการตรวจสุขภาพ</div>
+    <div style="font-size: 20px; line-height: 1.8; color: inherit; padding: 24px 8px;">
+        <div style="text-align: center; font-size: 29px; font-weight: bold;">รายงานผลการตรวจสุขภาพ</div>
         <div style="text-align: center;">วันที่ตรวจ: {check_date or "-"}</div>
         <div style="text-align: center; margin-top: 10px;">
             โรงพยาบาลสันทราย 201 หมู่ที่ 11 ถนน เชียงใหม่ - พร้าว ตำบลหนองหาร อำเภอสันทราย เชียงใหม่ 50290<br>
