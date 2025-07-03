@@ -105,7 +105,7 @@ if submitted:
             hn_val = float(hn.strip())
             query = query[query["HN"].astype(float).apply(lambda x: np.isclose(x, hn_val))]
         except ValueError:
-            st.error("❌ HN ต้องเป็นตัวเลข เช่น 12345 หรือ 100.0")
+            st.error("❌ HN ต้องเป็นตัวเลข เช่น 12345")
             st.stop()
     if full_name.strip():
         query = query[query["ชื่อ-สกุล"].str.strip() == full_name.strip()]
