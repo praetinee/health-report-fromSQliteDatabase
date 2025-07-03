@@ -715,7 +715,7 @@ if "person_row" in st.session_state:
             border-radius: 10px;
             font-size: 16px;
             line-height: 1.5;
-            color: inherit;
+            color: var(--text-color);
         ">
             <div style="font-size: 18px; font-weight: bold; margin-bottom: 0.5rem;">
                 📋 คำแนะนำจากผลตรวจสุขภาพ
@@ -1311,6 +1311,7 @@ if "person_row" in st.session_state:
             border-radius: 6px;
             background-color: {advice_background};
             margin-bottom: 1.5rem;
+            color: var(--text-color);
         '>
             <b>คำแนะนำ:</b> {advice}
         </div>
