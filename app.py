@@ -1239,7 +1239,7 @@ if "person_row" in st.session_state:
             min-width: 300px;
         '>
             <thead>
-                <tr style='border-bottom: 1px solid #ccc;'>
+                <tr style='border-bottom: 1px solid transparent #ccc;'>
                     <th style="padding: 8px;">HBsAg</th>
                     <th style="padding: 8px;">HBsAb</th>
                     <th style="padding: 8px;">HBcAb</th>
