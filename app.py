@@ -706,7 +706,7 @@ if "person_row" in st.session_state:
     with main_col:
         final_advice_html = merge_final_advice_grouped(advice_list)
         has_advice = "ไม่พบคำแนะนำเพิ่มเติม" not in final_advice_html
-        background_color = "rgba(255, 243, 205, 0.8)" if has_advice else "rgba(209, 236, 221, 0.85)"
+        background_color = "rgba(255, 215, 0, 0.2)" if has_advice else "rgba(33, 53, 41, 0.9)"
         
         st.markdown(f"""
         <div style="
@@ -1303,7 +1303,7 @@ if "person_row" in st.session_state:
             return "ไม่สามารถสรุปผลชัดเจน แนะนำให้พบแพทย์เพื่อประเมินซ้ำ"
         
         advice = hepatitis_b_advice(hbsag_raw, hbsab_raw, hbcab_raw)
-        advice_background = "rgba(209, 236, 221, 0.85)" if "มีภูมิคุ้มกัน" in advice else "rgba(255, 243, 205, 0.85)"
+        advice_background = "rgba(33, 53, 41, 0.9)" if "มีภูมิคุ้มกัน" in advice else "rgba(255, 215, 0, 0.2)"
         st.markdown(f"""
         <div style='
             font-size: 16px;
