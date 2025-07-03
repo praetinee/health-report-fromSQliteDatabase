@@ -934,7 +934,7 @@ if "person_row" in st.session_state:
                     }
                     .urine-table td {
                         padding: 12px;
-                        border: 1px solid var(--secondary-background-color);
+                        border: 1px solid transparent;  /* 👈 เส้นยังอยู่แต่โปร่งใส */
                         text-align: center;
                         color: var(--text-color);
                     }
@@ -1029,7 +1029,7 @@ if "person_row" in st.session_state:
                     }
                     .stool-table td {
                         padding: 12px;
-                        border: 1px solid var(--secondary-background-color);
+                        border: 1px solid transparent;  /* 👈 เส้นยังอยู่แต่โปร่งใส */
                         color: var(--text-color);
                     }
                 </style>
