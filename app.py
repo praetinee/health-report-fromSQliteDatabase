@@ -1327,7 +1327,7 @@ if "person_row" in st.session_state:
         </div>
 
         <div style='
-            margin-top: 3rem;
+            margin-top: 4rem;
             text-align: right;
             padding-right: 1rem;
         '>
