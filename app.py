@@ -420,14 +420,19 @@ if "person_row" in st.session_state:
     except:
         bmi_val = None
 
-    sbp_val = f"{sbp}/{dbp} ม.ม.ปรอท" if sbp is not None and dbp is not None else "-"
-    bp_desc = interpret_bp(sbp, dbp)
-    if is_empty(sbp) or is_empty(dbp):
+    # แปลงให้ไม่มีทศนิยม
+    try:
+        sbp_int = int(float(sbp))
+        dbp_int = int(float(dbp))
+        bp_val = f"{sbp_int}/{dbp_int} ม.ม.ปรอท"
+    except:
+        sbp_int = dbp_int = None
         bp_val = "-"
+    
+    if sbp_int is None or dbp_int is None:
         bp_desc = "-"
         bp_full = "-"
     else:
-        bp_val = f"{sbp}/{dbp} ม.ม.ปรอท"
         bp_desc = interpret_bp(sbp, dbp)
         bp_full = f"{bp_val} - {bp_desc}" if bp_desc != "-" else bp_val
 
