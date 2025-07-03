@@ -622,8 +622,12 @@ if "person_row" in st.session_state:
         for row in rows:
             is_abn = any(flag for _, flag in row)
             row_class = "lab-abn" if is_abn else "lab-row"
-            html += "<tr>" + "".join(f"<td class='{row_class}'>{cell}</td>" for cell, _ in row) + "</tr>"
-    
+            
+            html += f"<tr>"
+            html += f"<td class='{row_class}' style='text-align: left;'>{row[0][0]}</td>"  # ชื่อการตรวจ
+            html += f"<td class='{row_class}'>{row[1][0]}</td>"  # ผล
+            html += f"<td class='{row_class}' style='text-align: left;'>{row[2][0]}</td>"  # ค่าปกติ
+            html += f"</tr>"
         html += "</tbody></table></div>"
         return style + html
 
@@ -951,7 +955,11 @@ if "person_row" in st.session_state:
                 for _, row in df.iterrows():
                     is_abn = is_urine_abnormal(row["ชื่อการตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"])
                     css_class = "urine-abn" if is_abn else "urine-row"
-                    html += f"<tr class='{css_class}'><td>{row['ชื่อการตรวจ']}</td><td>{safe_value(row['ผลตรวจ'])}</td><td>{row['ค่าปกติ']}</td></tr>"
+                    html += f"<tr class='{css_class}'>"
+                    html += f"<td style='text-align: left;'>{row['ชื่อการตรวจ']}</td>"
+                    html += f"<td>{safe_value(row['ผลตรวจ'])}</td>"
+                    html += f"<td style='text-align: left;'>{row['ค่าปกติ']}</td>"
+                    html += "</tr>"
                 html += "</tbody></table></div>"
                 return style + html
     
@@ -1039,11 +1047,11 @@ if "person_row" in st.session_state:
                     <table class='stool-table'>
                         <tr>
                             <th>ผลตรวจอุจจาระทั่วไป</th>
-                            <td>{exam if exam != "-" else "ไม่ได้เข้ารับการตรวจ"}</td>
+                            <td style='text-align: left;'>{exam if exam != "-" else "ไม่ได้เข้ารับการตรวจ"}</td>
                         </tr>
                         <tr>
                             <th>ผลตรวจอุจจาระเพาะเชื้อ</th>
-                            <td>{cs if cs != "-" else "ไม่ได้เข้ารับการตรวจ"}</td>
+                            <td style='text-align: left;'>{cs if cs != "-" else "ไม่ได้เข้ารับการตรวจ"}</td>
                         </tr>
                     </table>
                 </div>
