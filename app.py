@@ -1310,21 +1310,16 @@ if "person_row" in st.session_state:
             else "rgba(255, 215, 0, 0.2)"
         )
         
-        st.markdown("""
-        <style>
-        .hep-box {
-            color: inherit !important;
-            font-size: 16px;
+        st.markdown(f"""
+        <div style='
+            background-color: {advice_background};
             padding: 1rem;
             border-radius: 6px;
             margin-bottom: 1.5rem;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-        
-        st.markdown(f"""
-        <div class="hep-box" style="background-color: {advice_background};">
-            <b>คำแนะนำ:</b> {advice}
+            font-size: 16px;
+            color: var(--text-color) !important;
+        '>
+            <b style='color: var(--text-color) !important;'>คำแนะนำ:</b> {advice}
         </div>
         """, unsafe_allow_html=True)
         
