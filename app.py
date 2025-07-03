@@ -544,18 +544,18 @@ if "person_row" in st.session_state:
         cbc_rows.append([(label, is_abn), (result, is_abn), (norm, is_abn)])
 
     blood_config = [
-        ("น้ำตาลในเลือด FBS", "FBS", "74 - 106 mg/dl", 74, 106),
-        ("Uric Acid", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2),
-        ("ALK", "ALP", "30 - 120 U/L", 30, 120),
-        ("SGOT", "SGOT", "< 37 U/L", None, 37),
-        ("SGPT", "SGPT", "< 41 U/L", None, 41),
-        ("CHOL", "CHOL", "150 - 200 mg/dl", 150, 200),
-        ("TGL", "TGL", "35 - 150 mg/dl", 35, 150),
-        ("HDL", "HDL", "> 40 mg/dl", 40, None, True),
-        ("LDL", "LDL", "0 - 160 mg/dl", 0, 160),
-        ("BUN", "BUN", "7.9 - 20 mg/dl", 7.9, 20),
-        ("Cr", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17),
-        ("GFR", "GFR", "> 60 mL/min", 60, None, True),
+        ("น้ำตาลในเลือด (FBS)", "FBS", "74 - 106 mg/dl", 74, 106),
+        ("น้ำตาลในเลือด (Uric Acid)", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2),
+        ("การทำงานของเอนไซม์ตับ (ALK)", "ALP", "30 - 120 U/L", 30, 120),
+        ("การทำงานของเอนไซม์ตับ (SGOT)", "SGOT", "< 37 U/L", None, 37),
+        ("การทำงานของเอนไซม์ตับ (SGPT)", "SGPT", "< 41 U/L", None, 41),
+        ("คลอเรสเตอรอล (CHOL)", "CHOL", "150 - 200 mg/dl", 150, 200),
+        ("ไตรกลีเซอไรด์ (TGL)", "TGL", "35 - 150 mg/dl", 35, 150),
+        ("ไขมันดี (HDL)", "HDL", "> 40 mg/dl", 40, None, True),
+        ("ไขมันเลว (LDL)", "LDL", "0 - 160 mg/dl", 0, 160),
+        ("การทำงานของไต (BUN)", "BUN", "7.9 - 20 mg/dl", 7.9, 20),
+        ("การทำงานของไต (Cr)", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17),
+        ("ประสิทธิภาพการกรองของไต (GFR)", "GFR", "> 60 mL/min", 60, None, True),
     ]
 
     blood_rows = []
