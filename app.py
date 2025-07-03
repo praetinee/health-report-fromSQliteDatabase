@@ -1162,7 +1162,7 @@ if "person_row" in st.session_state:
         </div>
         """, unsafe_allow_html=True)
               
-        # --- Extract extra info ---
+        # === Section: Hepatitis B ===
 
         import re
         from datetime import datetime
@@ -1308,12 +1308,13 @@ if "person_row" in st.session_state:
             return "ไม่สามารถสรุปผลชัดเจน แนะนำให้พบแพทย์เพื่อประเมินซ้ำ"
         
         advice = hepatitis_b_advice(hbsag_raw, hbsab_raw, hbcab_raw)
+        advice_background = "#d4edda" if "มีภูมิคุ้มกัน" in advice else "#fff3cd"
         st.markdown(f"""
         <div style='
             font-size: 16px;
             padding: 1rem;
             border-radius: 6px;
-            background-color: rgba(255, 215, 0, 0.15);
+            background-color: {advice_background};
             margin-bottom: 1.5rem;
         '>
             <b>คำแนะนำ:</b> {advice}
