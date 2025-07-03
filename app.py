@@ -544,7 +544,7 @@ if "person_row" in st.session_state:
         cbc_rows.append([(label, is_abn), (result, is_abn), (norm, is_abn)])
 
     blood_config = [
-        ("FBS", "FBS", "74 - 106 mg/dl", 74, 106),
+        ("น้ำตาลในเลือด FBS", "FBS", "74 - 106 mg/dl", 74, 106),
         ("Uric Acid", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2),
         ("ALK", "ALP", "30 - 120 U/L", 30, 120),
         ("SGOT", "SGOT", "< 37 U/L", None, 37),
