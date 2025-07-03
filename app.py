@@ -1076,8 +1076,8 @@ if "person_row" in st.session_state:
         # ✅ แสดงผล
         st.markdown(f"""
         <div style='
-            background-color: #111;
-            color: white;
+            background-color: var(--background-color);
+            color: var(--text-color);
             font-size: 16px;
             line-height: 1.6;
             padding: 1.25rem;
@@ -1109,8 +1109,8 @@ if "person_row" in st.session_state:
 
         st.markdown(f"""
         <div style='
-            background-color: #111;
-            color: white;
+            background-color: var(--secondary-background-color);
+            color: var(--text-color);
             font-size: 16px;
             line-height: 1.6;
             padding: 1.25rem;
