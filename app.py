@@ -617,7 +617,11 @@ if "person_row" in st.session_state:
         """
     
         html += "<div class='lab-container'><table class='lab-table'>"
-        html += "<thead><tr>" + "".join(f"<th>{h}</th>" for h in headers) + "</tr></thead><tbody>"
+        html += "<thead><tr>"
+        for i, h in enumerate(headers):
+            align = "left" if i in [0, 2] else "center"
+            html += f"<th style='text-align: {align};'>{h}</th>"
+        html += "</tr></thead><tbody>"
     
         for row in rows:
             is_abn = any(flag for _, flag in row)
@@ -951,7 +955,12 @@ if "person_row" in st.session_state:
                 </style>
                 """
                 html = "<div class='urine-container'><table class='urine-table'>"
-                html += "<thead><tr><th>ชื่อการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead><tbody>"
+                html += "<thead><tr>"
+                html += "<th style='text-align: left;'>ชื่อการตรวจ</th>"
+                html += "<th>ผลตรวจ</th>"
+                html += "<th style='text-align: left;'>ค่าปกติ</th>"
+                html += "</tr></thead><tbody>"
+                
                 for _, row in df.iterrows():
                     is_abn = is_urine_abnormal(row["ชื่อการตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"])
                     css_class = "urine-abn" if is_abn else "urine-row"
