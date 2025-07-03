@@ -1139,7 +1139,7 @@ if "person_row" in st.session_state:
         def safe_text(val):
             return "-" if str(val).strip().lower() in ["", "none", "nan", "-"] else str(val).strip()
         
-        # === Section: Hepatitis A ===
+        # ==================== Section: Hepatitis A ====================
         st.markdown(render_section_header("ผลการตรวจไวรัสตับอักเสบเอ (Viral hepatitis A)"), unsafe_allow_html=True)
         
         hep_a_raw = safe_text(person.get("Hepatitis A"))
@@ -1155,7 +1155,7 @@ if "person_row" in st.session_state:
         </div>
         """, unsafe_allow_html=True)
               
-        # === Section: Hepatitis B ===
+        # ================ Section: Hepatitis B =================
 
         import re
         from datetime import datetime
@@ -1270,20 +1270,18 @@ if "person_row" in st.session_state:
         
         # --- Show extra info ---
         st.markdown(f"""
-        <table style="width: 100%; font-size: 16px; border-collapse: collapse; border: none; margin-bottom: 1.5rem;">
-            <tr style="border: none;">
-                <td style="padding: 4px 8px; font-weight: bold; border: none;">วันที่ตรวจภูมิคุ้มกัน</td>
-                <td style="padding: 4px 8px; border: none;">{hep_check_date}</td>
-            </tr>
-            <tr style="border: none;">
-                <td style="padding: 4px 8px; font-weight: bold; border: none;">ประวัติโรคไวรัสตับอักเสบบี ปี พ.ศ. {year_selected}</td>
-                <td style="padding: 4px 8px; border: none;">{hep_history}</td>
-            </tr>
-            <tr style="border: none;">
-                <td style="padding: 4px 8px; font-weight: bold; border: none;">ประวัติการได้รับวัคซีนในปี พ.ศ. {year_selected}</td>
-                <td style="padding: 4px 8px; border: none;">{hep_vaccine}</td>
-            </tr>
-        </table>
+        <div style='
+            font-size: 16px;
+            padding: 0.75rem 1rem;
+            background-color: rgba(255,255,255,0.05);
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+            line-height: 1.8;
+        '>
+            <b>วันที่ตรวจภูมิคุ้มกัน:</b> {hep_check_date}<br>
+            <b>ประวัติโรคไวรัสตับอักเสบบี ปี พ.ศ. {year_selected}:</b> {hep_history}<br>
+            <b>ประวัติการได้รับวัคซีนในปี พ.ศ. {year_selected}:</b> {hep_vaccine}
+        </div>
         """, unsafe_allow_html=True)
         
         # --- Advice ---
@@ -1303,27 +1301,19 @@ if "person_row" in st.session_state:
             return "ไม่สามารถสรุปผลชัดเจน แนะนำให้พบแพทย์เพื่อประเมินซ้ำ"
         
         advice = hepatitis_b_advice(hbsag_raw, hbsab_raw, hbcab_raw)
-        
-        # ✅ กำหนดสีพื้นหลังโปร่งแสงให้กลืนธีม แบบเดียวกับปัสสาวะ
-        advice_background = (
-            "rgba(33, 53, 41, 0.9)" if "มีภูมิคุ้มกัน" in advice
-            else "rgba(255, 215, 0, 0.2)"
-        )
-        
         st.markdown(f"""
         <div style='
-            background-color: {advice_background};
+            font-size: 16px;
             padding: 1rem;
             border-radius: 6px;
+            background-color: rgba(255, 215, 0, 0.15);
             margin-bottom: 1.5rem;
-            font-size: 16px;
-            color: var(--text-color) !important;
         '>
-            <b style='color: var(--text-color) !important;'>คำแนะนำ:</b> {advice}
+            <b>คำแนะนำ:</b> {advice}
         </div>
         """, unsafe_allow_html=True)
         
-#=============== ความเห็นแพทย์ =======================
+#=========================== ความเห็นแพทย์ =======================
 if "person_row" in st.session_state:
     person = st.session_state["person_row"]
     doctor_suggestion = str(person.get("DOCTER suggest", "")).strip()
