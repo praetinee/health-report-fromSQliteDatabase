@@ -1277,16 +1277,16 @@ if "person_row" in st.session_state:
         
         # --- Show extra info ---
         st.markdown(f"""
-        <table style="width: 100%; font-size: 16px; border-collapse: collapse; margin-bottom: 1.5rem;">
-            <tr>
+        <table style="width: 100%; font-size: 16px; border-collapse: collapse; border: none; margin-bottom: 1.5rem;">
+            <tr style="border: none;">
                 <td style="padding: 4px 8px; font-weight: bold; border: none;">วันที่ตรวจภูมิคุ้มกัน</td>
                 <td style="padding: 4px 8px; border: none;">{hep_check_date}</td>
             </tr>
-            <tr>
+            <tr style="border: none;">
                 <td style="padding: 4px 8px; font-weight: bold; border: none;">ประวัติโรคไวรัสตับอักเสบบี ปี พ.ศ. {year_selected}</td>
                 <td style="padding: 4px 8px; border: none;">{hep_history}</td>
             </tr>
-            <tr>
+            <tr style="border: none;">
                 <td style="padding: 4px 8px; font-weight: bold; border: none;">ประวัติการได้รับวัคซีนในปี พ.ศ. {year_selected}</td>
                 <td style="padding: 4px 8px; border: none;">{hep_vaccine}</td>
             </tr>
