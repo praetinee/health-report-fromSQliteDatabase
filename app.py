@@ -1277,18 +1277,20 @@ if "person_row" in st.session_state:
         
         # --- Show extra info ---
         st.markdown(f"""
-        <div style='
-            font-size: 16px;
-            padding: 0.75rem 1rem;
-            background-color: rgba(255,255,255,0.05);
-            border-radius: 6px;
-            margin-bottom: 1.5rem;
-            line-height: 1.8;
-        '>
-            <b>วันที่ตรวจภูมิคุ้มกัน:</b> {hep_check_date}<br>
-            <b>ประวัติโรคไวรัสตับอักเสบบี ปี พ.ศ. {year_selected}:</b> {hep_history}<br>
-            <b>ประวัติการได้รับวัคซีนในปี พ.ศ. {year_selected}:</b> {hep_vaccine}
-        </div>
+        <table style="width: 100%; font-size: 16px; border-collapse: collapse; margin-bottom: 1.5rem;">
+            <tr>
+                <td style="padding: 4px 8px; vertical-align: top;">วันที่ตรวจภูมิคุ้มกัน</td>
+                <td style="padding: 4px 8px; vertical-align: top;">{hep_check_date}</td>
+            </tr>
+            <tr>
+                <td style="padding: 4px 8px; vertical-align: top;">ประวัติโรคไวรัสตับอักเสบบี ปี พ.ศ. {year_selected}</td>
+                <td style="padding: 4px 8px; vertical-align: top;">{hep_history}</td>
+            </tr>
+            <tr>
+                <td style="padding: 4px 8px; vertical-align: top;">ประวัติการได้รับวัคซีนในปี พ.ศ. {year_selected}</td>
+                <td style="padding: 4px 8px; vertical-align: top;">{hep_vaccine}</td>
+            </tr>
+        </table>
         """, unsafe_allow_html=True)
         
         # --- Advice ---
