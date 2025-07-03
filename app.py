@@ -711,9 +711,13 @@ if "person_row" in st.session_state:
     spacer_l, main_col, spacer_r = st.columns([1, 6, 1])
 
     with main_col:
+        final_advice_html = merge_final_advice_grouped(advice_list)
+        has_advice = "ไม่พบคำแนะนำเพิ่มเติม" not in final_advice_html
+        background_color = "#fff3cd" if has_advice else "#d4edda"
+        
         st.markdown(f"""
         <div style="
-            background-color: rgba(33, 150, 243, 0.15);
+            background-color: {background_color};
             padding: 2rem 2.5rem;
             border-radius: 10px;
             font-size: 16px;
@@ -723,7 +727,7 @@ if "person_row" in st.session_state:
             <div style="font-size: 18px; font-weight: bold; margin-bottom: 1.5rem;">
                 📋 คำแนะนำจากผลตรวจสุขภาพ
             </div>
-            {merge_final_advice_grouped(advice_list)}
+            {final_advice_html}
         </div>
         """, unsafe_allow_html=True)
 
