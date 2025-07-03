@@ -732,7 +732,7 @@ if "person_row" in st.session_state:
     
         return f"""
         <div style='
-            background-color: #1b5e20;
+            background-color: rgba(255, 215, 0, 0.2);
             color: white;
             text-align: center;
             padding: 1rem 0.5rem;
