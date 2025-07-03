@@ -692,16 +692,7 @@ if "person_row" in st.session_state:
             else:
                 groups["อื่นๆ"].append(msg)
 
-        icon_map = {
-            "FBS": "🍬", "ไต": "💧", "ตับ": "🫀",
-            "ยูริค": "🦴", "ไขมัน": "🧈", "อื่นๆ": "📝"
-        }
-
-        output = []
-        for title, msgs in groups.items():
-            if msgs:
-                unique_msgs = list(OrderedDict.fromkeys(msgs))
-                output.append(f"<b>{icon_map.get(title)} {title}:</b> {' '.join(unique_msgs)}")
+        output.append(f"<b>{title}:</b> {' '.join(unique_msgs)}")
 
         if not output:
             return "ไม่พบคำแนะนำเพิ่มเติมจากผลตรวจ"
