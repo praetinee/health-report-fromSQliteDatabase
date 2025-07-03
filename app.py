@@ -951,7 +951,11 @@ if "person_row" in st.session_state:
                 for _, row in df.iterrows():
                     is_abn = is_urine_abnormal(row["ชื่อการตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"])
                     css_class = "urine-abn" if is_abn else "urine-row"
-                    html += f"<tr class='{css_class}'><td>{row['ชื่อการตรวจ']}</td><td>{safe_value(row['ผลตรวจ'])}</td><td>{row['ค่าปกติ']}</td></tr>"
+                    html += f"<tr class='{css_class}'>"
+                    html += f"<td style='text-align: left;'>{row['ชื่อการตรวจ']}</td>"
+                    html += f"<td>{safe_value(row['ผลตรวจ'])}</td>"
+                    html += f"<td style='text-align: left;'>{row['ค่าปกติ']}</td>"
+                    html += "</tr>"
                 html += "</tbody></table></div>"
                 return style + html
     
@@ -1141,7 +1145,7 @@ if "person_row" in st.session_state:
         </div>
         """, unsafe_allow_html=True)
               
-        # --- Extract extra info ---
+        # --- Section: Hepatitis B ---
 
         import re
         from datetime import datetime
