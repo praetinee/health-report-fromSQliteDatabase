@@ -22,12 +22,15 @@ from summary.doctor_summary import render_doctor_summary
 def main():
     st.set_page_config(layout="wide", page_title="Health Report", page_icon="🧬")
     inject_global_styles()
+
     df = load_sqlite_data()
     person = render_search_form(df)
     if person is None or person.empty:
         st.stop()
 
-    render_report_header(person)  # ส่วนหัวแบบสวยงาม
+    # 🔹 ส่วนหัวรายงาน
+    render_report_header(person)
+
     # 🔹 ความดัน + ชีพจร
     sbp = get_float("SBP", person)
     dbp = get_float("DBP", person)
@@ -42,10 +45,12 @@ def main():
     </div>
     """, unsafe_allow_html=True)
 
-    # 🟨 แสดงคำแนะนำความดัน (ถ้ามี)
-    bp_advice = person.get("สรุปความดัน", "")
-    render_advice_box(bp_advice)
+    # 🔹 กล่องคำแนะนำความดัน (ถ้ามี)
+    bp_advice = bp_advice_text(sbp, dbp)
+    if bp_advice:
+        render_advice_box(bp_advice)
 
+    # 🔬 ผลตรวจต่าง ๆ
     render_section_header("ผลตรวจ CBC")
     render_cbc_section(person)
 
