@@ -26,8 +26,10 @@ def load_sqlite_data():
     df = pd.read_sql("SELECT * FROM health_data", conn)
     conn.close()
 
-    # แปลงวันที่และล้างค่า null
+    # แปลงวันที่ตรวจเป็น datetime
     df["วันที่ตรวจ"] = pd.to_datetime(df["วันที่ตรวจ"], errors="coerce", dayfirst=True)
+
+    # ล้างค่าว่างทั่วไป
     df = df.fillna("").replace("nan", "")
 
     return df
