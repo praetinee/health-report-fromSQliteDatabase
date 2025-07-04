@@ -42,7 +42,8 @@ def convert_to_bmi(weight, height_cm):
     except:
         return None
 
-# ✅ ฟังก์ชันแปลงวันที่ภาษาไทยหลายรูปแบบเป็น datetime (รองรับ พ.ศ.)
+# ---------------------------
+# ✅ ฟังก์ชันแปลงวันที่ไทยเป็น datetime
 thai_months_full = {
     "มกราคม": 1, "กุมภาพันธ์": 2, "มีนาคม": 3, "เมษายน": 4,
     "พฤษภาคม": 5, "มิถุนายน": 6, "กรกฎาคม": 7, "สิงหาคม": 8,
@@ -59,18 +60,18 @@ def parse_date_thai(date_str):
 
         s = str(date_str).strip()
 
-        # ✅ รูปแบบ: 5.กุมภาพันธ์ 2568 หรือ 5/กุมภาพันธ์/2568
-        match = re.match(r"(\d{1,2})[.\-\/ ]*([ก-ฮ]+)[.\-\/ ]*(\d{4})", s)
+        # ✅ รูปแบบ: 5.กุมภาพันธ์ 2568 หรือ 5/กุมภาพันธ์/2568 หรือ 5 กุมภาพันธ์ 2568
+        match = re.match(r"(\d{1,2})[.\-/ ]*([ก-ฮ.]+)[.\-/ ]*(\d{4})", s)
         if match:
             day, month_str, year = match.groups()
-            month = thai_months_full.get(month_str.strip(), 0)
+            month = thai_months_full.get(month_str.strip().replace('.', ''), 0)
             year = int(year)
-            if year > 2400:  # แปลง พ.ศ. ➝ ค.ศ.
+            if year > 2400:
                 year -= 543
             if month > 0:
                 return pd.Timestamp(datetime(year, month, int(day)))
 
-        # ✅ Fallback: "dd/mm/yyyy"
+        # ✅ Fallback: "dd/mm/yyyy", "dd-mm-yyyy", "dd mm yyyy"
         dt = pd.to_datetime(s, errors="coerce", dayfirst=True)
         if pd.isna(dt):
             return pd.NaT
@@ -81,16 +82,16 @@ def parse_date_thai(date_str):
     except:
         return pd.NaT
 
-# ✅ ฟังก์ชันแสดงวันที่แบบ "5 กุมภาพันธ์ 2568"
+# ---------------------------
+# ✅ ฟังก์ชันแสดงวันที่แบบไทย (5 กุมภาพันธ์ 2568)
 def format_thai_date(date):
     if pd.isna(date):
         return "-"
-
     thai_months = [
         "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
         "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
     ]
     day = date.day
     month = thai_months[date.month - 1]
-    year = date.year + 543  # ➝ แสดง พ.ศ.
+    year = date.year + 543
     return f"{day} {month} {year}"
