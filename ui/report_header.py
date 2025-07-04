@@ -1,8 +1,9 @@
 import streamlit as st
-from utils import format_thai_date, get_float  # ✅ เพิ่ม get_float
+from utils import format_thai_date, get_float, normalize_date
 
 def render_report_header(person):
-    date = format_thai_date(person["วันที่ตรวจ"])
+    raw_date = normalize_date(person["วันที่ตรวจ"])
+    date = format_thai_date(raw_date)
     name = person["ชื่อ-สกุล"]
     age = int(float(person["อายุ"]))
     gender = person["เพศ"]
