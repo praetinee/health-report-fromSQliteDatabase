@@ -2,10 +2,17 @@ import sys
 import os
 
 # ✅ เพิ่ม path โฟลเดอร์หลัก เพื่อให้ Python หา utils.py ได้
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if PROJECT_ROOT not in sys.path:
+    sys.path.append(PROJECT_ROOT)
 
 import streamlit as st
-from utils import format_thai_date, normalize_date, get_float
+
+try:
+    from utils import format_thai_date, normalize_date, get_float
+except ImportError as e:
+    st.error(f"❌ ไม่สามารถ import 'utils.py' ได้: {e}")
+    st.stop()
 
 def render_report_header(person):
     raw_date = normalize_date(person["วันที่ตรวจ"])
