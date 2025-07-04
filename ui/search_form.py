@@ -8,10 +8,10 @@ def render_search_form(df: pd.DataFrame):
     if not query:
         return None
 
-    filtered = df[
+        filtered = df[
         df["ชื่อ-สกุล"].str.contains(query, case=False, na=False) |
-        df["เลขบัตรประชาชน"].astype(str).str.contains(query) |
-        df["HN"].astype(str).str.contains(query)
+        df["เลขบัตรประชาชน"].astype(str).str.contains(query, na=False) |
+        df["HN"].astype(str).str.fullmatch(query)  # ✅ เปลี่ยนเป็น exact match
     ]
 
     if filtered.empty:
