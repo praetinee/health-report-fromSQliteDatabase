@@ -8,11 +8,13 @@ def render_search_form(df: pd.DataFrame):
     if not query:
         return None
 
-    df["HN_clean"] = df["HN"].apply(lambda x: str(int(float(x))) if x != "" else "")
+    # ✅ แก้ตรงนี้: ไม่ต้องใช้ float → int แล้ว
+    df["HN_clean"] = df["HN"].astype(str).str.strip()
+
     filtered = df[
         df["ชื่อ-สกุล"].str.contains(query, case=False, na=False) |
         df["เลขบัตรประชาชน"].astype(str).str.contains(query, na=False) |
-        df["HN_clean"].str.contains(query)
+        (df["HN_clean"] == query)  # ✅ exact match
     ]
 
     if filtered.empty:
