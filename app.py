@@ -2,7 +2,7 @@ import streamlit as st
 
 from ui.style import inject_global_styles
 from data_loader import load_sqlite_data
-from utils import get_float, interpret_bp
+from utils import get_float, bp_advice_text
 from ui.search_form import render_search_form
 from ui.section_header import render_section_header
 from ui.advice_box import render_advice_box
