@@ -11,7 +11,8 @@ from analysis.cbc import render_cbc_section
 from analysis.chemistry import render_chemistry_section
 from analysis.urine import render_urine_section
 from analysis.stool import render_stool_section
-from analysis.cxr_ekg import render_cxr_ekg_section
+from analysis.cxr import render_cxr_section
+from analysis.ekg import render_ekg_section
 from analysis.hepatitis import render_hepatitis_section
 
 from summary.doctor_summary import render_doctor_summary
@@ -40,7 +41,10 @@ def main():
     render_section_header("ผลตรวจอุจจาระ")
     render_stool_section(person)
 
-    render_section_header("ผล X-ray และ EKG")
+    render_section_header("ผล X-ray")
+    render_cxr_section(person)
+    
+    render_section_header("ผล EKG")
     render_cxr_ekg_section(person)
 
     render_section_header("ผลตรวจไวรัสตับอักเสบ")
