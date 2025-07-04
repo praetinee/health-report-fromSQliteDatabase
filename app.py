@@ -23,7 +23,7 @@ def main():
 
     df = load_sqlite_data()
     person = render_search_form(df)
-    if not person:
+    if person is None or person.empty:
         st.stop()
 
     render_section_header("ข้อมูลทั่วไป")
