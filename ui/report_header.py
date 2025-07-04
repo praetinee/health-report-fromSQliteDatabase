@@ -1,21 +1,28 @@
 import sys
 import os
-import streamlit as st
 
-# ✅ เพิ่ม path โฟลเดอร์หลัก เพื่อให้ Python หา utils.py ได้
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if PROJECT_ROOT not in sys.path:
     sys.path.append(PROJECT_ROOT)
 
-# ✅ Import จาก utils
-try:
-    from utils import format_thai_date, get_float
-except ImportError as e:
-    st.error(f"❌ ไม่สามารถ import 'utils.py' ได้: {e}")
-    st.stop()
+import streamlit as st
+from utils import format_thai_date, parse_date_thai, get_float
+
+def interpret_bp(sbp, dbp):
+    if sbp is None or dbp is None:
+        return "-"
+    if sbp < 120 and dbp < 80:
+        return "ความดันปกติ"
+    elif 120 <= sbp < 130 and dbp < 80:
+        return "ก่อนเป็นความดันสูง"
+    elif 130 <= sbp or dbp >= 80:
+        return "ความดันโลหิตสูง"
+    return "-"
 
 def render_report_header(person):
-    date = format_thai_date(person["วันที่ตรวจ"])  # ✅ ไม่ parse ซ้ำ
+    raw_date = parse_date_thai(person["วันที่ตรวจ"])
+    date = format_thai_date(raw_date)
+
     name = person["ชื่อ-สกุล"]
     age = int(float(person["อายุ"]))
     gender = person["เพศ"]
@@ -28,7 +35,20 @@ def render_report_header(person):
     sbp = get_float("SBP", person)
     dbp = get_float("DBP", person)
     pulse = get_float("pulse", person)
-    advice = person.get("สรุปความดัน", "")
+
+    # ➕ แปลความดัน
+    bp_interpret = interpret_bp(sbp, dbp)
+
+    # ✅ แสดงค่ารูปแบบตามที่ระบุ
+    try:
+        weight = f"{float(weight):.1f}"
+        height = f"{float(height):.1f}"
+        waist = f"{float(waist):.1f}"
+        sbp = f"{float(sbp):.0f}" if sbp is not None else "-"
+        dbp = f"{float(dbp):.0f}" if dbp is not None else "-"
+        pulse = f"{float(pulse):.0f}" if pulse is not None else "-"
+    except:
+        pass
 
     st.markdown(f"""
     <div style="text-align: center; font-size: 20px; font-weight: bold;">
@@ -55,11 +75,7 @@ def render_report_header(person):
         <div><b>น้ำหนัก:</b> {weight} กก.</div>
         <div><b>ส่วนสูง:</b> {height} ซม.</div>
         <div><b>รอบเอว:</b> {waist} ซม.</div>
-        <div><b>ความดันโลหิต:</b> {sbp}/{dbp} มม.ปรอท</div>
+        <div><b>ความดันโลหิต:</b> {sbp}/{dbp} - {bp_interpret}</div>
         <div><b>ชีพจร:</b> {pulse} ครั้ง/นาที</div>
-    </div>
-
-    <div style="margin-top: 0.5rem; text-align: center;">
-        <b>คำแนะนำ:</b> {advice if advice else "-"}
     </div>
     """, unsafe_allow_html=True)
