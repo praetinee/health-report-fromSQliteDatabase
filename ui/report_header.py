@@ -1,7 +1,7 @@
 import sys
 import os
 
-# ✅ เพิ่ม path โฟลเดอร์หลัก เพื่อให้ Python หา utils.py เจอ
+# ✅ เพิ่ม path โฟลเดอร์หลัก เพื่อให้ Python หา utils.py ได้
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import streamlit as st
