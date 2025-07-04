@@ -7,41 +7,8 @@ import tempfile
 import html  # ใช้สำหรับ html.escape()
 import numpy as np
 
-# ====== Utilities ที่ใช้ร่วมกัน ======
-
 def is_empty(val):
     return str(val).strip().lower() in ["", "-", "none", "nan", "null"]
-
-def get_float(col, person_data):
-    """
-    รับค่าจาก dictionary แล้วแปลงเป็น float (หากทำไม่ได้จะ return None)
-    """
-    try:
-        val = person_data.get(col, "")
-        if is_empty(val):
-            return None
-        return float(str(val).replace(",", "").strip())
-    except ValueError:
-        return None
-
-def flag(val, low=None, high=None, higher_is_better=False):
-    """
-    ประเมินว่าค่า val ผิดปกติหรือไม่ (ต่ำกว่าหรือสูงกว่าขอบเขตที่กำหนด)
-    """
-    try:
-        val = float(str(val).replace(",", "").strip())
-    except ValueError:
-        return "-", False
-
-    if higher_is_better and low is not None:
-        return f"{val:.1f}", val < low
-
-    if low is not None and val < low:
-        return f"{val:.1f}", True
-    if high is not None and val > high:
-        return f"{val:.1f}", True
-
-    return f"{val:.1f}", False
 
 @st.cache_data(ttl=600)
 def load_sqlite_data():
@@ -183,6 +150,35 @@ if "search_result" in st.session_state:
     elif len(person_year_df) == 1:
         st.session_state["person_row"] = person_year_df.iloc[0].to_dict()
         st.session_state["selected_row_found"] = True
+
+    # ==================== เตรียมข้อมูลจาก SQLite ====================
+
+# ฟังก์ชันช่วยประเมินค่าตรวจทางห้องแล็บ (ใช้ได้ทุกกลุ่ม)
+def get_float(col, person_data):
+    try:
+        val = person_data.get(col, "")
+        if is_empty(val):
+            return None
+        return float(str(val).replace(",", "").strip())
+    except:
+        return None
+
+def flag(val, low=None, high=None, higher_is_better=False):
+    try:
+        val = float(str(val).replace(",", "").strip())
+    except:
+        return "-", False
+
+    if higher_is_better and low is not None:
+        return f"{val:.1f}", val < low
+
+    if low is not None and val < low:
+        return f"{val:.1f}", True
+    if high is not None and val > high:
+        return f"{val:.1f}", True
+
+    # ✅ อยู่ในช่วง [low, high] รวมขอบ
+    return f"{val:.1f}", False
 
 # ========== ฟังก์ชันวิเคราะห์ค่าต่าง ๆ (ต้องอยู่ก่อนเรียกใช้) ==========
 def kidney_summary_gfr_only(gfr_raw):
@@ -481,6 +477,32 @@ if "person_row" in st.session_state:
         {f"<div style='margin-top: 16px; text-align: center;'><b>คำแนะนำ:</b> {summary_advice}</div>" if summary_advice else ""}
     </div>
     """, unsafe_allow_html=True)
+
+# ==================== เตรียมข้อมูลจาก SQLite ====================
+
+# ฟังก์ชันช่วยประเมินค่าตรวจทางห้องแล็บ (ใช้ได้ทุกกลุ่ม)
+def get_float(col, person_data):
+    try:
+        val = person_data.get(col, "")
+        if is_empty(val):
+            return None
+        return float(str(val).replace(",", "").strip())
+    except:
+        return None
+
+def flag(val, low=None, high=None, higher_is_better=False):
+    try:
+        val = float(str(val).replace(",", "").strip())
+    except:
+        return "-", False
+
+    if higher_is_better and low is not None:
+        return f"{val:.1f}", val < low
+
+    if low is not None and val < low:
+        return f"{val:.1f}", True
+    if high is not None and val > high:
+        return f"{val:.1f}", True
 
     # ✅ อยู่ในช่วง [low, high] รวมขอบ
     return f"{val:.1f}", False
