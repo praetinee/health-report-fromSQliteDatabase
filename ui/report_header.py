@@ -6,18 +6,7 @@ if PROJECT_ROOT not in sys.path:
     sys.path.append(PROJECT_ROOT)
 
 import streamlit as st
-from utils import format_thai_date, parse_date_thai, get_float
-
-def interpret_bp(sbp, dbp):
-    if sbp is None or dbp is None:
-        return "-"
-    if sbp < 120 and dbp < 80:
-        return "ความดันปกติ"
-    elif 120 <= sbp < 130 and dbp < 80:
-        return "ความดันเริ่มสูง"
-    elif 130 <= sbp or dbp >= 80:
-        return "ความดันโลหิตสูง"
-    return "-"
+from utils import format_thai_date, parse_date_thai, get_float, interpret_bp
 
 def render_report_header(person):
     raw_date = parse_date_thai(person["วันที่ตรวจ"])
