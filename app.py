@@ -1,5 +1,6 @@
 import streamlit as st
 
+from ui.style import inject_global_styles
 from data_loader import load_sqlite_data
 from utils import get_float, flag  # ถ้ามีใช้ใน future
 from ui.search_form import render_search_form
@@ -21,7 +22,7 @@ from summary.doctor_summary import render_doctor_summary
 
 def main():
     st.set_page_config(layout="wide", page_title="Health Report", page_icon="🧬")
-
+    inject_global_styles()
     df = load_sqlite_data()
     person = render_search_form(df)
     if person is None or person.empty:
