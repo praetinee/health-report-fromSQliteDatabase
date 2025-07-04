@@ -96,3 +96,14 @@ def format_thai_date(date):
     month = thai_months[date.month - 1]
     year = date.year + 543
     return f"{day} {month} {year}"
+
+def interpret_bp(sbp, dbp):
+    if sbp is None or dbp is None:
+        return "-"
+    if sbp < 120 and dbp < 80:
+        return "ความดันปกติ"
+    elif 120 <= sbp < 130 and dbp < 80:
+        return "ก่อนเป็นความดันสูง"
+    elif 130 <= sbp or dbp >= 80:
+        return "ความดันโลหิตสูง"
+    return "-"
