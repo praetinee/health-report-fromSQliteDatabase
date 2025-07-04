@@ -8,20 +8,27 @@ def render_search_form(df: pd.DataFrame):
     if not query:
         return None
 
-    # ✅ แก้ตรงนี้: ไม่ต้องใช้ float → int แล้ว
-    df["HN_clean"] = df["HN"].astype(str).str.strip()
+    # ✅ ล้างช่องว่างและ .0 ที่ติดมาใน HN เพื่อความแม่นยำ
+    df["HN_clean"] = (
+        df["HN"]
+        .astype(str)
+        .str.strip()
+        .str.replace(".0", "", regex=False)
+    )
+    query_clean = query.strip()
 
+    # ✅ เงื่อนไขกรอง: HN ต้องเป๊ะ, ชื่อ/เลขบัตรใช้ contains ได้
     filtered = df[
-        df["ชื่อ-สกุล"].str.contains(query, case=False, na=False) |
-        df["เลขบัตรประชาชน"].astype(str).str.contains(query, na=False) |
-        (df["HN_clean"] == query)  # ✅ exact match
+        df["ชื่อ-สกุล"].str.contains(query_clean, case=False, na=False) |
+        df["เลขบัตรประชาชน"].astype(str).str.contains(query_clean, na=False) |
+        (df["HN_clean"] == query_clean)
     ]
 
     if filtered.empty:
         st.sidebar.warning("ไม่พบข้อมูล")
         return None
 
-    # ✅ ถ้ามีมากกว่า 1 รายการให้เลือกชื่อ
+    # ✅ ถ้ามีมากกว่า 1 รายการ ให้เลือกชื่อ
     if len(filtered) > 1:
         person_names = sorted(filtered["ชื่อ-สกุล"].unique())
         selected_name = st.sidebar.selectbox("เลือกชื่อ", person_names)
