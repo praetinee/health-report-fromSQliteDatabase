@@ -59,29 +59,30 @@ def parse_date_thai(date_str):
             return pd.NaT
 
         s = str(date_str).strip()
+        s = s.replace("กรกฏาคม", "กรกฎาคม")  # รองรับสะกดผิดบ่อย
 
-        # ✅ รูปแบบ: 5.กุมภาพันธ์ 2568 หรือ 5/กุมภาพันธ์/2568 หรือ 5 กุมภาพันธ์ 2568
+        # ✅ รูปแบบ: 5.กุมภาพันธ์ 2568 หรือ 5/กุมภาพันธ์/2568
         match = re.match(r"(\d{1,2})[.\-/ ]*([ก-ฮ.]+)[.\-/ ]*(\d{4})", s)
         if match:
             day, month_str, year = match.groups()
-            month = thai_months_full.get(month_str.strip().replace('.', ''), 0)
+            month_str = month_str.strip(" .")
+            month = thai_months_full.get(month_str, 0)
             year = int(year)
-            if year > 2400:
+            if year > 2400:  # พ.ศ. ➝ ค.ศ.
                 year -= 543
             if month > 0:
                 return pd.Timestamp(datetime(year, month, int(day)))
 
-        # ✅ Fallback: "dd/mm/yyyy", "dd-mm-yyyy", "dd mm yyyy"
+        # ✅ Fallback: dd/mm/yyyy
         dt = pd.to_datetime(s, errors="coerce", dayfirst=True)
-        if pd.isna(dt):
+        if dt is pd.NaT or pd.isna(dt):
             return pd.NaT
         if dt.year > 2400:
             dt = dt.replace(year=dt.year - 543)
         return dt
 
-    except:
-        return pd.NaT
-
+    except Exception as e:
+        return ไม่พบวันที่ตรวจ
 # ---------------------------
 # ✅ ฟังก์ชันแสดงวันที่แบบไทย (5 กุมภาพันธ์ 2568)
 def format_thai_date(date):
