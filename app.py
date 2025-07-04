@@ -5,7 +5,6 @@ from data_loader import load_sqlite_data
 from utils import get_float, flag  # ถ้ามีใช้ใน future
 from ui.search_form import render_search_form
 from ui.section_header import render_section_header
-from ui.overview_section import render_overview
 from ui.advice_box import render_advice_box
 from ui.report_header import render_report_header
 
@@ -29,9 +28,6 @@ def main():
         st.stop()
 
     render_report_header(person)  # ส่วนหัวแบบสวยงาม
-
-    render_section_header("ข้อมูลทั่วไป")
-    render_overview(person)
 
     render_section_header("ผลตรวจ CBC")
     render_cbc_section(person)
