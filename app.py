@@ -44,8 +44,8 @@ def main():
     render_section_header("ผล X-ray")
     render_cxr_section(person)
     
-    render_section_header("ผล EKG")
-    render_cxr_ekg_section(person)
+    render_section_header("ผลคลื่นไฟฟ้าหัวใจ")
+    render_ekg_section(person)
 
     render_section_header("ผลตรวจไวรัสตับอักเสบ")
     render_hepatitis_section(person)
