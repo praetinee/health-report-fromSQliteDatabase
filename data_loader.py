@@ -24,42 +24,35 @@ def load_sqlite_data():
     df = pd.read_sql("SELECT * FROM health_data", conn)
     conn.close()
 
-    # === ฟังก์ชันแปลงวันที่แบบไทย ===
+    # ✅ แปลงวันที่จากหลายรูปแบบให้กลายเป็น datetime
     def parse_thai_date(text):
+        if pd.isna(text) or not isinstance(text, str):
+            return pd.NaT
+
+        text = text.strip()
         try:
-            if pd.isna(text) or str(text).strip() == "":
-                return pd.NaT
+            # กรณี dd/mm/yyyy
+            if "/" in text and text.count("/") == 2:
+                d, m, y = text.split("/")
+                y = str(int(y) - 543) if int(y) > 2400 else y
+                return pd.to_datetime(f"{d}/{m}/{y}", format="%d/%m/%Y", errors="coerce")
 
-            text = str(text).replace(".", "").strip()
+            # กรณี dd. เดือน พ.ศ.
+            if "." in text and " " in text:
+                d_part, m_part, y_part = text.replace(".", "").split(" ")
+                y_part = str(int(y_part) - 543) if int(y_part) > 2400 else y_part
+                return pd.to_datetime(f"{d_part} {m_part} {y_part}", format="%d %B %Y", errors="coerce")
 
-            # กรณีเช่น 13 มกราคม 2564
-            if " " in text and any(thai_month in text for thai_month in ["มกราคม", "กุมภาพันธ์", "มีนาคม"]):
-                thai_months = {
-                    "มกราคม": "01", "กุมภาพันธ์": "02", "มีนาคม": "03", "เมษายน": "04",
-                    "พฤษภาคม": "05", "มิถุนายน": "06", "กรกฎาคม": "07", "สิงหาคม": "08",
-                    "กันยายน": "09", "ตุลาคม": "10", "พฤศจิกายน": "11", "ธันวาคม": "12"
-                }
-                parts = text.split()
-                if len(parts) == 3:
-                    day, month_th, year_th = parts
-                    month = thai_months.get(month_th, "01")
-                    year = int(year_th) - 543
-                    return pd.to_datetime(f"{year}-{month}-{int(day):02}", errors="coerce")
-
-            # กรณี 06/07/2565
-            if "/" in text:
-                day, month, year = text.split("/")
-                year = int(year)
-                if year > 2400:
-                    year -= 543
-                return pd.to_datetime(f"{year}-{int(month):02}-{int(day):02}", errors="coerce")
-
+            # กรณี dd เดือน พ.ศ.
+            if " " in text:
+                d_part, m_part, y_part = text.split(" ")
+                y_part = str(int(y_part) - 543) if int(y_part) > 2400 else y_part
+                return pd.to_datetime(f"{d_part} {m_part} {y_part}", format="%d %B %Y", errors="coerce")
         except:
             return pd.NaT
 
         return pd.NaT
 
-    # === ใช้งานฟังก์ชันแปลงวันที่ ===
     df["วันที่ตรวจ"] = df["วันที่ตรวจ"].apply(parse_thai_date)
 
     df = df.fillna("").replace("nan", "")
