@@ -2,7 +2,7 @@ import streamlit as st
 
 from ui.style import inject_global_styles
 from data_loader import load_sqlite_data
-from utils import get_float, flag  # ถ้ามีใช้ใน future
+from utils import get_float, interpret_bp
 from ui.search_form import render_search_form
 from ui.section_header import render_section_header
 from ui.advice_box import render_advice_box
@@ -28,6 +28,23 @@ def main():
         st.stop()
 
     render_report_header(person)  # ส่วนหัวแบบสวยงาม
+    # 🔹 ความดัน + ชีพจร + คำแนะนำความดัน
+    sbp = get_float("SBP", person)
+    dbp = get_float("DBP", person)
+    pulse = get_float("ชีพจร", person)
+
+    bp_text = f"{int(sbp)}/{int(dbp)}" if sbp and dbp else "-"
+    bp_status = interpret_bp(sbp, dbp)
+    pulse_text = f"{int(pulse)} ครั้ง/นาที" if pulse else "-"
+
+    st.markdown(f"""
+    <div style='text-align: center; font-size: 1.1rem; margin-top: 1rem;'>
+        <b>ความดันโลหิต:</b> {bp_text} &nbsp;&nbsp; <b>ชีพจร:</b> {pulse_text}
+    </div>
+    <div style='text-align: center; color: #ffd700; font-weight: bold; margin-top: 0.25rem;'>
+        📌 {bp_status}
+    </div>
+    """, unsafe_allow_html=True)
 
     render_section_header("ผลตรวจ CBC")
     render_cbc_section(person)
