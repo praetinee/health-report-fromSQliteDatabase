@@ -45,3 +45,18 @@ def normalize_date(x):
         return pd.to_datetime(x, errors="coerce", dayfirst=True)
     except:
         return None
+
+# ✅ เพิ่มฟังก์ชันแปลงวันที่เป็นภาษาไทยและ พ.ศ.
+def format_thai_date(date):
+    if pd.isna(date):
+        return "-"
+    
+    thai_months = [
+        "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+        "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+    ]
+    
+    day = date.day
+    month = thai_months[date.month - 1]
+    year = date.year + 543  # ค.ศ. ➝ พ.ศ.
+    return f"{day} {month} {year}"
