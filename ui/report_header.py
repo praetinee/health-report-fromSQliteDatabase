@@ -1,23 +1,21 @@
 import sys
 import os
+import streamlit as st
 
 # ✅ เพิ่ม path โฟลเดอร์หลัก เพื่อให้ Python หา utils.py ได้
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if PROJECT_ROOT not in sys.path:
     sys.path.append(PROJECT_ROOT)
 
-import streamlit as st
-
+# ✅ Import จาก utils
 try:
-    from utils import format_thai_date, parse_date_thai, get_float
+    from utils import format_thai_date, get_float
 except ImportError as e:
     st.error(f"❌ ไม่สามารถ import 'utils.py' ได้: {e}")
     st.stop()
 
 def render_report_header(person):
-    raw_date = parse_date_thai(person["วันที่ตรวจ"])
-    date = format_thai_date(raw_date)
-    
+    date = format_thai_date(person["วันที่ตรวจ"])  # ✅ ไม่ parse ซ้ำ
     name = person["ชื่อ-สกุล"]
     age = int(float(person["อายุ"]))
     gender = person["เพศ"]
