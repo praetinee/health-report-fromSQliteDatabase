@@ -4,23 +4,30 @@ import pandas as pd
 def render_search_form(df: pd.DataFrame):
     st.sidebar.header("🔍 ค้นหาข้อมูลผู้รับบริการ")
 
-    # ✅ เตรียมคอลัมน์ HN แบบไม่มีทศนิยม
+    # ✅ เตรียม HN แบบไม่มีทศนิยมไว้ก่อน
     df["HN_clean"] = df["HN"].apply(lambda x: str(int(float(x))) if str(x).strip() != "" else "")
 
     query = st.sidebar.text_input("กรอกชื่อ, เลขบัตรประชาชน หรือ HN").strip()
     if not query:
         return None
 
-    filtered = df[
-        df["ชื่อ-สกุล"].str.contains(query, case=False, na=False) |
-        df["เลขบัตรประชาชน"].astype(str).str.contains(query, na=False) |
-        df["HN_clean"].astype(str).str.contains(query, na=False)
-    ]
+    # ✅ ลองค้นหาแบบ exact HN ก่อน
+    exact_match = df[df["HN_clean"] == query]
+    if not exact_match.empty:
+        filtered = exact_match
+    else:
+        # ✅ fallback ถ้าไม่ตรงเป๊ะ → ใช้ contains แบบเดิม
+        filtered = df[
+            df["ชื่อ-สกุล"].str.contains(query, case=False, na=False) |
+            df["เลขบัตรประชาชน"].astype(str).str.contains(query, na=False) |
+            df["HN_clean"].astype(str).str.contains(query, na=False)
+        ]
 
     if filtered.empty:
         st.sidebar.warning("ไม่พบข้อมูล")
         return None
 
+    # 🧠 ส่วนที่เหลือเหมือนเดิม
     person_names = sorted(filtered["ชื่อ-สกุล"].unique())
     selected_name = st.sidebar.selectbox("เลือกชื่อ", person_names)
     if not selected_name:
