@@ -1,13 +1,15 @@
 import streamlit as st
-from utils import format_thai_date, get_float, normalize_date
+from utils import format_thai_date, normalize_date, get_float
 
 def render_report_header(person):
     raw_date = normalize_date(person["วันที่ตรวจ"])
     date = format_thai_date(raw_date)
+    
     name = person["ชื่อ-สกุล"]
     age = int(float(person["อายุ"]))
     gender = person["เพศ"]
     hn = person["HN"]
+    hn_display = str(int(float(hn))) if hn else "-"
     org = person["หน่วยงาน"]
     weight = person["น้ำหนัก"]
     height = person["ส่วนสูง"]
@@ -17,47 +19,36 @@ def render_report_header(person):
     pulse = get_float("pulse", person)
     advice = person.get("สรุปความดัน", "")
 
-    st.markdown(
-        f"""
-        <div style="text-align: center; font-size: 18px; font-weight: bold;">
-            รายงานผลการตรวจสุขภาพ
-        </div>
-        <div style="text-align: center; margin-bottom: 1rem;">
-            วันที่ตรวจ: {date}
-        </div>
+    st.markdown(f"""
+    <div style="text-align: center; font-size: 20px; font-weight: bold;">
+        รายงานผลการตรวจสุขภาพ
+    </div>
+    <div style="text-align: center; margin-bottom: 1rem;">
+        วันที่ตรวจ: {date}
+    </div>
+    <div style="text-align: center;">
+        โรงพยาบาลสันทราย 201 หมู่ที่ 11 ถนน เชียงใหม่ - พร้าว<br>
+        ตำบลหนองหาร อำเภอสันทราย เชียงใหม่ 50290 โทร 053 921 199 ต่อ 167
+    </div>
+    <hr style="margin: 1.5rem 0;">
+    
+    <div style="display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; font-size: 16px;">
+        <div><b>ชื่อ-สกุล:</b> {name}</div>
+        <div><b>อายุ:</b> {age} ปี</div>
+        <div><b>เพศ:</b> {gender}</div>
+        <div><b>HN:</b> {hn_display}</div>
+        <div><b>หน่วยงาน:</b> {org}</div>
+    </div>
 
-        <div style="text-align: center;">
-            โรงพยาบาลสันทราย 201 หมู่ที่ 11 ถนน เชียงใหม่ - พร้าว<br>
-            ตำบลหนองหาร อำเภอสันทราย เชียงใหม่ 50290 โทร 053 921 199 ต่อ 167
-        </div>
+    <div style="display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; margin-top: 1rem;">
+        <div><b>น้ำหนัก:</b> {weight} กก.</div>
+        <div><b>ส่วนสูง:</b> {height} ซม.</div>
+        <div><b>รอบเอว:</b> {waist} ซม.</div>
+        <div><b>ความดันโลหิต:</b> {sbp}/{dbp} มม.ปรอท</div>
+        <div><b>ชีพจร:</b> {pulse} ครั้ง/นาที</div>
+    </div>
 
-        <hr style="margin: 1.5rem 0;">
-
-        <div style="font-size: 16px;">
-            <b>ชื่อ-สกุล:</b> {name} &nbsp;&nbsp;
-            <b>อายุ:</b> {age} ปี &nbsp;&nbsp;
-            <b>เพศ:</b> {gender} &nbsp;&nbsp;
-            <b>HN:</b> {hn}
-        </div>
-
-        <div>
-            <b>หน่วยงาน:</b> {org}
-        </div>
-
-        <div>
-            <b>น้ำหนัก:</b> {weight} กก. &nbsp;&nbsp;
-            <b>ส่วนสูง:</b> {height} ซม. &nbsp;&nbsp;
-            <b>รอบเอว:</b> {waist} ซม.
-        </div>
-
-        <div>
-            <b>ความดันโลหิต:</b> {sbp}/{dbp} มม.ปรอท &nbsp;&nbsp;
-            <b>ชีพจร:</b> {pulse} ครั้ง/นาที
-        </div>
-
-        <div style="margin-top: 0.5rem;">
-            <b>คำแนะนำ:</b> {advice if advice else "-"}
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    <div style="margin-top: 0.5rem; text-align: center;">
+        <b>คำแนะนำ:</b> {advice if advice else "-"}
+    </div>
+    """, unsafe_allow_html=True)
