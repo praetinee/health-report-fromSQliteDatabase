@@ -6,21 +6,21 @@ if PROJECT_ROOT not in sys.path:
     sys.path.append(PROJECT_ROOT)
 
 import streamlit as st
-from utils import format_thai_date, parse_date_thai, get_float
+from utils import format_thai_date, parse_date_thai, get_float, interpret_bp
 
 def render_report_header(person):
     raw_date = parse_date_thai(person["วันที่ตรวจ"])
     date = format_thai_date(raw_date)
 
-    name = person["ชื่อ-สกุล"]
-    age = int(float(person["อายุ"]))
-    gender = person["เพศ"]
-    hn = person["HN"]
+    name = person.get("ชื่อ-สกุล", "-")
+    age = int(float(person.get("อายุ", 0)))
+    gender = person.get("เพศ", "-")
+    hn = person.get("HN", "")
     hn_display = str(int(float(hn))) if hn else "-"
-    org = person["หน่วยงาน"]
-    weight = person["น้ำหนัก"]
-    height = person["ส่วนสูง"]
-    waist = person["รอบเอว"]
+    org = person.get("หน่วยงาน", "-")
+    weight = person.get("น้ำหนัก", "-")
+    height = person.get("ส่วนสูง", "-")
+    waist = person.get("รอบเอว", "-")
     sbp = get_float("SBP", person)
     dbp = get_float("DBP", person)
     pulse = get_float("pulse", person)
@@ -30,9 +30,9 @@ def render_report_header(person):
 
     # ✅ แสดงค่ารูปแบบตามที่ระบุ
     try:
-        weight = f"{float(weight):.1f}"
-        height = f"{float(height):.1f}"
-        waist = f"{float(waist):.1f}"
+        weight = f"{float(weight):.1f}" if weight else "-"
+        height = f"{float(height):.1f}" if height else "-"
+        waist = f"{float(waist):.1f}" if waist else "-"
         sbp = f"{float(sbp):.0f}" if sbp is not None else "-"
         dbp = f"{float(dbp):.0f}" if dbp is not None else "-"
         pulse = f"{float(pulse):.0f}" if pulse is not None else "-"
