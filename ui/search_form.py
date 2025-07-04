@@ -29,7 +29,6 @@ def render_search_form(df: pd.DataFrame):
 
     # 🧠 ส่วนที่เหลือเหมือนเดิม
     person_names = sorted(filtered["ชื่อ-สกุล"].unique())
-    selected_name = st.sidebar.selectbox("เลือกชื่อ", person_names)
     if not selected_name:
         return None
 
