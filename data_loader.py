@@ -28,9 +28,11 @@ def load_sqlite_data():
     df = pd.read_sql("SELECT * FROM health_data", conn)
     conn.close()
 
-    # ✅ แปลงคอลัมน์ "วันที่ตรวจ" ให้เป็น datetime (จาก utils)
-    df["วันที่ตรวจ"] = df["วันที่ตรวจ"].apply(parse_date_thai)
+    # ✅ ถ้าไม่มีคอลัมน์ "วันที่ตรวจ" ไม่ต้องแปลง
+    if "วันที่ตรวจ" in df.columns:
+        df["วันที่ตรวจ"] = df["วันที่ตรวจ"].apply(parse_date_thai)
 
     # ✅ เติมค่า missing ให้เรียบร้อย
     df = df.fillna("").replace("nan", "")
+
     return df
