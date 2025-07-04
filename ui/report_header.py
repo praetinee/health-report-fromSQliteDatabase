@@ -1,5 +1,11 @@
+import sys
+import os
+
+# ✅ เพิ่ม path โฟลเดอร์หลัก เพื่อให้ import utils.py ได้
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import streamlit as st
-from utils import format_thai_date, normalize_date, get_float
+from utils import format_thai_date, normalize_date, get_float  # ✅ import ได้แล้ว
 
 def render_report_header(person):
     raw_date = normalize_date(person["วันที่ตรวจ"])
