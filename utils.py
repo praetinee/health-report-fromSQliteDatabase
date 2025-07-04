@@ -98,12 +98,20 @@ def format_thai_date(date):
     return f"{day} {month} {year}"
 
 def interpret_bp(sbp, dbp):
-    if sbp is None or dbp is None:
+    try:
+        sbp = float(sbp)
+        dbp = float(dbp)
+
+        if sbp < 120 and dbp < 80:
+            return "ความดันปกติ"
+        elif 120 <= sbp < 130 and dbp < 80:
+            return "ความดันเริ่มสูง"
+        elif 130 <= sbp < 140 or 80 <= dbp < 90:
+            return "ความดันโลหิตสูง ระยะที่ 1"
+        elif sbp >= 140 or dbp >= 90:
+            return "ความดันโลหิตสูง ระยะที่ 2"
+        else:
+            return "-"
+    except:
         return "-"
-    if sbp < 120 and dbp < 80:
-        return "ความดันปกติ"
-    elif 120 <= sbp < 130 and dbp < 80:
-        return "ความดันเริ่มสูง"
-    elif 130 <= sbp or dbp >= 80:
-        return "ความดันโลหิตสูง"
-    return "-"
+
