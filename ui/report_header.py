@@ -1,5 +1,6 @@
 import streamlit as st
 from utils import format_thai_date, get_float  # ✅ ใช้ format_thai_date + get_float
+st.markdown(f"วันที่ตรวจ: {format_thai_date(person['วันที่ตรวจ'])}")
 
 def render_report_header(person):
     date = format_thai_date(person["วันที่ตรวจ"])  # ✅ แปลงวันที่ให้เป็น พ.ศ.
