@@ -9,13 +9,13 @@ if PROJECT_ROOT not in sys.path:
 import streamlit as st
 
 try:
-    from utils import format_thai_date, normalize_date, get_float
+    from utils import format_thai_date, parse_date_thai, get_float
 except ImportError as e:
     st.error(f"❌ ไม่สามารถ import 'utils.py' ได้: {e}")
     st.stop()
 
 def render_report_header(person):
-    raw_date = normalize_date(person["วันที่ตรวจ"])
+    raw_date = parse_date_thai(person["วันที่ตรวจ"])
     date = format_thai_date(raw_date)
     
     name = person["ชื่อ-สกุล"]
