@@ -107,9 +107,9 @@ def interpret_bp(sbp, dbp):
         elif 120 <= sbp < 130 and dbp < 80:
             return "ความดันเริ่มสูง"
         elif 130 <= sbp < 140 or 80 <= dbp < 90:
-            return "ความดันโลหิตสูง ระยะที่ 1"
+            return "ความดันโลหิตเริ่มสูง"
         elif sbp >= 140 or dbp >= 90:
-            return "ความดันโลหิตสูง ระยะที่ 2"
+            return "ความดันโลหิตสูง"
         else:
             return "-"
     except:
