@@ -42,64 +42,52 @@ def convert_to_bmi(weight, height_cm):
     except:
         return None
 
-def normalize_date(x):
-    try:
-        return pd.to_datetime(x, errors="coerce", dayfirst=True)
-    except:
-        return None
-
-# ------------------------------
-# ✅ แปลงวันที่ไทย → datetime (รองรับหลายรูปแบบ)
+# ✅ ฟังก์ชันแปลงวันที่ภาษาไทยหลายรูปแบบเป็น datetime (รองรับ พ.ศ.)
 thai_months_full = {
     "มกราคม": 1, "กุมภาพันธ์": 2, "มีนาคม": 3, "เมษายน": 4,
-    "พฤษภาคม": 5, "มิถุนายน": 6, "กรกฎาคม": 7, "สิงหาคม": 8,
-    "กันยายน": 9, "ตุลาคม": 10, "พฤศจิกายน": 11, "ธันวาคม": 12,
-    "ม.ค.": 1, "ก.พ.": 2, "มี.ค.": 3, "เม.ย.": 4,
-    "พ.ค.": 5, "มิ.ย.": 6, "ก.ค.": 7, "ส.ค.": 8,
-    "ก.ย.": 9, "ต.ค.": 10, "พ.ย.": 11, "ธ.ค.": 12
+    "พฤษภาคม": 5, "มิถุนายน": 6, "กรกฎาคม": 7, "กรกฏาคม": 7,
+    "สิงหาคม": 8, "กันยายน": 9, "ตุลาคม": 10, "พฤศจิกายน": 11, "ธันวาคม": 12
 }
 
 def parse_date_thai(date_str):
     try:
         if pd.isna(date_str) or not str(date_str).strip():
-            return None
+            return pd.NaT
 
         s = str(date_str).strip()
 
-        # รูปแบบ: 5.กุมภาพันธ์ 2568 / 5-กุมภาพันธ์-2568
-        match = re.match(r"(\d{1,2})[\.\-\/\s]?([ก-ฮ\.]+)[\.\-\/\s]?(\d{4})", s)
+        # ✅ รูปแบบ: 5.กุมภาพันธ์ 2568 หรือ 5/กุมภาพันธ์/2568
+        match = re.match(r"(\d{1,2})[.\-\/ ]*([ก-ฮ]+)[.\-\/ ]*(\d{4})", s)
         if match:
             day, month_str, year = match.groups()
             month = thai_months_full.get(month_str.strip(), 0)
             year = int(year)
-            if year < 2500:
-                year += 543
+            if year > 2400:  # แปลง พ.ศ. ➝ ค.ศ.
+                year -= 543
             if month > 0:
-                return datetime(year, month, int(day))
+                return pd.Timestamp(datetime(year, month, int(day)))
 
-        # fallback → pandas datetime
+        # ✅ Fallback: "dd/mm/yyyy"
         dt = pd.to_datetime(s, errors="coerce", dayfirst=True)
         if pd.isna(dt):
-            return None
-        if dt.year < 2500:
-            dt = dt.replace(year=dt.year + 543)
+            return pd.NaT
+        if dt.year > 2400:
+            dt = dt.replace(year=dt.year - 543)
         return dt
 
     except:
-        return None
+        return pd.NaT
 
-# ------------------------------
-# ✅ แสดงวันที่เป็น string แบบ "5 กุมภาพันธ์ 2568"
+# ✅ ฟังก์ชันแสดงวันที่แบบ "5 กุมภาพันธ์ 2568"
 def format_thai_date(date):
     if pd.isna(date):
         return "-"
-    
+
     thai_months = [
         "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
         "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
     ]
-    
     day = date.day
     month = thai_months[date.month - 1]
-    year = date.year  # พ.ศ. แล้ว เพราะ parse_date_thai แปลงให้
+    year = date.year + 543  # ➝ แสดง พ.ศ.
     return f"{day} {month} {year}"
