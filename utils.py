@@ -43,7 +43,7 @@ def convert_to_bmi(weight, height_cm):
         return None
 
 # ---------------------------
-# ✅ ฟังก์ชันแปลงวันที่ไทยเป็น datetime
+# ✅ แปลงวันที่ไทย ➝ datetime
 thai_months_full = {
     "มกราคม": 1, "กุมภาพันธ์": 2, "มีนาคม": 3, "เมษายน": 4,
     "พฤษภาคม": 5, "มิถุนายน": 6, "กรกฎาคม": 7, "สิงหาคม": 8,
@@ -59,21 +59,19 @@ def parse_date_thai(date_str):
             return pd.NaT
 
         s = str(date_str).strip()
-        s = s.replace("กรกฏาคม", "กรกฎาคม")  # รองรับสะกดผิดบ่อย
+        s = s.replace("กรกฏาคม", "กรกฎาคม")
 
-        # ✅ รูปแบบ: 5.กุมภาพันธ์ 2568 หรือ 5/กุมภาพันธ์/2568
         match = re.match(r"(\d{1,2})[.\-/ ]*([ก-ฮ.]+)[.\-/ ]*(\d{4})", s)
         if match:
             day, month_str, year = match.groups()
             month_str = month_str.strip(" .")
             month = thai_months_full.get(month_str, 0)
             year = int(year)
-            if year > 2400:  # พ.ศ. ➝ ค.ศ.
+            if year > 2400:
                 year -= 543
             if month > 0:
                 return pd.Timestamp(datetime(year, month, int(day)))
 
-        # ✅ Fallback: dd/mm/yyyy
         dt = pd.to_datetime(s, errors="coerce", dayfirst=True)
         if dt is pd.NaT or pd.isna(dt):
             return pd.NaT
@@ -82,9 +80,10 @@ def parse_date_thai(date_str):
         return dt
 
     except Exception as e:
-        return ไม่พบวันที่ตรวจ
+        return pd.NaT
+
 # ---------------------------
-# ✅ ฟังก์ชันแสดงวันที่แบบไทย (5 กุมภาพันธ์ 2568)
+# ✅ วันที่ไทยแบบ "5 กุมภาพันธ์ 2568"
 def format_thai_date(date):
     if pd.isna(date):
         return "-"
@@ -97,6 +96,8 @@ def format_thai_date(date):
     year = date.year + 543
     return f"{day} {month} {year}"
 
+# ---------------------------
+# ✅ แปลผลความดัน (ใช้ใน report_header)
 def interpret_bp(sbp, dbp):
     if sbp is None or dbp is None:
         return "-"
@@ -108,6 +109,8 @@ def interpret_bp(sbp, dbp):
         return "ความดันโลหิตสูง"
     return "-"
 
+# ---------------------------
+# ✅ คำแนะนำความดัน (ใช้ใน app.py)
 def bp_advice_text(sbp, dbp):
     if sbp is None or dbp is None:
         return ""
@@ -119,5 +122,3 @@ def bp_advice_text(sbp, dbp):
     elif 130 <= sbp or dbp >= 80:
         return "ควรลดเค็ม ออกกำลังกาย และติดตามความดันอย่างสม่ำเสมอ"
     return ""
-
-
