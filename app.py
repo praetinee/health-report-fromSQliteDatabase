@@ -1,6 +1,12 @@
 import streamlit as st
 from data_loader import load_sqlite_data
 from ui.search_form import render_search_form
+
+df = load_sqlite_data()
+person = render_search_form(df)
+if not person:
+    st.stop()
+
 from ui.section_header import render_section_header
 from ui.overview_section import render_overview
 from ui.advice_box import render_advice_box
