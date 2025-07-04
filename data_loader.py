@@ -3,8 +3,7 @@ import pandas as pd
 import sqlite3
 import requests
 import os
-
-from utils import parse_date_thai  # ✅ ฟังก์ชันแปลงวันที่จาก utils.py
+from utils import parse_date_thai  # ✅ ใช้ฟังก์ชันที่รองรับหลายรูปแบบ
 
 @st.cache_data(ttl=900)
 def load_sqlite_data():
@@ -28,11 +27,9 @@ def load_sqlite_data():
     df = pd.read_sql("SELECT * FROM health_data", conn)
     conn.close()
 
-    # ✅ ถ้าไม่มีคอลัมน์ "วันที่ตรวจ" ไม่ต้องแปลง
-    if "วันที่ตรวจ" in df.columns:
-        df["วันที่ตรวจ"] = df["วันที่ตรวจ"].apply(parse_date_thai)
+    # ✅ แปลง "วันที่ตรวจ" เป็น datetime
+    df["วันที่ตรวจ"] = df["วันที่ตรวจ"].apply(parse_date_thai)
 
     # ✅ เติมค่า missing ให้เรียบร้อย
     df = df.fillna("").replace("nan", "")
-
     return df
