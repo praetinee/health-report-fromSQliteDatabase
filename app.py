@@ -757,7 +757,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         wbc_t = interpret_wbc(wbc)
     
         if all(x in ["-", "ปกติ", "ไม่พบ", "พบโปรตีนในปัสสาวะเล็กน้อย", "พบน้ำตาลในปัสสาวะเล็กน้อย"]
-                       for x in [alb_t, sugar_t, rbc_t, wbc_t]):
+                               for x in [alb_t, sugar_t, rbc_t, wbc_t]):
             return ""
     
         if "พบน้ำตาลในปัสสาวะ" in sugar_t and "เล็กน้อย" not in sugar_t:
@@ -892,7 +892,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             # If no urine results at all, do not render the advice box.
             pass
         elif summary: # There is an actual advice due to abnormality
-            st.markdown(f"""  # <-- เพิ่ม 'st.markdown(f"""' ตรงนี้
+            st.markdown(f"""
                 <div style='
                     background-color: rgba(255, 255, 102, 0.1); /* Clearer translucent yellow for advice/abnormal */
                     color: var(--text-color);
@@ -902,19 +902,6 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                     font-size: 16px;
                 '>
                     <b>📌 คำแนะนำจากผลตรวจปัสสาวะ ปี {year_selected}:</b><br>{summary}
-                </div>
-            """, unsafe_allow_html=True) # <-- เพิ่ม '""", unsafe_allow_html=True)' ตรงนี้
-        else: # No specific advice, meaning results are normal
-            st.markdown(f"""
-                <div style='
-                    background-color: rgba(102, 255, 102, 0.1); /* Clearer translucent green for normal */
-                    color: var(--text-color);
-                    padding: 1rem;
-                    border-radius: 6px;
-                    margin-top: 1rem;
-                    font-size: 16px;
-                '>
-                    <b>✔ ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ:</b><br>ไม่มีคำแนะนำเพิ่มเติม
                 </div>
             """, unsafe_allow_html=True)
         else: # No specific advice, meaning results are normal
@@ -1228,7 +1215,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         advice = hepatitis_b_advice(hbsag_raw, hbsab_raw, hbcab_raw)
         
         # 🌈 Set background color based on advice
-       if advice.strip() == "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี":
+        if advice.strip() == "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี":
             bg_color = "rgba(102, 255, 102, 0.1)"  # Clearer translucent green
         else:
             bg_color = "rgba(255, 255, 102, 0.1)" # Clearer translucent yellow
