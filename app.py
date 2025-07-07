@@ -10,31 +10,6 @@ import numpy as np
 def is_empty(val):
     return str(val).strip().lower() in ["", "-", "none", "nan", "null"]
 
-def get_float(val):
-    try:
-        if is_empty(val): return None
-        return float(str(val).replace(",", "").strip())
-    except:
-        return None
-
-def flag(val, low=None, high=None, higher_is_better=False):
-    try:
-        val = get_float(val)
-        if val is None:
-            return "-", False
-    except:
-        return "-", False
-
-    if higher_is_better and low is not None:
-        return f"{val:.1f}", val < low
-
-    if low is not None and val < low:
-        return f"{val:.1f}", True
-    if high is not None and val > high:
-        return f"{val:.1f}", True
-
-    return f"{val:.1f}", False
-
 @st.cache_data(ttl=600)
 def load_sqlite_data():
     try:
@@ -175,6 +150,35 @@ if "search_result" in st.session_state:
     elif len(person_year_df) == 1:
         st.session_state["person_row"] = person_year_df.iloc[0].to_dict()
         st.session_state["selected_row_found"] = True
+
+    # ==================== เตรียมข้อมูลจาก SQLite ====================
+
+# ฟังก์ชันช่วยประเมินค่าตรวจทางห้องแล็บ (ใช้ได้ทุกกลุ่ม)
+def get_float(col, person_data):
+    try:
+        val = person_data.get(col, "")
+        if is_empty(val):
+            return None
+        return float(str(val).replace(",", "").strip())
+    except:
+        return None
+
+def flag(val, low=None, high=None, higher_is_better=False):
+    try:
+        val = float(str(val).replace(",", "").strip())
+    except:
+        return "-", False
+
+    if higher_is_better and low is not None:
+        return f"{val:.1f}", val < low
+
+    if low is not None and val < low:
+        return f"{val:.1f}", True
+    if high is not None and val > high:
+        return f"{val:.1f}", True
+
+    # ✅ อยู่ในช่วง [low, high] รวมขอบ
+    return f"{val:.1f}", False
 
 # ========== ฟังก์ชันวิเคราะห์ค่าต่าง ๆ (ต้องอยู่ก่อนเรียกใช้) ==========
 def kidney_summary_gfr_only(gfr_raw):
@@ -474,6 +478,35 @@ if "person_row" in st.session_state:
     </div>
     """, unsafe_allow_html=True)
 
+# ==================== เตรียมข้อมูลจาก SQLite ====================
+
+# ฟังก์ชันช่วยประเมินค่าตรวจทางห้องแล็บ (ใช้ได้ทุกกลุ่ม)
+def get_float(col, person_data):
+    try:
+        val = person_data.get(col, "")
+        if is_empty(val):
+            return None
+        return float(str(val).replace(",", "").strip())
+    except:
+        return None
+
+def flag(val, low=None, high=None, higher_is_better=False):
+    try:
+        val = float(str(val).replace(",", "").strip())
+    except:
+        return "-", False
+
+    if higher_is_better and low is not None:
+        return f"{val:.1f}", val < low
+
+    if low is not None and val < low:
+        return f"{val:.1f}", True
+    if high is not None and val > high:
+        return f"{val:.1f}", True
+
+    # ✅ อยู่ในช่วง [low, high] รวมขอบ
+    return f"{val:.1f}", False
+
 if "person_row" in st.session_state:
     person = st.session_state["person_row"]
     sex = str(person.get("เพศ", "")).strip()
@@ -695,6 +728,29 @@ if "person_row" in st.session_state:
         """, unsafe_allow_html=True)
 
     # ==================== Urinalysis Section ====================
+    def render_section_header(title, subtitle=None):
+        if subtitle:
+            full_title = f"{title} <span style='font-weight: normal;'>({subtitle})</span>"
+        else:
+            full_title = title
+    
+        return f"""
+        <div style='
+            background-color: #1b5e20;
+            color: white;
+            text-align: center;
+            padding: 1rem 0.5rem;
+            font-size: 20px;
+            font-weight: bold;
+            font-family: "Segoe UI", sans-serif;
+            border-radius: 8px;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        '>
+            {full_title}
+        </div>
+        """
+    
     def safe_value(val):
         val = str(val or "").strip()
         if val.lower() in ["", "nan", "none", "-"]:
@@ -1082,6 +1138,10 @@ if "person_row" in st.session_state:
             <b>ผลการตรวจ:</b> {ekg_result}
         </div>
         """, unsafe_allow_html=True)
+
+        # === Helper: ป้องกันค่าว่าง
+        def safe_text(val):
+            return "-" if str(val).strip().lower() in ["", "none", "nan", "-"] else str(val).strip()
         
         # ==================== Section: Hepatitis A ====================
         st.markdown(render_section_header("ผลการตรวจไวรัสตับอักเสบเอ (Viral hepatitis A)"), unsafe_allow_html=True)
