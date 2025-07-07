@@ -31,7 +31,7 @@ def load_sqlite_data():
         # Strip & แปลงชนิดข้อมูลสำคัญ
         df.columns = df.columns.str.strip()
         df['เลขบัตรประชาชน'] = df['เลขบัตรประชาชน'].astype(str).str.strip()
-        df['HN'] = df['HN'].astype(str).str.strip()
+        df['HN'] = df['HN'].apply(lambda x: str(int(float(x))) if pd.notna(x) else "").str.strip()
         df['ชื่อ-สกุล'] = df['ชื่อ-สกุล'].astype(str).str.strip()
         df['Year'] = df['Year'].astype(int)
 
@@ -126,7 +126,8 @@ if submitted:
     if id_card.strip():
         query = query[query["เลขบัตรประชาชน"] == id_card.strip()]
     if hn.strip():
-        query = query[query["HN"] == hn.strip()]
+        hn_cleaned = str(int(hn.strip()))
+        query = query[query["HN"] == hn_cleaned]
     if full_name.strip():
         query = query[query["ชื่อ-สกุล"].str.strip() == full_name.strip()]
 
