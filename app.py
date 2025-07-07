@@ -892,7 +892,8 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             # If no urine results at all, do not render the advice box.
             pass
         elif summary: # There is an actual advice due to abnormality
-            <div style='
+            st.markdown(f""" # <--- เพิ่ม st.markdown(f""" ตรงนี้
+                <div style='
                     background-color: rgba(255, 255, 102, 0.1); /* Clearer translucent yellow for advice/abnormal */
                     color: var(--text-color);
                     padding: 1rem;
@@ -902,7 +903,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                 '>
                     <b>📌 คำแนะนำจากผลตรวจปัสสาวะ ปี {year_selected}:</b><br>{summary}
                 </div>
-            """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True) # <--- เพิ่ม """) ท้ายบล็อก HTML ตรงนี้
         else: # No specific advice, meaning results are normal
             st.markdown(f"""
                 <div style='
