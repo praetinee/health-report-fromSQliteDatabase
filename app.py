@@ -33,7 +33,8 @@ def load_sqlite_data():
 
         # Strip & convert essential data types
         df.columns = df.columns.str.strip()
-        df['เลขบัตรประชาชน'] = df['เลขบัคนประชาชน'].astype(str).str.strip()
+        # >>>>> แก้ไขตรงนี้: จาก 'เลขบัคนประชาชน' เป็น 'เลขบัตรประชาชน' <<<<<
+        df['เลขบัตรประชาชน'] = df['เลขบัตรประชาชน'].astype(str).str.strip()
         df['HN'] = df['HN'].apply(lambda x: str(int(float(x))) if pd.notna(x) else "").str.strip()
         df['ชื่อ-สกุล'] = df['ชื่อ-สกุล'].astype(str).str.strip()
         df['Year'] = df['Year'].astype(int)
@@ -940,8 +941,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         left_spacer_ua, col_ua_left, col_ua_right, right_spacer_ua = st.columns([1, 3, 3, 1])
         
         with col_ua_left:
-            # Call render_urine_section here, outside of its definition
-            render_urine_section(person, sex, selected_year) 
+            render_urine_section(person, sex, selected_year)
 
             # ==================== Stool Section ====================
             st.markdown(render_section_header("ผลตรวจอุจจาระ", "Stool Examination"), unsafe_allow_html=True)
