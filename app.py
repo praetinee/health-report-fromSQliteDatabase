@@ -6,7 +6,7 @@ import io
 import tempfile
 import html
 import numpy as np
-from collections import OrderedDict # ตรวจสอบให้แน่ใจว่า import นี้มีอยู่แล้ว
+from collections import OrderedDict
 
 # --- Helper Functions ---
 def is_empty(val):
@@ -90,7 +90,7 @@ def safe_value(val):
 # --- Health Interpretation Functions ---
 def kidney_summary_gfr_only(gfr_raw):
     """Summarizes kidney function based on GFR."""
-    gfr = get_numeric_value(gfr_raw, None)
+    gfr = gfr_raw # GFR is already a numeric value or None here
     if gfr is None or gfr == 0:
         return ""
     elif gfr < 60:
@@ -110,7 +110,7 @@ def kidney_advice_from_summary(summary_text):
 
 def fbs_advice(fbs_raw):
     """Provides advice based on Fasting Blood Sugar (FBS)."""
-    value = get_numeric_value(fbs_raw, None)
+    value = fbs_raw # FBS is already a numeric value or None here
     if value is None or value == 0:
         return ""
     elif 100 <= value < 106:
@@ -123,9 +123,9 @@ def fbs_advice(fbs_raw):
 
 def summarize_liver(alp_val, sgot_val, sgpt_val):
     """Summarizes liver function based on ALP, SGOT, SGPT."""
-    alp = get_numeric_value(alp_val, None)
-    sgot = get_numeric_value(sgot_val, None)
-    sgpt = get_numeric_value(sgpt_val, None)
+    alp = alp_val # Already numeric or None
+    sgot = sgot_val # Already numeric or None
+    sgpt = sgpt_val # Already numeric or None
 
     if alp is None or sgot is None or sgpt is None or alp == 0 or sgot == 0 or sgpt == 0:
         return "-"
@@ -143,7 +143,7 @@ def liver_advice(summary_text):
 
 def uric_acid_advice(value_raw):
     """Provides advice based on Uric Acid levels."""
-    value = get_numeric_value(value_raw, None)
+    value = value_raw # Already numeric or None
     if value is None:
         return ""
     if value > 7.2:
@@ -152,9 +152,9 @@ def uric_acid_advice(value_raw):
 
 def summarize_lipids(chol_raw, tgl_raw, ldl_raw):
     """Summarizes lipid profile based on Cholesterol, Triglycerides, and LDL."""
-    chol = get_numeric_value(chol_raw, None)
-    tgl = get_numeric_value(tgl_raw, None)
-    ldl = get_numeric_value(ldl_raw, None)
+    chol = chol_raw # Already numeric or None
+    tgl = tgl_raw # Already numeric or None
+    ldl = ldl_raw # Already numeric or None
 
     if chol is None or tgl is None or ldl is None:
         return "" # Can't summarize if values are missing
@@ -189,10 +189,10 @@ def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
     """Provides advice based on Complete Blood Count (CBC) results."""
     advice_parts = []
     
-    hb_val = get_numeric_value(hb, None)
-    hct_val = get_numeric_value(hct, None)
-    wbc_val = get_numeric_value(wbc, None)
-    plt_val = get_numeric_value(plt, None)
+    hb_val = hb # Already numeric or None
+    hct_val = hct # Already numeric or None
+    wbc_val = wbc # Already numeric or None
+    plt_val = plt # Already numeric or None
 
     hb_ref = 13 if sex == "ชาย" else 12
     hct_ref = 39 if sex == "ชาย" else 36
@@ -217,11 +217,9 @@ def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
 
     return " ".join(advice_parts)
 
-def interpret_bp(sbp, dbp):
+def interpret_bp(sbp_val, dbp_val):
     """Interprets blood pressure values."""
-    sbp_val = get_numeric_value(sbp, None)
-    dbp_val = get_numeric_value(dbp, None)
-
+    # sbp_val and dbp_val are already numeric (int or float) or None
     if sbp_val is None or dbp_val is None or sbp_val == 0 or dbp_val == 0:
         return "-"
     if sbp_val >= 160 or dbp_val >= 100:
@@ -233,14 +231,13 @@ def interpret_bp(sbp, dbp):
     else:
         return "ความดันปกติ"
 
-def combined_health_advice(bmi_val, sbp_raw, dbp_raw):
+def combined_health_advice(bmi_val, sbp_val, dbp_val): # Pass numeric values directly
     """Provides combined advice for BMI and Blood Pressure."""
     bp_text = ""
-    sbp = get_numeric_value(sbp_raw, None)
-    dbp = get_numeric_value(dbp_raw, None)
+    # sbp_val and dbp_val are already numeric (int or float) or None
     
-    if sbp is not None and dbp is not None:
-        bp_interpretation = interpret_bp(sbp, dbp)
+    if sbp_val is not None and dbp_val is not None:
+        bp_interpretation = interpret_bp(sbp_val, dbp_val)
         if bp_interpretation in ["ความดันสูงมาก", "ความดันสูง", "ความดันค่อนข้างสูง"]:
             bp_text = f"ความดันโลหิตอยู่ในระดับ{bp_interpretation.replace('ความดัน', '').strip()}"
 
@@ -554,7 +551,13 @@ def render_lab_section(title, subtitle, headers, rows):
     html_content += "</tr></thead><tbody>"
     
     for row in rows:
-        is_abn = any(flag for _, flag in row)
+        # Check if any cell in the row has the abnormal flag
+        is_abn = False
+        for cell_value, cell_flag in row:
+            if cell_flag:
+                is_abn = True
+                break
+        
         row_class = "lab-abn" if is_abn else "lab-row"
         
         html_content += f"<tr>"
@@ -700,9 +703,11 @@ if "person_row" in st.session_state:
     sex = str(person.get("เพศ", "")).strip()
 
     # Get and format physical data
-    sbp = safe_value(person.get("SBP", "-"))
-    dbp = safe_value(person.get("DBP", "-"))
-    pulse = safe_value(person.get("pulse", "-"))
+    # Use get_numeric_value to ensure these are numbers (or None)
+    sbp_val = get_numeric_value(person, "SBP")
+    dbp_val = get_numeric_value(person, "DBP")
+    pulse_val = get_numeric_value(person, "pulse")
+    
     weight = safe_value(person.get("น้ำหนัก", "-"))
     height = safe_value(person.get("ส่วนสูง", "-"))
     waist = safe_value(person.get("รอบเอว", "-"))
@@ -711,26 +716,22 @@ if "person_row" in st.session_state:
     # Calculate BMI
     bmi_val = None
     try:
-        weight_val = float(str(weight).replace("กก.", "").strip())
-        height_val = float(str(height).replace("ซม.", "").strip())
-        if height_val > 0: # Avoid division by zero
-            bmi_val = weight_val / ((height_val / 100) ** 2)
+        weight_float = get_numeric_value(person, "น้ำหนัก")
+        height_float = get_numeric_value(person, "ส่วนสูง")
+        if weight_float is not None and height_float is not None and height_float > 0:
+            bmi_val = weight_float / ((height_float / 100) ** 2)
     except:
         pass
 
     # Format BP and Pulse
-    sbp_int = int(float(sbp)) if sbp.replace('.', '', 1).isdigit() else None
-    dbp_int = int(float(dbp)) if dbp.replace('.', '', 1).isdigit() else None
-    
-    if sbp_int is not None and dbp_int is not None:
-        bp_val = f"{sbp_int}/{dbp_int} ม.ม.ปรอท"
-        bp_desc = interpret_bp(sbp_int, dbp_int)
-        bp_full = f"{bp_val} - {bp_desc}" if bp_desc != "-" else bp_val
+    if sbp_val is not None and dbp_val is not None:
+        bp_display = f"{int(sbp_val)}/{int(dbp_val)} ม.ม.ปรอท"
+        bp_desc = interpret_bp(sbp_val, dbp_val) # Pass numeric values directly
+        bp_full = f"{bp_display} - {bp_desc}" if bp_desc != "-" else bp_display
     else:
         bp_full = "-"
 
-    pulse_val = int(float(pulse)) if pulse.replace('.', '', 1).isdigit() else None
-    pulse_display = f"{pulse_val} ครั้ง/นาที" if pulse_val is not None else "-"
+    pulse_display = f"{int(pulse_val)} ครั้ง/นาที" if pulse_val is not None else "-"
     
     weight_display = f"{weight} กก." if weight != "-" else "-"
     height_display = f"{height} ซม." if height != "-" else "-"
@@ -738,8 +739,7 @@ if "person_row" in st.session_state:
 
 
     # Combined summary advice for BMI and BP
-    summary_advice_physical = combined_health_advice(bmi_val, sbp, dbp)
-    # No need to html.escape here if `combined_health_advice` doesn't produce HTML
+    summary_advice_physical = combined_health_advice(bmi_val, sbp_val, dbp_val) # Pass numeric values directly
     escaped_summary_advice_physical = html.escape(summary_advice_physical) if summary_advice_physical else ""
 
 
@@ -848,24 +848,24 @@ if "person_row" in st.session_state:
         st.markdown(render_lab_section("ผลตรวจเคมีเลือด", "Blood Chemistry", ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows), unsafe_allow_html=True)
 
     # --- Consolidated General Health Advice ---
-    gfr_raw = get_numeric_value(person, "GFR")
-    fbs_raw = get_numeric_value(person, "FBS")
-    alp_raw = get_numeric_value(person, "ALP")
-    sgot_raw = get_numeric_value(person, "SGOT")
-    sgpt_raw = get_numeric_value(person, "SGPT")
-    uric_raw = get_numeric_value(person, "Uric Acid")
-    chol_raw = get_numeric_value(person, "CHOL")
-    tgl_raw = get_numeric_value(person, "TGL")
-    ldl_raw = get_numeric_value(person, "LDL")
+    gfr_val = get_numeric_value(person, "GFR")
+    fbs_val = get_numeric_value(person, "FBS")
+    alp_val = get_numeric_value(person, "ALP")
+    sgot_val = get_numeric_value(person, "SGOT")
+    sgpt_val = get_numeric_value(person, "SGPT")
+    uric_val = get_numeric_value(person, "Uric Acid")
+    chol_val = get_numeric_value(person, "CHOL")
+    tgl_val = get_numeric_value(person, "TGL")
+    ldl_val = get_numeric_value(person, "LDL")
 
     advice_list = []
     
-    # Pass original raw values to advice functions that handle parsing
-    advice_list.append(kidney_advice_from_summary(kidney_summary_gfr_only(gfr_raw)))
-    advice_list.append(fbs_advice(fbs_raw))
-    advice_list.append(liver_advice(summarize_liver(alp_raw, sgot_raw, sgpt_raw)))
-    advice_list.append(uric_acid_advice(uric_raw))
-    advice_list.append(lipids_advice(summarize_lipids(chol_raw, tgl_raw, ldl_raw)))
+    # Pass numeric values directly to advice functions
+    advice_list.append(kidney_advice_from_summary(kidney_summary_gfr_only(gfr_val)))
+    advice_list.append(fbs_advice(fbs_val))
+    advice_list.append(liver_advice(summarize_liver(alp_val, sgot_val, sgpt_val)))
+    advice_list.append(uric_acid_advice(uric_val))
+    advice_list.append(lipids_advice(summarize_lipids(chol_val, tgl_val, ldl_val)))
     advice_list.append(cbc_advice(
         get_numeric_value(person, "Hb(%)"),
         get_numeric_value(person, "HCT"),
@@ -911,10 +911,6 @@ if "person_row" in st.session_state:
         ("อื่นๆ", safe_value(person.get("ORTER", "-")), "-"),
     ]
 
-    # Convert urine data to rows format suitable for render_lab_section if needed,
-    # or render as a simple table for unique interpretation.
-    # For now, let's keep it simple with direct values and then advice.
-    
     # Determine if urine result is abnormal for highlight
     def is_urine_abnormal(test_name, value, normal_range):
         val_str = str(value or "").strip().lower()
