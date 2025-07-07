@@ -126,12 +126,7 @@ if submitted:
     if id_card.strip():
         query = query[query["เลขบัตรประชาชน"] == id_card.strip()]
     if hn.strip():
-        try:
-            hn_val = hn.strip()
-            query = query[query["HN"] == hn_val]
-        except ValueError:
-            st.error("❌ HN ต้องเป็นตัวเลข เช่น 12345")
-            st.stop()
+        query = query[query["HN"] == hn.strip()]
     if full_name.strip():
         query = query[query["ชื่อ-สกุล"].str.strip() == full_name.strip()]
 
