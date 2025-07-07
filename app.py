@@ -664,7 +664,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         
         # Set background color based on whether there's advice
         background_color_general_advice = (
-            "rgba(255, 255, 102, 0.3)" if has_general_advice else "rgba(102, 255, 102, 0.3)" # Vibrant translucent yellow if advice, vibrant translucent green if normal
+            "rgba(255, 255, 102, 0.1)" if has_general_advice else "rgba(102, 255, 102, 0.1)" # Clearer translucent green and yellow
         )
 
         st.markdown(f"""
@@ -892,9 +892,8 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             # If no urine results at all, do not render the advice box.
             pass
         elif summary: # There is an actual advice due to abnormality
-            st.markdown(f"""
-                <div style='
-                    background-color: rgba(255, 255, 102, 0.3); /* Vibrant translucent yellow for advice/abnormal */
+            <div style='
+                    background-color: rgba(255, 255, 102, 0.1); /* Clearer translucent yellow for advice/abnormal */
                     color: var(--text-color);
                     padding: 1rem;
                     border-radius: 6px;
@@ -907,14 +906,14 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         else: # No specific advice, meaning results are normal
             st.markdown(f"""
                 <div style='
-                    background-color: rgba(102, 255, 102, 0.3); /* Vibrant translucent green for normal */
+                    background-color: rgba(102, 255, 102, 0.1); /* Clearer translucent green for normal */
                     color: var(--text-color);
                     padding: 1rem;
                     border-radius: 6px;
                     margin-top: 1rem;
                     font-size: 16px;
                 '>
-                    <b> ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ:</b><br>ไม่มีคำแนะนำเพิ่มเติม
+                    <b>ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ:</b><br>ไม่มีคำแนะนำเพิ่มเติม
                 </div>
             """, unsafe_allow_html=True)
 
@@ -1215,10 +1214,10 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         advice = hepatitis_b_advice(hbsag_raw, hbsab_raw, hbcab_raw)
         
         # 🌈 Set background color based on advice
-        if advice.strip() == "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี":
-            bg_color = "rgba(102, 255, 102, 0.3)"  # Vibrant translucent green
+       if advice.strip() == "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี":
+            bg_color = "rgba(102, 255, 102, 0.1)"  # Clearer translucent green
         else:
-            bg_color = "rgba(255, 255, 102, 0.3)" # Vibrant translucent yellow
+            bg_color = "rgba(255, 255, 102, 0.1)" # Clearer translucent yellow
 
         st.markdown(f"""
         <div style='
