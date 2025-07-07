@@ -127,8 +127,8 @@ if submitted:
         query = query[query["เลขบัตรประชาชน"] == id_card.strip()]
     if hn.strip():
         try:
-            hn_val = float(hn.strip())
-            query = query[query["HN"].astype(float).apply(lambda x: np.isclose(x, hn_val))]
+            hn_val = hn.strip()
+            query = query[query["HN"] == hn_val]
         except ValueError:
             st.error("❌ HN ต้องเป็นตัวเลข เช่น 12345")
             st.stop()
