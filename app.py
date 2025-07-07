@@ -659,14 +659,17 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
 
     with main_col:
         final_advice_html = merge_final_advice_grouped(advice_list)
-        has_advice = "ไม่พบคำแนะนำเพิ่มเติม" not in final_advice_html
-        background_color = (
-            "rgba(255, 215, 0, 0.15)" if has_advice else "rgba(200, 255, 200, 0.15)"
+        # Determine if there's any *actual* advice for general health (i.e., not just "no advice")
+        has_general_advice = "ไม่พบคำแนะนำเพิ่มเติม" not in final_advice_html
+        
+        # Set background color based on whether there's advice
+        background_color_general_advice = (
+            "rgba(255, 215, 0, 0.15)" if has_general_advice else "rgba(27, 86, 27, 0.15)" # Yellow if advice, dark green if normal
         )
         
         st.markdown(f"""
         <div style="
-            background-color: {background_color};
+            background-color: {background_color_general_advice};
             padding: 1rem 2.5rem;
             border-radius: 10px;
             font-size: 16px;
@@ -743,7 +746,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         if high <= 5:
             return "ปกติ"
         elif high <= 10:
-            return "พบเม็ดเลือดขาวในปัสสาวะเล็กน้อย"
+            return "พบเม็ดเลือดขาวในปัส saliva.น้อย"
         else:
             return "พบเม็ดเลือดขาวในปัสสาวะ"
     
@@ -880,12 +883,18 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         st.markdown(html, unsafe_allow_html=True)
         
         summary = advice_urine(sex, alb_raw, sugar_raw, rbc_raw, wbc_raw)
-        if all(str(x).strip().lower() in ["", "-", "nan", "none"] for _, x, _ in urine_data):
-            pass # Do not show anything if all urine data is missing
-        elif summary:
+        
+        # Determine if any of the key urine results are actually present (not empty)
+        # This will prevent showing 'normal' advice if there's truly no data.
+        has_any_urine_result = any(not is_empty(val) for _, val, _ in urine_data)
+
+        if not has_any_urine_result:
+            # If no urine results at all, do not render the advice box.
+            pass
+        elif summary: # There is an actual advice due to abnormality
             st.markdown(f"""
                 <div style='
-                    background-color: rgba(255, 215, 0, 0.15);
+                    background-color: rgba(255, 215, 0, 0.15); /* Yellow for advice/abnormal */
                     color: var(--text-color);
                     padding: 1rem;
                     border-radius: 6px;
@@ -895,8 +904,19 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                     <b>📌 คำแนะนำจากผลตรวจปัสสาวะ ปี {year_selected}:</b><br>{summary}
                 </div>
             """, unsafe_allow_html=True)
-        else:
-            st.success("ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ ไม่มีคำแนะนำเพิ่มเติม")
+        else: # No specific advice, meaning results are normal
+            st.markdown(f"""
+                <div style='
+                    background-color: rgba(27, 86, 27, 0.15); /* Dark translucent green for normal */
+                    color: var(--text-color);
+                    padding: 1rem;
+                    border-radius: 6px;
+                    margin-top: 1rem;
+                    font-size: 16px;
+                '>
+                    <b>✔ ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ:</b><br>ไม่มีคำแนะนำเพิ่มเติม
+                </div>
+            """, unsafe_allow_html=True)
 
     with st.container():
         left_spacer_ua, col_ua_left, col_ua_right, right_spacer_ua = st.columns([1, 3, 3, 1])
@@ -1194,10 +1214,11 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         
         advice = hepatitis_b_advice(hbsag_raw, hbsab_raw, hbcab_raw)
         
+        # 🌈 Set background color based on advice
         if advice.strip() == "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี":
-            bg_color = "rgba(200, 255, 200, 0.15)"
+            bg_color = "rgba(27, 86, 27, 0.15)"  # Dark translucent green
         else:
-            bg_color = "rgba(255, 215, 0, 0.15)"
+            bg_color = "rgba(255, 215, 0, 0.15)"    # Yellow translucent
         
         st.markdown(f"""
         <div style='
@@ -1213,7 +1234,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         </div>
         """, unsafe_allow_html=True)
             
-# =========================== Doctor's Opinion =======================
+#=========================== ความเห็นแพทย์ =======================
 if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
     person = st.session_state["person_row"]
     doctor_suggestion = str(person.get("DOCTER suggest", "")).strip()
