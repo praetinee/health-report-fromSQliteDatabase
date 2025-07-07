@@ -33,7 +33,6 @@ def load_sqlite_data():
 
         # Strip & convert essential data types
         df.columns = df.columns.str.strip()
-        # >>>>> แก้ไขตรงนี้: จาก 'เลขบัคนประชาชน' เป็น 'เลขบัตรประชาชน' <<<<<
         df['เลขบัตรประชาชน'] = df['เลขบัตรประชาชน'].astype(str).str.strip()
         df['HN'] = df['HN'].apply(lambda x: str(int(float(x))) if pd.notna(x) else "").str.strip()
         df['ชื่อ-สกุล'] = df['ชื่อ-สกุล'].astype(str).str.strip()
@@ -350,8 +349,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<h1 style='text-align:center;'>ระบบรายงานผลตรวจสุขภาพ</h1>", unsafe_allow_html=True)
-st.markdown("<h4 style='text-align:center; color:gray;'>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม รพ.สันทราย -</h4>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center; font-family: \"Sarabun\", sans-serif;'>ระบบรายงานผลตรวจสุขภาพ</h1>", unsafe_allow_html=True)
+st.markdown("<h4 style='text-align:center; color:gray; font-family: \"Sarabun\", sans-serif;'>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม รพ.สันทราย -</h4>", unsafe_allow_html=True)
 
 with st.form("search_form"):
     col1, col2, col3 = st.columns(3)
@@ -525,7 +524,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     
     # ===== Display General Information Section =====
     st.markdown(f"""
-    <div style="font-size: 20px; line-height: 1.8; color: inherit; padding: 24px 8px;">
+    <div style="font-size: 20px; line-height: 1.8; color: inherit; padding: 24px 8px; font-family: \"Sarabun\", sans-serif;">
         <div style="text-align: center; font-size: 29px; font-weight: bold;">รายงานผลการตรวจสุขภาพ</div>
         <div style="text-align: center;">วันที่ตรวจ: {check_date or "-"}</div>
         <div style="text-align: center; margin-top: 10px;">
