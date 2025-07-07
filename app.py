@@ -894,7 +894,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         elif summary: # There is an actual advice due to abnormality
             st.markdown(f"""
                 <div style='
-                    background-color: rgba(255, 215, 0, 0.15); /* Yellow for advice/abnormal */
+                    background-color: rgba(255, 255, 102, 0.3); /* Brighter and more vibrant yellow for advice/abnormal */
                     color: var(--text-color);
                     padding: 1rem;
                     border-radius: 6px;
