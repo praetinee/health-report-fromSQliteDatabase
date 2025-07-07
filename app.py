@@ -668,10 +668,25 @@ if "person_row" in st.session_state:
 
     with main_col:
         final_advice_html = merge_final_advice_grouped(advice_list)
-        has_advice = "ไม่พบคำแนะนำเพิ่มเติม" not in final_advice_html
-        background_color = (
-            "rgba(255, 215, 0, 0.15)" if has_advice else "rgba(200, 255, 200, 0.15)"
-        )
+        if "ไม่พบคำแนะนำเพิ่มเติม" in final_advice_html:
+            st.success("ผลตรวจสุขภาพอยู่ในเกณฑ์ปกติ ไม่มีคำแนะนำเพิ่มเติม")
+        else:
+            st.markdown(f"""
+            <div style="
+                background-color: rgba(255, 215, 0, 0.15);
+                padding: 1rem 2.5rem;
+                border-radius: 10px;
+                font-size: 16px;
+                line-height: 1.5;
+                color: var(--text-color);
+            ">
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 0.5rem;">
+                    📋 คำแนะนำจากผลตรวจสุขภาพ
+                </div>
+                {final_advice_html}
+            </div>
+            """, unsafe_allow_html=True)
+
         text_color = "var(--text-color)"
         
         st.markdown(f"""
@@ -1271,9 +1286,21 @@ if "person_row" in st.session_state:
         
         # 🌈 เปลี่ยนสีพื้นหลังตามคำแนะนำ
         if advice.strip() == "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี":
-            bg_color = "rgba(200, 255, 200, 0.15)"  # สีเขียวโปร่งแสง
+            st.success("ผลการตรวจไวรัสตับอักเสบบี: มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี")
         else:
-            bg_color = "rgba(255, 215, 0, 0.15)"    # สีเหลืองโปร่งแสง
+            st.markdown(f"""
+            <div style='
+                font-size: 16px;
+                line-height: 1.6;
+                padding: 1rem 1.5rem;
+                border-radius: 6px;
+                background-color: rgba(255, 215, 0, 0.15);
+                color: var(--text-color);
+                margin-bottom: 1.5rem;
+            '>
+                <b>คำแนะนำ:</b> {advice}
+            </div>
+            """, unsafe_allow_html=True)
         
         st.markdown(f"""
         <div style='
