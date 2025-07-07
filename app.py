@@ -664,7 +664,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         
         # Set background color based on whether there's advice
         background_color_general_advice = (
-            "rgba(255, 255, 102, 0.3)" if has_general_advice else "rgba(102, 255, 102, 0.3)" # Brighter and more vibrant green and yellow
+            "rgba(255, 255, 102, 0.3)" if has_general_advice else "rgba(102, 255, 102, 0.3)" # Vibrant translucent yellow if advice, vibrant translucent green if normal
         )
 
         st.markdown(f"""
@@ -894,7 +894,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         elif summary: # There is an actual advice due to abnormality
             st.markdown(f"""
                 <div style='
-                    background-color: rgba(255, 255, 102, 0.3); /* Brighter and more vibrant yellow for advice/abnormal */
+                    background-color: rgba(255, 255, 102, 0.3); /* Vibrant translucent yellow for advice/abnormal */
                     color: var(--text-color);
                     padding: 1rem;
                     border-radius: 6px;
@@ -907,14 +907,14 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         else: # No specific advice, meaning results are normal
             st.markdown(f"""
                 <div style='
-                    background-color: rgba(102, 255, 102, 0.3); /* Brighter and more vibrant translucent green for normal */
+                    background-color: rgba(102, 255, 102, 0.3); /* Vibrant translucent green for normal */
                     color: var(--text-color);
                     padding: 1rem;
                     border-radius: 6px;
                     margin-top: 1rem;
                     font-size: 16px;
                 '>
-                    <b>✔ ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ:</b><br>ไม่มีคำแนะนำเพิ่มเติม
+                    <b> ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ:</b><br>ไม่มีคำแนะนำเพิ่มเติม
                 </div>
             """, unsafe_allow_html=True)
 
@@ -1216,9 +1216,9 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         
         # 🌈 Set background color based on advice
         if advice.strip() == "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี":
-            bg_color = "rgba(102, 255, 102, 0.3)"  # Brighter and more vibrant translucent green
+            bg_color = "rgba(102, 255, 102, 0.3)"  # Vibrant translucent green
         else:
-            bg_color = "rgba(255, 255, 102, 0.3)" # Brighter and more vibrant translucent yellow
+            bg_color = "rgba(255, 255, 102, 0.3)" # Vibrant translucent yellow
 
         st.markdown(f"""
         <div style='
