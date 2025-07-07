@@ -664,7 +664,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         
         # Set background color based on whether there's advice
         background_color_general_advice = (
-            "rgba(255, 255, 102, 0.1)" if has_general_advice else "rgba(102, 255, 102, 0.1)" # Clearer translucent green and yellow
+            "rgba(255, 255, 0, 0.2)" if has_general_advice else "rgba(57, 255, 20, 0.2)" # Vibrant translucent yellow if advice, vibrant translucent green if normal
         )
 
         st.markdown(f"""
@@ -894,7 +894,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         elif summary: # There is an actual advice due to abnormality
             st.markdown(f"""
                 <div style='
-                    background-color: rgba(255, 255, 102, 0.1); /* Clearer translucent yellow for advice/abnormal */
+                    background-color: rgba(255, 255, 0, 0.2); /* Vibrant translucent yellow for advice/abnormal */
                     color: var(--text-color);
                     padding: 1rem;
                     border-radius: 6px;
@@ -907,7 +907,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         else: # No specific advice, meaning results are normal
             st.markdown(f"""
                 <div style='
-                    background-color: rgba(102, 255, 102, 0.1); /* Clearer translucent green for normal */
+                    background-color: rgba(57, 255, 20, 0.2); /* Vibrant translucent green for normal */
                     color: var(--text-color);
                     padding: 1rem;
                     border-radius: 6px;
@@ -922,7 +922,8 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         left_spacer_ua, col_ua_left, col_ua_right, right_spacer_ua = st.columns([1, 3, 3, 1])
         
         with col_ua_left:
-            render_urine_section(person, sex, selected_year)
+            # Call render_urine_section here, outside of its definition
+            render_urine_section(person, sex, selected_year) 
 
             # ==================== Stool Section ====================
             st.markdown(render_section_header("ผลตรวจอุจจาระ", "Stool Examination"), unsafe_allow_html=True)
@@ -1216,9 +1217,9 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         
         # 🌈 Set background color based on advice
         if advice.strip() == "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี":
-            bg_color = "rgba(102, 255, 102, 0.1)"  # Clearer translucent green
+            bg_color = "rgba(57, 255, 20, 0.2)"  # Vibrant translucent green
         else:
-            bg_color = "rgba(255, 255, 102, 0.1)" # Clearer translucent yellow
+            bg_color = "rgba(255, 255, 0, 0.2)" # Vibrant translucent yellow
 
         st.markdown(f"""
         <div style='
