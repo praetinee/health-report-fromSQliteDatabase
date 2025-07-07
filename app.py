@@ -913,7 +913,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                     margin-top: 1rem;
                     font-size: 16px;
                 '>
-                    <b>ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ:</b><br>ไม่มีคำแนะนำเพิ่มเติม
+                    <b>✔ ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ:</b><br>ไม่มีคำแนะนำเพิ่มเติม
                 </div>
             """, unsafe_allow_html=True)
 
