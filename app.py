@@ -118,13 +118,13 @@ def render_lab_table_html(title, subtitle, headers, rows, table_class="lab-table
         .{table_class} thead th {{
             background-color: var(--secondary-background-color);
             color: var(--text-color);
-            padding: 2px 4px; /* Consistent padding */
+            padding: 2px 2px; /* Adjusted padding to make columns closer */
             text-align: center;
             font-weight: bold;
             border: 1px solid transparent;
         }}
         .{table_class} td {{
-            padding: 2px 4px; /* Consistent padding */
+            padding: 2px 2px; /* Adjusted padding to make columns closer */
             border: 1px solid transparent;
             text-align: center;
             color: var(--text-color);
@@ -867,13 +867,13 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             .urine-table thead th {
                 background-color: var(--secondary-background-color);
                 color: var(--text-color);
-                padding: 3px 4px; /* Consistent padding */
+                padding: 3px 2px; /* Adjusted padding to make columns closer */
                 text-align: center;
                 font-weight: bold;
                 border: 1px solid transparent;
             }
             .urine-table td {
-                padding: 3px 4px; /* Consistent padding */
+                padding: 3px 2px; /* Adjusted padding to make columns closer */
                 border: 1px solid transparent;
                 text-align: center;
                 color: var(--text-color);
@@ -998,14 +998,14 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                     .stool-table th {
                         background-color: var(--secondary-background-color);
                         color: var(--text-color);
-                        padding: 3px 4px; /* Consistent padding */
+                        padding: 3px 2px; /* Adjusted padding to make columns closer */
                         text-align: left;
                         font-weight: bold;
                         width: 40%; /* Set width for first column (th) */
                         border: 1px solid transparent;
                     }
                     .stool-table td {
-                        padding: 3px 4px; /* Consistent padding */
+                        padding: 3px 2px; /* Adjusted padding to make columns closer */
                         border: 1px solid transparent;
                         /* The second column (td) will take the remaining width (60%) */
                         color: var(--text-color);
