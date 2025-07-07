@@ -33,7 +33,7 @@ def load_sqlite_data():
 
         # Strip & convert essential data types
         df.columns = df.columns.str.strip()
-        df['เลขบัตรประชาชน'] = df['เลขบัตรประชาชน'].astype(str).str.strip()
+        df['เลขบัตรประชาชน'] = df['เลขบัคนประชาชน'].astype(str).str.strip()
         df['HN'] = df['HN'].apply(lambda x: str(int(float(x))) if pd.notna(x) else "").str.strip()
         df['ชื่อ-สกุล'] = df['ชื่อ-สกุล'].astype(str).str.strip()
         df['Year'] = df['Year'].astype(int)
@@ -87,7 +87,7 @@ def render_section_header(title, subtitle=None):
         padding: 1rem 0.5rem;
         font-size: 20px;
         font-weight: bold;
-        font-family: "Segoe UI", sans-serif;
+        font-family: "Sarabun", sans-serif; /* Adjusted font */
         border-radius: 8px;
         margin-top: 2rem;
         margin-bottom: 1rem;
@@ -111,7 +111,7 @@ def render_lab_table_html(title, subtitle, headers, rows, table_class="lab-table
             width: 100%;
             border-collapse: collapse;
             font-size: 16px;
-            font-family: "Segoe UI", sans-serif;
+            font-family: "Sarabun", sans-serif; /* Adjusted font */
             color: var(--text-color);
         }}
         .{table_class} thead th {{
@@ -298,28 +298,43 @@ def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 st.markdown("""
     <style>
-    /* ปิด scrollbar เฉพาะ markdown ทุกตัว */
+    /* Import Sarabun font from Google Fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
+
+    /* Apply Sarabun font globally */
+    html, body, [class*="st-emotion"], [class*="css-"] { /* Target Streamlit elements */
+        font-family: "Sarabun", sans-serif;
+    }
+
+    /* Override specific elements if needed, for example the main text */
+    div.stMarkdown, div.stText, p {
+        font-family: "Sarabun", sans-serif;
+    }
+
+    /* Adjust font for inputs/select boxes if they don't inherit automatically */
+    .stTextInput > div > div > input, .stSelectbox > div > div > div > div {
+        font-family: "Sarabun", sans-serif;
+    }
+
+
+    /* Original scrollbar CSS */
     div.stMarkdown {
         overflow: visible !important;
     }
 
-    /* ปิด scrollbar บน container ที่ Streamlit ห่อให้ */
     section.main > div {
         overflow-y: visible !important;
     }
 
-    /* บังคับไม่ให้ wrap scroll container */
     [data-testid="stVerticalBlock"] {
         overflow: visible !important;
     }
 
-    /* ปิด scrollbar ที่ WebKit (Chrome/Safari) */
     ::-webkit-scrollbar {
         width: 0px;
         background: transparent;
     }
 
-    /* ปิด scrollbar ของ container markdown ที่แสดงผลแนะนำ */
     div[style*="overflow: auto"] {
         overflow: visible !important;
     }
@@ -675,6 +690,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             font-size: 16px;
             line-height: 1.5;
             color: var(--text-color);
+            font-family: "Sarabun", sans-serif; /* Adjusted font */
         ">
             <div style="font-size: 18px; font-weight: bold; margin-bottom: 0.5rem;">
                 📋 คำแนะนำจากผลตรวจสุขภาพ
@@ -839,7 +855,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                 width: 100%;
                 border-collapse: collapse;
                 font-size: 16px;
-                font-family: "Segoe UI", sans-serif;
+                font-family: "Sarabun", sans-serif; /* Adjusted font */
             }
             .urine-table thead th {
                 background-color: var(--secondary-background-color);
@@ -900,6 +916,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                     border-radius: 6px;
                     margin-top: 1rem;
                     font-size: 16px;
+                    font-family: "Sarabun", sans-serif; /* Adjusted font */
                 '>
                     <b>📌 คำแนะนำจากผลตรวจปัสสาวะ ปี {year_selected}:</b><br>{summary}
                 </div>
@@ -913,6 +930,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                     border-radius: 6px;
                     margin-top: 1rem;
                     font-size: 16px;
+                    font-family: "Sarabun", sans-serif; /* Adjusted font */
                 '>
                     <b>✔ ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ:</b><br>ไม่มีคำแนะนำเพิ่มเติม
                 </div>
@@ -963,7 +981,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                         width: 100%;
                         border-collapse: collapse;
                         font-size: 16px;
-                        font-family: "Segoe UI", sans-serif;
+                        font-family: "Sarabun", sans-serif; /* Adjusted font */
                     }
                     .stool-table th {
                         background-color: var(--secondary-background-color);
@@ -1025,6 +1043,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             padding: 1.25rem;
             border-radius: 6px;
             margin-bottom: 1.5rem;
+            font-family: "Sarabun", sans-serif; /* Adjusted font */
         '>
             <b>ผลการตรวจ:</b> {cxr_result}
         </div>
@@ -1057,6 +1076,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             padding: 1.25rem;
             border-radius: 6px;
             margin-bottom: 1.5rem;
+            font-family: "Sarabun", sans-serif; /* Adjusted font */
         '>
             <b>ผลการตรวจ:</b> {ekg_result}
         </div>
@@ -1077,6 +1097,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             border-radius: 6px;
             margin-bottom: 1.5rem;
             background-color: rgba(255,255,255,0.05);
+            font-family: "Sarabun", sans-serif; /* Adjusted font */
         '>
             {hep_a_raw}
         </div>
@@ -1161,6 +1182,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             text-align: center;
             border-collapse: collapse;
             min-width: 300px;
+            font-family: "Sarabun", sans-serif; /* Adjusted font */
         '>
             <thead>
                 <tr>
@@ -1191,6 +1213,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             border-radius: 6px;
             margin-bottom: 1.5rem;
             line-height: 1.8;
+            font-family: "Sarabun", sans-serif; /* Adjusted font */
         '>
             <b>วันที่ตรวจภูมิคุ้มกัน:</b> {hep_check_date}<br>
             <b>ประวัติโรคไวรัสตับอักเสบบี ปี พ.ศ. {selected_year}:</b> {hep_history}<br>
@@ -1230,6 +1253,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             background-color: {bg_color};
             color: var(--text-color);
             margin-bottom: 1.5rem;
+            font-family: "Sarabun", sans-serif; /* Adjusted font */
         '>
             <b>คำแนะนำ:</b> {advice}
         </div>
@@ -1255,7 +1279,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             line-height: 1.6;
             margin-top: 2rem;
             margin-bottom: 2rem;
-            font-family: "Segoe UI", sans-serif;
+            font-family: "Sarabun", sans-serif; /* Adjusted font */
         '>
             <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
         </div>
