@@ -113,17 +113,18 @@ def render_lab_table_html(title, subtitle, headers, rows, table_class="lab-table
             font-size: 16px;
             font-family: "Sarabun", sans-serif; /* Adjusted font */
             color: var(--text-color);
+            table-layout: fixed; /* Ensures column widths are respected */
         }}
         .{table_class} thead th {{
             background-color: var(--secondary-background-color);
             color: var(--text-color);
-            padding: 2px 4px;
+            padding: 2px 4px; /* Consistent padding */
             text-align: center;
             font-weight: bold;
             border: 1px solid transparent;
         }}
         .{table_class} td {{
-            padding: 2px 1px;
+            padding: 2px 4px; /* Consistent padding */
             border: 1px solid transparent;
             text-align: center;
             color: var(--text-color);
@@ -140,6 +141,11 @@ def render_lab_table_html(title, subtitle, headers, rows, table_class="lab-table
     header_html = render_section_header(title, subtitle)
     
     html_content = f"{style}{header_html}<div class='{table_class}-container'><table class='{table_class}'>"
+    # Add colgroup for explicit column widths
+    html_content += """
+        <colgroup>
+            <col style="width: 40%;"> <col style="width: 20%;"> <col style="width: 40%;"> </colgroup>
+    """
     html_content += "<thead><tr>"
     for i, h in enumerate(headers):
         align = "left" if i in [0, 2] else "center"
@@ -856,17 +862,18 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                 border-collapse: collapse;
                 font-size: 16px;
                 font-family: "Sarabun", sans-serif; /* Adjusted font */
+                table-layout: fixed; /* Ensures column widths are respected */
             }
             .urine-table thead th {
                 background-color: var(--secondary-background-color);
                 color: var(--text-color);
-                padding: 3px 1px;
+                padding: 3px 4px; /* Consistent padding */
                 text-align: center;
                 font-weight: bold;
                 border: 1px solid transparent;
             }
             .urine-table td {
-                padding: 3px 1px;
+                padding: 3px 4px; /* Consistent padding */
                 border: 1px solid transparent;
                 text-align: center;
                 color: var(--text-color);
@@ -881,6 +888,11 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         """
         html = style + render_section_header("ผลการตรวจปัสสาวะ", "Urinalysis")
         html += "<div class='urine-table-container'><table class='urine-table'>"
+        # Add colgroup for explicit column widths
+        html += """
+            <colgroup>
+                <col style="width: 40%;"> <col style="width: 20%;"> <col style="width: 40%;"> </colgroup>
+        """
         html += "<thead><tr>"
         html += "<th style='text-align: left;'>การตรวจ</th>"
         html += "<th>ผลตรวจ</th>"
@@ -981,19 +993,21 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                         border-collapse: collapse;
                         font-size: 16px;
                         font-family: "Sarabun", sans-serif; /* Adjusted font */
+                        table-layout: fixed; /* Ensure column widths are respected */
                     }
                     .stool-table th {
                         background-color: var(--secondary-background-color);
                         color: var(--text-color);
-                        padding: 3px 1px;
+                        padding: 3px 4px; /* Consistent padding */
                         text-align: left;
                         font-weight: bold;
-                        width: 40%;
+                        width: 40%; /* Set width for first column (th) */
                         border: 1px solid transparent;
                     }
                     .stool-table td {
-                        padding: 3px 1px;
+                        padding: 3px 4px; /* Consistent padding */
                         border: 1px solid transparent;
+                        /* The second column (td) will take the remaining width (60%) */
                         color: var(--text-color);
                     }
                 </style>
@@ -1001,6 +1015,8 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                 html = f"""
                 <div class='stool-container'>
                     <table class='stool-table'>
+                        <colgroup>
+                            <col style="width: 40%;"> <col style="width: 60%;"> </colgroup>
                         <tr>
                             <th>ผลตรวจอุจจาระทั่วไป</th>
                             <td style='text-align: left;'>{exam if exam != "-" else "ไม่ได้เข้ารับการตรวจ"}</td>
