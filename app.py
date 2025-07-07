@@ -664,7 +664,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         
         # Set background color based on whether there's advice
         background_color_general_advice = (
-            "rgba(255, 215, 0, 0.15)" if has_general_advice else "rgba(100, 200, 100, 0.15)" # More visible bright green if normal
+            "rgba(255, 255, 102, 0.3)" if has_general_advice else "rgba(102, 255, 102, 0.3)" # Brighter and more vibrant green and yellow
         )
 
         st.markdown(f"""
@@ -907,7 +907,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         else: # No specific advice, meaning results are normal
             st.markdown(f"""
                 <div style='
-                    background-color: rgba(100, 200, 100, 0.15); /* Brighter translucent green for normal */
+                    background-color: rgba(102, 255, 102, 0.3); /* Brighter and more vibrant translucent green for normal */
                     color: var(--text-color);
                     padding: 1rem;
                     border-radius: 6px;
@@ -1216,9 +1216,9 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         
         # 🌈 Set background color based on advice
         if advice.strip() == "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี":
-            bg_color = "rgba(100, 200, 100, 0.15)"  # Brighter translucent green
+            bg_color = "rgba(102, 255, 102, 0.3)"  # Brighter and more vibrant translucent green
         else:
-            bg_color = "rgba(255, 215, 0, 0.15)"
+            bg_color = "rgba(255, 255, 102, 0.3)" # Brighter and more vibrant translucent yellow
 
         st.markdown(f"""
         <div style='
