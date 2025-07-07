@@ -310,29 +310,6 @@ def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
     return " ".join(advice_parts)
 
 # === เพิ่มฟังก์ชันตรงนี้ ===
-def render_advice_box(title, advice_text):
-    """
-    แสดงคำแนะนำแบบกล่องสวยงาม
-    - หากไม่มีคำแนะนำ: ใช้ st.success()
-    - หากมีคำแนะนำ: ใช้กล่องพื้นหลังเหลืองแบบปัสสาวะ
-    """
-    if not advice_text or advice_text.strip() in ["-", "none", "null", "nan", "ไม่พบคำแนะนำเพิ่มเติมจากผลตรวจ"]:
-        st.success(f"{title}อยู่ในเกณฑ์ปกติ ไม่มีคำแนะนำเพิ่มเติม")
-    else:
-        st.markdown(f"""
-        <div style='
-            background-color: rgba(255, 215, 0, 0.15);
-            color: var(--text-color);
-            padding: 1rem 1.5rem;
-            border-radius: 6px;
-            margin-bottom: 1.5rem;
-            font-size: 16px;
-            line-height: 1.5;
-        '>
-            <b>{title}:</b> {advice_text}
-        </div>
-        """, unsafe_allow_html=True)
-
 def render_section_header(title, subtitle=None):
     if subtitle:
         full_title = f"{title} <span style='font-weight: normal;'>({subtitle})</span>"
@@ -690,7 +667,28 @@ if "person_row" in st.session_state:
     spacer_l, main_col, spacer_r = st.columns([1, 6, 1])
 
     with main_col:
-        st.markdown(render_section_header("ผลตรวจสุขภาพ"), unsafe_allow_html=True)
+        final_advice_html = merge_final_advice_grouped(advice_list)
+        has_advice = "ไม่พบคำแนะนำเพิ่มเติม" not in final_advice_html
+        background_color = (
+            "rgba(255, 215, 0, 0.15)" if has_advice else "rgba(200, 255, 200, 0.15)"
+        )
+        text_color = "var(--text-color)"
+        
+        st.markdown(f"""
+        <div style="
+            background-color: {background_color};
+            padding: 1rem 2.5rem;
+            border-radius: 10px;
+            font-size: 16px;
+            line-height: 1.5;
+            color: var(--text-color);
+        ">
+            <div style="font-size: 18px; font-weight: bold; margin-bottom: 0.5rem;">
+                📋 คำแนะนำจากผลตรวจสุขภาพ
+            </div>
+            {final_advice_html}
+        </div>
+        """, unsafe_allow_html=True)
 
     # ==================== Urinalysis Section ====================
     def render_section_header(title, subtitle=None):
@@ -1272,7 +1270,24 @@ if "person_row" in st.session_state:
         advice = hepatitis_b_advice(hbsag_raw, hbsab_raw, hbcab_raw)
         
         # 🌈 เปลี่ยนสีพื้นหลังตามคำแนะนำ
-        st.markdown(render_section_header("ภูมิคุ้มกันต่อ Hepatiis B"), unsafe_allow_html=True)
+        if advice.strip() == "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี":
+            bg_color = "rgba(200, 255, 200, 0.15)"  # สีเขียวโปร่งแสง
+        else:
+            bg_color = "rgba(255, 215, 0, 0.15)"    # สีเหลืองโปร่งแสง
+        
+        st.markdown(f"""
+        <div style='
+            font-size: 16px;
+            line-height: 1.6;
+            padding: 1rem 1.5rem;
+            border-radius: 6px;
+            background-color: {bg_color};
+            color: var(--text-color);
+            margin-bottom: 1.5rem;
+        '>
+            <b>คำแนะนำ:</b> {advice}
+        </div>
+        """, unsafe_allow_html=True)
         
 #=========================== ความเห็นแพทย์ =======================
 if "person_row" in st.session_state:
