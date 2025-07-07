@@ -85,9 +85,9 @@ def render_section_header(title, subtitle=None):
         color: white;
         text-align: center;
         padding: 1rem 0.5rem;
-        font-size: 20px;
+        font-size: 18px; /* Adjusted font size */
         font-weight: bold;
-        font-family: "Sarabun", sans-serif; /* Adjusted font */
+        font-family: "Sarabun", sans-serif;
         border-radius: 8px;
         margin-top: 2rem;
         margin-bottom: 1rem;
@@ -110,8 +110,8 @@ def render_lab_table_html(title, subtitle, headers, rows, table_class="lab-table
         .{table_class} {{
             width: 100%;
             border-collapse: collapse;
-            font-size: 16px;
-            font-family: "Sarabun", sans-serif; /* Adjusted font */
+            font-size: 18px; /* Adjusted font size */
+            font-family: "Sarabun", sans-serif;
             color: var(--text-color);
             table-layout: fixed; /* Ensures column widths are respected */
         }}
@@ -530,7 +530,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     
     # ===== Display General Information Section =====
     st.markdown(f"""
-    <div style="font-size: 20px; line-height: 1.8; color: inherit; padding: 24px 8px; font-family: \"Sarabun\", sans-serif;">
+    <div style="font-size: 18px; line-height: 1.8; color: inherit; padding: 24px 8px; font-family: \"Sarabun\", sans-serif;">
         <div style="text-align: center; font-size: 29px; font-weight: bold;">รายงานผลการตรวจสุขภาพ</div>
         <div style="text-align: center;">วันที่ตรวจ: {check_date or "-"}</div>
         <div style="text-align: center; margin-top: 10px;">
@@ -612,7 +612,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         result, is_abn = flag(val, low, high, higher)
         blood_rows.append([(label, is_abn), (result, is_abn), (norm, is_abn)])
 
-    left_spacer, col1, col2, right_spacer = st.columns([1, 3, 3, 1])
+    left_spacer, col1, col2, right_spacer = st.columns([0.5, 3, 3, 0.5]) # Adjusted spacer ratio
 
     with col1:
         st.markdown(render_lab_table_html("ผลตรวจ CBC", "Complete Blood Count", ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows), unsafe_allow_html=True)
@@ -676,7 +676,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
 
         return "<div style='margin-bottom: 0.75rem;'>" + "</div><div style='margin-bottom: 0.75rem;'>".join(output) + "</div>"
 
-    spacer_l, main_col, spacer_r = st.columns([1, 6, 1])
+    spacer_l, main_col, spacer_r = st.columns([0.5, 6, 0.5]) # Adjusted spacer ratio
 
     with main_col:
         final_advice_html = merge_final_advice_grouped(advice_list)
@@ -693,10 +693,10 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             background-color: {background_color_general_advice};
             padding: 1rem 2.5rem;
             border-radius: 10px;
-            font-size: 16px;
+            font-size: 18px; /* Adjusted font size */
             line-height: 1.5;
             color: var(--text-color);
-            font-family: "Sarabun", sans-serif; /* Adjusted font */
+            font-family: "Sarabun", sans-serif;
         ">
             {final_advice_html}
         </div>
@@ -857,8 +857,9 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             .urine-table {
                 width: 100%;
                 border-collapse: collapse;
-                font-size: 16px;
-                font-family: "Sarabun", sans-serif; /* Adjusted font */
+                font-size: 18px; /* Adjusted font size */
+                font-family: "Sarabun", sans-serif;
+                color: var(--text-color);
                 table-layout: fixed; /* Ensures column widths are respected */
             }
             .urine-table thead th {
@@ -924,8 +925,8 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                     padding: 1rem;
                     border-radius: 6px;
                     margin-top: 1rem;
-                    font-size: 16px;
-                    font-family: "Sarabun", sans-serif; /* Adjusted font */
+                    font-size: 18px; /* Adjusted font size */
+                    font-family: "Sarabun", sans-serif;
                 '>
                     {summary}
                 </div>
@@ -938,15 +939,15 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                     padding: 1rem;
                     border-radius: 6px;
                     margin-top: 1rem;
-                    font-size: 16px;
-                    font-family: "Sarabun", sans-serif; /* Adjusted font */
+                    font-size: 18px; /* Adjusted font size */
+                    font-family: "Sarabun", sans-serif;
                 '>
                     ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ
                 </div>
             """, unsafe_allow_html=True)
 
     with st.container():
-        left_spacer_ua, col_ua_left, col_ua_right, right_spacer_ua = st.columns([1, 3, 3, 1])
+        left_spacer_ua, col_ua_left, col_ua_right, right_spacer_ua = st.columns([0.5, 3, 3, 0.5]) # Adjusted spacer ratio
         
         with col_ua_left:
             render_urine_section(person, sex, selected_year)
@@ -988,8 +989,8 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                     .stool-table {
                         width: 100%;
                         border-collapse: collapse;
-                        font-size: 16px;
-                        font-family: "Sarabun", sans-serif; /* Adjusted font */
+                        font-size: 18px; /* Adjusted font size */
+                        font-family: "Sarabun", sans-serif;
                         table-layout: fixed; /* Ensure column widths are respected */
                     }
                     .stool-table th {
@@ -1050,12 +1051,12 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         <div style='
             background-color: var(--background-color);
             color: var(--text-color);
-            font-size: 16px;
+            font-size: 18px; /* Adjusted font size */
             line-height: 1.6;
             padding: 1.25rem;
             border-radius: 6px;
             margin-bottom: 1.5rem;
-            font-family: "Sarabun", sans-serif; /* Adjusted font */
+            font-family: "Sarabun", sans-serif;
         '>
             <b>ผลการตรวจ:</b> {cxr_result}
         </div>
@@ -1083,12 +1084,12 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         <div style='
             background-color: var(--secondary-background-color);
             color: var(--text-color);
-            font-size: 16px;
+            font-size: 18px; /* Adjusted font size */
             line-height: 1.6;
             padding: 1.25rem;
             border-radius: 6px;
             margin-bottom: 1.5rem;
-            font-family: "Sarabun", sans-serif; /* Adjusted font */
+            font-family: "Sarabun", sans-serif;
         '>
             <b>ผลการตรวจ:</b> {ekg_result}
         </div>
@@ -1104,12 +1105,12 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         hep_a_raw = safe_text(person.get("Hepatitis A"))
         st.markdown(f"""
         <div style='
-            font-size: 16px;
+            font-size: 18px; /* Adjusted font size */
             padding: 1rem;
             border-radius: 6px;
             margin-bottom: 1.5rem;
             background-color: rgba(255,255,255,0.05);
-            font-family: "Sarabun", sans-serif; /* Adjusted font */
+            font-family: "Sarabun", sans-serif;
         '>
             {hep_a_raw}
         </div>
@@ -1190,11 +1191,11 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         <div style="margin-bottom: 1rem;">
         <table style='
             width: 100%;
-            font-size: 16px;
+            font-size: 18px; /* Adjusted font size */
             text-align: center;
             border-collapse: collapse;
             min-width: 300px;
-            font-family: "Sarabun", sans-serif; /* Adjusted font */
+            font-family: "Sarabun", sans-serif;
         '>
             <thead>
                 <tr>
@@ -1219,13 +1220,13 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
 
         st.markdown(f"""
         <div style='
-            font-size: 16px;
+            font-size: 18px; /* Adjusted font size */
             padding: 0.75rem 1rem;
             background-color: rgba(255,255,255,0.05);
             border-radius: 6px;
             margin-bottom: 1.5rem;
             line-height: 1.8;
-            font-family: "Sarabun", sans-serif; /* Adjusted font */
+            font-family: "Sarabun", sans-serif;
         '>
             <b>วันที่ตรวจภูมิคุ้มกัน:</b> {hep_check_date}<br>
             <b>ประวัติโรคไวรัสตับอักเสบบี ปี พ.ศ. {selected_year}:</b> {hep_history}<br>
@@ -1258,14 +1259,14 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
 
         st.markdown(f"""
         <div style='
-            font-size: 16px;
+            font-size: 18px; /* Adjusted font size */
             line-height: 1.6;
             padding: 1rem 1.5rem;
             border-radius: 6px;
             background-color: {bg_color};
             color: var(--text-color);
             margin-bottom: 1.5rem;
-            font-family: "Sarabun", sans-serif; /* Adjusted font */
+            font-family: "Sarabun", sans-serif;
         '>
             {advice}
         </div>
@@ -1278,7 +1279,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     if doctor_suggestion.lower() in ["", "-", "none", "nan", "null"]:
         doctor_suggestion = "<i>ไม่มีคำแนะนำจากแพทย์</i>"
 
-    left_spacer3, doctor_col, right_spacer3 = st.columns([1, 6, 1])
+    left_spacer3, doctor_col, right_spacer3 = st.columns([0.5, 6, 0.5]) # Adjusted spacer ratio
 
     with doctor_col:
         st.markdown(f"""
@@ -1287,11 +1288,11 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             color: white;
             padding: 1.5rem 2rem;
             border-radius: 8px;
-            font-size: 18px;
+            font-size: 18px; /* Adjusted font size */
             line-height: 1.6;
             margin-top: 2rem;
             margin-bottom: 2rem;
-            font-family: "Sarabun", sans-serif; /* Adjusted font */
+            font-family: "Sarabun", sans-serif;
         '>
             <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
         </div>
