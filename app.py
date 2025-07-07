@@ -126,15 +126,15 @@ if submitted:
     if id_card.strip():
         query = query[query["เลขบัตรประชาชน"] == id_card.strip()]
     if hn.strip():
-        query = query[query["HN"] == hn.strip()]
+        try:
+            hn_val = float(hn.strip())
+            query = query[query["HN"].astype(float).apply(lambda x: np.isclose(x, hn_val))]
+        except ValueError:
+            st.error("❌ HN ต้องเป็นตัวเลข เช่น 12345")
+            st.stop()
     if full_name.strip():
         query = query[query["ชื่อ-สกุล"].str.strip() == full_name.strip()]
-    if query.empty:
-        st.error("❌ ไม่พบข้อมูล กรุณาตรวจสอบอีกครั้ง")
-        st.session_state.pop("person", None)
-    else:
-        st.session_state["person"] = query.iloc[0]
-        
+
     # 🧹 Reset ปุ่มที่เคยเลือกไว้ก่อนหน้าทุกครั้งที่ค้นหาใหม่
     st.session_state.pop("selected_index", None)
     
