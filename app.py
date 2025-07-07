@@ -141,14 +141,14 @@ def render_lab_table_html(title, subtitle, headers, rows, table_class="lab-table
     header_html = render_section_header(title, subtitle)
     
     html_content = f"{style}{header_html}<div class='{table_class}-container'><table class='{table_class}'>"
-    # Add colgroup for explicit column widths
+    # Add colgroup for explicit column widths (equal distribution for 3 columns)
     html_content += """
         <colgroup>
-            <col style="width: 40%;"> <col style="width: 20%;"> <col style="width: 40%;"> </colgroup>
+            <col style="width: 33.33%;"> <col style="width: 33.33%;"> <col style="width: 33.33%;"> </colgroup>
     """
     html_content += "<thead><tr>"
     for i, h in enumerate(headers):
-        align = "left" if i in [0, 2] else "center"
+        align = "left" if i == 0 else ("left" if i == 2 else "center") # 'การตรวจ' and 'ค่าปกติ' left-aligned, 'ผล' center-aligned
         html_content += f"<th style='text-align: {align};'>{h}</th>"
     html_content += "</tr></thead><tbody>"
     
@@ -888,10 +888,10 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         """
         html = style + render_section_header("ผลการตรวจปัสสาวะ", "Urinalysis")
         html += "<div class='urine-table-container'><table class='urine-table'>"
-        # Add colgroup for explicit column widths
+        # Add colgroup for explicit column widths (equal distribution for 3 columns)
         html += """
             <colgroup>
-                <col style="width: 40%;"> <col style="width: 20%;"> <col style="width: 40%;"> </colgroup>
+                <col style="width: 33.33%;"> <col style="width: 33.33%;"> <col style="width: 33.33%;"> </colgroup>
         """
         html += "<thead><tr>"
         html += "<th style='text-align: left;'>การตรวจ</th>"
@@ -1000,14 +1000,14 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                         color: var(--text-color);
                         padding: 3px 2px; /* Adjusted padding to make columns closer */
                         text-align: left;
+                        width: 50%; /* Equal width for 2 columns */
                         font-weight: bold;
-                        width: 40%; /* Set width for first column (th) */
                         border: 1px solid transparent;
                     }
                     .stool-table td {
                         padding: 3px 2px; /* Adjusted padding to make columns closer */
                         border: 1px solid transparent;
-                        /* The second column (td) will take the remaining width (60%) */
+                        width: 50%; /* Equal width for 2 columns */
                         color: var(--text-color);
                     }
                 </style>
@@ -1016,7 +1016,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                 <div class='stool-container'>
                     <table class='stool-table'>
                         <colgroup>
-                            <col style="width: 40%;"> <col style="width: 60%;"> </colgroup>
+                            <col style="width: 50%;"> <col style="width: 50%;"> </colgroup>
                         <tr>
                             <th>ผลตรวจอุจจาระทั่วไป</th>
                             <td style='text-align: left;'>{exam if exam != "-" else "ไม่ได้เข้ารับการตรวจ"}</td>
