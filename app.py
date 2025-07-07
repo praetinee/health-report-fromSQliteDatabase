@@ -698,9 +698,6 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             color: var(--text-color);
             font-family: "Sarabun", sans-serif; /* Adjusted font */
         ">
-            <div style="font-size: 18px; font-weight: bold; margin-bottom: 0.5rem;">
-                📋 คำแนะนำจากผลตรวจสุขภาพ
-            </div>
             {final_advice_html}
         </div>
         """, unsafe_allow_html=True)
@@ -930,7 +927,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                     font-size: 16px;
                     font-family: "Sarabun", sans-serif; /* Adjusted font */
                 '>
-                    <b>📌 คำแนะนำจากผลตรวจปัสสาวะ ปี {year_selected}:</b><br>{summary}
+                    {summary}
                 </div>
             """, unsafe_allow_html=True)
         else: # No specific advice, meaning results are normal
@@ -944,7 +941,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                     font-size: 16px;
                     font-family: "Sarabun", sans-serif; /* Adjusted font */
                 '>
-                    <b>✔ ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ:</b><br>ไม่มีคำแนะนำเพิ่มเติม
+                    ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ
                 </div>
             """, unsafe_allow_html=True)
 
@@ -1270,7 +1267,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             margin-bottom: 1.5rem;
             font-family: "Sarabun", sans-serif; /* Adjusted font */
         '>
-            <b>คำแนะนำ:</b> {advice}
+            {advice}
         </div>
         """, unsafe_allow_html=True)
             
