@@ -861,11 +861,11 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Main search form moved to sidebar
-with st.sidebar.form("search_form_sidebar"):
-    st.markdown("<h3>ค้นหาข้อมูลผู้เข้ารับบริการ</h3>", unsafe_allow_html=True)
-    search_query = st.text_input("กรอก HN หรือ ชื่อ-สกุล")
-    submitted_sidebar = st.form_submit_button("ค้นหา")
+# Main search form moved to sidebar (MODIFIED: No form border)
+st.sidebar.markdown("<h3>ค้นหาข้อมูลผู้เข้ารับบริการ</h3>", unsafe_allow_html=True)
+search_query = st.sidebar.text_input("กรอก HN หรือ ชื่อ-สกุล")
+submitted_sidebar = st.sidebar.button("ค้นหา")
+
 
 if submitted_sidebar:
     st.session_state.pop("search_result", None)
