@@ -512,66 +512,77 @@ def render_urine_section(person_data, sex, selected_year):
         </div>
         """, unsafe_allow_html=True)
 
-def interpret_stool_exam(stool_exam_raw):
-    """Interprets stool examination result."""
-    if is_empty(stool_exam_raw):
-        return "ไม่มีข้อมูล"
-    s = str(stool_exam_raw).strip()
-    if "ไม่พบ" in s or "ปกติ" in s or "negative" in s.lower():
-        return "ปกติ"
-    return s # Return as is if it contains other values
+# Moved to global scope
+def interpret_stool_exam(val):
+    val = str(val or "").strip().lower()
+    if val in ["", "-", "none", "nan"]:
+        return "-"
+    elif val == "normal":
+        return "ไม่พบเม็ดเลือดขาวในอุจจาระ ถือว่าปกติ"
+    elif "wbc" in val or "เม็ดเลือดขาว" in val:
+        return "พบเม็ดเลือดขาวในอุจจาระ นัดตรวจซ้ำ"
+    return val
 
-def interpret_stool_cs(stool_cs_raw):
-    """Interprets stool C/S result."""
-    if is_empty(stool_cs_raw):
-        return "ไม่มีข้อมูล"
-    s = str(stool_cs_raw).strip()
-    if "ไม่พบ" in s or "ปกติ" in s or "negative" in s.lower():
-        return "ปกติ"
-    return s # Return as is if it contains other values
+# Moved to global scope
+def interpret_stool_cs(value):
+    value = str(value or "").strip()
+    if value in ["", "-", "none", "nan"]:
+        return "-"
+    if "ไม่พบ" in value or "ปกติ" in value:
+        return "ไม่พบการติดเชื้อ"
+    return "พบการติดเชื้อในอุจจาระ ให้พบแพทย์เพื่อตรวจรักษาเพิ่มเติม"
 
-def render_stool_html_table(exam_text, cs_text):
-    """Generates HTML table for stool examination."""
-    # Determine if any part is abnormal to apply a highlight to the table if needed
-    is_abnormal_exam = ("ปกติ" not in exam_text) and ("ไม่มีข้อมูล" not in exam_text)
-    is_abnormal_cs = ("ปกติ" not in cs_text) and ("ไม่มีข้อมูล" not in cs_text)
-    
-    # Decide table background based on abnormality
-    table_bg_color = "rgba(255, 64, 64, 0.1)" if is_abnormal_exam or is_abnormal_cs else "rgba(255,255,255,0.02)"
-
-    return f"""
-    <div style='
-        background-color: {table_bg_color};
-        margin-top: 1rem;
-        padding: 0.5rem; /* Reduced padding */
-        border-radius: 6px;
-        font-family: "Sarabun", sans-serif;
-    '>
-        <table style='
+# Moved to global scope
+def render_stool_html_table(exam, cs):
+    style = """
+    <style>
+        .stool-container {
+            background-color: var(--background-color);
+            margin-top: 1rem;
+        }
+        .stool-table {
             width: 100%;
             border-collapse: collapse;
             font-size: 18px; /* Adjusted font size */
+            font-family: "Sarabun", sans-serif;
             color: var(--text-color);
-        '>
-            <thead>
-                <tr>
-                    <th style="padding: 2px 2px; text-align: left; border-bottom: 1px solid var(--secondary-background-color);">การตรวจ</th>
-                    <th style="padding: 2px 2px; text-align: left; border-bottom: 1px solid var(--secondary-background-color);">ผล</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td style="padding: 2px 2px; text-align: left;">Stool exam</td>
-                    <td style="padding: 2px 2px; text-align: left;">{exam_text}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 2px 2px; text-align: left;">Stool C/S</td>
-                    <td style="padding: 2px 2px; text-align: left;">{cs_text}</td>
-                </tr>
-            </tbody>
+            table-layout: fixed; /* Ensure column widths are respected */
+        }
+        .stool-table th {
+            background-color: var(--secondary-background-color);
+            color: var(--text-color);
+            padding: 3px 2px; /* Adjusted padding to make columns closer */
+            text-align: left;
+            width: 50%; /* Equal width for 2 columns */
+            font-weight: bold;
+            border: 1px solid transparent;
+        }
+        .stool-table td {
+            padding: 3px 2px; /* Adjusted padding to make columns closer */
+            border: 1px solid transparent;
+            width: 50%; /* Equal width for 2 columns */
+            color: var(--text-color);
+        }
+    </style>
+    """
+    html_content = f"""
+    <div class='stool-container'>
+        <table class='stool-table'>
+            <colgroup>
+                <col style="width: 50%;"> <col style="width: 50%;"> </colgroup>
+            <tr>
+                <th>ผลตรวจอุจจาระทั่วไป</th>
+                <td style='text-align: left;'>{exam if exam != "-" else "ไม่ได้เข้ารับการตรวจ"}</td>
+            </tr>
+            <tr>
+                <th>ผลตรวจอุจจาระเพาะเชื้อ</th>
+                <td style='text-align: left;'>{cs if cs != "-" else "ไม่ได้เข้ารับการตรวจ"}</td>
+            </tr>
         </table>
     </div>
     """
+    return style + html_content
+
 
 def interpret_cxr(cxr_raw):
     """Interprets Chest X-ray result."""
@@ -584,9 +595,13 @@ def interpret_cxr(cxr_raw):
 
 def get_ekg_col_name(selected_year_int):
     """Determines the correct EKG column name based on the selected year."""
-    if selected_year_int == 2568:
+    # Assuming current year is 2568 BE as per prompt context
+    current_thai_year = 2568 # Hardcoding based on assumption from previous context
+
+    if selected_year_int == current_thai_year:
         return "EKG"
     else:
+        # For years before current, use the last two digits
         return f"EKG{str(selected_year_int)[-2:]}"
 
 def interpret_ekg(ekg_raw):
@@ -1113,8 +1128,12 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             
             stool_exam_raw = person.get("Stool exam", "")
             stool_cs_raw = person.get("Stool C/S", "")
+            
+            # Call the global functions for interpretation
             exam_text = interpret_stool_exam(stool_exam_raw)
             cs_text = interpret_stool_cs(stool_cs_raw)
+            
+            # Call the global function for rendering the table
             st.markdown(render_stool_html_table(exam_text, cs_text), unsafe_allow_html=True)
 
         with col_ua_right:
