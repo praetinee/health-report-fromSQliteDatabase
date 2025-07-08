@@ -127,6 +127,23 @@ def load_sqlite_data():
         df['ชื่อ-สกุล'] = df['ชื่อ-สกุล'].astype(str).str.strip()
         df['Year'] = df['Year'].astype(int)
 
+        # Create HN_SEARCHABLE for more lenient numerical HN matching
+        # This function cleans HN to its pure digit form (e.g., "007" -> "7", "HN123" -> "123")
+        def clean_hn_for_df_search(hn_value):
+            if is_empty(hn_value):
+                return ""
+            s = str(hn_value)
+            digits_only = re.sub(r'\D', '', s) # Keep only digits
+            if digits_only:
+                try:
+                    return str(int(digits_only)) # Convert to int and back to str to remove leading zeros
+                except ValueError:
+                    return "" # Should not happen if digits_only is not empty
+            return "" # If no digits are found (e.g., "ABC"), it becomes empty.
+        
+        df['HN_SEARCHABLE'] = df['HN'].apply(clean_hn_for_df_search)
+
+
         # Apply date normalization AFTER initial data loading and cleaning
         df['วันที่ตรวจ'] = df['วันที่ตรวจ'].apply(normalize_thai_date)
 
@@ -467,14 +484,16 @@ if submitted_sidebar:
     query_df = df.copy()
 
     if search_query.strip():
+        search_term = search_query.strip()
+        
         # Check if the query is purely numeric (potential HN)
-        if search_query.strip().isdigit():
+        if search_term.isdigit():
             # Clean user input for HN search (digits only, no leading zeros)
-            hn_search_value = str(int(search_query.strip()))
+            hn_search_value = str(int(search_term))
             query_df = query_df[query_df["HN_SEARCHABLE"] == hn_search_value]
         else:
             # Assume it's a full name if not purely numeric
-            query_df = query_df[query_df["ชื่อ-สกุล"].str.strip() == search_query.strip()]
+            query_df = query_df[query_df["ชื่อ-สกุล"].str.strip() == search_term]
     
     if query_df.empty:
         st.sidebar.error("❌ ไม่พบข้อมูล กรุณาตรวจสอบข้อมูลที่กรอกอีกครั้ง") # Improved error message in sidebar
@@ -498,8 +517,8 @@ if "search_result" in st.session_state:
         selected_year_from_sidebar = st.selectbox(
             "📅 เลือกปีที่ต้องการดูผลตรวจรายงาน",
             options=available_years,
+            index=available_years.index(st.session_state["selected_year_from_sidebar"]) if st.session_state["selected_year_from_sidebar"] in available_years else (0 if available_years else None),
             format_func=lambda y: f"พ.ศ. {y}",
-            index=available_years.index(st.session_state["selected_year_from_sidebar"]) if st.session_state["selected_year_from_sidebar"] in available_years else 0,
             key="year_select" # Use a key to manage state
         )
         st.session_state["selected_year_from_sidebar"] = selected_year_from_sidebar
@@ -511,7 +530,7 @@ if "search_result" in st.session_state:
             person_year_df = results_df[
                 (results_df["Year"] == selected_year_from_sidebar) &
                 (results_df["HN"] == selected_hn)
-            ].drop_duplicates(subset=["HN", "วันที่ตรวจ"]).sort_values(by="วันที่ตรวจ", ascending=False) # Sort by date
+            ].drop_duplicates(subset=["HN", "วันที่ตรวจ"]).sort_values(by="วันที่ตรวจ", key=lambda x: pd.to_datetime(x, errors='coerce'), ascending=False) # Sort by date (robust)
 
             exam_dates_options = person_year_df["วันที่ตรวจ"].dropna().unique().tolist()
             
@@ -532,7 +551,7 @@ if "search_result" in st.session_state:
                     selected_exam_date_from_sidebar = st.selectbox(
                         "🗓️ เลือกวันที่ตรวจ",
                         options=exam_dates_options,
-                        index=exam_dates_options.index(st.session_state["selected_exam_date_from_sidebar"]) if st.session_state["selected_exam_date_from_sidebar"] in exam_dates_options else 0,
+                        index=exam_dates_options.index(st.session_state["selected_exam_date_from_sidebar"]) if st.session_state["selected_exam_date_from_sidebar"] in exam_dates_options else (0 if exam_dates_options else None),
                         key="exam_date_select" # Use a key
                     )
                     st.session_state["selected_exam_date_from_sidebar"] = selected_exam_date_from_sidebar
