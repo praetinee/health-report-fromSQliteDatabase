@@ -817,14 +817,19 @@ df = load_sqlite_data()
 # ==================== UI Setup and Search Form (Sidebar) ====================
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
-# Inject custom CSS for font and size control
+# Inject custom CSS for font and size control (MODIFIED)
 st.markdown("""
     <style>
     /* Import Sarabun font from Google Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
 
-    /* Apply Sarabun font to text elements, leaving Streamlit's icons alone */
-    body, h1, h2, h3, h4, h5, h6, p, label, th, td, button, .st-emotion-cache-16txtl3 {
+    /*
+      Apply Sarabun font to all elements in the app using the universal selector (*).
+      This is the most effective way to ensure all text adopts the new font.
+      The Streamlit sidebar collapse icon is an SVG element, which is not
+      affected by the 'font-family' property, so it will not be broken.
+    */
+    * {
         font-family: 'Sarabun', sans-serif !important;
     }
     
@@ -861,7 +866,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Main search form moved to sidebar (MODIFIED: No form border)
+# Main search form moved to sidebar
 st.sidebar.markdown("<h3>ค้นหาข้อมูลผู้เข้ารับบริการ</h3>", unsafe_allow_html=True)
 search_query = st.sidebar.text_input("กรอก HN หรือ ชื่อ-สกุล")
 submitted_sidebar = st.sidebar.button("ค้นหา")
