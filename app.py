@@ -130,11 +130,12 @@ def render_section_header(title, subtitle=None):
         background-color: #1b5e20;
         color: white;
         text-align: center;
-        padding: 1rem 0.5rem;
+        padding: 0.8rem 0.5rem;
         font-weight: bold;
         border-radius: 8px;
         margin-top: 2rem;
         margin-bottom: 1rem;
+        font-size: 16px;
     '>
         {full_title}
     </div>
@@ -152,6 +153,7 @@ def render_lab_table_html(title, subtitle, headers, rows, table_class="lab-table
             border-collapse: collapse;
             color: var(--text-color);
             table-layout: fixed; /* Ensures column widths are respected */
+            font-size: 16px;
         }}
         .{table_class} thead th {{
             background-color: var(--secondary-background-color);
@@ -558,6 +560,7 @@ def render_urine_section(person_data, sex, year_selected):
             border-collapse: collapse;
             color: var(--text-color);
             table-layout: fixed; /* Ensures column widths are respected */
+            font-size: 16px;
         }
         .urine-table thead th {
             background-color: var(--secondary-background-color);
@@ -618,6 +621,7 @@ def render_urine_section(person_data, sex, year_selected):
                 padding: 1rem;
                 border-radius: 6px;
                 margin-top: 1rem;
+                font-size: 16px;
             '>
                 {summary}
             </div>
@@ -630,6 +634,7 @@ def render_urine_section(person_data, sex, year_selected):
                 padding: 1rem;
                 border-radius: 6px;
                 margin-top: 1rem;
+                font-size: 16px;
             '>
                 ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ
             </div>
@@ -666,6 +671,7 @@ def render_stool_html_table(exam, cs):
             border-collapse: collapse;
             color: var(--text-color);
             table-layout: fixed; /* Ensure column widths are respected */
+            font-size: 16px;
         }
         .stool-table th {
             background-color: var(--secondary-background-color);
@@ -824,31 +830,31 @@ st.markdown("""
     
     /* Set a base font size for the body, allowing overrides */
     body, p, div, span, label, th, td, button, input, select, option {
-        font-size: 18px !important;
+        font-size: 16px !important;
     }
     
     /* Set specific size for main report title (h1) */
     .report-header-container h1 {
-        font-size: 2.2rem !important;
+        font-size: 2.0rem !important;
         font-weight: bold;
     }
 
     /* Style for the clinic subtitle (h2) */
     .report-header-container h2 {
-        font-size: 1.6rem !important; /* Size between h1 and body text */
+        font-size: 1.4rem !important; /* Size between h1 and body text */
         color: darkgrey;
         font-weight: bold;
     }
 
     /* Set specific size for sidebar titles (h3) */
     .st-sidebar h3 {
-        font-size: 22px !important; /* Slightly larger than body text */
+        font-size: 20px !important; /* Slightly larger than body text */
     }
 
-    /* Control spacing for all elements in header to be more spread out */
+    /* Control spacing for all elements in header */
     .report-header-container * {
-        line-height: 1.9 !important; /* << ADJUST THIS VALUE FOR SPACING */
-        margin: 0.3rem 0 !important; /* Add vertical margin between elements */
+        line-height: 1.8 !important; /* << ADJUST THIS VALUE FOR SPACING */
+        margin: 0.25rem 0 !important; /* Add vertical margin between elements */
         padding: 0 !important;
     }
 
@@ -1008,7 +1014,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     report_header_html = f"""
     <div class="report-header-container" style="text-align: center; margin-bottom: 0.5rem;">
         <h1>รายงานผลการตรวจสุขภาพ</h1>
-        <h2>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย -</h2>
+        <h2>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม -</h2>
         <p>ชั้น 2 อาคารผู้ป่วยนอก-อุบัติเหตุ โรงพยาบาลสันทราย 201 หมู่ 11 ถ.เชียงใหม่–พร้าว ต.หนองหาร อ.สันทราย จ.เชียงใหม่ 50290</p>
         <p>ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167</p>
         <p><b>วันที่ตรวจ:</b> {check_date or "-"}</p>
@@ -1181,6 +1187,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             border-radius: 10px;
             line-height: 1.5;
             color: var(--text-color);
+            font-size: 16px;
         ">
             {final_advice_html}
         </div>
@@ -1225,6 +1232,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                 padding: 1.25rem;
                 border-radius: 6px;
                 margin-bottom: 1.5rem;
+                font-size: 16px;
             '>
                 {cxr_result}
             </div>
@@ -1245,6 +1253,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                 padding: 1.25rem;
                 border-radius: 6px;
                 margin-bottom: 1.5rem;
+                font-size: 16px;
             '>
                 {ekg_result}
             </div>
@@ -1260,6 +1269,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                 border-radius: 6px;
                 margin-bottom: 1.5rem;
                 background-color: rgba(255,255,255,0.05);
+                font-size: 16px;
             '>
                 {hep_a_raw}
             </div>
@@ -1282,6 +1292,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                 text-align: center;
                 border-collapse: collapse;
                 min-width: 300px;
+                font-size: 16px;
             '>
                 <thead>
                     <tr>
@@ -1311,6 +1322,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                 border-radius: 6px;
                 margin-bottom: 1.5rem;
                 line-height: 1.8;
+                font-size: 16px;
             '>
                 <b>วันที่ตรวจภูมิคุ้มกัน:</b> {hep_check_date}<br>
                 <b>ประวัติโรคไวรัสตับอักเสบบี ปี พ.ศ. {selected_year}:</b> {hep_history}<br>
@@ -1333,6 +1345,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                 background-color: {bg_color};
                 color: var(--text-color);
                 margin-bottom: 1.5rem;
+                font-size: 16px;
             '>
                 {advice}
             </div>
@@ -1357,6 +1370,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             line-height: 1.6;
             margin-top: 2rem;
             margin-bottom: 2rem;
+            font-size: 16px;
         '>
             <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
         </div>
