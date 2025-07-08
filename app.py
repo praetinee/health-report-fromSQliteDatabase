@@ -847,7 +847,7 @@ st.markdown("""
 
     /* Control spacing for all elements in header to be more spread out */
     .report-header-container * {
-        line-height: 1.9 !important; /* Adjust this value to control spacing */
+        line-height: 1.9 !important; /* << ADJUST THIS VALUE FOR SPACING */
         margin: 0.3rem 0 !important; /* Add vertical margin between elements */
         padding: 0 !important;
     }
@@ -1006,7 +1006,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
 
     # --- NEW: Unified Header Block (MODIFIED) ---
     report_header_html = f"""
-    <div class="report-header-container" style="text-align: center; margin-bottom: 2rem;">
+    <div class="report-header-container" style="text-align: center; margin-bottom: 1rem;">
         <h1>รายงานผลการตรวจสุขภาพ</h1>
         <h2>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม -</h2>
         <p>ชั้น 2 อาคารผู้ป่วยนอก-อุบัติเหตุ โรงพยาบาลสันทราย 201 หมู่ 11 ถ.เชียงใหม่–พร้าว ต.หนองหาร อ.สันทราย จ.เชียงใหม่ 50290</p>
