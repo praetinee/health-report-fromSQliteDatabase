@@ -406,9 +406,9 @@ def combined_health_advice(bmi, sbp, dbp):
         return f"{bp_text} แนะนำให้ดูแลสุขภาพ และติดตามค่าความดันอย่างสม่ำเสมอ"
     if bmi_text and bp_text:
         return f"{bmi_text} และ {bp_text} แนะนำให้ปรับพฤติกรรมด้านอาหารและการออกกำลังกาย"
-    if bmi_text and not bp_text: # Added this case
+    if bmi_text and not bp_text:
         return f"{bmi_text} แนะนำให้ดูแลเรื่องโภชนาการและการออกกำลังกายอย่างเหมาะสม"
-    return "" # Default return if no specific advice is generated
+    return ""
 
 def safe_text(val):
     """Helper to safely get text and handle empty values."""
@@ -730,7 +730,6 @@ def interpret_cxr(val):
     return val
 
 def get_ekg_col_name(year):
-    # Get current Thai Buddhist Year dynamically
     current_thai_year = datetime.now().year + 543
     return "EKG" if year == current_thai_year else f"EKG{str(year)[-2:]}"
 
@@ -803,12 +802,31 @@ def load_sqlite_data():
         tmp.close()
 
         conn = sqlite3.connect(tmp.name)
-        df_loaded = pd.read_sql("SELECT * FROM health_data", conn) # Renamed to avoid conflict with global df
+        df_loaded = pd.read_sql("SELECT * FROM health_data", conn)
         conn.close()
 
         df_loaded.columns = df_loaded.columns.str.strip()
         df_loaded['เลขบัตรประชาชน'] = df_loaded['เลขบัตรประชาชน'].astype(str).str.strip()
-        df_loaded['HN'] = df_loaded['HN'].astype(str).str.strip()
+        
+        # --- Crucial: Add clean_hn_for_df_search globally and use it to create HN_SEARCHABLE ---
+        def clean_hn_for_df_search(hn_value):
+            if is_empty(hn_value):
+                return ""
+            s = str(hn_value)
+            digits_only = re.sub(r'\D', '', s) # Keep only digits
+            if digits_only:
+                try:
+                    return str(int(digits_only)) # Convert to int and back to str to remove leading zeros
+                except ValueError:
+                    return ""
+            return ""
+
+        # Apply the cleaner function to create HN_SEARCHABLE
+        df_loaded['HN_SEARCHABLE'] = df_loaded['HN'].apply(clean_hn_for_df_search)
+        
+        # Keep original HN for exact display if needed, but search uses HN_SEARCHABLE for flexibility
+        df_loaded['HN'] = df_loaded['HN'].astype(str).str.strip() 
+
         df_loaded['ชื่อ-สกุล'] = df_loaded['ชื่อ-สกุล'].astype(str).str.strip()
         df_loaded['Year'] = df_loaded['Year'].astype(int)
 
@@ -820,8 +838,8 @@ def load_sqlite_data():
         st.error(f"❌ โหลดฐานข้อมูลไม่สำเร็จ: {e}")
         st.stop()
 
-# --- Load data when the app starts ---
-df = load_sqlite_data() # This line ensures 'df' is defined globally before use.
+# --- Load data when the app starts. This line MUST be here and not inside any function or if block ---
+df = load_sqlite_data()
 
 # ==================== UI Setup and Search Form (Sidebar) ====================
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
@@ -882,7 +900,7 @@ st.markdown("<h4 style='text-align:center; color:gray; font-family: \"Sarabun\",
 
 # Main search form moved to sidebar
 with st.sidebar.form("search_form_sidebar"):
-    st.markdown("<h3>ค้นหาข้อมูลผู้เข้ารับบริการ</h3>", unsafe_allow_html=True) # Changed text here
+    st.markdown("<h3>ค้นหาข้อมูลผู้เข้ารับบริการ</h3>", unsafe_allow_html=True)
     search_query = st.text_input("กรอก HN หรือ ชื่อ-สกุล")
     submitted_sidebar = st.form_submit_button("ค้นหา")
 
@@ -898,7 +916,9 @@ if submitted_sidebar:
 
     if search_term:
         if search_term.isdigit():
-            query_df = query_df[query_df["HN"].str.strip() == search_term]
+            # --- Changed: Use HN_SEARCHABLE for numeric HN search ---
+            hn_search_value = str(int(search_term)) # Ensure user input is cleaned to match HN_SEARCHABLE format
+            query_df = query_df[query_df["HN_SEARCHABLE"] == hn_search_value]
         else:
             query_df = query_df[query_df["ชื่อ-สกุล"].str.strip() == search_term]
         
@@ -911,7 +931,7 @@ if submitted_sidebar:
             
             first_person_year_df = query_df[
                 (query_df["Year"] == first_available_year) &
-                (query_df["HN"] == query_df.iloc[0]["HN"])
+                (query_df["HN"] == query_df.iloc[0]["HN"]) # Use original HN for selecting row based on the first found result, not HN_SEARCHABLE
             ].drop_duplicates(subset=["HN", "วันที่ตรวจ"]).sort_values(by="วันที่ตรวจ", key=lambda x: pd.to_datetime(x, errors='coerce', dayfirst=True), ascending=False)
             
             if not first_person_year_df.empty:
