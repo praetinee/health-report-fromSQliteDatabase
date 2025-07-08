@@ -828,7 +828,12 @@ def load_sqlite_data():
 df = load_sqlite_data()
 
 # ==================== UI Setup and Search Form (Sidebar) ====================
-st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
+st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide") # Page title remains 'ระบบรายงานสุขภาพ'
+
+# Main application title and subtitle
+st.markdown("<h1 style='text-align:center; font-family: \"Sarabun\", sans-serif;'>รายงานผลการตรวจสุขภาพ</h1>", unsafe_allow_html=True) # Changed from "ระบบรายงานผลตรวจสุขภาพ" to "รายงานผลการตรวจสุขภาพ"
+st.markdown("<h4 style='text-align:center; color:gray; font-family: \"Sarabun\", sans-serif;'>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม รพ.สันทราย -</h4>", unsafe_allow_html=True)
+
 st.markdown("""
     <style>
     /* Import Sarabun font from Google Fonts */
@@ -880,9 +885,6 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
-
-st.markdown("<h1 style='text-align:center; font-family: \"Sarabun\", sans-serif;'>ระบบรายงานผลตรวจสุขภาพ</h1>", unsafe_allow_html=True)
-st.markdown("<h4 style='text-align:center; color:gray; font-family: \"Sarabun\", sans-serif;'>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม รพ.สันทราย -</h4>", unsafe_allow_html=True)
 
 # Main search form moved to sidebar
 with st.sidebar.form("search_form_sidebar"):
@@ -1049,7 +1051,6 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     
     st.markdown(f"""
     <div style="font-size: 18px; line-height: 1.8; color: inherit; padding: 24px 8px; font-family: \"Sarabun\", sans-serif;">
-        <div style="text-align: center; font-size: 29px; font-weight: bold;">รายงานผลการตรวจสุขภาพ</div>
         <div style="text-align: center;">วันที่ตรวจ: {check_date or "-"}</div>
         <div style="text-align: center; margin-top: 10px;">
             โรงพยาบาลสันทราย 201 หมู่ที่ 11 ถนน เชียงใหม่ - พร้าว ตำบลหนองหาร อำเภอสันทราย เชียงใหม่ 50290<br>
