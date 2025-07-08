@@ -13,12 +13,13 @@ import re
 def is_empty(val):
     return str(val).strip().lower() in ["", "-", "none", "nan", "null"]
 
-# Function to normalize and convert Thai dates (Using the version you provided as "old code")
+# Function to normalize and convert Thai dates
 def normalize_thai_date(date_str):
     if is_empty(date_str):
         return "-" # Or "ไม่ระบุ"
     
     s = str(date_str).strip().replace("พ.ศ.", "").replace("พศ.", "").strip()
+    s = s.replace('.', '') # <-- NEW: Remove ALL dots from the input string immediately
 
     # Handle specific non-date strings
     if s.lower() in ["ไม่ตรวจ", "นัดที่หลัง", "ไม่ได้เข้ารับการตรวจ", ""]:
@@ -55,7 +56,7 @@ def normalize_thai_date(date_str):
             if year > 2500: # Assume Thai Buddhist year if year > 2500
                 year -= 543
             dt = datetime(year, month, day)
-            return f"{dt.day} {thai_months[dt.month]} {dt.year + 543}".replace('.', '')
+            return f"{dt.day} {thai_months[dt.month]} {dt.year + 543}"
 
         # Format: DD-MM-YYYY (e.g., 29-04-2565)
         if re.match(r'^\d{1,2}-\d{1,2}-\d{4}$', s):
@@ -63,7 +64,7 @@ def normalize_thai_date(date_str):
             if year > 2500: # Assume Thai Buddhist year if year > 2500
                 year -= 543
             dt = datetime(year, month, day)
-            return f"{dt.day} {thai_months[dt.month]} {dt.year + 543}".replace('.', '')
+            return f"{dt.day} {thai_months[dt.month]} {dt.year + 543}"
 
         # Format: DD MonthName Jamboree (e.g., 8 เมษายน 2565) or DD-DD MonthName Jamboree (e.g., 15-16 กรกฎาคม 2564)
         # This regex captures the first day in case of a range
@@ -78,7 +79,7 @@ def normalize_thai_date(date_str):
                 try:
                     # Convert BE year to CE year for datetime object, then back for display
                     dt = datetime(year - 543, month_num, day)
-                    return f"{day} {thai_months[dt.month]} {year}".replace('.', '')
+                    return f"{day} {thai_months[dt.month]} {year}"
                 except ValueError:
                     pass # Invalid date, fall through
 
@@ -93,7 +94,7 @@ def normalize_thai_date(date_str):
         if parsed_dt.year > datetime.now().year + 50: 
             parsed_dt = parsed_dt.replace(year=parsed_dt.year - 543)
 
-        return f"{parsed_dt.day} {thai_months[parsed_dt.month]} {parsed_dt.year + 543}".replace('.', '')
+        return f"{parsed_dt.day} {thai_months[parsed_dt.month]} {parsed_dt.year + 543}"
     except Exception:
         pass
 
