@@ -85,7 +85,11 @@ def normalize_thai_date(date_str):
     try:
         parsed_dt = pd.to_datetime(s, dayfirst=True, errors='coerce')
         if pd.notna(parsed_dt):
-            if parsed_dt.year > datetime.now().year + 50: # Heuristic for Buddhist Era year
+            # Check current CE year dynamically
+            current_ce_year = datetime.now().year
+            # Heuristic for Buddhist Era year: if parsed_dt.year is unexpectedly high (e.g., > current CE year + 50),
+            # assume it's a BE year that pandas interpreted as CE.
+            if parsed_dt.year > current_ce_year + 50 and parsed_dt.year - 543 > 1900: # Add a lower bound to avoid very old dates
                 parsed_dt = parsed_dt.replace(year=parsed_dt.year - 543)
             return f"{parsed_dt.day} {THAI_MONTHS_GLOBAL[parsed_dt.month]} {parsed_dt.year + 543}".replace('.', '')
     except Exception:
@@ -726,7 +730,7 @@ def interpret_cxr(val):
     return val
 
 def get_ekg_col_name(year):
-    # Get current Thai Buddhist Year for dynamic column name
+    # Get current Thai Buddhist Year dynamically
     current_thai_year = datetime.now().year + 543
     return "EKG" if year == current_thai_year else f"EKG{str(year)[-2:]}"
 
@@ -784,6 +788,40 @@ def merge_final_advice_grouped(messages):
     return "<div style='margin-bottom: 0.75rem;'>" + "</div><div style='margin-bottom: 0.75rem;'>".join(output) + "</div>"
 
 # --- Global Helper Functions: END ---
+
+@st.cache_data(ttl=600)
+def load_sqlite_data():
+    try:
+        file_id = "1HruO9AMrUfniC8hBWtumVdxLJayEc1Xr"
+        download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
+        response = requests.get(download_url)
+        response.raise_for_status()
+
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".db")
+        tmp.write(response.content)
+        tmp.flush()
+        tmp.close()
+
+        conn = sqlite3.connect(tmp.name)
+        df_loaded = pd.read_sql("SELECT * FROM health_data", conn) # Renamed to avoid conflict with global df
+        conn.close()
+
+        df_loaded.columns = df_loaded.columns.str.strip()
+        df_loaded['เลขบัตรประชาชน'] = df_loaded['เลขบัตรประชาชน'].astype(str).str.strip()
+        df_loaded['HN'] = df_loaded['HN'].astype(str).str.strip()
+        df_loaded['ชื่อ-สกุล'] = df_loaded['ชื่อ-สกุล'].astype(str).str.strip()
+        df_loaded['Year'] = df_loaded['Year'].astype(int)
+
+        df_loaded['วันที่ตรวจ'] = df_loaded['วันที่ตรวจ'].apply(normalize_thai_date)
+        df_loaded.replace(["-", "None", None], pd.NA, inplace=True)
+
+        return df_loaded
+    except Exception as e:
+        st.error(f"❌ โหลดฐานข้อมูลไม่สำเร็จ: {e}")
+        st.stop()
+
+# --- Load data when the app starts ---
+df = load_sqlite_data() # This line ensures 'df' is defined globally before use.
 
 # ==================== UI Setup and Search Form (Sidebar) ====================
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
@@ -855,7 +893,7 @@ if submitted_sidebar:
     st.session_state.pop("selected_year_from_sidebar", None)
     st.session_state.pop("selected_exam_date_from_sidebar", None)
 
-    query_df = df.copy()
+    query_df = df.copy() # 'df' is now guaranteed to be defined here.
     search_term = search_query.strip()
 
     if search_term:
@@ -1167,7 +1205,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             st.markdown(render_section_header("ผลเอกซเรย์", "Chest X-ray"), unsafe_allow_html=True)
             
             selected_year_int = int(selected_year)
-            cxr_col = "CXR" if selected_year_int == 2568 else f"CXR{str(selected_year_int)[-2:]}"
+            cxr_col = "CXR" if selected_year_int == (datetime.now().year + 543) else f"CXR{str(selected_year_int)[-2:]}"
             cxr_raw = person.get(cxr_col, "")
             cxr_result = interpret_cxr(cxr_raw)
             
@@ -1211,7 +1249,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             # ==================== Section: Hepatitis A ====================
             st.markdown(render_section_header("ผลการตรวจไวรัสตับอักเสบเอ (Viral hepatitis A)"), unsafe_allow_html=True)
             
-            hep_a_raw = safe_text(person.get("Hepatitis A")) # Corrected: safe_text is now global
+            hep_a_raw = safe_text(person.get("Hepatitis A"))
             st.markdown(f"""
             <div style='
                 font-size: 18px;
@@ -1227,7 +1265,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             
             # ================ Section: Hepatitis B =================
             hep_check_date_raw = person.get("ปีตรวจHEP")
-            hep_check_date = normalize_thai_date(hep_check_date_raw) # Use global normalize_thai_date for consistency
+            hep_check_date = normalize_thai_date(hep_check_date_raw)
             
             st.markdown(render_section_header("ผลการตรวจไวรัสตับอักเสบบี (Viral hepatitis B)"), unsafe_allow_html=True)
             
