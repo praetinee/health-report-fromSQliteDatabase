@@ -406,6 +406,10 @@ def combined_health_advice(bmi, sbp, dbp):
         return f"{bmi_text} แนะนำให้ดูแลเรื่องโภชนาการและการออกกำลังกายอย่างเหมาะสม"
     return "" # Default return if no specific advice is generated
 
+def safe_text(val):
+    """Helper to safely get text and handle empty values."""
+    return "-" if str(val).strip().lower() in ["", "none", "nan", "-"] else str(val).strip()
+
 def safe_value(val):
     val = str(val or "").strip()
     if val.lower() in ["", "nan", "none", "-"]:
@@ -781,39 +785,6 @@ def merge_final_advice_grouped(messages):
 
 # --- Global Helper Functions: END ---
 
-@st.cache_data(ttl=600)
-def load_sqlite_data():
-    try:
-        file_id = "1HruO9AMrUfniC8hBWtumVdxLJayEc1Xr"
-        download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
-        response = requests.get(download_url)
-        response.raise_for_status()
-
-        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".db")
-        tmp.write(response.content)
-        tmp.flush()
-        tmp.close()
-
-        conn = sqlite3.connect(tmp.name)
-        df = pd.read_sql("SELECT * FROM health_data", conn)
-        conn.close()
-
-        df.columns = df.columns.str.strip()
-        df['เลขบัตรประชาชน'] = df['เลขบัตรประชาชน'].astype(str).str.strip()
-        df['HN'] = df['HN'].astype(str).str.strip()
-        df['ชื่อ-สกุล'] = df['ชื่อ-สกุล'].astype(str).str.strip()
-        df['Year'] = df['Year'].astype(int)
-
-        df['วันที่ตรวจ'] = df['วันที่ตรวจ'].apply(normalize_thai_date)
-        df.replace(["-", "None", None], pd.NA, inplace=True)
-
-        return df
-    except Exception as e:
-        st.error(f"❌ โหลดฐานข้อมูลไม่สำเร็จ: {e}")
-        st.stop()
-
-df = load_sqlite_data()
-
 # ==================== UI Setup and Search Form (Sidebar) ====================
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 st.markdown("""
@@ -889,7 +860,6 @@ if submitted_sidebar:
 
     if search_term:
         if search_term.isdigit():
-            # Use original HN column for exact match, not HN_SEARCHABLE as per new prompt
             query_df = query_df[query_df["HN"].str.strip() == search_term]
         else:
             query_df = query_df[query_df["ชื่อ-สกุล"].str.strip() == search_term]
@@ -937,7 +907,7 @@ if "search_result" in st.session_state:
             options=available_years,
             index=available_years.index(st.session_state["selected_year_from_sidebar"]) if st.session_state["selected_year_from_sidebar"] in available_years else (0 if available_years else None),
             format_func=lambda y: f"พ.ศ. {y}",
-            key="year_select_sidebar" # Changed key to avoid conflict if any
+            key="year_select_sidebar"
         )
         st.session_state["selected_year_from_sidebar"] = selected_year_from_sidebar
 
@@ -967,7 +937,7 @@ if "search_result" in st.session_state:
                         "🗓️ เลือกวันที่ตรวจ",
                         options=exam_dates_options,
                         index=exam_dates_options.index(st.session_state["selected_exam_date_from_sidebar"]) if st.session_state["selected_exam_date_from_sidebar"] in exam_dates_options else (0 if exam_dates_options else None),
-                        key="exam_date_select_sidebar" # Changed key to avoid conflict
+                        key="exam_date_select_sidebar"
                     )
                     st.session_state["selected_exam_date_from_sidebar"] = selected_exam_date_from_sidebar
 
@@ -989,9 +959,9 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     sbp = person.get("SBP", "")
     dbp = person.get("DBP", "")
     pulse_raw = person.get("pulse", "-")
-    weight_raw = person.get("น้ำหนัก", "-") # Renamed to avoid conflict
-    height_raw = person.get("ส่วนสูง", "-") # Renamed to avoid conflict
-    waist_raw = person.get("รอบเอว", "-") # Renamed to avoid conflict
+    weight_raw = person.get("น้ำหนัก", "-")
+    height_raw = person.get("ส่วนสูง", "-")
+    waist_raw = person.get("รอบเอว", "-")
     check_date = person.get("วันที่ตรวจ", "-")
 
     try:
@@ -1241,7 +1211,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             # ==================== Section: Hepatitis A ====================
             st.markdown(render_section_header("ผลการตรวจไวรัสตับอักเสบเอ (Viral hepatitis A)"), unsafe_allow_html=True)
             
-            hep_a_raw = safe_text(person.get("Hepatitis A"))
+            hep_a_raw = safe_text(person.get("Hepatitis A")) # Corrected: safe_text is now global
             st.markdown(f"""
             <div style='
                 font-size: 18px;
