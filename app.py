@@ -824,12 +824,17 @@ st.markdown("""
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
 
     /*
-      Apply Sarabun font to all elements in the app using the universal selector (*).
-      This is the most effective way to ensure all text adopts the new font.
-      The Streamlit sidebar collapse icon is an SVG element, which is not
-      affected by the 'font-family' property, so it will not be broken.
+      Apply Sarabun font to all common text elements. This approach is
+      more specific than the universal selector (*) and avoids overriding
+      the font for special elements like Streamlit's internal icons
+      (e.g., the sidebar collapse button).
     */
-    * {
+    body, h1, h2, h3, h4, h5, h6, p, li, a, label, input, select, textarea, button, th, td,
+    div[data-testid="stMarkdown"],
+    div[data-testid="stInfo"],
+    div[data-testid="stSuccess"],
+    div[data-testid="stWarning"],
+    div[data-testid="stError"] {
         font-family: 'Sarabun', sans-serif !important;
     }
     
