@@ -19,7 +19,7 @@ def normalize_thai_date(date_str):
         return "-" # Or "ไม่ระบุ"
     
     s = str(date_str).strip().replace("พ.ศ.", "").replace("พศ.", "").strip()
-    s = s.replace('.', '') # <-- NEW: Remove ALL dots from the input string immediately
+    s = s.replace('.', '').replace('-', '') # <-- NEW: Remove ALL dots and hyphens from the input string immediately
 
     # Handle specific non-date strings
     if s.lower() in ["ไม่ตรวจ", "นัดที่หลัง", "ไม่ได้เข้ารับการตรวจ", ""]:
@@ -51,25 +51,21 @@ def normalize_thai_date(date_str):
     # Try parsing different formats
     try:
         # Format: DD/MM/YYYY (e.g., 29/04/2565) - Removed '.' from regex as it's handled by s.replace('.', '')
-        if re.match(r'^\d{1,2}/\d{1,2}/\d{4}$', s):
-            day, month, year = map(int, s.split('/'))
-            if year > 2500: # Assume Thai Buddhist year if year > 2500
-                year -= 543
-            dt = datetime(year, month, day)
-            return " ".join([str(dt.day), thai_months[dt.month], str(dt.year + 543)]) # Force space with join
-
-        # Format: DD-MM-YYYY (e.g., 29-04-2565) - Removed '.' from regex
-        if re.match(r'^\d{1,2}-\d{1,2}-\d{4}$', s):
-            day, month, year = map(int, s.split('-'))
+        # Also, removed '/' and '-' from 's' above, so matching needs to be adjusted
+        if re.match(r'^\d{1,2}\d{1,2}\d{4}$', s): # Now expects DDMmYYYY (no separators)
+            day = int(s[:-6]) # First 1 or 2 digits
+            month = int(s[-6:-4]) # Next 2 digits
+            year = int(s[-4:]) # Last 4 digits
             if year > 2500: # Assume Thai Buddhist year if year > 2500
                 year -= 543
             dt = datetime(year, month, day)
             return " ".join([str(dt.day), thai_months[dt.month], str(dt.year + 543)]) # Force space with join
 
         # Format: DD MonthName Jamboree (e.g., 8 เมษายน 2565) or DD-DD MonthName Jamboree (e.g., 15-16 กรกฎาคม 2564)
-        # Regex changed `\s*` to `\s+` to explicitly require at least one space, but after s.replace('.', '') it should be fine.
-        # Let's keep `\s*` but enforce join later.
-        match_thai_text_date = re.match(r'^(?P<day1>\d{1,2})(?:-\d{1,2})?\s*(?P<month_str>[ก-ฮ]+)\s*(?P<year>\d{4})$', s) 
+        # Regex needs to handle words correctly if separators are removed globally from 's'
+        # The previous regex matched `\s*` (zero or more spaces).
+        # Let's try to match day and month name, assuming no internal space within month name, and year.
+        match_thai_text_date = re.match(r'^(?P<day1>\d{1,2})\s*(?P<month_str>[ก-ฮ]+)\s*(?P<year>\d{4})$', s) 
         if match_thai_text_date:
             day = int(match_thai_text_date.group('day1'))
             month_str = match_thai_text_date.group('month_str').strip()
@@ -88,14 +84,22 @@ def normalize_thai_date(date_str):
         pass # Fall through to general parsing or return original string
 
     # Fallback to pandas for robust parsing if other specific formats fail
+    # This is the most critical part for inconsistent data.
     try:
-        parsed_dt = pd.to_datetime(s, dayfirst=True)
+        # Re-add common separators before pandas parse if they were removed, as pandas might expect them.
+        # This part is a bit tricky due to removed chars from 's'. Let's feed original 'date_str' to pandas.
+        temp_s_for_pandas = str(date_str).strip()
+        parsed_dt = pd.to_datetime(temp_s_for_pandas, dayfirst=True, errors='coerce') # errors='coerce' to turn unparsable into NaT
+
+        if pd.isna(parsed_dt):
+            return s # Return cleaned original string if pandas can't parse it
+        
         # Heuristic for Buddhist Era year: if parsed_dt.year is unexpectedly high (e.g., > current CE year + 50),
         # assume it's a BE year that pandas interpreted as CE.
         if parsed_dt.year > datetime.now().year + 50: 
             parsed_dt = parsed_dt.replace(year=parsed_dt.year - 543)
 
-        return " ".join([str(parsed_dt.day), thai_months[parsed_dt.month], str(parsed_dt.year + 543)]) # Force space with join
+        return " ".join([str(parsed_dt.day), thai_months[parsed_dt.month], str(parsed_dt.year + 543)])
     except Exception:
         pass
 
@@ -124,9 +128,13 @@ def load_sqlite_data():
         df.columns = df.columns.str.strip()
         # Ensure 'เลขบัตรประชาชน' and 'HN' are treated as strict strings to preserve leading zeros/exact match
         df['เลขบัตรประชาชน'] = df['เลขบัตรประชาชน'].astype(str).str.strip()
-        df['HN'] = df['HN'].astype(str).str.strip() # Modified for strict HN matching
+        # HN is now handled as string for exact match, with numeric cleansing for search column
+        df['HN'] = df['HN'].astype(str).str.strip() 
         df['ชื่อ-สกุล'] = df['ชื่อ-สกุล'].astype(str).str.strip()
         df['Year'] = df['Year'].astype(int)
+
+        # Create a searchable HN column that's numerically cleaned
+        df['HN_SEARCHABLE'] = df['HN'].apply(lambda x: str(int(re.sub(r'\D', '', str(x)))) if re.sub(r'\D', '', str(x)).isdigit() else "").str.strip()
 
         # Apply date normalization AFTER initial data loading and cleaning
         df['วันที่ตรวจ'] = df['วันที่ตรวจ'].apply(normalize_thai_date)
@@ -452,7 +460,7 @@ st.markdown("<h1 style='text-align:center; font-family: \"Sarabun\", sans-serif;
 st.markdown("<h4 style='text-align:center; color:gray; font-family: \"Sarabun\", sans-serif;'>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม รพ.สันทราย -</h4>", unsafe_allow_html=True)
 
 with st.form("search_form"):
-    # Removed col1 for 'เลขบัตรประชาชน', adjusted columns
+    # Removed col1 for 'เลขบัตรประชาชน', adjusted columns to 2
     col1, col2 = st.columns(2) 
     hn = col1.text_input("HN") # Moved to col1
     full_name = col2.text_input("ชื่อ-สกุล") # Moved to col2
@@ -472,8 +480,14 @@ if submitted:
     #     query = query[query["เลขบัตรประชาชน"].str.strip() == id_card.strip()]
 
     if hn.strip():
-        # HN is already loaded as string, so direct comparison is exact
-        query = query[query["HN"].str.strip() == hn.strip()] 
+        # Clean user input for HN search (digits only, no leading zeros if purely numeric)
+        hn_search_value = re.sub(r'\D', '', hn.strip()) # Remove non-digits
+        if hn_search_value.isdigit(): # If result is purely digits, convert to int then str to remove leading zeros
+            hn_search_value = str(int(hn_search_value))
+        
+        # Compare with the pre-cleaned HN_SEARCHABLE column
+        query = query[query["HN_SEARCHABLE"] == hn_search_value] 
+    
     if full_name.strip():
         query = query[query["ชื่อ-สกุล"].str.strip() == full_name.strip()]
     
@@ -885,7 +899,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         if sex == "ชาย" and "พบเม็ดเลือดแดง" in rbc_t and "ปกติ" in wbc_t:
             return "พบเม็ดเลือดแดงในปัสสาวะ ควรตรวจทางเดินปัสสาวะเพิ่มเติม"
     
-        if "พบเม็ดเลือดขาว" in wbc_t and "เล็กน้อย" not in wbc_t:
+        if "พบเม็ดเลือดขาว" in wbc_t and "เล็กน้อย" not in in_wbc_t:
             return "อาจมีการอักเสบของระบบทางเดินปัสสาวะ แนะนำให้ตรวจซ้ำ"
     
         return "ควรตรวจปัสสาวะซ้ำเพื่อติดตามผล"
