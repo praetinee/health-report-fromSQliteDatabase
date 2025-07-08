@@ -18,23 +18,19 @@ def normalize_thai_date(date_str):
     if is_empty(date_str):
         return "-" # Or "ไม่ระบุ"
     
-    s = str(date_str).strip()
+    s = str(date_str).strip().replace("พ.ศ.", "").replace("พศ.", "").strip()
 
-    # Aggressive initial cleaning of punctuation and specific text patterns
-    s_cleaned_for_parsing = s.replace('.', '').replace('พ.ศ.', '').replace('พศ.', '').strip()
-    s_cleaned_for_parsing = s_cleaned_for_parsing.replace('-', '').replace('/', '').replace(' ', '').strip() # Remove all spaces/hyphens/slashes/dots temporarily for number/month parsing
-    
-    # Handle specific non-date strings after basic cleaning
-    # Check against the original input string (s) or the cleaned one based on context
-    if str(date_str).strip().lower() in ["ไม่ตรวจ", "นัดที่หลัง", "ไม่ได้เข้ารับการตรวจ", ""]:
-        return str(date_str).strip() # Return original non-date string if matched
+    # Handle specific non-date strings
+    if s.lower() in ["ไม่ตรวจ", "นัดที่หลัง", "ไม่ได้เข้ารับการตรวจ", ""]:
+        return s
 
-    # Define Thai month mappings (local to this function for clarity)
+    # Thai month abbreviations and full names (for conversion/display)
     thai_months = {
         1: "มกราคม", 2: "กุมภาพันธ์", 3: "มีนาคม", 4: "เมษายน",
         5: "พฤษภาคม", 6: "มิถุนายน", 7: "กรกฎาคม", 8: "สิงหาคม",
         9: "กันยายน", 10: "ตุลาคม", 11: "พฤศจิกายน", 12: "ธันวาคม"
     }
+    # For parsing: map string month names/abbr to month numbers
     thai_month_abbr_to_num = {
         "ม.ค.": 1, "ม.ค": 1, "มกราคม": 1,
         "ก.พ.": 2, "ก.พ": 2, "กพ": 2, "กุมภาพันธ์": 2,
@@ -50,44 +46,58 @@ def normalize_thai_date(date_str):
         "ธ.ค.": 12, "ธ.ค": 12, "ธันวาคม": 12
     }
 
-    # --- Step 1: Try to parse with pandas (most robust for various formats with separators) ---
+
+    # Try parsing different formats
     try:
-        # Use the original string for pandas.to_datetime first, it's very robust with separators.
-        # errors='coerce' will turn unparsable dates into NaT (Not a Time).
-        parsed_dt = pd.to_datetime(s, dayfirst=True, errors='coerce')
+        # Format: DD/MM/YYYY (e.g., 29/04/2565)
+        if re.match(r'^\d{1,2}/\d{1,2}/\d{4}$', s):
+            day, month, year = map(int, s.split('/'))
+            if year > 2500: # Assume Thai Buddhist year if year > 2500
+                year -= 543
+            dt = datetime(year, month, day)
+            return f"{dt.day} {thai_months[dt.month]} {dt.year + 543}".replace('.', '')
 
-        if pd.notna(parsed_dt): # Check if pandas successfully parsed it
-            # Adjust for Buddhist Era year interpretation if needed
-            if parsed_dt.year > datetime.now().year + 50: # Heuristic for BE year
-                parsed_dt = parsed_dt.replace(year=parsed_dt.year - 543)
-            
-            # Reconstruct the string with guaranteed space
-            return " ".join([str(parsed_dt.day), thai_months[parsed_dt.month], str(parsed_dt.year + 543)])
-    except Exception:
-        pass # Fall through to regex attempts if pandas fails
+        # Format: DD-MM-YYYY (e.g., 29-04-2565)
+        if re.match(r'^\d{1,2}-\d{1,2}-\d{4}$', s):
+            day, month, year = map(int, s.split('-'))
+            if year > 2500: # Assume Thai Buddhist year if year > 2500
+                year -= 543
+            dt = datetime(year, month, day)
+            return f"{dt.day} {thai_months[dt.month]} {dt.year + 543}".replace('.', '')
 
-    # --- Step 2: Try specific regex patterns on the aggressively cleaned string ('s_cleaned_for_parsing') ---
-    # These patterns are for cases where pandas might fail due to lack of separators, but structure is fixed.
-
-    # Regex for DDMonthNameYYYY without explicit spaces (because s_cleaned_for_parsing has no spaces)
-    # Example: "5กุมภาพันธ์2568"
-    match_thai_text_date_no_space = re.match(r'^(?P<day1>\d{1,2})(?P<month_str>[ก-ฮ]+)(?P<year>\d{4})$', s_cleaned_for_parsing)
-    if match_thai_text_date_no_space:
-        try:
-            day = int(match_thai_text_date_no_space.group('day1'))
-            month_str = match_thai_text_date_no_space.group('month_str')
-            year = int(match_thai_text_date_no_space.group('year'))
+        # Format: DD MonthName YYYY (e.g., 8 เมษายน 2565) or DD-DD MonthName YYYY (e.g., 15-16 กรกฎาคม 2564)
+        # This regex captures the first day in case of a range
+        match_thai_text_date = re.match(r'^(?P<day1>\d{1,2})(?:-\d{1,2})?\s*(?P<month_str>[ก-ฮ]+\.?)\s*(?P<year>\d{4})$', s)
+        if match_thai_text_date:
+            day = int(match_thai_text_date.group('day1'))
+            month_str = match_thai_text_date.group('month_str').strip().replace('.', '')
+            year = int(match_thai_text_date.group('year'))
             
             month_num = thai_month_abbr_to_num.get(month_str)
             if month_num:
-                dt = datetime(year - 543, month_num, day)
-                return " ".join([str(day), thai_months[dt.month], str(year)])
-        except (ValueError, KeyError):
-            pass
+                try:
+                    # Convert BE year to CE year for datetime object, then back for display
+                    dt = datetime(year - 543, month_num, day)
+                    return f"{day} {thai_months[dt.month]} {year}".replace('.', '')
+                except ValueError:
+                    pass # Invalid date, fall through
 
-    # Fallback if nothing else works
-    return s # Final fallback, returns the input string 's' (which is the original string with just พ.ศ. removed)
-             # if all parsing fails, so user can see raw data.
+    except Exception:
+        pass # Fall through to general parsing or return original string
+
+    # Fallback to pandas for robust parsing if other specific regex fail
+    try:
+        parsed_dt = pd.to_datetime(s, dayfirst=True)
+        # Heuristic for Buddhist Era year: if parsed_dt.year is unexpectedly high (e.g., > current CE year + 50),
+        # assume it's a BE year that pandas interpreted as CE.
+        if parsed_dt.year > datetime.now().year + 50: 
+            parsed_dt = parsed_dt.replace(year=parsed_dt.year - 543)
+
+        return f"{parsed_dt.day} {thai_months[parsed_dt.month]} {parsed_dt.year + 543}".replace('.', '')
+    except Exception:
+        pass
+
+    return s # Final fallback, returns original string if no format matches.
 
 
 @st.cache_data(ttl=600)
@@ -112,27 +122,9 @@ def load_sqlite_data():
         df.columns = df.columns.str.strip()
         # Ensure 'เลขบัตรประชาชน' and 'HN' are treated as strict strings to preserve leading zeros/exact match
         df['เลขบัตรประชาชน'] = df['เลขบัตรประชาชน'].astype(str).str.strip()
-        # HN is now handled as string for exact match, with numeric cleansing for search column
-        df['HN'] = df['HN'].astype(str).str.strip() 
+        df['HN'] = df['HN'].astype(str).str.strip() # Modified for strict HN matching
         df['ชื่อ-สกุล'] = df['ชื่อ-สกุล'].astype(str).str.strip()
         df['Year'] = df['Year'].astype(int)
-
-        # Create a searchable HN column that's numerically cleaned
-        # This function aims to convert any HN to its pure digit form (e.g., "007" -> "7", "HN123" -> "123")
-        def clean_hn_for_df_search(hn_value):
-            if is_empty(hn_value):
-                return ""
-            s = str(hn_value)
-            digits_only = re.sub(r'\D', '', s) # Keep only digits
-            if digits_only:
-                try:
-                    return str(int(digits_only)) # Convert to int and back to str to remove leading zeros
-                except ValueError:
-                    return "" # Should not happen if digits_only is not empty
-            return "" # If no digits are found (e.g., "ABC"), it becomes empty.
-        
-        df['HN_SEARCHABLE'] = df['HN'].apply(clean_hn_for_df_search)
-
 
         # Apply date normalization AFTER initial data loading and cleaning
         df['วันที่ตรวจ'] = df['วันที่ตรวจ'].apply(normalize_thai_date)
@@ -367,7 +359,7 @@ def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
         hb_val = float(hb)
         hb_ref = 13 if sex == "ชาย" else 12
         if hb_val < hb_ref:
-            advice_parts.append("ระดับฮีโมโกลบินต่ำ ควรตรวจหาภาภาวะเลือดจางและตรวจติดตาม")
+            advice_parts.append("ระดับฮีโมโกลบินต่ำ ควรตรวจหาภาวะโลหิตจางและติดตามซ้ำ")
     except:
         pass
 
@@ -375,7 +367,7 @@ def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
         hct_val = float(hct)
         hct_ref = 39 if sex == "ชาย" else 36
         if hct_val < hct_ref:
-            advice_parts.append("ค่าฮีมาโตคริตต่ำ ควรตรวจหาภาภาวะเลือดจางและตรวจติดตาม")
+            advice_parts.append("ค่าฮีมาโตคริตต่ำ ควรตรวจหาภาวะเลือดจางและตรวจติดตาม")
     except:
         pass
 
@@ -458,10 +450,10 @@ st.markdown("<h1 style='text-align:center; font-family: \"Sarabun\", sans-serif;
 st.markdown("<h4 style='text-align:center; color:gray; font-family: \"Sarabun\", sans-serif;'>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม รพ.สันทราย -</h4>", unsafe_allow_html=True)
 
 with st.form("search_form"):
-    # Removed col1 for 'เลขบัตรประชาชน', adjusted columns to 2
-    col1, col2 = st.columns(2) 
-    hn = col1.text_input("HN") # Moved to col1
-    full_name = col2.text_input("ชื่อ-สกุล") # Moved to col2
+    col1, col2, col3 = st.columns(3)
+    id_card = col1.text_input("เลขบัตรประชาชน")
+    hn = col2.text_input("HN")
+    full_name = col3.text_input("ชื่อ-สกุล")
     submitted = st.form_submit_button("ค้นหา")
 
 if submitted:
@@ -473,19 +465,12 @@ if submitted:
 
     query = df.copy()
 
-    # Removed id_card search logic
-    # if id_card.strip():
-    #     query = query[query["เลขบัตรประชาชน"].str.strip() == id_card.strip()]
-
+    # Apply stripping directly to query columns for robust exact match
+    if id_card.strip():
+        query = query[query["เลขบัตรประชาชน"].str.strip() == id_card.strip()]
     if hn.strip():
-        # Clean user input for HN search (digits only, no leading zeros if purely numeric)
-        hn_user_cleaned = re.sub(r'\D', '', hn.strip()) # Remove non-digits
-        if hn_user_cleaned.isdigit(): # If result is purely digits, convert to int then str to remove leading zeros
-            hn_user_cleaned = str(int(hn_user_cleaned))
-        
-        # Compare with the pre-cleaned HN_SEARCHABLE column in DataFrame
-        query = query[query["HN_SEARCHABLE"] == hn_user_cleaned] 
-    
+        # HN is already loaded as string, so direct comparison is exact
+        query = query[query["HN"].str.strip() == hn.strip()] 
     if full_name.strip():
         query = query[query["ชื่อ-สกุล"].str.strip() == full_name.strip()]
     
@@ -1227,10 +1212,98 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         
         # ================ Section: Hepatitis B =================
 
-        def normalize_date_for_display(date_str_input): # This wrapper exists in previous code, kept for compatibility
-            return normalize_thai_date(date_str_input)
+        THAI_MONTHS_GLOBAL = { # Global scope for general Thai month mapping
+            1: "มกราคม", 2: "กุมภาพันธ์", 3: "มีนาคม", 4: "เมษายน",
+            5: "พฤษภาคม", 6: "มิถุนายน", 7: "กรกฎาคม", 8: "สิงหาคม",
+            9: "กันยายน", 10: "ตุลาคม", 11: "พฤศจิกายน", 12: "ธันวาคม"
+        }
+        # Moved inside normalize_thai_date for local use to ensure consistency
+
+        def normalize_date_for_display(date_str_input): # Renamed to avoid confusion with the global normalize_thai_date
+            if is_empty(date_str_input):
+                return "-"
+            
+            s = str(date_str_input).strip().replace("พ.ศ.", "").replace("พศ.", "").strip()
+
+            if s.lower() in ["ไม่ตรวจ", "นัดที่หลัง", "ไม่ได้เข้ารับการตรวจ", ""]:
+                return s
+
+            # Thai month abbreviations and full names (for conversion/display)
+            # Define here to use the correct scope for the helper function
+            thai_months_local = {
+                1: "มกราคม", 2: "กุมภาพันธ์", 3: "มีนาคม", 4: "เมษายน",
+                5: "พฤษภาคม", 6: "มิถุนายน", 7: "กรกฎาคม", 8: "สิงหาคม",
+                9: "กันยายน", 10: "ตุลาคม", 11: "พฤศจิกายน", 12: "ธันวาคม"
+            }
+            thai_month_abbr_to_num_local = {
+                "ม.ค.": 1, "ม.ค": 1, "มกราคม": 1,
+                "ก.พ.": 2, "ก.พ": 2, "กพ": 2, "กุมภาพันธ์": 2,
+                "มี.ค.": 3, "มี.ค": 3, "มีนาคม": 3,
+                "เม.ย.": 4, "เม.ย": 4, "เมษายน": 4,
+                "พ.ค.": 5, "พ.ค": 5, "พฤษภาคม": 5,
+                "มิ.ย.": 6, "มิ.ย": 6, "มิถุนายน": 6,
+                "ก.ค.": 7, "ก.ค": 7, "กรกฎาคม": 7,
+                "ส.ค.": 8, "ส.ค": 8, "สิงหาคม": 8,
+                "ก.ย.": 9, "ก.ย": 9, "กันยายน": 9,
+                "ต.ค.": 10, "ต.ค": 10, "ตุลาคม": 10,
+                "พ.ย.": 11, "พ.ย": 11, "พฤศจิกายน": 11,
+                "ธ.ค.": 12, "ธ.ค": 12, "ธันวาคม": 12
+            }
 
 
+            # Try parsing different formats
+            try:
+                # Format: DD/MM/YYYY (e.g., 29/04/2565)
+                if re.match(r'^\d{1,2}/\d{1,2}/\d{4}$', s):
+                    day, month, year = map(int, s.split('/'))
+                    if year > 2500: # Assume Thai Buddhist year if year > 2500
+                        year -= 543
+                    dt = datetime(year, month, day)
+                    return f"{dt.day} {thai_months_local[dt.month]} {dt.year + 543}".replace('.', '')
+
+                # Format: DD-MM-YYYY (e.g., 29-04-2565)
+                if re.match(r'^\d{1,2}-\d{1,2}-\d{4}$', s):
+                    day, month, year = map(int, s.split('-'))
+                    if year > 2500: # Assume Thai Buddhist year if year > 2500
+                        year -= 543
+                    dt = datetime(year, month, day)
+                    return f"{dt.day} {thai_months_local[dt.month]} {dt.year + 543}".replace('.', '')
+
+                # Format: DD MonthName YYYY (e.g., 8 เมษายน 2565) or DD-DD MonthName YYYY (e.g., 15-16 กรกฎาคม 2564)
+                # This regex captures the first day in case of a range
+                match_thai_text_date = re.match(r'^(?P<day1>\d{1,2})(?:-\d{1,2})?\s*(?P<month_str>[ก-ฮ]+\.?)\s*(?P<year>\d{4})$', s)
+                if match_thai_text_date:
+                    day = int(match_thai_text_date.group('day1'))
+                    month_str = match_thai_text_date.group('month_str').strip().replace('.', '')
+                    year = int(match_thai_text_date.group('year'))
+                    
+                    month_num = thai_month_abbr_to_num_local.get(month_str)
+                    if month_num:
+                        try:
+                            # Convert BE year to CE year for datetime object, then back for display
+                            dt = datetime(year - 543, month_num, day)
+                            return f"{day} {thai_months_local[dt.month]} {year}".replace('.', '')
+                        except ValueError:
+                            pass # Invalid date, fall through
+
+            except Exception:
+                pass # Fall through to general parsing or return original string
+
+            # Fallback to pandas for robust parsing if other specific regex fail
+            try:
+                parsed_dt = pd.to_datetime(s, dayfirst=True)
+                # Heuristic for Buddhist Era year: if parsed_dt.year is unexpectedly high (e.g., > current CE year + 50),
+                # assume it's a BE year that pandas interpreted as CE.
+                if parsed_dt.year > datetime.now().year + 50: 
+                    parsed_dt = parsed_dt.replace(year=parsed_dt.year - 543)
+
+                return f"{parsed_dt.day} {thai_months_local[parsed_dt.month]} {parsed_dt.year + 543}".replace('.', '')
+            except Exception:
+                pass
+
+            return s # Final fallback, returns original string if no format matches.
+
+        
         hep_check_date_raw = person.get("ปีตรวจHEP")
         hep_check_date = normalize_date_for_display(hep_check_date_raw) # Use the new normalization function here
         
