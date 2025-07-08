@@ -826,9 +826,9 @@ df = load_sqlite_data()
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide") # Page title remains 'ระบบรายงานสุขภาพ'
 
 # Main application title and subtitle
-# Changed main title from "ระบบรายงานผลตรวจสุขภาพ" to "รายงานผลการตรวจสุขภาพ"
-st.markdown("<h1 style='text-align:center; font-family: \"Sarabun\", sans-serif;'>รายงานผลการตรวจสุขภาพ</h1>", unsafe_allow_html=True)
-st.markdown("<h4 style='text-align:center; color:gray; font-family: \"Sarabun\", sans-serif;'>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม รพ.สันทราย -</h4>", unsafe_allow_html=True)
+# Adjusted line-height and margin-bottom for better spacing
+st.markdown("<h1 style='text-align:center; font-family: \"Sarabun\", sans-serif; margin-bottom: 0.5rem;'>รายงานผลการตรวจสุขภาพ</h1>", unsafe_allow_html=True)
+st.markdown("<h4 style='text-align:center; color:gray; font-family: \"Sarabun\", sans-serif; margin-top: 0; line-height: 1.5;'>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม รพ.สันทราย -</h4>", unsafe_allow_html=True)
 
 st.markdown("""
     <style>
@@ -1082,7 +1082,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     # Adjusted line spacing in the main info block
     st.markdown(f"""
     <div style="font-size: 18px; line-height: 1.8; color: inherit; padding: 24px 8px; font-family: \"Sarabun\", sans-serif;">
-        <div style="text-align: center; margin-top: 10px; line-height: 1.8;">
+        <div style="text-align: center; margin-top: 0.5rem; line-height: 1.6;">
             วันที่ตรวจ: {check_date or "-"} <br>
             โรงพยาบาลสันทราย 201 หมู่ที่ 11 ถนน เชียงใหม่ - พร้าว ตำบลหนองหาร อำเภอสันทราย เชียงใหม่ 50290<br>
             ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167
