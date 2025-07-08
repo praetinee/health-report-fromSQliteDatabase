@@ -275,7 +275,7 @@ def uric_acid_advice(value_raw):
             return "ควรลดอาหารที่มีพิวรีนสูง เช่น เครื่องในสัตว์ อาหารทะเล และพบแพทย์หากมีอาการปวดข้อ"
         return ""
     except:
-        return ""
+        return "-"
 
 def summarize_lipids(chol_raw, tgl_raw, ldl_raw):
     try:
@@ -912,6 +912,7 @@ if submitted_sidebar:
         else:
             st.session_state["search_result"] = query_df
             
+            # Select the most recent year/date from the found results for a person
             first_available_year = sorted(query_df["Year"].dropna().unique().astype(int), reverse=True)[0]
             
             first_person_year_df = query_df[
@@ -1078,10 +1079,11 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     advice_text = combined_health_advice(bmi_val, sbp, dbp)
     summary_advice = html.escape(advice_text) if advice_text else ""
     
+    # Adjusted line spacing in the main info block
     st.markdown(f"""
     <div style="font-size: 18px; line-height: 1.8; color: inherit; padding: 24px 8px; font-family: \"Sarabun\", sans-serif;">
-        <div style="text-align: center;">วันที่ตรวจ: {check_date or "-"}</div>
-        <div style="text-align: center; margin-top: 10px;">
+        <div style="text-align: center; margin-top: 10px; line-height: 1.8;">
+            วันที่ตรวจ: {check_date or "-"} <br>
             โรงพยาบาลสันทราย 201 หมู่ที่ 11 ถนน เชียงใหม่ - พร้าว ตำบลหนองหาร อำเภอสันทราย เชียงใหม่ 50290<br>
             ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167
         </div>
