@@ -56,7 +56,7 @@ def normalize_thai_date(date_str):
             if year > 2500: # Assume Thai Buddhist year if year > 2500
                 year -= 543
             dt = datetime(year, month, day)
-            return f"{dt.day} {thai_months[dt.month]} {dt.year + 543}"
+            return " ".join([str(dt.day), thai_months[dt.month], str(dt.year + 543)]) # Force space with join
 
         # Format: DD-MM-YYYY (e.g., 29-04-2565) - Removed '.' from regex
         if re.match(r'^\d{1,2}-\d{1,2}-\d{4}$', s):
@@ -64,14 +64,15 @@ def normalize_thai_date(date_str):
             if year > 2500: # Assume Thai Buddhist year if year > 2500
                 year -= 543
             dt = datetime(year, month, day)
-            return f"{dt.day} {thai_months[dt.month]} {dt.year + 543}"
+            return " ".join([str(dt.day), thai_months[dt.month], str(dt.year + 543)]) # Force space with join
 
         # Format: DD MonthName Jamboree (e.g., 8 เมษายน 2565) or DD-DD MonthName Jamboree (e.g., 15-16 กรกฎาคม 2564)
-        # Regex no longer needs to handle '.' as it's removed earlier
-        match_thai_text_date = re.match(r'^(?P<day1>\d{1,2})(?:-\d{1,2})?\s*(?P<month_str>[ก-ฮ]+\.?)\s*(?P<year>\d{4})$', s)
+        # Regex changed `\s*` to `\s+` to explicitly require at least one space, but after s.replace('.', '') it should be fine.
+        # Let's keep `\s*` but enforce join later.
+        match_thai_text_date = re.match(r'^(?P<day1>\d{1,2})(?:-\d{1,2})?\s*(?P<month_str>[ก-ฮ]+)\s*(?P<year>\d{4})$', s) 
         if match_thai_text_date:
             day = int(match_thai_text_date.group('day1'))
-            month_str = match_thai_text_date.group('month_str').strip() # .replace('.', '') is already done globally on 's'
+            month_str = match_thai_text_date.group('month_str').strip()
             year = int(match_thai_text_date.group('year'))
             
             month_num = thai_month_abbr_to_num.get(month_str)
@@ -79,7 +80,7 @@ def normalize_thai_date(date_str):
                 try:
                     # Convert BE year to CE year for datetime object, then back for display
                     dt = datetime(year - 543, month_num, day)
-                    return f"{day} {thai_months[dt.month]} {year}"
+                    return " ".join([str(day), thai_months[dt.month], str(year)]) # Force space with join
                 except ValueError:
                     pass # Invalid date, fall through
 
@@ -94,7 +95,7 @@ def normalize_thai_date(date_str):
         if parsed_dt.year > datetime.now().year + 50: 
             parsed_dt = parsed_dt.replace(year=parsed_dt.year - 543)
 
-        return f"{parsed_dt.day} {thai_months[parsed_dt.month]} {parsed_dt.year + 543}"
+        return " ".join([str(parsed_dt.day), thai_months[parsed_dt.month], str(parsed_dt.year + 543)]) # Force space with join
     except Exception:
         pass
 
@@ -451,10 +452,10 @@ st.markdown("<h1 style='text-align:center; font-family: \"Sarabun\", sans-serif;
 st.markdown("<h4 style='text-align:center; color:gray; font-family: \"Sarabun\", sans-serif;'>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม รพ.สันทราย -</h4>", unsafe_allow_html=True)
 
 with st.form("search_form"):
-    col1, col2, col3 = st.columns(3)
-    id_card = col1.text_input("เลขบัตรประชาชน")
-    hn = col2.text_input("HN")
-    full_name = col3.text_input("ชื่อ-สกุล")
+    # Removed col1 for 'เลขบัตรประชาชน', adjusted columns
+    col1, col2 = st.columns(2) 
+    hn = col1.text_input("HN") # Moved to col1
+    full_name = col2.text_input("ชื่อ-สกุล") # Moved to col2
     submitted = st.form_submit_button("ค้นหา")
 
 if submitted:
@@ -466,9 +467,10 @@ if submitted:
 
     query = df.copy()
 
-    # Apply stripping directly to query columns for robust exact match
-    if id_card.strip():
-        query = query[query["เลขบัตรประชาชน"].str.strip() == id_card.strip()]
+    # Removed id_card search logic
+    # if id_card.strip():
+    #     query = query[query["เลขบัตรประชาชน"].str.strip() == id_card.strip()]
+
     if hn.strip():
         # HN is already loaded as string, so direct comparison is exact
         query = query[query["HN"].str.strip() == hn.strip()] 
@@ -1213,12 +1215,9 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         
         # ================ Section: Hepatitis B =================
 
-        # THAI_MONTHS_GLOBAL and thai_month_abbr_to_num are now defined within normalize_thai_date
-        # to ensure they are used correctly within that function's scope.
-        # This wrapper function is no longer needed but kept for context.
-        # The main 'normalize_thai_date' function itself is used directly in load_sqlite_data.
+        # Moved Thai month dictionaries inside normalize_thai_date for local use to ensure consistency.
         
-        def normalize_date_for_display(date_str_input): # This wrapper exists in previous code, keep for compatibility
+        def normalize_date_for_display(date_str_input): # This wrapper exists in previous code, kept for compatibility
             return normalize_thai_date(date_str_input)
 
 
