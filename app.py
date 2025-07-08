@@ -817,35 +817,40 @@ st.markdown("""
     /* Import Sarabun font from Google Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
 
-    /* Apply Sarabun font and 18px size globally */
-    html, body, [class*="st-"], [class*="css-"], h1, h3 {
+    /* Apply Sarabun font globally and forcefully */
+    html, body, [class*="st-"], [class*="css-"], h1, h2, h3, h4, h5, h6, p, div, span, label, button, input, select, option {
         font-family: 'Sarabun', sans-serif !important;
     }
     
-    html, body, [class*="st-"], [class*="css-"] {
+    /* Set a base font size for the body, allowing overrides */
+    body {
         font-size: 18px !important;
-    }
-    
-    /* Override for main report titles (h1) to be larger */
-    .report-header h1 {
-        font-size: 2.5rem !important; /* Adjust size as needed */
-        margin-bottom: 0.2rem;
-        font-weight: bold;
     }
 
-    /* Custom style for header paragraphs to be compact */
-    .report-header p {
-        margin: 0;
-        padding: 2px 0; /* a little vertical padding */
+    /* All other text elements will inherit 18px unless specified */
+    p, div, span, label, th, td, button, input, select, option {
         font-size: 18px !important;
     }
     
-    /* Ensure Streamlit widgets also use the correct font size */
-    .stTextInput > div > div > input, .stSelectbox > div > div {
-        font-size: 18px !important;
+    /* Set specific size for main report titles (h1) */
+    .report-header-container h1 {
+        font-size: 2.5rem !important; /* Adjust size as needed */
+        margin: 0.2rem 0 !important;
+        padding: 0 !important;
+        font-weight: bold;
+        line-height: 1.2 !important;
     }
-    .stButton > button {
-        font-size: 18px !important;
+
+    /* Set specific size for sidebar titles (h3) */
+    .st-sidebar h3 {
+        font-size: 22px !important; /* Slightly larger than body text */
+    }
+
+    /* Control spacing for header paragraphs to be compact */
+    .report-header-container p {
+        margin: 0 !important;
+        padding: 2px 0 !important; /* a little vertical padding */
+        line-height: 1.4 !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -1001,7 +1006,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
 
     # --- NEW: Unified Header Block ---
     report_header_html = f"""
-    <div class="report-header" style="text-align: center; margin-bottom: 2rem;">
+    <div class="report-header-container" style="text-align: center; margin-bottom: 2rem;">
         <h1>รายงานผลการตรวจสุขภาพ</h1>
         <h1 style="color: darkgrey;">- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม -</h1>
         <p>ชั้น 2 อาคารผู้ป่วยนอก-อุบัติเหตุ โรงพยาบาลสันทราย 201 หมู่ 11 ถ.เชียงใหม่–พร้าว ต.หนองหาร อ.สันทราย จ.เชียงใหม่ 50290</p>
