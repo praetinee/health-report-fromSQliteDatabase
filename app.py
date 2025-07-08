@@ -825,12 +825,9 @@ def load_sqlite_data():
 df = load_sqlite_data()
 
 # ==================== UI Setup and Search Form (Sidebar) ====================
-st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide") # Page title remains 'ระบบรายงานสุขภาพ'
+st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
-# Main application title and subtitle
-st.markdown("<h1 style='text-align:center; font-family: \"Sarabun\", sans-serif;'>รายงานผลการตรวจสุขภาพ</h1>", unsafe_allow_html=True)
-st.markdown("<h4 style='text-align:center; color:gray; font-family: \"Sarabun\", sans-serif;'>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย -</h4>", unsafe_allow_html=True)
-
+# The main header is now generated *after* data is loaded, so we remove the old static header from here.
 
 st.markdown("""
     <style>
@@ -881,6 +878,13 @@ st.markdown("""
     div[style*="overflow-y: auto"] {
         overflow-y: visible !important;
     }
+    
+    /* Custom style for header paragraphs to be compact */
+    .report-header p {
+        margin: 0;
+        padding: 1px 0; /* a little vertical padding */
+    }
+
     </style>
 """, unsafe_allow_html=True)
 
@@ -1046,6 +1050,20 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     waist_raw = person.get("รอบเอว", "-")
     check_date = person.get("วันที่ตรวจ", "-")
 
+    # --- NEW: Unified Header Block ---
+    report_header_html = f"""
+    <div class="report-header" style="text-align: center; font-family: 'Sarabun', sans-serif; margin-bottom: 2rem;">
+        <h1 style="margin-bottom: 0.2rem;">รายงานผลการตรวจสุขภาพ</h1>
+        <p style="font-size: 1.1em;">- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม -</p>
+        <p>ชั้น 2 อาคารผู้ป่วยนอก-อุบัติเหตุ โรงพยาบาลสันทราย</p>
+        <p>201 หมู่ 11 ถ.เชียงใหม่–พร้าว ต.หนองหาร อ.สันทราย จ.เชียงใหม่ 50290</p>
+        <p>ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167</p>
+        <p style="margin-top: 0.5rem;"><b>วันที่ตรวจ:</b> {check_date or "-"}</p>
+    </div>
+    """
+    st.markdown(report_header_html, unsafe_allow_html=True)
+    
+    # --- The rest of the report starts here ---
     try:
         weight_val = float(str(weight_raw).replace("กก.", "").strip())
         height_val = float(str(height_raw).replace("ซม.", "").strip())
@@ -1081,16 +1099,11 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     advice_text = combined_health_advice(bmi_val, sbp, dbp)
     summary_advice = html.escape(advice_text) if advice_text else ""
     
-    # Removed custom line-height from the address block to use default spacing
+    # This block now only contains personal info, not the header.
     st.markdown(f"""
-    <div style="font-size: 18px; color: inherit; padding: 24px 8px; font-family: \"Sarabun\", sans-serif;">
-        <div style="text-align: center;">
-            วันที่ตรวจ: {check_date or "-"} <br>
-            โรงพยาบาลสันทราย 201 หมู่ที่ 11 ถนน เชียงใหม่ - พร้าว ตำบลหนองหาร อำเภอสันทราย เชียงใหม่ 50290<br>
-            ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167
-        </div>
-        <hr style="margin: 24px 0;">
-        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; margin-bottom: 20px; text-align: center; line-height: 1.6;">
+    <div style="font-size: 18px; color: inherit; font-family: 'Sarabun', sans-serif;">
+        <hr>
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; margin-top: 24px; margin-bottom: 20px; text-align: center; line-height: 1.6;">
             <div><b>ชื่อ-สกุล:</b> {person.get('ชื่อ-สกุล', '-')}</div>
             <div><b>อายุ:</b> {str(int(float(person.get('อายุ')))) if str(person.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')} ปี</div>
             <div><b>เพศ:</b> {person.get('เพศ', '-')}</div>
