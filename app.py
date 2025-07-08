@@ -949,16 +949,30 @@ if "search_result" in st.session_state:
 
         available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
         
-        if "selected_year_from_sidebar" not in st.session_state:
-            st.session_state["selected_year_from_sidebar"] = available_years[0] if available_years else None
+        # Determine current selected year or default to the first available year
+        current_selected_year_index = 0
+        if "selected_year_from_sidebar" in st.session_state and st.session_state["selected_year_from_sidebar"] in available_years:
+            current_selected_year_index = available_years.index(st.session_state["selected_year_from_sidebar"])
         
         selected_year_from_sidebar = st.selectbox(
             "📅 เลือกปีที่ต้องการดูผลตรวจรายงาน",
             options=available_years,
-            index=available_years.index(st.session_state["selected_year_from_sidebar"]) if st.session_state["selected_year_from_sidebar"] in available_years else (0 if available_years else None),
+            index=current_selected_year_index,
             format_func=lambda y: f"พ.ศ. {y}",
             key="year_select_sidebar"
         )
+        
+        # Check if the year selection has actually changed, implying a new search context
+        # This will trigger a rerun and update the exam date dropdown
+        if st.session_state.get("last_selected_year_sidebar") != selected_year_from_sidebar:
+            st.session_state["last_selected_year_sidebar"] = selected_year_from_sidebar
+            # Reset person_row and selected_exam_date to force re-selection of the first date for the new year
+            st.session_state.pop("person_row", None)
+            st.session_state.pop("selected_exam_date_from_sidebar", None)
+            st.session_state.pop("selected_row_found", None)
+            st.rerun() # Force rerun to update exam dates immediately
+
+        # Update session state for the selected year
         st.session_state["selected_year_from_sidebar"] = selected_year_from_sidebar
 
 
@@ -973,28 +987,26 @@ if "search_result" in st.session_state:
             exam_dates_options = person_year_df["วันที่ตรวจ"].dropna().unique().tolist()
             
             if exam_dates_options:
-                if len(exam_dates_options) == 1:
-                    st.session_state["selected_exam_date_from_sidebar"] = exam_dates_options[0]
-                    st.session_state["person_row"] = person_year_df[
-                        person_year_df["วันที่ตรวจ"] == st.session_state["selected_exam_date_from_sidebar"]
-                    ].iloc[0].to_dict()
-                    st.session_state["selected_row_found"] = True
-                else:
-                    if "selected_exam_date_from_sidebar" not in st.session_state:
-                        st.session_state["selected_exam_date_from_sidebar"] = exam_dates_options[0]
-                    
-                    selected_exam_date_from_sidebar = st.selectbox(
-                        "🗓️ เลือกวันที่ตรวจ",
-                        options=exam_dates_options,
-                        index=exam_dates_options.index(st.session_state["selected_exam_date_from_sidebar"]) if st.session_state["selected_exam_date_from_sidebar"] in exam_dates_options else (0 if exam_dates_options else None),
-                        key="exam_date_select_sidebar"
-                    )
-                    st.session_state["selected_exam_date_from_sidebar"] = selected_exam_date_from_sidebar
+                # Determine current selected exam date or default to the first available date
+                current_selected_exam_date_index = 0
+                if "selected_exam_date_from_sidebar" in st.session_state and st.session_state["selected_exam_date_from_sidebar"] in exam_dates_options:
+                    current_selected_exam_date_index = exam_dates_options.index(st.session_state["selected_exam_date_from_sidebar"])
 
-                    st.session_state["person_row"] = person_year_df[
-                        person_year_df["วันที่ตรวจ"] == selected_exam_date_from_sidebar
-                    ].iloc[0].to_dict()
-                    st.session_state["selected_row_found"] = True
+                selected_exam_date_from_sidebar = st.selectbox(
+                    "🗓️ เลือกวันที่ตรวจ",
+                    options=exam_dates_options,
+                    index=current_selected_exam_date_index,
+                    key="exam_date_select_sidebar"
+                )
+                
+                # Update session state for the selected exam date
+                st.session_state["selected_exam_date_from_sidebar"] = selected_exam_date_from_sidebar
+
+                # Always update person_row based on the currently selected year and exam date
+                st.session_state["person_row"] = person_year_df[
+                    person_year_df["วันที่ตรวจ"] == selected_exam_date_from_sidebar
+                ].iloc[0].to_dict()
+                st.session_state["selected_row_found"] = True
             else:
                 st.info("ไม่พบข้อมูลการตรวจสำหรับปีที่เลือก")
                 st.session_state.pop("person_row", None)
