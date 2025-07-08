@@ -253,7 +253,7 @@ def summarize_liver(alp_val, sgot_val, sgpt_val):
             return "การทำงานของตับสูงกว่าเกณฑ์ปกติเล็กน้อย"
         return "ปกติ"
     except:
-        return "-"
+        return ""
 
 def liver_advice(summary_text):
     if summary_text == "การทำงานของตับสูงกว่าเกณฑ์ปกติเล็กน้อย":
@@ -823,13 +823,13 @@ st.markdown("""
     /* Import Sarabun font from Google Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
 
-    /* Apply Sarabun font globally and forcefully */
-    html, body, [class*="st-"], [class*="css-"], h1, h2, h3, h4, h5, h6, p, div, span, label, button, input, select, option {
+    /* Apply Sarabun font to text elements, leaving Streamlit's icons alone */
+    body, h1, h2, h3, h4, h5, h6, p, label, th, td, button, .st-emotion-cache-16txtl3 {
         font-family: 'Sarabun', sans-serif !important;
     }
     
-    /* Set a base font size for the body, allowing overrides */
-    body, p, div, span, label, th, td, button, input, select, option {
+    /* Set a base font size for the body */
+    body {
         font-size: 14px !important;
     }
     
@@ -853,8 +853,8 @@ st.markdown("""
 
     /* Control spacing for all elements in header */
     .report-header-container * {
-        line-height: 1.8 !important; 
-        margin: 0.25rem 0 !important;
+        line-height: 1.7 !important; 
+        margin: 0.2rem 0 !important;
         padding: 0 !important;
     }
 
