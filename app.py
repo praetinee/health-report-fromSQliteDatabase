@@ -805,9 +805,7 @@ def load_sqlite_data():
         df_loaded.columns = df_loaded.columns.str.strip()
         df_loaded['เลขบัตรประชาชน'] = df_loaded['เลขบัตรประชาชน'].astype(str).str.strip()
         
-        # --- Adjusted HN conversion for exact string match from REAL type ---
-        # Convert REAL numbers (like 123.0) to integer strings (like "123")
-        # For non-numeric or empty values, just convert to string or empty string
+        # Convert HN from potentially REAL type to integer string, stripping extra decimals
         df_loaded['HN'] = df_loaded['HN'].apply(lambda x: str(int(x)) if pd.notna(x) and isinstance(x, (float, int)) else str(x)).str.strip()
 
         df_loaded['ชื่อ-สกุล'] = df_loaded['ชื่อ-สกุล'].astype(str).str.strip()
@@ -828,7 +826,8 @@ df = load_sqlite_data()
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide") # Page title remains 'ระบบรายงานสุขภาพ'
 
 # Main application title and subtitle
-st.markdown("<h1 style='text-align:center; font-family: \"Sarabun\", sans-serif;'>รายงานผลการตรวจสุขภาพ</h1>", unsafe_allow_html=True) # Changed from "ระบบรายงานผลตรวจสุขภาพ" to "รายงานผลการตรวจสุขภาพ"
+# Changed main title from "ระบบรายงานผลตรวจสุขภาพ" to "รายงานผลการตรวจสุขภาพ"
+st.markdown("<h1 style='text-align:center; font-family: \"Sarabun\", sans-serif;'>รายงานผลการตรวจสุขภาพ</h1>", unsafe_allow_html=True)
 st.markdown("<h4 style='text-align:center; color:gray; font-family: \"Sarabun\", sans-serif;'>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม รพ.สันทราย -</h4>", unsafe_allow_html=True)
 
 st.markdown("""
@@ -913,7 +912,6 @@ if submitted_sidebar:
         else:
             st.session_state["search_result"] = query_df
             
-            # Select the most recent year/date from the found results for a person
             first_available_year = sorted(query_df["Year"].dropna().unique().astype(int), reverse=True)[0]
             
             first_person_year_df = query_df[
@@ -951,16 +949,16 @@ def update_year_selection():
         st.session_state.pop("selected_exam_date_from_sidebar", None)
         st.session_state.pop("person_row", None) # Clear person_row to ensure it's re-selected
         st.session_state.pop("selected_row_found", None)
-        st.rerun() # Force a rerun to update the date dropdown and main display
+        # st.rerun() # Removed as per Streamlit 1.30.0+ behavior - selectbox change already triggers rerun.
 
 def update_exam_date_selection():
     """Callback for exam date selectbox to update person_row immediately."""
     new_exam_date = st.session_state["exam_date_select_sidebar"]
+    # We only update if the value truly changed. st.selectbox already triggers a rerun on change.
     if st.session_state.get("last_selected_exam_date_sidebar") != new_exam_date:
         st.session_state["selected_exam_date_from_sidebar"] = new_exam_date
         st.session_state["last_selected_exam_date_sidebar"] = new_exam_date
-        # No need for st.rerun() here as selectbox changes already trigger rerun,
-        # and the subsequent logic will pick up the updated session_state.
+        # No st.rerun() needed here.
 
 
 if "search_result" in st.session_state:
