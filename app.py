@@ -847,13 +847,9 @@ st.markdown("""
 
     /* Control spacing for all elements in header to be more spread out */
     .report-header-container * {
-        line-height: 1.6 !important; /* Adjust this value to control spacing */
-        margin: 0.1rem 0 !important;
+        line-height: 1.8 !important; /* Adjust this value to control spacing */
+        margin: 0.2rem 0 !important; /* Add small vertical margin between elements */
         padding: 0 !important;
-    }
-    
-    .report-header-container p {
-        margin: 0.2rem 0 !important;
     }
 
     </style>
