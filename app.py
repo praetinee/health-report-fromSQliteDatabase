@@ -85,17 +85,14 @@ def normalize_thai_date(date_str):
     try:
         parsed_dt = pd.to_datetime(s, dayfirst=True, errors='coerce')
         if pd.notna(parsed_dt):
-            # Check current CE year dynamically
             current_ce_year = datetime.now().year
-            # Heuristic for Buddhist Era year: if parsed_dt.year is unexpectedly high (e.g., > current CE year + 50),
-            # assume it's a BE year that pandas interpreted as CE.
-            if parsed_dt.year > current_ce_year + 50 and parsed_dt.year - 543 > 1900: # Add a lower bound to avoid very old dates
+            if parsed_dt.year > current_ce_year + 50 and parsed_dt.year - 543 > 1900:
                 parsed_dt = parsed_dt.replace(year=parsed_dt.year - 543)
             return f"{parsed_dt.day} {THAI_MONTHS_GLOBAL[parsed_dt.month]} {parsed_dt.year + 543}".replace('.', '')
     except Exception:
         pass
 
-    return s # Final fallback, returns original string if no format matches.
+    return s
 
 def get_float(col, person_data):
     try:
@@ -808,24 +805,13 @@ def load_sqlite_data():
         df_loaded.columns = df_loaded.columns.str.strip()
         df_loaded['เลขบัตรประชาชน'] = df_loaded['เลขบัตรประชาชน'].astype(str).str.strip()
         
-        # --- Crucial: Add clean_hn_for_df_search globally and use it to create HN_SEARCHABLE ---
-        def clean_hn_for_df_search(hn_value):
-            if is_empty(hn_value):
-                return ""
-            s = str(hn_value)
-            digits_only = re.sub(r'\D', '', s) # Keep only digits
-            if digits_only:
-                try:
-                    return str(int(digits_only)) # Convert to int and back to str to remove leading zeros
-                except ValueError:
-                    return ""
-            return ""
+        # --- Adjusted HN conversion for exact string match from REAL type ---
+        # Convert REAL numbers (like 123.0) to integer strings (like "123")
+        # For non-numeric or empty values, just convert to string or empty string
+        df_loaded['HN'] = df_loaded['HN'].apply(lambda x: str(int(x)) if pd.notna(x) and isinstance(x, (float, int)) else str(x)).str.strip()
 
-        # Apply the cleaner function to create HN_SEARCHABLE
-        df_loaded['HN_SEARCHABLE'] = df_loaded['HN'].apply(clean_hn_for_df_search)
-        
-        # Keep original HN for exact display if needed, but search uses HN_SEARCHABLE for flexibility
-        df_loaded['HN'] = df_loaded['HN'].astype(str).str.strip() 
+        # Removed HN_SEARCHABLE as it's not needed for strict exact matching
+        # df_loaded['HN_SEARCHABLE'] = df_loaded['HN'].apply(clean_hn_for_df_search) 
 
         df_loaded['ชื่อ-สกุล'] = df_loaded['ชื่อ-สกุล'].astype(str).str.strip()
         df_loaded['Year'] = df_loaded['Year'].astype(int)
@@ -911,15 +897,18 @@ if submitted_sidebar:
     st.session_state.pop("selected_year_from_sidebar", None)
     st.session_state.pop("selected_exam_date_from_sidebar", None)
 
-    query_df = df.copy() # 'df' is now guaranteed to be defined here.
+    query_df = df.copy()
     search_term = search_query.strip()
 
     if search_term:
+        # --- Adjusted search logic for exact HN match ---
+        # If the search term is purely numeric, we treat it as an HN.
+        # We compare it directly against the 'HN' column which is now cleaned to be integer-string.
+        # This means '0000' will not match '0' unless '0000' is the exact HN stored.
         if search_term.isdigit():
-            # --- Changed: Use HN_SEARCHABLE for numeric HN search ---
-            hn_search_value = str(int(search_term)) # Ensure user input is cleaned to match HN_SEARCHABLE format
-            query_df = query_df[query_df["HN_SEARCHABLE"] == hn_search_value]
+            query_df = query_df[query_df["HN"] == search_term]
         else:
+            # If not purely numeric, or if it's a mix of digits and text, treat as name search
             query_df = query_df[query_df["ชื่อ-สกุล"].str.strip() == search_term]
         
         if query_df.empty:
@@ -927,11 +916,12 @@ if submitted_sidebar:
         else:
             st.session_state["search_result"] = query_df
             
+            # Select the most recent year/date from the found results for a person
             first_available_year = sorted(query_df["Year"].dropna().unique().astype(int), reverse=True)[0]
             
             first_person_year_df = query_df[
                 (query_df["Year"] == first_available_year) &
-                (query_df["HN"] == query_df.iloc[0]["HN"]) # Use original HN for selecting row based on the first found result, not HN_SEARCHABLE
+                (query_df["HN"] == query_df.iloc[0]["HN"]) # Use original HN for selecting row
             ].drop_duplicates(subset=["HN", "วันที่ตรวจ"]).sort_values(by="วันที่ตรวจ", key=lambda x: pd.to_datetime(x, errors='coerce', dayfirst=True), ascending=False)
             
             if not first_person_year_df.empty:
