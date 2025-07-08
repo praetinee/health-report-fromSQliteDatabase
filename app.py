@@ -827,8 +827,8 @@ st.set_page_config(page_title="ระบบรายงานสุขภาพ"
 
 # Main application title and subtitle
 # Adjusted line-height and margin-bottom for better spacing
-st.markdown("<h1 style='text-align:center; font-family: \"Sarabun\", sans-serif; margin-bottom: 0.5rem; line-height: 2.0;'>รายงานผลการตรวจสุขภาพ</h1>", unsafe_allow_html=True)
-st.markdown("<h4 style='text-align:center; color:gray; font-family: \"Sarabun\", sans-serif; margin-top: 0; line-height: 2.0; margin-bottom: 1.5rem;'>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม รพ.สันทราย -</h4>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center; font-family: \"Sarabun\", sans-serif; margin-bottom: 0.75rem; line-height: 1.6;'>รายงานผลการตรวจสุขภาพ</h1>", unsafe_allow_html=True)
+st.markdown("<h4 style='text-align:center; color:gray; font-family: \"Sarabun\", sans-serif; margin-top: 0; line-height: 1.6; margin-bottom: 1.5rem;'>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย -</h4>", unsafe_allow_html=True)
 
 
 st.markdown("""
@@ -1083,27 +1083,27 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     # Adjusted line spacing in the main info block
     st.markdown(f"""
     <div style="font-size: 18px; line-height: 1.8; color: inherit; padding: 24px 8px; font-family: \"Sarabun\", sans-serif;">
-        <div style="text-align: center; margin-top: 0.5rem; line-height: 2.0;">
+        <div style="text-align: center; margin-top: 0.5rem; line-height: 1.8;">
             วันที่ตรวจ: {check_date or "-"} <br>
             โรงพยาบาลสันทราย 201 หมู่ที่ 11 ถนน เชียงใหม่ - พร้าว ตำบลหนองหาร อำเภอสันทราย เชียงใหม่ 50290<br>
             ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167
         </div>
         <hr style="margin: 24px 0;">
         <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; margin-bottom: 20px; text-align: center;">
-            <div><b>ชื่อ-สกุล:</b> {person.get('ชื่อ-สกุล', '-')}</div>
-            <div><b>อายุ:</b> {str(int(float(person.get('อายุ')))) if str(person.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')} ปี</div>
-            <div><b>เพศ:</b> {person.get('เพศ', '-')}</div>
-            <div><b>HN:</b> {str(int(float(person.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person.get('HN', '-')}</div>
-            <div><b>หน่วยงาน:</b> {person.get('หน่วยงาน', '-')}</div>
+            <div style='line-height: 1.6;'><b>ชื่อ-สกุล:</b> {person.get('ชื่อ-สกุล', '-')}</div>
+            <div style='line-height: 1.6;'><b>อายุ:</b> {str(int(float(person.get('อายุ')))) if str(person.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')} ปี</div>
+            <div style='line-height: 1.6;'><b>เพศ:</b> {person.get('เพศ', '-')}</div>
+            <div style='line-height: 1.6;'><b>HN:</b> {str(int(float(person.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person.get('HN', '-')}</div>
+            <div style='line-height: 1.6;'><b>หน่วยงาน:</b> {person.get('หน่วยงาน', '-')}</div>
         </div>
         <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; margin-bottom: 16px; text-align: center;">
-            <div><b>น้ำหนัก:</b> {weight_display}</div>
-            <div><b>ส่วนสูง:</b> {height_display}</div>
-            <div><b>รอบเอว:</b> {waist_display}</div>
-            <div><b>ความดันโลหิต:</b> {bp_full}</div>
-            <div><b>ชีพจร:</b> {pulse}</div>
+            <div style='line-height: 1.6;'><b>น้ำหนัก:</b> {weight_display}</div>
+            <div style='line-height: 1.6;'><b>ส่วนสูง:</b> {height_display}</div>
+            <div style='line-height: 1.6;'><b>รอบเอว:</b> {waist_display}</div>
+            <div style='line-height: 1.6;'><b>ความดันโลหิต:</b> {bp_full}</div>
+            <div style='line-height: 1.6;'><b>ชีพจร:</b> {pulse}</div>
         </div>
-        {f"<div style='margin-top: 16px; text-align: center;'><b>คำแนะนำ:</b> {summary_advice}</div>" if summary_advice else ""}
+        {f"<div style='margin-top: 16px; text-align: center; line-height: 1.6;'><b>คำแนะนำ:</b> {summary_advice}</div>" if summary_advice else ""}
     </div>
     """, unsafe_allow_html=True)
 
