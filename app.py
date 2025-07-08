@@ -826,9 +826,9 @@ df = load_sqlite_data()
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide") # Page title remains 'ระบบรายงานสุขภาพ'
 
 # Main application title and subtitle
-# Adjusted line-height and margin-bottom for better spacing
-st.markdown("<h1 style='text-align:center; font-family: \"Sarabun\", sans-serif; margin-bottom: 0.2rem; line-height: 1.2;'>รายงานผลการตรวจสุขภาพ</h1>", unsafe_allow_html=True)
-st.markdown("<h4 style='text-align:center; color:gray; font-family: \"Sarabun\", sans-serif; margin-top: 0; line-height: 1.2; margin-bottom: 1.5rem;'>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย -</h4>", unsafe_allow_html=True)
+# Removed custom line-height and margins to use HTML defaults
+st.markdown("<h1 style='text-align:center; font-family: \"Sarabun\", sans-serif;'>รายงานผลการตรวจสุขภาพ</h1>", unsafe_allow_html=True)
+st.markdown("<h4 style='text-align:center; color:gray; font-family: \"Sarabun\", sans-serif;'>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย -</h4>", unsafe_allow_html=True)
 
 
 st.markdown("""
@@ -1080,10 +1080,10 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     advice_text = combined_health_advice(bmi_val, sbp, dbp)
     summary_advice = html.escape(advice_text) if advice_text else ""
     
-    # Adjusted line spacing in the main info block
+    # Removed custom line-height from the address block to use default spacing
     st.markdown(f"""
     <div style="font-size: 18px; color: inherit; padding: 24px 8px; font-family: \"Sarabun\", sans-serif;">
-        <div style="text-align: center; margin-top: 0.5rem; line-height: 1.4;">
+        <div style="text-align: center;">
             วันที่ตรวจ: {check_date or "-"} <br>
             โรงพยาบาลสันทราย 201 หมู่ที่ 11 ถนน เชียงใหม่ - พร้าว ตำบลหนองหาร อำเภอสันทราย เชียงใหม่ 50290<br>
             ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167
