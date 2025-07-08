@@ -131,9 +131,7 @@ def render_section_header(title, subtitle=None):
         color: white;
         text-align: center;
         padding: 1rem 0.5rem;
-        font-size: 18px; /* Adjusted font size */
         font-weight: bold;
-        font-family: "Sarabun", sans-serif;
         border-radius: 8px;
         margin-top: 2rem;
         margin-bottom: 1rem;
@@ -143,10 +141,6 @@ def render_section_header(title, subtitle=None):
     """
 
 def render_lab_table_html(title, subtitle, headers, rows, table_class="lab-table"):
-    """
-    Generates HTML for lab result tables (CBC, Blood Chemistry).
-    Uses the same styling and abnormal highlighting logic.
-    """
     style = f"""
     <style>
         .{table_class}-container {{
@@ -156,8 +150,6 @@ def render_lab_table_html(title, subtitle, headers, rows, table_class="lab-table
         .{table_class} {{
             width: 100%;
             border-collapse: collapse;
-            font-size: 18px; /* Adjusted font size */
-            font-family: "Sarabun", sans-serif;
             color: var(--text-color);
             table-layout: fixed; /* Ensures column widths are respected */
         }}
@@ -564,8 +556,6 @@ def render_urine_section(person_data, sex, year_selected):
         .urine-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 18px; /* Adjusted font size */
-            font-family: "Sarabun", sans-serif;
             color: var(--text-color);
             table-layout: fixed; /* Ensures column widths are respected */
         }
@@ -628,8 +618,6 @@ def render_urine_section(person_data, sex, year_selected):
                 padding: 1rem;
                 border-radius: 6px;
                 margin-top: 1rem;
-                font-size: 18px;
-                font-family: "Sarabun", sans-serif;
             '>
                 {summary}
             </div>
@@ -642,8 +630,6 @@ def render_urine_section(person_data, sex, year_selected):
                 padding: 1rem;
                 border-radius: 6px;
                 margin-top: 1rem;
-                font-size: 18px;
-                font-family: "Sarabun", sans-serif;
             '>
                 ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ
             </div>
@@ -678,8 +664,6 @@ def render_stool_html_table(exam, cs):
         .stool-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 18px; /* Adjusted font size */
-            font-family: "Sarabun", sans-serif;
             color: var(--text-color);
             table-layout: fixed; /* Ensure column widths are respected */
         }
@@ -827,64 +811,44 @@ df = load_sqlite_data()
 # ==================== UI Setup and Search Form (Sidebar) ====================
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
-# The main header is now generated *after* data is loaded, so we remove the old static header from here.
-
+# Inject custom CSS for font and size control
 st.markdown("""
     <style>
     /* Import Sarabun font from Google Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
 
-    /* Apply Sarabun font globally */
-    html, body, [class*="st-emotion"], [class*="css-"] { /* Target Streamlit elements */
-        font-family: "Sarabun", sans-serif;
-    }
-
-    /* Override specific elements if needed, for example the main text */
-    div.stMarkdown, div.stText, p {
-        font-family: "Sarabun", sans-serif;
-    }
-
-    /* Adjust font for inputs/select boxes if they don't inherit automatically */
-    .stTextInput > div > div > input, .stSelectbox > div > div > div > div {
-        font-family: "Sarabun", sans-serif;
-    }
-
-    /* Original scrollbar CSS */
-    div.stMarkdown {
-        overflow: visible !important;
-    }
-
-    section.main > div {
-        overflow-y: visible !important;
-    }
-
-    [data-testid="stVerticalBlock"] {
-        overflow: visible !important;
-    }
-
-    ::-webkit-scrollbar {
-        width: 0px;
-        background: transparent;
-    }
-
-    div[style*="overflow: auto"] {
-        overflow: visible !important;
-    }
-
-    div[style*="overflow-x: auto"] {
-        overflow-x: visible !important;
-    }
-
-    div[style*="overflow-y: auto"] {
-        overflow-y: visible !important;
+    /* Apply Sarabun font and 18px size globally */
+    html, body, [class*="st-"], [class*="css-"] {
+        font-family: 'Sarabun', sans-serif !important;
+        font-size: 18px !important;
     }
     
+    /* Override for main report titles (h1) to be larger */
+    .report-header h1 {
+        font-size: 2.5rem !important; /* Adjust size as needed */
+        margin-bottom: 0.2rem;
+        font-weight: bold;
+    }
+
+    /* Keep section headers at a specific size */
+    .st-emotion-cache-16txtl3 {
+        font-size: 18px !important;
+    }
+
     /* Custom style for header paragraphs to be compact */
     .report-header p {
         margin: 0;
-        padding: 1px 0; /* a little vertical padding */
+        padding: 2px 0; /* a little vertical padding */
+        font-size: 18px !important;
     }
-
+    
+    /* Ensure Streamlit widgets also use the correct font size */
+    .stTextInput > div > div > input, .stSelectbox > div > div {
+        font-size: 18px !important;
+    }
+    .stButton > button {
+        font-size: 18px !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -945,27 +909,20 @@ if submitted_sidebar:
 
 def update_year_selection():
     """Callback for year selectbox to ensure immediate update."""
-    # When year_select_sidebar changes, its new value is automatically in st.session_state["year_select_sidebar"]
     new_year = st.session_state["year_select_sidebar"]
-    
-    # Only proceed if the year actually changed to avoid unnecessary reruns for same selection
     if st.session_state.get("last_selected_year_sidebar") != new_year:
         st.session_state["selected_year_from_sidebar"] = new_year
         st.session_state["last_selected_year_sidebar"] = new_year
-        # Crucially, clear the selected exam date to force the app to pick the first one for the new year
         st.session_state.pop("selected_exam_date_from_sidebar", None)
-        st.session_state.pop("person_row", None) # Clear person_row to ensure it's re-selected
+        st.session_state.pop("person_row", None)
         st.session_state.pop("selected_row_found", None)
-        # st.rerun() # Removed as per Streamlit 1.30.0+ behavior - selectbox change already triggers rerun.
 
 def update_exam_date_selection():
     """Callback for exam date selectbox to update person_row immediately."""
     new_exam_date = st.session_state["exam_date_select_sidebar"]
-    # We only update if the value truly changed. st.selectbox already triggers a rerun on change.
     if st.session_state.get("last_selected_exam_date_sidebar") != new_exam_date:
         st.session_state["selected_exam_date_from_sidebar"] = new_exam_date
         st.session_state["last_selected_exam_date_sidebar"] = new_exam_date
-        # No st.rerun() needed here.
 
 
 if "search_result" in st.session_state:
@@ -977,7 +934,6 @@ if "search_result" in st.session_state:
 
         available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
         
-        # Get current selected year index for selectbox initialization
         current_selected_year_index = 0
         if "selected_year_from_sidebar" in st.session_state and st.session_state["selected_year_from_sidebar"] in available_years:
             current_selected_year_index = available_years.index(st.session_state["selected_year_from_sidebar"])
@@ -987,13 +943,12 @@ if "search_result" in st.session_state:
             options=available_years,
             index=current_selected_year_index,
             format_func=lambda y: f"พ.ศ. {y}",
-            key="year_select_sidebar", # Key for session state
-            on_change=update_year_selection # Add callback for year change
+            key="year_select_sidebar",
+            on_change=update_year_selection
         )
-        # st.session_state["selected_year_from_sidebar"] is updated by on_change or the initial setting
 
         if selected_year_from_sidebar:
-            selected_hn = results_df.iloc[0]["HN"] # Assuming one person in search_result for simplicity
+            selected_hn = results_df.iloc[0]["HN"]
 
             person_year_df = results_df[
                 (results_df["Year"] == selected_year_from_sidebar) &
@@ -1004,15 +959,13 @@ if "search_result" in st.session_state:
             
             if exam_dates_options:
                 if len(exam_dates_options) == 1:
-                    # Issue 2: If only one exam date, don't show dropdown, just display it as text
                     st.session_state["selected_exam_date_from_sidebar"] = exam_dates_options[0]
                     st.session_state["person_row"] = person_year_df[
                         person_year_df["วันที่ตรวจ"] == st.session_state["selected_exam_date_from_sidebar"]
                     ].iloc[0].to_dict()
                     st.session_state["selected_row_found"] = True
-                    st.sidebar.info(f"ผลตรวจวันที่: **{exam_dates_options[0]}**") # Display the single date as info
+                    st.sidebar.info(f"ผลตรวจวันที่: **{exam_dates_options[0]}**")
                 else:
-                    # Issue 2: Only show selectbox if there are multiple exam dates
                     current_selected_exam_date_index = 0
                     if "selected_exam_date_from_sidebar" in st.session_state and st.session_state["selected_exam_date_from_sidebar"] in exam_dates_options:
                         current_selected_exam_date_index = exam_dates_options.index(st.session_state["selected_exam_date_from_sidebar"])
@@ -1021,12 +974,10 @@ if "search_result" in st.session_state:
                         "🗓️ เลือกวันที่ตรวจ",
                         options=exam_dates_options,
                         index=current_selected_exam_date_index,
-                        key="exam_date_select_sidebar", # Key for session state
-                        on_change=update_exam_date_selection # Add callback for date change
+                        key="exam_date_select_sidebar",
+                        on_change=update_exam_date_selection
                     )
-                    # st.session_state["selected_exam_date_from_sidebar"] is updated by on_change
-
-                    # Update person_row based on the currently selected year and exam date
+                    
                     st.session_state["person_row"] = person_year_df[
                         person_year_df["วันที่ตรวจ"] == selected_exam_date_from_sidebar
                     ].iloc[0].to_dict()
@@ -1052,9 +1003,9 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
 
     # --- NEW: Unified Header Block ---
     report_header_html = f"""
-    <div class="report-header" style="text-align: center; font-family: 'Sarabun', sans-serif; margin-bottom: 2rem;">
-        <h1 style="margin-bottom: 0.2rem;">รายงานผลการตรวจสุขภาพ</h1>
-        <p style="font-size: 1.1em;">- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม -</p>
+    <div class="report-header" style="text-align: center; margin-bottom: 2rem;">
+        <h1>รายงานผลการตรวจสุขภาพ</h1>
+        <h1 style="color: darkgrey;">- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม -</h1>
         <p>ชั้น 2 อาคารผู้ป่วยนอก-อุบัติเหตุ โรงพยาบาลสันทราย</p>
         <p>201 หมู่ 11 ถ.เชียงใหม่–พร้าว ต.หนองหาร อ.สันทราย จ.เชียงใหม่ 50290</p>
         <p>ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167</p>
@@ -1101,7 +1052,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     
     # This block now only contains personal info, not the header.
     st.markdown(f"""
-    <div style="font-size: 18px; color: inherit; font-family: 'Sarabun', sans-serif;">
+    <div>
         <hr>
         <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; margin-top: 24px; margin-bottom: 20px; text-align: center; line-height: 1.6;">
             <div><b>ชื่อ-สกุล:</b> {person.get('ชื่อ-สกุล', '-')}</div>
@@ -1157,7 +1108,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
 
     blood_config = [
         ("น้ำตาลในเลือด (FBS)", "FBS", "74 - 106 mg/dl", 74, 106),
-        ("น้ำตาลในเลือด (Uric Acid)", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2),
+        ("กรดยูริก (Uric Acid)", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2), #แก้ไขชื่อ
         ("การทำงานของเอนไซม์ตับ (ALK)", "ALP", "30 - 120 U/L", 30, 120),
         ("การทำงานของเอนไซม์ตับ (SGOT)", "SGOT", "< 37 U/L", None, 37),
         ("การทำงานของเอนไซม์ตับ (SGPT)", "SGPT", "< 41 U/L", None, 41),
@@ -1180,10 +1131,10 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     left_spacer, col1, col2, right_spacer = st.columns([0.5, 3, 3, 0.5])
 
     with col1:
-        st.markdown(render_lab_table_html("ผลตรวจ CBC", "Complete Blood Count", ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows), unsafe_allow_html=True)
+        st.markdown(render_lab_table_html("ผลตรวจ CBC (Complete Blood Count)", None, ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows), unsafe_allow_html=True)
     
     with col2:
-        st.markdown(render_lab_table_html("ผลตรวจเคมีเลือด", "Blood Chemistry", ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows), unsafe_allow_html=True)
+        st.markdown(render_lab_table_html("ผลตรวจเลือด (Blood Chemistry)", None, ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows), unsafe_allow_html=True)
 
     # ==================== Combined Recommendations ====================
     gfr_raw = person.get("GFR", "")
@@ -1226,10 +1177,8 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             background-color: {background_color_general_advice};
             padding: 1rem 2.5rem;
             border-radius: 10px;
-            font-size: 18px;
             line-height: 1.5;
             color: var(--text-color);
-            font-family: "Sarabun", sans-serif;
         ">
             {final_advice_html}
         </div>
@@ -1247,7 +1196,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             render_urine_section(person, sex, selected_year)
 
             # ==================== Stool Section ====================
-            st.markdown(render_section_header("ผลตรวจอุจจาระ", "Stool Examination"), unsafe_allow_html=True)
+            st.markdown(render_section_header("ผลตรวจอุจจาระ (Stool Examination)"), unsafe_allow_html=True)
             
             stool_exam_raw = person.get("Stool exam", "")
             stool_cs_raw = person.get("Stool C/S", "")
@@ -1259,7 +1208,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
 
         with col_ua_right:
             # ============ X-ray Section ============
-            st.markdown(render_section_header("ผลเอกซเรย์", "Chest X-ray"), unsafe_allow_html=True)
+            st.markdown(render_section_header("ผลเอกซเรย์ (Chest X-ray)"), unsafe_allow_html=True)
             
             selected_year_int = int(selected_year)
             cxr_col = "CXR" if selected_year_int == (datetime.now().year + 543) else f"CXR{str(selected_year_int)[-2:]}"
@@ -1270,19 +1219,17 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             <div style='
                 background-color: var(--background-color);
                 color: var(--text-color);
-                font-size: 18px;
                 line-height: 1.6;
                 padding: 1.25rem;
                 border-radius: 6px;
                 margin-bottom: 1.5rem;
-                font-family: "Sarabun", sans-serif;
             '>
                 {cxr_result}
             </div>
             """, unsafe_allow_html=True)
 
             # ==================== EKG Section ====================
-            st.markdown(render_section_header("ผลคลื่นไฟฟ้าหัวใจ", "EKG"), unsafe_allow_html=True)
+            st.markdown(render_section_header("ผลคลื่นไฟฟ้าหัวใจ (EKG)"), unsafe_allow_html=True)
 
             ekg_col = get_ekg_col_name(selected_year_int)
             ekg_raw = person.get(ekg_col, "")
@@ -1292,12 +1239,10 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             <div style='
                 background-color: var(--secondary-background-color);
                 color: var(--text-color);
-                font-size: 18px;
                 line-height: 1.6;
                 padding: 1.25rem;
                 border-radius: 6px;
                 margin-bottom: 1.5rem;
-                font-family: "Sarabun", sans-serif;
             '>
                 {ekg_result}
             </div>
@@ -1309,12 +1254,10 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             hep_a_raw = safe_text(person.get("Hepatitis A"))
             st.markdown(f"""
             <div style='
-                font-size: 18px;
                 padding: 1rem;
                 border-radius: 6px;
                 margin-bottom: 1.5rem;
                 background-color: rgba(255,255,255,0.05);
-                font-family: "Sarabun", sans-serif;
             '>
                 {hep_a_raw}
             </div>
@@ -1334,11 +1277,9 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             <div style="margin-bottom: 1rem;">
             <table style='
                 width: 100%;
-                font-size: 18px;
                 text-align: center;
                 border-collapse: collapse;
                 min-width: 300px;
-                font-family: "Sarabun", sans-serif;
             '>
                 <thead>
                     <tr>
@@ -1363,13 +1304,11 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
 
             st.markdown(f"""
             <div style='
-                font-size: 18px;
                 padding: 0.75rem 1rem;
                 background-color: rgba(255,255,255,0.05);
                 border-radius: 6px;
                 margin-bottom: 1.5rem;
                 line-height: 1.8;
-                font-family: "Sarabun", sans-serif;
             '>
                 <b>วันที่ตรวจภูมิคุ้มกัน:</b> {hep_check_date}<br>
                 <b>ประวัติโรคไวรัสตับอักเสบบี ปี พ.ศ. {selected_year}:</b> {hep_history}<br>
@@ -1386,14 +1325,12 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
 
             st.markdown(f"""
             <div style='
-                font-size: 18px;
                 line-height: 1.6;
                 padding: 1rem 1.5rem;
                 border-radius: 6px;
                 background-color: {bg_color};
                 color: var(--text-color);
                 margin-bottom: 1.5rem;
-                font-family: "Sarabun", sans-serif;
             '>
                 {advice}
             </div>
@@ -1415,11 +1352,9 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             color: white;
             padding: 1.5rem 2rem;
             border-radius: 8px;
-            font-size: 18px;
             line-height: 1.6;
             margin-top: 2rem;
             margin-bottom: 2rem;
-            font-family: "Sarabun", sans-serif;
         '>
             <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
         </div>
