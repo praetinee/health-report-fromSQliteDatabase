@@ -13,7 +13,7 @@ import re
 def is_empty(val):
     return str(val).strip().lower() in ["", "-", "none", "nan", "null"]
 
-# Function to normalize and convert Thai dates
+# Function to normalize and convert Thai dates (Using the version you provided as "old code")
 def normalize_thai_date(date_str):
     if is_empty(date_str):
         return "-" # Or "ไม่ระบุ"
@@ -65,7 +65,7 @@ def normalize_thai_date(date_str):
             dt = datetime(year, month, day)
             return f"{dt.day} {thai_months[dt.month]} {dt.year + 543}".replace('.', '')
 
-        # Format: DD MonthName YYYY (e.g., 8 เมษายน 2565) or DD-DD MonthName YYYY (e.g., 15-16 กรกฎาคม 2564)
+        # Format: DD MonthName Jamboree (e.g., 8 เมษายน 2565) or DD-DD MonthName Jamboree (e.g., 15-16 กรกฎาคม 2564)
         # This regex captures the first day in case of a range
         match_thai_text_date = re.match(r'^(?P<day1>\d{1,2})(?:-\d{1,2})?\s*(?P<month_str>[ก-ฮ]+\.?)\s*(?P<year>\d{4})$', s)
         if match_thai_text_date:
@@ -120,9 +120,10 @@ def load_sqlite_data():
 
         # Strip & convert essential data types
         df.columns = df.columns.str.strip()
-        # Ensure 'เลขบัตรประชาชน' and 'HN' are treated as strict strings to preserve leading zeros/exact match
         df['เลขบัตรประชาชน'] = df['เลขบัตรประชาชน'].astype(str).str.strip()
-        df['HN'] = df['HN'].astype(str).str.strip() # Modified for strict HN matching
+        # HN handling as per the "old code" for now (str(int(float(x))))
+        # This converts "0000" to "0" and numerical HNs to strings without leading zeros
+        df['HN'] = df['HN'].apply(lambda x: str(int(float(x))) if pd.notna(x) else "").str.strip()
         df['ชื่อ-สกุล'] = df['ชื่อ-สกุล'].astype(str).str.strip()
         df['Year'] = df['Year'].astype(int)
 
@@ -359,7 +360,7 @@ def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
         hb_val = float(hb)
         hb_ref = 13 if sex == "ชาย" else 12
         if hb_val < hb_ref:
-            advice_parts.append("ระดับฮีโมโกลบินต่ำ ควรตรวจหาภาวะโลหิตจางและติดตามซ้ำ")
+            advice_parts.append("ระดับฮีโมโกลบินต่ำ ควรตรวจหาภาภาวะเลือดจางและตรวจติดตาม")
     except:
         pass
 
@@ -367,7 +368,7 @@ def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
         hct_val = float(hct)
         hct_ref = 39 if sex == "ชาย" else 36
         if hct_val < hct_ref:
-            advice_parts.append("ค่าฮีมาโตคริตต่ำ ควรตรวจหาภาวะเลือดจางและตรวจติดตาม")
+            advice_parts.append("ค่าฮีมาโตคริตต่ำ ควรตรวจหาภาภาวะเลือดจางและตรวจติดตาม")
     except:
         pass
 
@@ -449,69 +450,105 @@ st.markdown("""
 st.markdown("<h1 style='text-align:center; font-family: \"Sarabun\", sans-serif;'>ระบบรายงานผลตรวจสุขภาพ</h1>", unsafe_allow_html=True)
 st.markdown("<h4 style='text-align:center; color:gray; font-family: \"Sarabun\", sans-serif;'>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม รพ.สันทราย -</h4>", unsafe_allow_html=True)
 
-with st.form("search_form"):
-    col1, col2, col3 = st.columns(3)
-    id_card = col1.text_input("เลขบัตรประชาชน")
-    hn = col2.text_input("HN")
-    full_name = col3.text_input("ชื่อ-สกุล")
-    submitted = st.form_submit_button("ค้นหา")
+# Main search form moved to sidebar
+with st.sidebar.form("search_form_sidebar"):
+    st.markdown("<h3>ค้นหาข้อมูลผู้ป่วย</h3>", unsafe_allow_html=True)
+    search_query = st.text_input("กรอก HN หรือ ชื่อ-สกุล")
+    submitted_sidebar = st.form_submit_button("ค้นหา")
 
-if submitted:
+if submitted_sidebar:
     # Clear previous results immediately upon new search
     st.session_state.pop("search_result", None)
     st.session_state.pop("person_row", None)
     st.session_state.pop("selected_row_found", None)
-    st.session_state.pop("selected_index", None) # Clear selected year/date button
+    st.session_state.pop("selected_year_from_sidebar", None) # Clear previously selected year
+    st.session_state.pop("selected_exam_date_from_sidebar", None) # Clear previously selected exam date
 
-    query = df.copy()
+    query_df = df.copy()
 
-    # Apply stripping directly to query columns for robust exact match
-    if id_card.strip():
-        query = query[query["เลขบัตรประชาชน"].str.strip() == id_card.strip()]
-    if hn.strip():
-        # HN is already loaded as string, so direct comparison is exact
-        query = query[query["HN"].str.strip() == hn.strip()] 
-    if full_name.strip():
-        query = query[query["ชื่อ-สกุล"].str.strip() == full_name.strip()]
+    if search_query.strip():
+        # Check if the query is purely numeric (potential HN)
+        if search_query.strip().isdigit():
+            # Clean user input for HN search (digits only, no leading zeros)
+            hn_search_value = str(int(search_query.strip()))
+            query_df = query_df[query_df["HN_SEARCHABLE"] == hn_search_value]
+        else:
+            # Assume it's a full name if not purely numeric
+            query_df = query_df[query_df["ชื่อ-สกุล"].str.strip() == search_query.strip()]
     
-    if query.empty:
-        st.error("❌ ไม่พบข้อมูล กรุณาตรวจสอบข้อมูลที่กรอกอีกครั้ง") # Improved error message
+    if query_df.empty:
+        st.sidebar.error("❌ ไม่พบข้อมูล กรุณาตรวจสอบข้อมูลที่กรอกอีกครั้ง") # Improved error message in sidebar
     else:
-        st.session_state["search_result"] = query
+        st.session_state["search_result"] = query_df
 
-# ==================== SELECT YEAR FROM RESULTS ====================
+# ==================== SELECT YEAR AND EXAM DATE IN SIDEBAR ====================
 if "search_result" in st.session_state:
     results_df = st.session_state["search_result"]
 
-    available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
-    selected_year = st.selectbox(
-        "📅 เลือกปีที่ต้องการดูผลตรวจรายงาน",
-        options=available_years,
-        format_func=lambda y: f"พ.ศ. {y}"
-    )
+    with st.sidebar:
+        st.markdown("<hr>", unsafe_allow_html=True) # Separator
+        st.markdown("<h3>เลือกปีและวันที่ตรวจ</h3>", unsafe_allow_html=True)
 
-    selected_hn = results_df.iloc[0]["HN"] # Get HN of the found person
+        available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
+        
+        # Use session state to persist selection across reruns
+        if "selected_year_from_sidebar" not in st.session_state:
+            st.session_state["selected_year_from_sidebar"] = available_years[0] if available_years else None
+        
+        selected_year_from_sidebar = st.selectbox(
+            "📅 เลือกปีที่ต้องการดูผลตรวจรายงาน",
+            options=available_years,
+            format_func=lambda y: f"พ.ศ. {y}",
+            index=available_years.index(st.session_state["selected_year_from_sidebar"]) if st.session_state["selected_year_from_sidebar"] in available_years else 0,
+            key="year_select" # Use a key to manage state
+        )
+        st.session_state["selected_year_from_sidebar"] = selected_year_from_sidebar
 
-    person_year_df = results_df[
-        (results_df["Year"] == selected_year) &
-        (results_df["HN"] == selected_hn)
-    ]
 
-    person_year_df = person_year_df.drop_duplicates(subset=["HN", "วันที่ตรวจ"])
+        if selected_year_from_sidebar:
+            selected_hn = results_df.iloc[0]["HN"] # Get HN of the found person (assuming one person in results_df)
 
-    exam_dates = person_year_df["วันที่ตรวจ"].dropna().unique()
-    
-    if len(exam_dates) > 1:
-        for idx, row in person_year_df.iterrows():
-            label = str(row["วันที่ตรวจ"]).strip() if pd.notna(row["วันที่ตรวจ"]) else f"ครั้งที่ {idx+1}"
-            if st.button(label, key=f"checkup_{idx}"):
-                st.session_state["person_row"] = row.to_dict()
-                st.session_state["selected_row_found"] = True
-    elif len(person_year_df) == 1:
-        st.session_state["person_row"] = person_year_df.iloc[0].to_dict()
-        st.session_state["selected_row_found"] = True
+            person_year_df = results_df[
+                (results_df["Year"] == selected_year_from_sidebar) &
+                (results_df["HN"] == selected_hn)
+            ].drop_duplicates(subset=["HN", "วันที่ตรวจ"]).sort_values(by="วันที่ตรวจ", ascending=False) # Sort by date
 
-# ==================== Display Health Report ====================
+            exam_dates_options = person_year_df["วันที่ตรวจ"].dropna().unique().tolist()
+            
+            if exam_dates_options:
+                # If there's only one exam date, automatically select it and display the report
+                if len(exam_dates_options) == 1:
+                    st.session_state["selected_exam_date_from_sidebar"] = exam_dates_options[0]
+                    # Automatically set person_row if only one date
+                    st.session_state["person_row"] = person_year_df[
+                        person_year_df["วันที่ตรวจ"] == st.session_state["selected_exam_date_from_sidebar"]
+                    ].iloc[0].to_dict()
+                    st.session_state["selected_row_found"] = True
+                else:
+                    # Dropdown for multiple exam dates
+                    if "selected_exam_date_from_sidebar" not in st.session_state:
+                        st.session_state["selected_exam_date_from_sidebar"] = exam_dates_options[0]
+                    
+                    selected_exam_date_from_sidebar = st.selectbox(
+                        "🗓️ เลือกวันที่ตรวจ",
+                        options=exam_dates_options,
+                        index=exam_dates_options.index(st.session_state["selected_exam_date_from_sidebar"]) if st.session_state["selected_exam_date_from_sidebar"] in exam_dates_options else 0,
+                        key="exam_date_select" # Use a key
+                    )
+                    st.session_state["selected_exam_date_from_sidebar"] = selected_exam_date_from_sidebar
+
+                    # Update person_row based on selected exam date
+                    st.session_state["person_row"] = person_year_df[
+                        person_year_df["วันที่ตรวจ"] == selected_exam_date_from_sidebar
+                    ].iloc[0].to_dict()
+                    st.session_state["selected_row_found"] = True
+            else:
+                st.info("ไม่พบข้อมูลการตรวจสำหรับปีที่เลือก")
+                st.session_state.pop("person_row", None)
+                st.session_state.pop("selected_row_found", None)
+
+
+# ==================== Display Health Report (Main Content) ====================
 if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
     person = st.session_state["person_row"]
     year_display = person.get("Year", "-")
@@ -1212,98 +1249,10 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         
         # ================ Section: Hepatitis B =================
 
-        THAI_MONTHS_GLOBAL = { # Global scope for general Thai month mapping
-            1: "มกราคม", 2: "กุมภาพันธ์", 3: "มีนาคม", 4: "เมษายน",
-            5: "พฤษภาคม", 6: "มิถุนายน", 7: "กรกฎาคม", 8: "สิงหาคม",
-            9: "กันยายน", 10: "ตุลาคม", 11: "พฤศจิกายน", 12: "ธันวาคม"
-        }
-        # Moved inside normalize_thai_date for local use to ensure consistency
-
-        def normalize_date_for_display(date_str_input): # Renamed to avoid confusion with the global normalize_thai_date
-            if is_empty(date_str_input):
-                return "-"
-            
-            s = str(date_str_input).strip().replace("พ.ศ.", "").replace("พศ.", "").strip()
-
-            if s.lower() in ["ไม่ตรวจ", "นัดที่หลัง", "ไม่ได้เข้ารับการตรวจ", ""]:
-                return s
-
-            # Thai month abbreviations and full names (for conversion/display)
-            # Define here to use the correct scope for the helper function
-            thai_months_local = {
-                1: "มกราคม", 2: "กุมภาพันธ์", 3: "มีนาคม", 4: "เมษายน",
-                5: "พฤษภาคม", 6: "มิถุนายน", 7: "กรกฎาคม", 8: "สิงหาคม",
-                9: "กันยายน", 10: "ตุลาคม", 11: "พฤศจิกายน", 12: "ธันวาคม"
-            }
-            thai_month_abbr_to_num_local = {
-                "ม.ค.": 1, "ม.ค": 1, "มกราคม": 1,
-                "ก.พ.": 2, "ก.พ": 2, "กพ": 2, "กุมภาพันธ์": 2,
-                "มี.ค.": 3, "มี.ค": 3, "มีนาคม": 3,
-                "เม.ย.": 4, "เม.ย": 4, "เมษายน": 4,
-                "พ.ค.": 5, "พ.ค": 5, "พฤษภาคม": 5,
-                "มิ.ย.": 6, "มิ.ย": 6, "มิถุนายน": 6,
-                "ก.ค.": 7, "ก.ค": 7, "กรกฎาคม": 7,
-                "ส.ค.": 8, "ส.ค": 8, "สิงหาคม": 8,
-                "ก.ย.": 9, "ก.ย": 9, "กันยายน": 9,
-                "ต.ค.": 10, "ต.ค": 10, "ตุลาคม": 10,
-                "พ.ย.": 11, "พ.ย": 11, "พฤศจิกายน": 11,
-                "ธ.ค.": 12, "ธ.ค": 12, "ธันวาคม": 12
-            }
+        def normalize_date_for_display(date_str_input): # This wrapper exists in previous code, kept for compatibility
+            return normalize_thai_date(date_str_input)
 
 
-            # Try parsing different formats
-            try:
-                # Format: DD/MM/YYYY (e.g., 29/04/2565)
-                if re.match(r'^\d{1,2}/\d{1,2}/\d{4}$', s):
-                    day, month, year = map(int, s.split('/'))
-                    if year > 2500: # Assume Thai Buddhist year if year > 2500
-                        year -= 543
-                    dt = datetime(year, month, day)
-                    return f"{dt.day} {thai_months_local[dt.month]} {dt.year + 543}".replace('.', '')
-
-                # Format: DD-MM-YYYY (e.g., 29-04-2565)
-                if re.match(r'^\d{1,2}-\d{1,2}-\d{4}$', s):
-                    day, month, year = map(int, s.split('-'))
-                    if year > 2500: # Assume Thai Buddhist year if year > 2500
-                        year -= 543
-                    dt = datetime(year, month, day)
-                    return f"{dt.day} {thai_months_local[dt.month]} {dt.year + 543}".replace('.', '')
-
-                # Format: DD MonthName YYYY (e.g., 8 เมษายน 2565) or DD-DD MonthName YYYY (e.g., 15-16 กรกฎาคม 2564)
-                # This regex captures the first day in case of a range
-                match_thai_text_date = re.match(r'^(?P<day1>\d{1,2})(?:-\d{1,2})?\s*(?P<month_str>[ก-ฮ]+\.?)\s*(?P<year>\d{4})$', s)
-                if match_thai_text_date:
-                    day = int(match_thai_text_date.group('day1'))
-                    month_str = match_thai_text_date.group('month_str').strip().replace('.', '')
-                    year = int(match_thai_text_date.group('year'))
-                    
-                    month_num = thai_month_abbr_to_num_local.get(month_str)
-                    if month_num:
-                        try:
-                            # Convert BE year to CE year for datetime object, then back for display
-                            dt = datetime(year - 543, month_num, day)
-                            return f"{day} {thai_months_local[dt.month]} {year}".replace('.', '')
-                        except ValueError:
-                            pass # Invalid date, fall through
-
-            except Exception:
-                pass # Fall through to general parsing or return original string
-
-            # Fallback to pandas for robust parsing if other specific regex fail
-            try:
-                parsed_dt = pd.to_datetime(s, dayfirst=True)
-                # Heuristic for Buddhist Era year: if parsed_dt.year is unexpectedly high (e.g., > current CE year + 50),
-                # assume it's a BE year that pandas interpreted as CE.
-                if parsed_dt.year > datetime.now().year + 50: 
-                    parsed_dt = parsed_dt.replace(year=parsed_dt.year - 543)
-
-                return f"{parsed_dt.day} {thai_months_local[parsed_dt.month]} {parsed_dt.year + 543}".replace('.', '')
-            except Exception:
-                pass
-
-            return s # Final fallback, returns original string if no format matches.
-
-        
         hep_check_date_raw = person.get("ปีตรวจHEP")
         hep_check_date = normalize_date_for_display(hep_check_date_raw) # Use the new normalization function here
         
