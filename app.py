@@ -823,22 +823,21 @@ st.markdown("""
     }
     
     /* Set a base font size for the body, allowing overrides */
-    body {
-        font-size: 18px !important;
-    }
-
-    /* All other text elements will inherit 18px unless specified */
-    p, div, span, label, th, td, button, input, select, option {
+    body, p, div, span, label, th, td, button, input, select, option {
         font-size: 18px !important;
     }
     
-    /* Set specific size for main report titles (h1) */
+    /* Set specific size for main report title (h1) */
     .report-header-container h1 {
-        font-size: 2.5rem !important; /* Adjust size as needed */
-        margin: 0.2rem 0 !important;
-        padding: 0 !important;
+        font-size: 2.2rem !important;
         font-weight: bold;
-        line-height: 1.2 !important;
+    }
+
+    /* Style for the clinic subtitle (h2) */
+    .report-header-container h2 {
+        font-size: 1.6rem !important; /* Size between h1 and body text */
+        color: darkgrey;
+        font-weight: bold;
     }
 
     /* Set specific size for sidebar titles (h3) */
@@ -846,12 +845,17 @@ st.markdown("""
         font-size: 22px !important; /* Slightly larger than body text */
     }
 
-    /* Control spacing for header paragraphs to be compact */
-    .report-header-container p {
-        margin: 0 !important;
-        padding: 2px 0 !important; /* a little vertical padding */
-        line-height: 1.4 !important;
+    /* Control spacing for all elements in header to be more spread out */
+    .report-header-container * {
+        line-height: 1.6 !important; /* Adjust this value to control spacing */
+        margin: 0.1rem 0 !important;
+        padding: 0 !important;
     }
+    
+    .report-header-container p {
+        margin: 0.2rem 0 !important;
+    }
+
     </style>
 """, unsafe_allow_html=True)
 
@@ -1004,14 +1008,14 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     waist_raw = person.get("รอบเอว", "-")
     check_date = person.get("วันที่ตรวจ", "-")
 
-    # --- NEW: Unified Header Block ---
+    # --- NEW: Unified Header Block (MODIFIED) ---
     report_header_html = f"""
     <div class="report-header-container" style="text-align: center; margin-bottom: 2rem;">
         <h1>รายงานผลการตรวจสุขภาพ</h1>
-        <h1 style="color: darkgrey;">- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม -</h1>
+        <h2>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม -</h2>
         <p>ชั้น 2 อาคารผู้ป่วยนอก-อุบัติเหตุ โรงพยาบาลสันทราย 201 หมู่ 11 ถ.เชียงใหม่–พร้าว ต.หนองหาร อ.สันทราย จ.เชียงใหม่ 50290</p>
         <p>ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167</p>
-        <p style="margin-top: 0.5rem;"><b>วันที่ตรวจ:</b> {check_date or "-"}</p>
+        <p><b>วันที่ตรวจ:</b> {check_date or "-"}</p>
     </div>
     """
     st.markdown(report_header_html, unsafe_allow_html=True)
@@ -1056,21 +1060,21 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     st.markdown(f"""
     <div>
         <hr>
-        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; margin-top: 24px; margin-bottom: 20px; text-align: center; line-height: 1.6;">
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; margin-top: 24px; margin-bottom: 20px; text-align: center;">
             <div><b>ชื่อ-สกุล:</b> {person.get('ชื่อ-สกุล', '-')}</div>
             <div><b>อายุ:</b> {str(int(float(person.get('อายุ')))) if str(person.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')} ปี</div>
             <div><b>เพศ:</b> {person.get('เพศ', '-')}</div>
             <div><b>HN:</b> {str(int(float(person.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person.get('HN', '-')}</div>
             <div><b>หน่วยงาน:</b> {person.get('หน่วยงาน', '-')}</div>
         </div>
-        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; margin-bottom: 16px; text-align: center; line-height: 1.6;">
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; margin-bottom: 16px; text-align: center;">
             <div><b>น้ำหนัก:</b> {weight_display}</div>
             <div><b>ส่วนสูง:</b> {height_display}</div>
             <div><b>รอบเอว:</b> {waist_display}</div>
             <div><b>ความดันโลหิต:</b> {bp_full}</div>
             <div><b>ชีพจร:</b> {pulse}</div>
         </div>
-        {f"<div style='margin-top: 16px; text-align: center; line-height: 1.6;'><b>คำแนะนำ:</b> {summary_advice}</div>" if summary_advice else ""}
+        {f"<div style='margin-top: 16px; text-align: center;'><b>คำแนะนำ:</b> {summary_advice}</div>" if summary_advice else ""}
     </div>
     """, unsafe_allow_html=True)
 
