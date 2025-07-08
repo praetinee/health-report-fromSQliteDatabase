@@ -827,8 +827,8 @@ st.set_page_config(page_title="ระบบรายงานสุขภาพ"
 
 # Main application title and subtitle
 # Adjusted line-height and margin-bottom for better spacing
-st.markdown("<h1 style='text-align:center; font-family: \"Sarabun\", sans-serif; margin-bottom: 0.5rem;'>รายงานผลการตรวจสุขภาพ</h1>", unsafe_allow_html=True)
-st.markdown("<h4 style='text-align:center; color:gray; font-family: \"Sarabun\", sans-serif; margin-top: 0; line-height: 1.6; margin-bottom: 1.5rem;'>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม รพ.สันทราย -</h4>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center; font-family: \"Sarabun\", sans-serif; margin-bottom: 0.5rem; line-height: 2.0;'>รายงานผลการตรวจสุขภาพ</h1>", unsafe_allow_html=True)
+st.markdown("<h4 style='text-align:center; color:gray; font-family: \"Sarabun\", sans-serif; margin-top: 0; line-height: 2.0; margin-bottom: 1.5rem;'>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม รพ.สันทราย -</h4>", unsafe_allow_html=True)
 
 
 st.markdown("""
