@@ -818,8 +818,11 @@ st.markdown("""
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
 
     /* Apply Sarabun font and 18px size globally */
-    html, body, [class*="st-"], [class*="css-"] {
+    html, body, [class*="st-"], [class*="css-"], h1, h3 {
         font-family: 'Sarabun', sans-serif !important;
+    }
+    
+    html, body, [class*="st-"], [class*="css-"] {
         font-size: 18px !important;
     }
     
@@ -828,11 +831,6 @@ st.markdown("""
         font-size: 2.5rem !important; /* Adjust size as needed */
         margin-bottom: 0.2rem;
         font-weight: bold;
-    }
-
-    /* Keep section headers at a specific size */
-    .st-emotion-cache-16txtl3 {
-        font-size: 18px !important;
     }
 
     /* Custom style for header paragraphs to be compact */
@@ -1006,8 +1004,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     <div class="report-header" style="text-align: center; margin-bottom: 2rem;">
         <h1>รายงานผลการตรวจสุขภาพ</h1>
         <h1 style="color: darkgrey;">- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม -</h1>
-        <p>ชั้น 2 อาคารผู้ป่วยนอก-อุบัติเหตุ โรงพยาบาลสันทราย</p>
-        <p>201 หมู่ 11 ถ.เชียงใหม่–พร้าว ต.หนองหาร อ.สันทราย จ.เชียงใหม่ 50290</p>
+        <p>ชั้น 2 อาคารผู้ป่วยนอก-อุบัติเหตุ โรงพยาบาลสันทราย 201 หมู่ 11 ถ.เชียงใหม่–พร้าว ต.หนองหาร อ.สันทราย จ.เชียงใหม่ 50290</p>
         <p>ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167</p>
         <p style="margin-top: 0.5rem;"><b>วันที่ตรวจ:</b> {check_date or "-"}</p>
     </div>
@@ -1108,7 +1105,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
 
     blood_config = [
         ("น้ำตาลในเลือด (FBS)", "FBS", "74 - 106 mg/dl", 74, 106),
-        ("กรดยูริก (Uric Acid)", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2), #แก้ไขชื่อ
+        ("กรดยูริก (Uric Acid)", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2),
         ("การทำงานของเอนไซม์ตับ (ALK)", "ALP", "30 - 120 U/L", 30, 120),
         ("การทำงานของเอนไซม์ตับ (SGOT)", "SGOT", "< 37 U/L", None, 37),
         ("การทำงานของเอนไซม์ตับ (SGPT)", "SGPT", "< 41 U/L", None, 41),
