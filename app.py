@@ -168,7 +168,7 @@ st.markdown("""
 
 # Main search form moved to sidebar
 st.sidebar.markdown("<h3>ค้นหาข้อมูลผู้เข้ารับบริการ</h3>", unsafe_allow_html=True)
-search_query = st.sidebar.text_input("กรอก HN หรือ ชื่อ-สกุล")
+st.sidebar.text_input("กรอก HN หรือ ชื่อ-สกุล", key="search_query")
 submitted_sidebar = st.sidebar.button("ค้นหา")
 
 
@@ -182,7 +182,7 @@ if submitted_sidebar:
     st.session_state.pop("last_selected_year_sidebar", None)
     st.session_state.pop("last_selected_exam_date_sidebar", None)
     query_df = df.copy()
-    search_term = search_query.strip()
+    search_term = st.session_state.search_query.strip()
     if search_term:
         if search_term.isdigit():
             query_df = query_df[query_df["HN"] == search_term]
