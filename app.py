@@ -9,9 +9,9 @@ import numpy as np
 from collections import OrderedDict
 from datetime import datetime
 import re
-import streamlit.components.v1 as components # เปลี่ยนมาใช้ component ของ streamlit โดยตรง
+import streamlit.components.v1 as components
 
-# --- ALL HELPER FUNCTIONS (No Changes) ---
+# --- All Helper Functions (No Changes) ---
 # โค้ดในส่วนของฟังก์ชันทั้งหมดเหมือนเดิมทุกประการ
 def is_empty(val):
     return str(val).strip().lower() in ["", "-", "none", "nan", "null"]
@@ -353,20 +353,55 @@ st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
     
-    /* 1. Force Sarabun on ALL elements */
-    * {
+    /* 1. Set Sarabun as the base font for the entire page for good inheritance. */
+    html, body {
+        font-family: 'Sarabun', sans-serif !important;
+    }
+
+    /* 2. Explicitly apply Sarabun to all major text and widget elements to override defaults. */
+    h1, h2, h3, h4, h5, h6, p, a, li, label,
+    button, input, select, textarea, th, td,
+    .stButton > button,
+    .stTextInput > div > div > input,
+    div[data-testid="stMarkdown"],
+    div[data-testid="stMetric"],
+    div[data-testid="stAlert"] {
         font-family: 'Sarabun', sans-serif !important;
     }
     
-    /* 2. Create a specific exception for the sidebar collapse button icon */
-    [data-testid="stSidebarNavCollapseButton"] * {
-        font-family: 'sans-serif' !important; /* Revert to a generic font for the icon */
-    }
-
+    /* 3. CSS for Printing */
     @media print {
-        .no-print { display: none !important; }
-        [data-testid="stSidebar"] { display: none !important; }
-        section[data-testid="stAppViewContainer"] { left: 0 !important; width: 100% !important; padding: 1rem !important; }
+        /* Hide UI elements that shouldn't be printed */
+        .no-print, [data-testid="stSidebar"], [data-testid="stHeader"] {
+            display: none !important;
+        }
+
+        /* Ensure the main content area takes up the full page */
+        .main, section[data-testid="stAppViewContainer"] {
+            width: 100% !important;
+            position: static !important;
+            margin: 0 !important;
+            padding: 2cm !important; /* Add some margin for the paper */
+            float: none !important;
+        }
+        
+        /* Reset colors and backgrounds for printing to save ink */
+        * {
+            background: transparent !important;
+            color: black !important;
+            box-shadow: none !important;
+            text-shadow: none !important;
+        }
+
+        /* Prevent tables and key sections from being split across pages */
+        table, figure, .st-emotion-cache-block-container {
+            page-break-inside: avoid;
+        }
+        
+        /* Ensure table borders are visible when printing */
+        table, th, td {
+            border: 1px solid #dee2e6 !important;
+        }
     }
     </style>
 """, unsafe_allow_html=True)
@@ -412,7 +447,12 @@ with st.sidebar:
 
         available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
         year_index = available_years.index(st.session_state.year_select_sidebar) if st.session_state.get("year_select_sidebar") in available_years else 0
-        st.selectbox("📅 เลือกปีที่ต้องการดูผลตรวจ", available_years, index=year_index, key="year_select_sidebar", format_func=lambda y: f"พ.ศ. {y}", on_change=update_report_view)
+        
+        st.selectbox(
+            "📅 เลือกปีที่ต้องการดูผลตรวจ",
+            available_years, index=year_index, key="year_select_sidebar",
+            format_func=lambda y: f"พ.ศ. {y}", on_change=update_report_view
+        )
 
         current_year = st.session_state.get("year_select_sidebar", available_years[0])
         person_year_df = results_df[results_df["Year"] == current_year]
@@ -420,10 +460,16 @@ with st.sidebar:
         
         if exam_dates_options:
             date_index = exam_dates_options.index(st.session_state.exam_date_select_sidebar) if st.session_state.get("exam_date_select_sidebar") in exam_dates_options else 0
-            st.selectbox("🗓️ เลือกวันที่ตรวจ", exam_dates_options, index=date_index, key="exam_date_select_sidebar", on_change=update_report_view)
+            st.selectbox(
+                "🗓️ เลือกวันที่ตรวจ",
+                exam_dates_options, index=date_index, key="exam_date_select_sidebar",
+                on_change=update_report_view
+            )
         
         st.markdown("---")
-        # --- FIXED PRINT BUTTON ---
+        # --- NEW, ROBUST PRINT BUTTON ---
+        # We wrap the button in a div with class="no-print" to hide it during printing
+        st.markdown('<div class="no-print">', unsafe_allow_html=True)
         print_button_html = """
         <style>
             .print-button {
@@ -439,14 +485,11 @@ with st.sidebar:
                 border-color: var(--primary-color);
                 color: var(--primary-color);
             }
-            .print-button:active {
-                background-color: var(--primary-color);
-                color: white;
-            }
         </style>
         <button class="print-button" onclick="window.print()">🖨️ พิมพ์รายงานสุขภาพ</button>
         """
         components.html(print_button_html, height=50)
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # ==================== Display Health Report (Main Content) ====================
 if "person_row" in st.session_state:
@@ -529,10 +572,10 @@ if "person_row" in st.session_state:
         doctor_suggestion = str(person.get("DOCTER suggest", "")).strip()
         if is_empty(doctor_suggestion): doctor_suggestion = "<i>ไม่มีคำแนะนำจากแพทย์</i>"
         st.markdown(f"""
-            <div style='background-color:#1b5e20; color:white; padding:1.5rem 2rem; border-radius:8px; margin-top:2rem; margin-bottom:2rem; font-size:14px;'>
+            <div class='no-print' style='background-color:#1b5e20; color:white; padding:1.5rem 2rem; border-radius:8px; margin-top:2rem; margin-bottom:2rem; font-size:14px;'>
                 <b>สรุปความเห็นของแพทย์:</b><br>{doctor_suggestion}
             </div>
-            <div style='margin-top:7rem; text-align:right; padding-right:1rem;'>
+            <div class='no-print' style='margin-top:7rem; text-align:right; padding-right:1rem;'>
                 <div style='display:inline-block; text-align:center; width:340px;'>
                     <div style='border-bottom:1px dotted #ccc; margin-bottom:0.5rem; width:100%;'></div>
                     <div style='white-space:nowrap;'>นายแพทย์นพรัตน์ รัชฎาพร</div>
