@@ -12,13 +12,11 @@ import re
 import streamlit.components.v1 as components
 
 # --- All Helper Functions (No Changes) ---
-# โค้ดในส่วนของฟังก์ชันทั้งหมดเหมือนเดิมทุกประการ
 def is_empty(val):
     return str(val).strip().lower() in ["", "-", "none", "nan", "null"]
 THAI_MONTHS_GLOBAL = {
-    1: "มกราคม", 2: "กุมภาพันธ์", 3: "มีนาคม", 4: "เมษายน",
-    5: "พฤษภาคม", 6: "มิถุนายน", 7: "กรกฎาคม", 8: "สิงหาคม",
-    9: "กันยายน", 10: "ตุลาคม", 11: "พฤศจิกายน", 12: "ธันวาคม"
+    1: "มกราคม", 2: "กุมภาพันธ์", 3: "มีนาคม", 4: "เมษายน", 5: "พฤษภาคม", 6: "มิถุนายน", 
+    7: "กรกฎาคม", 8: "สิงหาคม", 9: "กันยายน", 10: "ตุลาคม", 11: "พฤศจิกายน", 12: "ธันวาคม"
 }
 THAI_MONTH_ABBR_TO_NUM_GLOBAL = {
     "ม.ค.": 1, "ม.ค": 1, "มกราคม": 1, "ก.พ.": 2, "ก.พ": 2, "กพ": 2, "กุมภาพันธ์": 2,
@@ -28,30 +26,36 @@ THAI_MONTH_ABBR_TO_NUM_GLOBAL = {
     "ก.ย.": 9, "ก.ย": 9, "กันยายน": 9, "ต.ค.": 10, "ต.ค": 10, "ตุลาคม": 10,
     "พ.ย.": 11, "พ.ย": 11, "พฤศจิกายน": 11, "ธ.ค.": 12, "ธ.ค": 12, "ธันวาคม": 12
 }
+
 def normalize_thai_date(date_str):
     if is_empty(date_str): return "-"
     s = str(date_str).strip().replace("พ.ศ.", "").replace("พศ.", "").strip()
     if s.lower() in ["ไม่ตรวจ", "นัดที่หลัง", "ไม่ได้เข้ารับการตรวจ", ""]: return s
     try:
         if re.match(r'^\d{1,2}/\d{1,2}/\d{4}$', s):
-            day, month, year = map(int, s.split('/')); year -= 543 if year > 2500 else 0
+            day, month, year = map(int, s.split('/')); 
+            if year > 2500: year -= 543
             return f"{day} {THAI_MONTHS_GLOBAL[month]} {year + 543}"
         if re.match(r'^\d{1,2}-\d{1,2}-\d{4}$', s):
-            day, month, year = map(int, s.split('-')); year -= 543 if year > 2500 else 0
+            day, month, year = map(int, s.split('-')); 
+            if year > 2500: year -= 543
             return f"{day} {THAI_MONTHS_GLOBAL[month]} {year + 543}"
         match = re.match(r'^(?P<day1>\d{1,2})(?:-\d{1,2})?\s*(?P<month_str>[ก-ฮ]+\.?)\s*(?P<year>\d{4})$', s)
         if match:
             day, month_str, year = int(match.group('day1')), match.group('month_str').strip('.'), int(match.group('year'))
             month_num = THAI_MONTH_ABBR_TO_NUM_GLOBAL.get(month_str)
             if month_num: return f"{day} {THAI_MONTHS_GLOBAL[month_num]} {year}"
-    except: pass
+    except Exception: pass
     try:
         dt = pd.to_datetime(s, dayfirst=True, errors='coerce')
         if pd.notna(dt):
-            year = dt.year - 543 if dt.year > datetime.now().year + 50 else dt.year
+            year = dt.year
+            if year > datetime.now().year + 50: year -= 543
             return f"{dt.day} {THAI_MONTHS_GLOBAL[dt.month]} {year + 543}"
-    except: pass
+    except Exception: pass
     return str(date_str)
+
+# (โค้ดฟังก์ชัน Helper อื่นๆ ทั้งหมดของคุณยังอยู่ครบถ้วนเหมือนเดิม)
 def get_float(col, person_data):
     try:
         val = person_data.get(col, "")
@@ -348,7 +352,7 @@ def load_sqlite_data():
 df = load_sqlite_data()
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
-# --- CSS Injection (FIXED for FONT and PRINT) ---
+# --- NEW, ROBUST CSS FOR FONT & PRINT ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
@@ -371,37 +375,24 @@ st.markdown("""
     
     /* 3. CSS for Printing */
     @media print {
-        /* Hide UI elements that shouldn't be printed */
         .no-print, [data-testid="stSidebar"], [data-testid="stHeader"] {
             display: none !important;
         }
-
-        /* Ensure the main content area takes up the full page */
         .main, section[data-testid="stAppViewContainer"] {
             width: 100% !important;
             position: static !important;
             margin: 0 !important;
-            padding: 2cm !important; /* Add some margin for the paper */
+            padding: 1.5cm !important;
             float: none !important;
         }
-        
-        /* Reset colors and backgrounds for printing to save ink */
         * {
             background: transparent !important;
             color: black !important;
             box-shadow: none !important;
             text-shadow: none !important;
         }
-
-        /* Prevent tables and key sections from being split across pages */
-        table, figure, .st-emotion-cache-block-container {
-            page-break-inside: avoid;
-        }
-        
-        /* Ensure table borders are visible when printing */
-        table, th, td {
-            border: 1px solid #dee2e6 !important;
-        }
+        table, figure { page-break-inside: avoid; }
+        table, th, td { border: 1px solid #dee2e6 !important; }
     }
     </style>
 """, unsafe_allow_html=True)
@@ -468,28 +459,27 @@ with st.sidebar:
         
         st.markdown("---")
         # --- NEW, ROBUST PRINT BUTTON ---
-        # We wrap the button in a div with class="no-print" to hide it during printing
-        st.markdown('<div class="no-print">', unsafe_allow_html=True)
         print_button_html = """
-        <style>
-            .print-button {
-                display: inline-flex; align-items: center; justify-content: center;
-                font-weight: 400; padding: 0.25rem 0.75rem; border-radius: 0.5rem;
-                min-height: 38.4px; margin: 0px; line-height: 1.6;
-                color: inherit; width: 100%; user-select: none;
-                background-color: var(--secondary-background-color);
-                border: 1px solid rgba(49, 51, 63, 0.2);
-                cursor: pointer;
-            }
-            .print-button:hover {
-                border-color: var(--primary-color);
-                color: var(--primary-color);
-            }
-        </style>
-        <button class="print-button" onclick="window.print()">🖨️ พิมพ์รายงานสุขภาพ</button>
+        <div class="no-print">
+            <style>
+                .print-button {
+                    display: inline-flex; align-items: center; justify-content: center;
+                    font-weight: 400; padding: 0.25rem 0.75rem; border-radius: 0.5rem;
+                    min-height: 38.4px; margin: 0px; line-height: 1.6;
+                    color: inherit; width: 100%; user-select: none;
+                    background-color: var(--secondary-background-color);
+                    border: 1px solid rgba(49, 51, 63, 0.2);
+                    cursor: pointer;
+                }
+                .print-button:hover {
+                    border-color: var(--primary-color);
+                    color: var(--primary-color);
+                }
+            </style>
+            <button class="print-button" onclick="window.print()">🖨️ พิมพ์รายงานสุขภาพ</button>
+        </div>
         """
         components.html(print_button_html, height=50)
-        st.markdown('</div>', unsafe_allow_html=True)
 
 # ==================== Display Health Report (Main Content) ====================
 if "person_row" in st.session_state:
