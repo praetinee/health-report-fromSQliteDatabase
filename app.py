@@ -355,26 +355,9 @@ st.set_page_config(page_title="ระบบรายงานสุขภาพ"
 # --- NEW, ROBUST CSS FOR FONT & PRINT ---
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
-    
-    /* 1. Set Sarabun as the base font for the entire page for good inheritance. */
-    html, body {
-        font-family: 'Sarabun', sans-serif !important;
-    }
+    # ... (โค้ดส่วนฟอนต์ยังอยู่เหมือนเดิม) ...
 
-    /* 2. Explicitly apply Sarabun to all major text and widget elements to override defaults. */
-    h1, h2, h3, h4, h5, h6, p, a, li, label,
-    button, input, select, textarea, th, td,
-    .stButton > button,
-    .stTextInput > div > div > input,
-    div[data-testid="stMarkdown"],
-    div[data-testid="stMetric"],
-    div[data-testid="stAlert"] {
-        font-family: 'Sarabun', sans-serif !important;
-    }
-    
-    /* 3. CSS for Printing */
-    @media print {
+    /* @media print {
         .no-print, [data-testid="stSidebar"], [data-testid="stHeader"] {
             display: none !important;
         }
@@ -393,7 +376,7 @@ st.markdown("""
         }
         table, figure { page-break-inside: avoid; }
         table, th, td { border: 1px solid #dee2e6 !important; }
-    }
+    } */
     </style>
 """, unsafe_allow_html=True)
 
