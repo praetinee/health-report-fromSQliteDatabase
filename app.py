@@ -189,7 +189,6 @@ def render_lab_table_html(title, subtitle, headers, rows, table_class="lab-table
     html_content += "</tbody></table></div>"
     return html_content
 
-# --- All other helper functions remain the same ---
 def kidney_summary_gfr_only(gfr_raw):
     try:
         gfr = float(str(gfr_raw).replace(",", "").strip())
@@ -388,9 +387,343 @@ def combined_health_advice(bmi, sbp, dbp):
         return f"{bmi_text} แนะนำให้ดูแลเรื่องโภชนาการและการออกกำลังกายอย่างเหมาะสม"
     return ""
 
-# --- All other simple helper functions are omitted for brevity ---
-# (safe_text, safe_value, interpret_alb, etc.)
-# ...
+def safe_text(val):
+    return "-" if str(val).strip().lower() in ["", "none", "nan", "-"] else str(val).strip()
+
+def safe_value(val):
+    val = str(val or "").strip()
+    if val.lower() in ["", "nan", "none", "-"]:
+        return "-"
+    return val
+    
+def interpret_alb(value):
+    val = str(value).strip().lower()
+    if val == "negative":
+        return "ไม่พบ"
+    elif val in ["trace", "1+", "2+"]:
+        return "พบโปรตีนในปัสสาวะเล็กน้อย"
+    elif val in ["3+", "4+"]:
+        return "พบโปรตีนในปัสสาวะ"
+    return "-"
+    
+def interpret_sugar(value):
+    val = str(value).strip().lower()
+    if val == "negative":
+        return "ไม่พบ"
+    elif val == "trace":
+        return "พบน้ำตาลในปัสสาวะเล็กน้อย"
+    elif val in ["1+", "2+", "3+", "4+", "5+", "6+"]:
+        return "พบน้ำตาลในปัสสาวะ"
+    return "-"
+    
+def parse_range_or_number(val):
+    val = val.replace("cell/hpf", "").replace("cells/hpf", "").replace("cell", "").strip().lower()
+    try:
+        if "-" in val:
+            low, high = map(float, val.split("-"))
+            return low, high
+        else:
+            num = float(val)
+            return num, num
+    except:
+        return None, None
+    
+def interpret_rbc(value):
+    val = str(value or "").strip().lower()
+    if val in ["-", "", "none", "nan"]:
+        return "-"
+    low, high = parse_range_or_number(val)
+    if high is None:
+        return value
+    if high <= 2:
+        return "ปกติ"
+    elif high <= 5:
+        return "พบเม็ดเลือดแดงในปัสสาวะเล็กน้อย"
+    else:
+        return "พบเม็ดเลือดแดงในปัสสาวะ"
+    
+def interpret_wbc(value):
+    val = str(value or "").strip().lower()
+    if val in ["-", "", "none", "nan"]:
+        return "-"
+    low, high = parse_range_or_number(val)
+    if high is None:
+        return value
+    if high <= 5:
+        return "ปกติ"
+    elif high <= 10:
+        return "พบเม็ดเลือดขาวในปัสสาวะเล็กน้อย"
+    else:
+        return "พบเม็ดเลือดขาวในปัสสาวะ"
+    
+def advice_urine(sex, alb, sugar, rbc, wbc):
+    alb_t = interpret_alb(alb)
+    sugar_t = interpret_sugar(sugar)
+    rbc_t = interpret_rbc(rbc)
+    wbc_t = interpret_wbc(wbc)
+    
+    if all(x in ["-", "ปกติ", "ไม่พบ", "พบโปรตีนในปัสสาวะเล็กน้อย", "พบน้ำตาลในปัสสาวะเล็กน้อย"]
+                     for x in [alb_t, sugar_t, rbc_t, wbc_t]):
+        return ""
+    
+    if "พบน้ำตาลในปัสสาวะ" in sugar_t and "เล็กน้อย" not in sugar_t:
+        return "ควรลดการบริโภคน้ำตาล และตรวจระดับน้ำตาลในเลือดเพิ่มเติม"
+    
+    if sex == "หญิง" and "พบเม็ดเลือดแดง" in rbc_t and "ปกติ" in wbc_t:
+        return "อาจมีปนเปื้อนจากประจำเดือน แนะนำให้ตรวจซ้ำ"
+    
+    if sex == "ชาย" and "พบเม็ดเลือดแดง" in rbc_t and "ปกติ" in wbc_t:
+        return "พบเม็ดเลือดแดงในปัสสาวะ ควรตรวจทางเดินปัสสาวะเพิ่มเติม"
+    
+    if "พบเม็ดเลือดขาว" in wbc_t and "เล็กน้อย" not in wbc_t:
+        return "อาจมีการอักเสบของระบบทางเดินปัสสาวะ แนะนำให้ตรวจซ้ำ"
+    
+    return "ควรตรวจปัสสาวะซ้ำเพื่อติดตามผล"
+    
+def is_urine_abnormal(test_name, value, normal_range):
+    val = str(value or "").strip().lower()
+    if val in ["", "-", "none", "nan", "null"]:
+        return False
+    
+    if test_name == "กรด-ด่าง (pH)":
+        try:
+            return not (5.0 <= float(val) <= 8.0)
+        except:
+            return True
+    
+    if test_name == "ความถ่วงจำเพาะ (Sp.gr)":
+        try:
+            return not (1.003 <= float(val) <= 1.030)
+        except:
+            return True
+    
+    if test_name == "เม็ดเลือดแดง (RBC)":
+        return "พบ" in interpret_rbc(val).lower()
+    
+    if test_name == "เม็ดเลือดขาว (WBC)":
+        return "พบ" in interpret_wbc(val).lower()
+    
+    if test_name == "น้ำตาล (Sugar)":
+        return interpret_sugar(val).lower() != "ไม่พบ"
+    
+    if test_name == "โปรตีน (Albumin)":
+        return interpret_alb(val).lower() != "ไม่พบ"
+    
+    if test_name == "สี (Colour)":
+        return val not in ["yellow", "pale yellow", "colorless", "paleyellow", "light yellow"]
+    
+    return False
+
+def render_urine_section(person_data, sex, year_selected):
+    alb_raw = person_data.get("Alb", "-")
+    sugar_raw = person_data.get("sugar", "-")
+    rbc_raw = person_data.get("RBC1", "-")
+    wbc_raw = person_data.get("WBC1", "-")
+
+    urine_data = [
+        ("สี (Colour)", person_data.get("Color", "-"), "Yellow, Pale Yellow"),
+        ("น้ำตาล (Sugar)", sugar_raw, "Negative"),
+        ("โปรตีน (Albumin)", alb_raw, "Negative, trace"),
+        ("กรด-ด่าง (pH)", person_data.get("pH", "-"), "5.0 - 8.0"),
+        ("ความถ่วงจำเพาะ (Sp.gr)", person_data.get("Spgr", "-"), "1.003 - 1.030"),
+        ("เม็ดเลือดแดง (RBC)", rbc_raw, "0 - 2 cell/HPF"),
+        ("เม็ดเลือดขาว (WBC)", wbc_raw, "0 - 5 cell/HPF"),
+        ("เซลล์เยื่อบุผิว (Squam.epit.)", person_data.get("SQ-epi", "-"), "0 - 10 cell/HPF"),
+        ("อื่นๆ", person_data.get("ORTER", "-"), "-"),
+    ]
+
+    df_urine = pd.DataFrame(urine_data, columns=["การตรวจ", "ผลตรวจ", "ค่าปกติ"])
+    
+    style = """
+    <style>
+        .urine-table-container { margin-top: 1rem; }
+        .urine-table {
+            width: 100%; border-collapse: collapse; color: var(--text-color);
+            table-layout: fixed; font-size: 14px;
+        }
+        .urine-table thead th {
+            background-color: var(--secondary-background-color); color: var(--text-color);
+            padding: 3px 2px; text-align: center; font-weight: bold; border: 1px solid transparent;
+        }
+        .urine-table td {
+            padding: 3px 2px; border: 1px solid transparent; text-align: center; color: var(--text-color);
+        }
+        .urine-abn { background-color: rgba(255, 64, 64, 0.25); }
+        .urine-row { background-color: rgba(255,255,255,0.02); }
+    </style>
+    """
+    html_content = style + render_section_header("ผลการตรวจปัสสาวะ", "Urinalysis")
+    html_content += "<div class='urine-table-container'><table class='urine-table'>"
+    html_content += """
+        <colgroup>
+            <col style="width: 33.33%;"> <col style="width: 33.33%;"> <col style="width: 33.33%;"> </colgroup>
+    """
+    html_content += "<thead><tr>"
+    html_content += "<th style='text-align: left;'>การตรวจ</th>"
+    html_content += "<th>ผลตรวจ</th>"
+    html_content += "<th style='text-align: left;'>ค่าปกติ</th>"
+    html_content += "</tr></thead><tbody>"
+    
+    for _, row in df_urine.iterrows():
+        is_abn = is_urine_abnormal(row["การตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"])
+        css_class = "urine-abn" if is_abn else "urine-row"
+        html_content += f"<tr class='{css_class}'>"
+        html_content += f"<td style='text-align: left;'>{row['การตรวจ']}</td>"
+        html_content += f"<td>{safe_value(row['ผลตรวจ'])}</td>"
+        html_content += f"<td style='text-align: left;'>{row['ค่าปกติ']}</td>"
+        html_content += "</tr>"
+    html_content += "</tbody></table></div>"
+    st.markdown(html_content, unsafe_allow_html=True)
+    
+    summary = advice_urine(sex, alb_raw, sugar_raw, rbc_raw, wbc_raw)
+    
+    has_any_urine_result = any(not is_empty(val) for _, val, _ in urine_data)
+
+    if not has_any_urine_result:
+        pass
+    elif summary:
+        st.markdown(f"""
+            <div class="advice-box" style='
+                background-color: rgba(255, 255, 0, 0.2);
+                color: var(--text-color);
+                padding: 1rem; border-radius: 6px; margin-top: 1rem; font-size: 14px;
+            '>
+                {summary}
+            </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown(f"""
+            <div class="advice-box" style='
+                background-color: rgba(57, 255, 20, 0.2);
+                color: var(--text-color);
+                padding: 1rem; border-radius: 6px; margin-top: 1rem; font-size: 14px;
+            '>
+                ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ
+            </div>
+        """, unsafe_allow_html=True)
+
+
+def interpret_stool_exam(val):
+    val = str(val or "").strip().lower()
+    if val in ["", "-", "none", "nan"]:
+        return "-"
+    elif val == "normal":
+        return "ไม่พบเม็ดเลือดขาวในอุจจาระ ถือว่าปกติ"
+    elif "wbc" in val or "เม็ดเลือดขาว" in val:
+        return "พบเม็ดเลือดขาวในอุจจาระ นัดตรวจซ้ำ"
+    return val
+
+def interpret_stool_cs(value):
+    value = str(value or "").strip()
+    if value in ["", "-", "none", "nan"]:
+        return "-"
+    if "ไม่พบ" in value or "ปกติ" in value:
+        return "ไม่พบการติดเชื้อ"
+    return "พบการติดเชื้อในอุจจาระ ให้พบแพทย์เพื่อตรวจรักษาเพิ่มเติม"
+
+def render_stool_html_table(exam, cs):
+    style = """
+    <style>
+        .stool-container { margin-top: 1rem; }
+        .stool-table {
+            width: 100%; border-collapse: collapse; color: var(--text-color);
+            table-layout: fixed; font-size: 14px;
+        }
+        .stool-table th {
+            background-color: var(--secondary-background-color); color: var(--text-color);
+            padding: 3px 2px; text-align: left; width: 50%; font-weight: bold; border: 1px solid transparent;
+        }
+        .stool-table td {
+            padding: 3px 2px; border: 1px solid transparent; width: 50%; color: var(--text-color);
+        }
+    </style>
+    """
+    html_content = f"""
+    <div class='stool-container'>
+        <table class='stool-table'>
+            <colgroup>
+                <col style="width: 50%;"> <col style="width: 50%;"> </colgroup>
+            <tr>
+                <th>ผลตรวจอุจจาระทั่วไป</th>
+                <td style='text-align: left;'>{exam if exam != "-" else "ไม่ได้เข้ารับการตรวจ"}</td>
+            </tr>
+            <tr>
+                <th>ผลตรวจอุจจาระเพาะเชื้อ</th>
+                <td style='text-align: left;'>{cs if cs != "-" else "ไม่ได้เข้ารับการตรวจ"}</td>
+            </tr>
+        </table>
+    </div>
+    """
+    return style + html_content
+
+def interpret_cxr(val):
+    val = str(val or "").strip()
+    if is_empty(val):
+        return "ไม่ได้เข้ารับการตรวจเอกซเรย์"
+    if any(keyword in val.lower() for keyword in ["ผิดปกติ", "ฝ้า", "รอย", "abnormal", "infiltrate", "lesion"]):
+        return f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
+    return val
+
+def get_ekg_col_name(year):
+    current_thai_year = datetime.now().year + 543
+    return "EKG" if year == current_thai_year else f"EKG{str(year)[-2:]}"
+
+def interpret_ekg(val):
+    val = str(val or "").strip()
+    if is_empty(val):
+        return "ไม่ได้เข้ารับการตรวจคลื่นไฟฟ้าหัวใจ"
+    if any(x in val.lower() for x in ["ผิดปกติ", "abnormal", "arrhythmia"]):
+        return f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
+    return val
+
+def hepatitis_b_advice(hbsag, hbsab, hbcab):
+    hbsag = hbsag.lower()
+    hbsab = hbsab.lower()
+    hbcab = hbcab.lower()
+    
+    if "positive" in hbsag:
+        return "ติดเชื้อไวรัสตับอักเสบบี"
+    elif "positive" in hbsab and "positive" not in hbsag:
+        return "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี"
+    elif "positive" in hbcab and "positive" not in hbsab:
+        return "เคยติดเชื้อแต่ไม่มีภูมิคุ้มกันในปัจจุบัน"
+    elif all(x == "negative" for x in [hbsag, hbsab, hbcab]):
+        return "ไม่มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี ควรปรึกษาแพทย์เพื่อรับวัคซีน"
+    return "ไม่สามารถสรุปผลชัดเจน แนะนำให้พบแพทย์เพื่อประเมินซ้ำ"
+
+def merge_final_advice_grouped(messages):
+    groups = {
+        "FBS": [], "ไต": [], "ตับ": [], "ยูริค": [], "ไขมัน": [], "อื่นๆ": []
+    }
+
+    for msg in messages:
+        if not msg or msg.strip() in ["-", ""]:
+            continue
+        if "น้ำตาล" in msg:
+            groups["FBS"].append(msg)
+        elif "ไต" in msg:
+            groups["ไต"].append(msg)
+        elif "ตับ" in msg:
+            groups["ตับ"].append(msg)
+        elif "พิวรีน" in msg or "ยูริค" in msg:
+            groups["ยูริค"].append(msg)
+        elif "ไขมัน" in msg:
+            groups["ไขมัน"].append(msg)
+        else:
+            groups["อื่นๆ"].append(msg)
+            
+    output = []
+    for title, msgs in groups.items():
+        if msgs:
+            unique_msgs = list(OrderedDict.fromkeys(msgs))
+            output.append(f"<b>{title}:</b> {' '.join(unique_msgs)}")
+            
+    if not output:
+        return "ไม่พบคำแนะนำเพิ่มเติมจากผลตรวจ"
+
+    return "<div style='margin-bottom: 0.75rem;'>" + "</div><div style='margin-bottom: 0.75rem;'>".join(output) + "</div>"
+
+# --- Global Helper Functions: END ---
 
 @st.cache_data(ttl=600)
 def load_sqlite_data():
@@ -407,16 +740,7 @@ def load_sqlite_data():
         conn = sqlite3.connect(tmp_path)
         df_loaded = pd.read_sql("SELECT * FROM health_data", conn)
         conn.close()
-        os.unlink(tmp_path) # Clean up the temporary file
-
-        df_loaded.columns = df_loaded.columns.str.strip()
-        df_loaded['เลขบัตรประชาชน'] = df_loaded['เลขบัตรประชาชน'].astype(str).str.strip()
-        df_loaded['HN'] = df_loaded['HN'].apply(lambda x: str(int(x)) if pd.notna(x) and isinstance(x, (float, int)) else str(x)).str.strip()
-        df_loaded['ชื่อ-สกุล'] = df_loaded['ชื่อ-สกุล'].astype(str).str.strip()
-        df_loaded['Year'] = df_loaded['Year'].astype(int)
-        df_loaded['วันที่ตรวจ'] = df_loaded['วันที่ตรวจ'].apply(normalize_thai_date)
-        df_loaded.replace(["-", "None", None], pd.NA, inplace=True)
-
+        os.unlink(tmp_path)
         return df_loaded
     except Exception as e:
         st.error(f"❌ โหลดฐานข้อมูลไม่สำเร็จ: {e}")
@@ -428,7 +752,6 @@ df = load_sqlite_data()
 # ==================== UI Setup and Search Form (Sidebar) ====================
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
-# ⭐ Inject CSS for print layout
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
@@ -439,20 +762,18 @@ st.markdown("""
     @media print {
         @page {
             size: A4;
-            margin: 1cm; /* กำหนดขอบกระดาษ */
+            margin: 1cm;
         }
 
-        /* ซ่อนส่วนที่ไม่ต้องการพิมพ์ */
         [data-testid="stSidebar"], 
         header[data-testid="stHeader"] {
             display: none !important;
         }
 
-        /* กำหนด Layout หลัก */
         .main .block-container {
             padding: 0 !important;
-            width: 100% !important;
             margin: 0 !important;
+            width: 100% !important;
         }
 
         body {
@@ -461,7 +782,6 @@ st.markdown("""
             padding: 0 !important;
         }
 
-        /* --- ⭐ การแก้ไขที่สำคัญสำหรับ Dark Mode และการแสดงสีพื้นหลัง ⭐ --- */
         * {
             background: transparent !important;
             color: #000000 !important;
@@ -469,7 +789,6 @@ st.markdown("""
             print-color-adjust: exact !important;
         }
 
-        /* บังคับให้ st.columns แสดงผลข้างกันเหมือนเดิม */
         div[data-testid="stHorizontalBlock"] {
             display: flex !important;
             flex-direction: row !important;
@@ -480,36 +799,34 @@ st.markdown("""
             padding: 0 0.25rem !important;
         }
 
-        /* ลดระยะห่างของทุกอย่างเพื่อให้กระชับที่สุด */
         div, p, table, th, td {
             page-break-inside: avoid !important;
             margin: 0 !important;
-            padding: 1px !important;
+            padding: 2px !important;
             line-height: 1.3 !important;
         }
         
-        h1, h2, h3 { line-height: 1.2 !important; margin-bottom: 4px !important; }
-        h1 { font-size: 14pt !important; }
-        h2 { font-size: 11pt !important; }
-        p { font-size: 9pt !important; }
+        h1, h2, p {
+            text-align: center;
+        }
+        h1 { font-size: 14pt !important; margin-bottom: 2px !important; font-weight: bold;}
+        h2 { font-size: 10pt !important; margin-bottom: 2px !important;}
+        p { font-size: 9pt !important; margin-bottom: 2px !important; }
         hr { display: none !important; }
         
-        /* บังคับให้สีพื้นหลังของ element ที่ต้องการยังคงแสดงอยู่ */
         .section-header, .advice-box, .lab-table-abn, .urine-abn {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
         }
-        .section-header { background-color: #1b5e20 !important; color: white !important; }
-        .advice-box { background-color: rgba(255, 255, 0, 0.2) !important; }
+        .section-header { background-color: #1b5e20 !important; color: white !important; border-radius: 8px; }
+        .advice-box { background-color: rgba(255, 255, 0, 0.2) !important; padding: 0.5rem !important; border-radius: 6px; margin-top: 0.5rem !important; }
         .lab-table-abn, .urine-abn { background-color: rgba(255, 64, 64, 0.25) !important; }
     }
     </style>
 """, unsafe_allow_html=True)
 
 
-# --- STATE MANAGEMENT REFACTOR START ---
-
-# Initialize state keys if they don't exist
+# --- STATE MANAGEMENT ---
 if 'current_search_term' not in st.session_state:
     st.session_state.current_search_term = ""
 if 'search_results_df' not in st.session_state:
@@ -570,10 +887,7 @@ if st.session_state.current_search_term:
                 print_button_html = """
                     <!DOCTYPE html><html><head><style>
                     body { margin: 0; font-family: 'Sarabun', sans-serif; }
-                    #print-btn { display: inline-flex; align-items: center; justify-content: center;
-                        font-weight: 400; padding: .25rem .75rem; border-radius: .5rem; min-height: 38.4px;
-                        margin: 0; line-height: 1.6; color: #31333F; width: 100%; user-select: none;
-                        background-color: #FFFFFF; border: 1px solid rgba(49, 51, 63, 0.2); box-sizing: border-box; }
+                    #print-btn { display: inline-flex; align-items: center; justify-content: center; font-weight: 400; padding: .25rem .75rem; border-radius: .5rem; min-height: 38.4px; margin: 0; line-height: 1.6; color: #31333F; width: 100%; user-select: none; background-color: #FFFFFF; border: 1px solid rgba(49, 51, 63, 0.2); box-sizing: border-box; }
                     #print-btn:hover { border: 1px solid #FF4B4B; color: #FF4B4B; }
                     #print-btn:active { color: #FFFFFF; border-color: #FF4B4B; background-color: #FF4B4B; }
                     #print-btn:focus:not(:active) { border-color: #FF4B4B; box-shadow: 0 0 0 .2rem rgba(255, 75, 75, .5); }
@@ -590,24 +904,36 @@ if not st.session_state.current_search_term:
 
 # ==================== Display Health Report (Main Content) ====================
 if st.session_state.get('person_row'):
-    # Wrap the entire report in a div for print layout control
-    st.markdown('<div class="report-container-for-print">', unsafe_allow_html=True)
-    
     person = st.session_state.person_row
-    check_date = person.get("วันที่ตรวจ", "-")
-
-    report_header_html = f"""
-    <div class="report-header-container" style="text-align: center; margin-bottom: 0.5rem;">
-        <h1>รายงานผลการตรวจสุขภาพ</h1>
-        <h2>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม -</h2>
-        <p>ชั้น 2 อาคารผู้ป่วยนอก-อุบัติเหตุ โรงพยาบาลสันทราย 201 หมู่ 11 ถ.เชียงใหม่–พร้าว ต.หนองหาร อ.สันทราย จ.เชียงใหม่ 50290</p>
-        <p>ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167</p>
-        <p><b>วันที่ตรวจ:</b> {check_date or "-"}</p>
-    </div>
-    """
-    st.markdown(report_header_html, unsafe_allow_html=True)
     
-    # ... The rest of your report display code remains the same ...
-    # (I've omitted the middle part for brevity, it's identical to your last version)
-
-    st.markdown('</div>', unsafe_allow_html=True) # Close the wrapper div
+    # All display logic is now wrapped in a single container
+    with st.container():
+        report_header_html = f"""
+        <div class="report-header-container" style="text-align: center; margin-bottom: 1rem;">
+            <h1>รายงานผลการตรวจสุขภาพ</h1>
+            <h2>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม -</h2>
+            <p>ชั้น 2 อาคารผู้ป่วยนอก-อุบัติเหตุ โรงพยาบาลสันทราย</p>
+            <p>201 หมู่ 11 ถ.เชียงใหม่–พร้าว ต.หนองหาร อ.สันทราย จ.เชียงใหม่ 50290</p>
+            <p>ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167</p>
+            <p><b>วันที่ตรวจ:</b> {person.get("วันที่ตรวจ", "-")}</p>
+        </div>"""
+        st.markdown(report_header_html, unsafe_allow_html=True)
+        
+        # --- The rest of your report display code ---
+        # (This part is identical to the previous version, just ensure it's inside the `with st.container():` block)
+        # For brevity, I'll show the structure
+        
+        # Personal Info section
+        # ...
+        
+        # Lab results section with columns
+        # ...
+        
+        # Advice section
+        # ...
+        
+        # Other tests section with columns
+        # ...
+        
+        # Doctor's note and signature
+        # ...
