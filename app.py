@@ -527,6 +527,61 @@ def generate_print_view_html(person_data):
         <div class="signature-area">...........................................................<br><span>(นายแพทย์นพรัตน์ รัชฎาพร) ว.26674</span></div>
     </div>"""
 
+def print_section():
+    components.html('''
+    <script>
+        // Create a new style element for print-specific styles
+        const printStyles = `
+            @page { size: A4; margin: 0.7cm; }
+            body > * { display: none !important; }
+            .print-view, .print-view * { display: block !important; }
+            * {
+                background: transparent !important; color: #000 !important;
+                box-shadow: none !important; text-shadow: none !important;
+                print-color-adjust: exact !important; font-family: 'Sarabun', sans-serif !important;
+            }
+            h1 { font-size: 13pt !important; font-weight: bold; text-align: center; margin:0; padding:0; }
+            h2 { font-size: 10pt !important; text-align: center; margin:0 0 5px 0; padding:0; }
+            p, div, table, span { font-size: 8pt !important; line-height: 1.3 !important; }
+            .patient-info-print { border: 1px solid #000; padding: 4px; margin-bottom: 5px; text-align: left; }
+            .patient-info-print b { font-weight: bold; }
+            .main-content-flex { display: flex; flex-direction: row; gap: 0.6cm; width: 100%; }
+            .column-left { width: 55%; } .column-right { width: 45%; }
+            .section-header {
+                background-color: #E0E0E0 !important; font-weight: bold; text-align: center;
+                padding: 2px; margin-top: 5px; margin-bottom: 3px; border-radius: 3px;
+            }
+            table { width: 100%; border-collapse: collapse; page-break-inside: avoid; }
+            th, td { border: 1px solid #ccc; padding: 1px 3px; vertical-align: top; }
+            th { font-weight: bold; background-color: #F5F5F5 !important; }
+            th.test, td.test { width: 45%; }
+            th.result, td.result { width: 20%; text-align: center; }
+            th.norm, td.norm { width: 35%; }
+            .lab-table-abn td, .urine-abn td { background-color: #F2F2F2 !important; font-weight: bold; }
+            .other-results { margin: 0; padding: 2px 3px; border-bottom: 1px dotted #eee; }
+            .advice-box { padding: 4px; border: 1px solid #ccc; border-radius: 4px; page-break-inside: avoid; }
+            .advice-box b { font-weight: bold; }
+            .footer-section {
+                position: fixed; bottom: 0.7cm; left: 0.7cm; right: 0.7cm;
+                border-top: 1px solid #000; padding-top: 5px;
+                display: flex; justify-content: space-between; align-items: flex-end;
+            }
+            .signature-area { text-align: center; }
+        `;
+        const styleSheet = document.createElement("style");
+        styleSheet.type = "text/css";
+        styleSheet.innerText = printStyles;
+        document.head.appendChild(styleSheet);
+        
+        // Trigger print dialog
+        window.print();
+        
+        // Optional: remove the stylesheet after printing to not affect the live view
+        // This might not be necessary if the styles are correctly scoped under @media print
+        setTimeout(() => { document.head.removeChild(styleSheet); }, 500);
+    </script>
+    ''', height=0, scrolling=False)
+
 # ==============================================================================
 # SECTION 3: MAIN APP LOGIC
 # ==============================================================================
@@ -618,133 +673,133 @@ if "search_result" in st.session_state:
 
         if st.session_state.get('person_row'):
             st.markdown("---")
-            components.html("""<button onclick="window.parent.print()" style="width:100%; padding: .5rem; font-weight:bold; border-radius: .5rem; border: 1px solid #FF4B4B; color: #FF4B4B;">🖨️ พิมพ์รายงานนี้</button>""", height=45)
+            if st.sidebar.button("🖨️ พิมพ์รายงานนี้"):
+                print_section()
 
 if "person_row" in st.session_state:
     person = st.session_state.person_row
     st.markdown(f'<div class="print-view">{generate_print_view_html(person)}</div>', unsafe_allow_html=True)
-    st.markdown('<div class="live-view">', unsafe_allow_html=True)
     
-    st.markdown(f"""<div class="report-header-container" style="text-align:center; margin-bottom:0.5rem;">
-        <h1>รายงานผลการตรวจสุขภาพ</h1><h2>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม -</h2>
-        <p>ชั้น 2 อาคารผู้ป่วยนอก-อุบัติเหตุ โรงพยาบาลสันทราย 201 หมู่ 11 ถ.เชียงใหม่–พร้าว ต.หนองหาร อ.สันทราย จ.เชียงใหม่ 50290</p>
-        <p>ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167</p>
-        <p><b>วันที่ตรวจ:</b> {person.get("วันที่ตรวจ", "-")}</p></div>""", unsafe_allow_html=True)
-    
-    try: bmi_val = float(person.get("BMI", 0))
-    except: bmi_val = 0
-    sbp, dbp = person.get("SBP", ""), person.get("DBP", "")
-    bp_full = f"{sbp}/{dbp} - {interpret_bp(sbp, dbp)}" if sbp and dbp else "-"
-
-    st.markdown(f"""<div><hr>
-        <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:32px; margin:24px 0 20px 0; text-align:center;">
-            <div><b>ชื่อ-สกุล:</b> {person.get('ชื่อ-สกุล', '-')}</div>
-            <div><b>อายุ:</b> {int(get_float('อายุ', person)) if get_float('อายุ', person) else '-'} ปี</div>
-            <div><b>เพศ:</b> {person.get('เพศ', '-')}</div><div><b>HN:</b> {person.get('HN', '-')}</div>
-            <div><b>หน่วยงาน:</b> {person.get('หน่วยงาน', '-')}</div></div>
-        <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:32px; margin-bottom:16px; text-align:center;">
-            <div><b>น้ำหนัก:</b> {person.get("น้ำหนัก", "-")} กก.</div><div><b>ส่วนสูง:</b> {person.get("ส่วนสูง", "-")} ซม.</div>
-            <div><b>รอบเอว:</b> {person.get("รอบเอว", "-")} ซม.</div><div><b>ความดันโลหิต:</b> {bp_full}</div>
-            <div><b>ชีพจร:</b> {int(get_float('pulse', person)) if get_float('pulse', person) else '-'} ครั้ง/นาที</div></div>
-        <div style='margin-top:16px; text-align:center;'><b>คำแนะนำ:</b> {html.escape(combined_health_advice(bmi_val, sbp, dbp) or "")}</div>
-    </div>""", unsafe_allow_html=True)
-
-    sex = str(person.get("เพศ", "")).strip() or "ไม่ระบุ"
-    hb_low, hct_low = (13, 39) if sex == "ชาย" else (12, 36)
-    
-    cbc_config = [
-        ("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None),
-        ("ฮีมาโตคริต (Hct)", "HCT", "ชาย > 39%, หญิง > 36%", hct_low, None),
-        ("เม็ดเลือดขาว (wbc)", "WBC (cumm)", "4,000 - 10,000 /cu.mm", 4000, 10000),
-        ("นิวโทรฟิล (Neutrophil)", "Ne (%)", "43 - 70%", 43, 70),
-        ("ลิมโฟไซต์ (Lymphocyte)", "Ly (%)", "20 - 44%", 20, 44),
-        ("โมโนไซต์ (Monocyte)", "M", "3 - 9%", 3, 9),
-        ("อีโอซิโนฟิล (Eosinophil)", "Eo", "0 - 9%", 0, 9),
-        ("เบโซฟิล (Basophil)", "BA", "0 - 3%", 0, 3),
-        ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150,000 - 500,000 /cu.mm", 150000, 500000),
-    ]
-    blood_config = [
-        ("น้ำตาลในเลือด (FBS)", "FBS", "74 - 106 mg/dl", 74, 106, False),
-        ("กรดยูริก (Uric Acid)", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2, False),
-        ("การทำงานของเอนไซม์ตับ (ALK)", "ALP", "30 - 120 U/L", 30, 120, False),
-        ("การทำงานของเอนไซม์ตับ (SGOT)", "SGOT", "< 37 U/L", None, 37, False),
-        ("การทำงานของเอนไซม์ตับ (SGPT)", "SGPT", "< 41 U/L", None, 41, False),
-        ("คลอเรสเตอรอล (CHOL)", "CHOL", "150 - 200 mg/dl", 150, 200, False),
-        ("ไตรกลีเซอไรด์ (TGL)", "TGL", "35 - 150 mg/dl", 35, 150, False),
-        ("ไขมันดี (HDL)", "HDL", "> 40 mg/dl", 40, None, True),
-        ("ไขมันเลว (LDL)", "LDL", "0 - 160 mg/dl", 0, 160, False),
-        ("การทำงานของไต (BUN)", "BUN", "7.9 - 20 mg/dl", 7.9, 20, False),
-        ("การทำงานของไต (Cr)", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17, False),
-        ("ประสิทธิภาพการกรองของไต (GFR)", "GFR", "> 60 mL/min", 60, None, True),
-    ]
-    cbc_rows = []
-    for l, c, n, lo, hi in cbc_config:
-        f = flag(get_float(c, person), lo, hi)
-        cbc_rows.append([(l, f[1]), (f[0], f[1]), (n, f[1])])
-        
-    blood_rows = []
-    for l, c, n, lo, hi, hig in blood_config:
-        f = flag(get_float(c, person), lo, hi, hig)
-        blood_rows.append([(l, f[1]), (f[0], f[1]), (n, f[1])])
-
-    _, c1, c2, _ = st.columns([0.5, 3, 3, 0.5])
-    with c1: st.markdown(render_lab_table_html("ผลตรวจ CBC (Complete Blood Count)", None, ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows), unsafe_allow_html=True)
-    with c2: st.markdown(render_lab_table_html("ผลตรวจเลือด (Blood Chemistry)", None, ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows), unsafe_allow_html=True)
-    
-    advice_list = [
-        kidney_advice_from_summary(kidney_summary_gfr_only(person.get("GFR"))), fbs_advice(person.get("FBS")),
-        liver_advice(summarize_liver(person.get("ALP"), person.get("SGOT"), person.get("SGPT"))),
-        uric_acid_advice(person.get("Uric Acid")), lipids_advice(summarize_lipids(person.get("CHOL"), person.get("TGL"), person.get("LDL"))),
-        cbc_advice(person.get("Hb(%)"), person.get("HCT"), person.get("WBC (cumm)"), person.get("Plt (/mm)"), sex)
-    ]
-    final_advice_html = merge_final_advice_grouped(advice_list)
-    has_general_advice = "ไม่พบคำแนะนำเพิ่มเติม" not in final_advice_html
-    bg_color = "rgba(255, 255, 0, 0.2)" if has_general_advice else "rgba(57, 255, 20, 0.2)"
-    _, main_col, _ = st.columns([0.5, 6, 0.5])
-    with main_col:
-        st.markdown(f"<div style='background-color:{bg_color};padding:1rem 2.5rem;border-radius:10px;line-height:1.5;color:var(--text-color);font-size:14px;'>{final_advice_html}</div>", unsafe_allow_html=True)
-
-    selected_year = st.session_state.get("selected_year", datetime.now().year + 543)
+    # The entire live view is now wrapped in a single container
     with st.container():
-        _, c_left, c_right, _ = st.columns([0.5, 3, 3, 0.5])
-        with c_left:
-            render_urine_section(person, sex, selected_year)
-            st.markdown(render_section_header("ผลตรวจอุจจาระ (Stool Examination)"), unsafe_allow_html=True)
-            st.markdown(render_stool_html_table(interpret_stool_exam(person.get("Stool exam", "")), interpret_stool_cs(person.get("Stool C/S", ""))), unsafe_allow_html=True)
-        with c_right:
-            st.markdown(render_section_header("ผลเอกซเรย์ (Chest X-ray)"), unsafe_allow_html=True)
-            st.markdown(f"""<div style='background-color:var(--background-color);color:var(--text-color);line-height:1.6;padding:1.25rem;border-radius:6px;margin-bottom:1.5rem;font-size:14px;'>
-                {interpret_cxr(person.get(f'CXR{str(selected_year)[-2:]}' if selected_year != (datetime.now().year + 543) else 'CXR', ''))}</div>""", unsafe_allow_html=True)
-            st.markdown(render_section_header("ผลคลื่นไฟฟ้าหัวใจ (EKG)"), unsafe_allow_html=True)
-            st.markdown(f"""<div style='background-color:var(--secondary-background-color);color:var(--text-color);line-height:1.6;padding:1.25rem;border-radius:6px;margin-bottom:1.5rem;font-size:14px;'>
-                {interpret_ekg(person.get(get_ekg_col_name(selected_year), ''))}</div>""", unsafe_allow_html=True)
-            st.markdown(render_section_header("ผลการตรวจไวรัสตับอักเสบเอ (Viral hepatitis A)"), unsafe_allow_html=True)
-            st.markdown(f"""<div style='padding:1rem;border-radius:6px;margin-bottom:1.5rem;background-color:rgba(255,255,255,0.05);font-size:14px;'>
-                {safe_text(person.get("Hepatitis A"))}</div>""", unsafe_allow_html=True)
-            st.markdown(render_section_header("ผลการตรวจไวรัสตับอักเสบบี (Viral hepatitis B)"), unsafe_allow_html=True)
-            st.markdown(f"""<div style="margin-bottom:1rem;"><table style='width:100%;text-align:center;border-collapse:collapse;font-size:14px;'>
-                <thead><tr><th style="padding:8px;border:1px solid transparent;">HBsAg</th><th style="padding:8px;border:1px solid transparent;">HBsAb</th><th style="padding:8px;border:1px solid transparent;">HBcAb</th></tr></thead>
-                <tbody><tr><td>{safe_text(person.get("HbsAg"))}</td><td>{safe_text(person.get("HbsAb"))}</td><td>{safe_text(person.get("HBcAB"))}</td></tr></tbody>
-            </table></div>""", unsafe_allow_html=True)
-            st.markdown(f"""<div style='padding:0.75rem 1rem;background-color:rgba(255,255,255,0.05);border-radius:6px;margin-bottom:1.5rem;line-height:1.8;font-size:14px;'>
-                <b>วันที่ตรวจภูมิคุ้มกัน:</b> {normalize_thai_date(person.get("ปีตรวจHEP"))}<br>
-                <b>ประวัติโรคไวรัสตับอักเสบบี ปี พ.ศ. {selected_year}:</b> {safe_text(person.get("สรุปประวัติ Hepb"))}<br>
-                <b>ประวัติการได้รับวัคซีนในปี พ.ศ. {selected_year}:</b> {safe_text(person.get("วัคซีนhep b 67"))}</div>""", unsafe_allow_html=True)
-            advice = hepatitis_b_advice(safe_text(person.get("HbsAg")), safe_text(person.get("HbsAb")), safe_text(person.get("HBcAB")))
-            bg_color_hep = "rgba(57, 255, 20, 0.2)" if advice.strip() == "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี" else "rgba(255, 255, 0, 0.2)"
-            st.markdown(f"<div style='line-height:1.6;padding:1rem 1.5rem;border-radius:6px;background-color:{bg_color_hep};color:var(--text-color);margin-bottom:1.5rem;font-size:14px;'>{advice}</div>", unsafe_allow_html=True)
+        st.markdown(f"""<div class="report-header-container" style="text-align:center; margin-bottom:0.5rem;">
+            <h1>รายงานผลการตรวจสุขภาพ</h1><h2>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม -</h2>
+            <p>ชั้น 2 อาคารผู้ป่วยนอก-อุบัติเหตุ โรงพยาบาลสันทราย 201 หมู่ 11 ถ.เชียงใหม่–พร้าว ต.หนองหาร อ.สันทราย จ.เชียงใหม่ 50290</p>
+            <p>ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167</p>
+            <p><b>วันที่ตรวจ:</b> {person.get("วันที่ตรวจ", "-")}</p></div>""", unsafe_allow_html=True)
+        
+        try: bmi_val = float(person.get("BMI", 0))
+        except: bmi_val = 0
+        sbp, dbp = person.get("SBP", ""), person.get("DBP", "")
+        bp_full = f"{sbp}/{dbp} - {interpret_bp(sbp, dbp)}" if sbp and dbp else "-"
 
-    doctor_suggestion = str(person.get("DOCTER suggest", "")).strip()
-    if is_empty(doctor_suggestion): doctor_suggestion = "<i>ไม่มีคำแนะนำจากแพทย์</i>"
-    _, doc_col, _ = st.columns([0.5, 6, 0.5])
-    with doc_col:
-        st.markdown(f"""<div style='background-color:#1b5e20;color:white;padding:1.5rem 2rem;border-radius:8px;line-height:1.6;margin:2rem 0;font-size:14px;'>
-            <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}</div>
-            <div style='margin-top:7rem;text-align:right;padding-right:1rem;'>
-            <div style='display:inline-block;text-align:center;width:340px;'>
-            <div style='border-bottom:1px dotted #ccc;margin-bottom:0.5rem;width:100%;'></div>
-            <div style='white-space:nowrap;'>นายแพทย์นพรัตน์ รัชฎาพร</div>
-            <div style='white-space:nowrap;'>เลขที่ใบอนุญาตผู้ประกอบวิชาชีพเวชกรรม ว.26674</div>
-            </div></div>""", unsafe_allow_html=True)
-    
-    st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown(f"""<div><hr>
+            <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:32px; margin:24px 0 20px 0; text-align:center;">
+                <div><b>ชื่อ-สกุล:</b> {person.get('ชื่อ-สกุล', '-')}</div>
+                <div><b>อายุ:</b> {int(get_float('อายุ', person)) if get_float('อายุ', person) else '-'} ปี</div>
+                <div><b>เพศ:</b> {person.get('เพศ', '-')}</div><div><b>HN:</b> {person.get('HN', '-')}</div>
+                <div><b>หน่วยงาน:</b> {person.get('หน่วยงาน', '-')}</div></div>
+            <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:32px; margin-bottom:16px; text-align:center;">
+                <div><b>น้ำหนัก:</b> {person.get("น้ำหนัก", "-")} กก.</div><div><b>ส่วนสูง:</b> {person.get("ส่วนสูง", "-")} ซม.</div>
+                <div><b>รอบเอว:</b> {person.get("รอบเอว", "-")} ซม.</div><div><b>ความดันโลหิต:</b> {bp_full}</div>
+                <div><b>ชีพจร:</b> {int(get_float('pulse', person)) if get_float('pulse', person) else '-'} ครั้ง/นาที</div></div>
+            <div style='margin-top:16px; text-align:center;'><b>คำแนะนำ:</b> {html.escape(combined_health_advice(bmi_val, sbp, dbp) or "")}</div>
+        </div>""", unsafe_allow_html=True)
+
+        sex = str(person.get("เพศ", "")).strip() or "ไม่ระบุ"
+        hb_low, hct_low = (13, 39) if sex == "ชาย" else (12, 36)
+        
+        cbc_config = [
+            ("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None),
+            ("ฮีมาโตคริต (Hct)", "HCT", "ชาย > 39%, หญิง > 36%", hct_low, None),
+            ("เม็ดเลือดขาว (wbc)", "WBC (cumm)", "4,000 - 10,000 /cu.mm", 4000, 10000),
+            ("นิวโทรฟิล (Neutrophil)", "Ne (%)", "43 - 70%", 43, 70),
+            ("ลิมโฟไซต์ (Lymphocyte)", "Ly (%)", "20 - 44%", 20, 44),
+            ("โมโนไซต์ (Monocyte)", "M", "3 - 9%", 3, 9),
+            ("อีโอซิโนฟิล (Eosinophil)", "Eo", "0 - 9%", 0, 9),
+            ("เบโซฟิล (Basophil)", "BA", "0 - 3%", 0, 3),
+            ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150,000 - 500,000 /cu.mm", 150000, 500000),
+        ]
+        blood_config = [
+            ("น้ำตาลในเลือด (FBS)", "FBS", "74 - 106 mg/dl", 74, 106, False),
+            ("กรดยูริก (Uric Acid)", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2, False),
+            ("การทำงานของเอนไซม์ตับ (ALK)", "ALP", "30 - 120 U/L", 30, 120, False),
+            ("การทำงานของเอนไซม์ตับ (SGOT)", "SGOT", "< 37 U/L", None, 37, False),
+            ("การทำงานของเอนไซม์ตับ (SGPT)", "SGPT", "< 41 U/L", None, 41, False),
+            ("คลอเรสเตอรอล (CHOL)", "CHOL", "150 - 200 mg/dl", 150, 200, False),
+            ("ไตรกลีเซอไรด์ (TGL)", "TGL", "35 - 150 mg/dl", 35, 150, False),
+            ("ไขมันดี (HDL)", "HDL", "> 40 mg/dl", 40, None, True),
+            ("ไขมันเลว (LDL)", "LDL", "0 - 160 mg/dl", 0, 160, False),
+            ("การทำงานของไต (BUN)", "BUN", "7.9 - 20 mg/dl", 7.9, 20, False),
+            ("การทำงานของไต (Cr)", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17, False),
+            ("ประสิทธิภาพการกรองของไต (GFR)", "GFR", "> 60 mL/min", 60, None, True),
+        ]
+        cbc_rows = []
+        for l, c, n, lo, hi in cbc_config:
+            f = flag(get_float(c, person), lo, hi)
+            cbc_rows.append([(l, f[1]), (f[0], f[1]), (n, f[1])])
+            
+        blood_rows = []
+        for l, c, n, lo, hi, hig in blood_config:
+            f = flag(get_float(c, person), lo, hi, hig)
+            blood_rows.append([(l, f[1]), (f[0], f[1]), (n, f[1])])
+
+        _, c1, c2, _ = st.columns([0.5, 3, 3, 0.5])
+        with c1: st.markdown(render_lab_table_html("ผลตรวจ CBC (Complete Blood Count)", None, ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows), unsafe_allow_html=True)
+        with c2: st.markdown(render_lab_table_html("ผลตรวจเลือด (Blood Chemistry)", None, ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows), unsafe_allow_html=True)
+        
+        advice_list = [
+            kidney_advice_from_summary(kidney_summary_gfr_only(person.get("GFR"))), fbs_advice(person.get("FBS")),
+            liver_advice(summarize_liver(person.get("ALP"), person.get("SGOT"), person.get("SGPT"))),
+            uric_acid_advice(person.get("Uric Acid")), lipids_advice(summarize_lipids(person.get("CHOL"), person.get("TGL"), person.get("LDL"))),
+            cbc_advice(person.get("Hb(%)"), person.get("HCT"), person.get("WBC (cumm)"), person.get("Plt (/mm)"), sex)
+        ]
+        final_advice_html = merge_final_advice_grouped(advice_list)
+        has_general_advice = "ไม่พบคำแนะนำเพิ่มเติม" not in final_advice_html
+        bg_color = "rgba(255, 255, 0, 0.2)" if has_general_advice else "rgba(57, 255, 20, 0.2)"
+        _, main_col, _ = st.columns([0.5, 6, 0.5])
+        with main_col:
+            st.markdown(f"<div style='background-color:{bg_color};padding:1rem 2.5rem;border-radius:10px;line-height:1.5;color:var(--text-color);font-size:14px;'>{final_advice_html}</div>", unsafe_allow_html=True)
+
+        selected_year = st.session_state.get("selected_year", datetime.now().year + 543)
+        with st.container():
+            _, c_left, c_right, _ = st.columns([0.5, 3, 3, 0.5])
+            with c_left:
+                render_urine_section(person, sex, selected_year)
+                st.markdown(render_section_header("ผลตรวจอุจจาระ (Stool Examination)"), unsafe_allow_html=True)
+                st.markdown(render_stool_html_table(interpret_stool_exam(person.get("Stool exam", "")), interpret_stool_cs(person.get("Stool C/S", ""))), unsafe_allow_html=True)
+            with c_right:
+                st.markdown(render_section_header("ผลเอกซเรย์ (Chest X-ray)"), unsafe_allow_html=True)
+                st.markdown(f"""<div style='background-color:var(--background-color);color:var(--text-color);line-height:1.6;padding:1.25rem;border-radius:6px;margin-bottom:1.5rem;font-size:14px;'>
+                    {interpret_cxr(person.get(f'CXR{str(selected_year)[-2:]}' if selected_year != (datetime.now().year + 543) else 'CXR', ''))}</div>""", unsafe_allow_html=True)
+                st.markdown(render_section_header("ผลคลื่นไฟฟ้าหัวใจ (EKG)"), unsafe_allow_html=True)
+                st.markdown(f"""<div style='background-color:var(--secondary-background-color);color:var(--text-color);line-height:1.6;padding:1.25rem;border-radius:6px;margin-bottom:1.5rem;font-size:14px;'>
+                    {interpret_ekg(person.get(get_ekg_col_name(selected_year), ''))}</div>""", unsafe_allow_html=True)
+                st.markdown(render_section_header("ผลการตรวจไวรัสตับอักเสบเอ (Viral hepatitis A)"), unsafe_allow_html=True)
+                st.markdown(f"""<div style='padding:1rem;border-radius:6px;margin-bottom:1.5rem;background-color:rgba(255,255,255,0.05);font-size:14px;'>
+                    {safe_text(person.get("Hepatitis A"))}</div>""", unsafe_allow_html=True)
+                st.markdown(render_section_header("ผลการตรวจไวรัสตับอักเสบบี (Viral hepatitis B)"), unsafe_allow_html=True)
+                st.markdown(f"""<div style="margin-bottom:1rem;"><table style='width:100%;text-align:center;border-collapse:collapse;font-size:14px;'>
+                    <thead><tr><th style="padding:8px;border:1px solid transparent;">HBsAg</th><th style="padding:8px;border:1px solid transparent;">HBsAb</th><th style="padding:8px;border:1px solid transparent;">HBcAb</th></tr></thead>
+                    <tbody><tr><td>{safe_text(person.get("HbsAg"))}</td><td>{safe_text(person.get("HbsAb"))}</td><td>{safe_text(person.get("HBcAB"))}</td></tr></tbody>
+                </table></div>""", unsafe_allow_html=True)
+                st.markdown(f"""<div style='padding:0.75rem 1rem;background-color:rgba(255,255,255,0.05);border-radius:6px;margin-bottom:1.5rem;line-height:1.8;font-size:14px;'>
+                    <b>วันที่ตรวจภูมิคุ้มกัน:</b> {normalize_thai_date(person.get("ปีตรวจHEP"))}<br>
+                    <b>ประวัติโรคไวรัสตับอักเสบบี ปี พ.ศ. {selected_year}:</b> {safe_text(person.get("สรุปประวัติ Hepb"))}<br>
+                    <b>ประวัติการได้รับวัคซีนในปี พ.ศ. {selected_year}:</b> {safe_text(person.get("วัคซีนhep b 67"))}</div>""", unsafe_allow_html=True)
+                advice = hepatitis_b_advice(safe_text(person.get("HbsAg")), safe_text(person.get("HbsAb")), safe_text(person.get("HBcAB")))
+                bg_color_hep = "rgba(57, 255, 20, 0.2)" if advice.strip() == "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี" else "rgba(255, 255, 0, 0.2)"
+                st.markdown(f"<div style='line-height:1.6;padding:1rem 1.5rem;border-radius:6px;background-color:{bg_color_hep};color:var(--text-color);margin-bottom:1.5rem;font-size:14px;'>{advice}</div>", unsafe_allow_html=True)
+
+        doctor_suggestion = str(person.get("DOCTER suggest", "")).strip()
+        if is_empty(doctor_suggestion): doctor_suggestion = "<i>ไม่มีคำแนะนำจากแพทย์</i>"
+        _, doc_col, _ = st.columns([0.5, 6, 0.5])
+        with doc_col:
+            st.markdown(f"""<div style='background-color:#1b5e20;color:white;padding:1.5rem 2rem;border-radius:8px;line-height:1.6;margin:2rem 0;font-size:14px;'>
+                <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}</div>
+                <div style='margin-top:7rem;text-align:right;padding-right:1rem;'>
+                <div style='display:inline-block;text-align:center;width:340px;'>
+                <div style='border-bottom:1px dotted #ccc;margin-bottom:0.5rem;width:100%;'></div>
+                <div style='white-space:nowrap;'>นายแพทย์นพรัตน์ รัชฎาพร</div>
+                <div style='white-space:nowrap;'>เลขที่ใบอนุญาตผู้ประกอบวิชาชีพเวชกรรม ว.26674</div>
+                </div></div>""", unsafe_allow_html=True)
