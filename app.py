@@ -846,11 +846,17 @@ st.markdown("""
             font-size: 9pt !important; /* ลดขนาด font ลงอีก */
             margin: 0 !important;
             padding: 0 !important;
-            background: #fff !important; 
-            color: #000 !important;
         }
 
-        /* --- ⭐ การแก้ไขคอลัมน์ที่สำคัญ ⭐ --- */
+        /* --- ⭐ การแก้ไขที่สำคัญสำหรับ Dark Mode ⭐ --- */
+        /* บังคับให้พื้นหลังเป็นสีขาวและตัวอักษรเป็นสีดำเสมอเมื่อพิมพ์ */
+        body, div, p, h1, h2, table, th, td, span, a {
+            background: #ffffff !important;
+            color: #000000 !important;
+            -webkit-print-color-adjust: exact !important; /* For Chrome, Safari */
+            color-adjust: exact !important; /* Standard */
+        }
+
         /* บังคับให้ st.columns แสดงผลข้างกันเหมือนเดิม */
         div[data-testid="stHorizontalBlock"] {
             display: flex;
@@ -869,6 +875,11 @@ st.markdown("""
         h1 { font-size: 16pt !important; }
         h2 { font-size: 12pt !important; }
         hr { display: none; } /* ซ่อนเส้นคั่น */
+        
+        /* ทำให้พื้นหลังของผลตรวจที่ผิดปกติยังคงแสดงสีอยู่ */
+        .lab-table-abn, .urine-abn {
+            background-color: rgba(255, 64, 64, 0.25) !important;
+        }
     }
     </style>
 """, unsafe_allow_html=True)
