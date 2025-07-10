@@ -1446,7 +1446,7 @@ if st.session_state.person_row:
         '>
             <div style='
                 display: inline-block;
-                text-align: cente
+                text-align: center;
                 width: 340px;
             '>
                 <div style='
