@@ -15,38 +15,37 @@ import os
 # นำเข้า Library ของ OpenAI
 import openai
 
-# ตั้งค่า OpenAI API Key อย่างปลอดภัย
+# ตั้งค่า OpenAI API Key อย่างปลอดภัย (ตามโครงสร้างโค้ดที่แนะนำ)
 # โดยจะดึงค่ามาจาก Secrets ของ Streamlit ก่อน
-# หากไม่เจอ (เช่น ตอนรันบนเครื่องตัวเอง) จะไปหาจาก Environment Variable แทน
 try:
     # สำหรับการ Deploy บน Streamlit Cloud
-    api_key = st.secrets["OPENAI_API_KEY"]
+    openai.api_key = st.secrets["OPENAI_API_KEY"]
 except (KeyError, FileNotFoundError):
     # สำหรับการรันบนเครื่อง Local
-    api_key = os.environ.get("OPENAI_API_KEY")
+    openai.api_key = os.environ.get("OPENAI_API_KEY")
 
-# สร้าง client ของ OpenAI หากมี Key
-client = openai.OpenAI(api_key=api_key) if api_key else None
 
 def get_chatgpt_response(prompt):
-    """Function to get a response from ChatGPT."""
-    if not client:
+    """Function to get a response from ChatGPT using the older create method."""
+    if not openai.api_key:
         st.error("ไม่สามารถใช้งานฟีเจอร์ AI ได้ เนื่องจากไม่ได้ตั้งค่า OPENAI_API_KEY ใน Secrets")
         return None
 
     try:
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo"
+        # ใช้ openai.ChatCompletion.create ตามโค้ดที่แนะนำ
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo", # เปลี่ยนโมเดลตามที่แนะนำ
             messages=[
                 {"role": "system", "content": "คุณคือผู้ช่วยแพทย์ผู้เชี่ยวชาญ สรุปผลตรวจสุขภาพให้ผู้ป่วยเข้าใจง่ายที่สุด โดยเน้นเฉพาะรายการที่ผิดปกติและให้คำแนะนำในการปฏิบัติตัวเบื้องต้นเป็นข้อๆ ใช้ภาษาไทยที่สุภาพและเป็นกันเอง"},
                 {"role": "user", "content": prompt}
             ]
         )
-        return response.choices[0].message.content
-    except openai.RateLimitError:
+        return response['choices'][0]['message']['content']
+    except openai.error.RateLimitError:
         st.error("เกิดข้อผิดพลาด: คุณใช้งานเกินโควต้าฟรีสำหรับวันนี้แล้ว กรุณาลองใหม่ในวันถัดไป หรือตรวจสอบแผนการใช้งานของคุณที่ OpenAI")
         return None
     except Exception as e:
+        # แสดงข้อผิดพลาดที่เกิดขึ้น เพื่อให้ง่ายต่อการตรวจสอบ
         st.error(f"เกิดข้อผิดพลาดในการเรียกใช้ OpenAI API: {e}")
         return None
 # --- CHATGPT (OPENAI) INTEGRATION END ---
@@ -1438,4 +1437,4 @@ if st.session_state.get('person_row'):
                 <div style='white-space: nowrap;'>เลขที่ใบอนุญาตผู้ประกอบวิชาชีพเวชกรรม ว.26674</div>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """, unsafe_allow_html=Tr
