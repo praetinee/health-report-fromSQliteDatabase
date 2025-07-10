@@ -850,6 +850,16 @@ st.markdown("""
         margin: 0.2rem 0 !important;
         padding: 0 !important;
     }
+    @media print {
+        .main .block-container {
+            padding-top: 1rem !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+        [data-testid="stSidebar"], header, .stButton {
+            display: none !important;
+        }
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -935,6 +945,13 @@ if st.session_state.current_search_term:
                     st.session_state.person_row = None
             else:
                  st.session_state.person_row = None
+            
+            # Add Print Button
+            if st.session_state.get('person_row'):
+                st.markdown("---")
+                if st.sidebar.button("🖨️ พิมพ์รายงานนี้"):
+                    # Inject JavaScript to trigger the browser's print dialog
+                    st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
 else:
     st.info("เริ่มต้นใช้งานโดยการค้นหา HN หรือ ชื่อ-สกุล จากเมนูด้านซ้าย")
 
