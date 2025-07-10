@@ -1339,4 +1339,4 @@ if st.session_state.get('person_row'):
                 <div style='white-space: nowrap;'>เลขที่ใบอนุญาตผู้ประกอบวิชาชีพเวชกรรม ว.26674</div>
             </div>
         </div>
-        """, unsafe_allow_html=Tr
+        """, unsafe_allow_html=True)
