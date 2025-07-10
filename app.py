@@ -498,7 +498,7 @@ def is_urine_abnormal(test_name, value, normal_range):
         except:
             return True
 
-    if test_name == "ความถ่วงจำเพาะ (Sp.gr)":
+    if test_name == "ความถ่วงจำเพาะ (Sp.gr)" or test_name == "ถ.พ. (Sp.gr)":
         try:
             return not (1.003 <= float(val) <= 1.030)
         except:
@@ -662,7 +662,7 @@ def render_stool_html_table(exam, cs):
             width: 100%;
             border-collapse: collapse;
             color: var(--text-color);
-            table-layout: fixed; /* Ensure column widths are respected */
+            table-layout: fixed; /* Ensures column widths are respected */
             font-size: 14px;
         }
         .stool-table th {
@@ -855,15 +855,20 @@ def generate_print_view_html(person_data):
     except:
         bmi, bmi_str = 0, "-"
 
-    # --- Lab Data Preparation ---
+    # --- Lab Data Preparation (Corrected cbc_rows) ---
     cbc_config = [
         ("ฮีโมโกลบิน (Hb)", "Hb(%)", "ช>13,ญ>12", hb_low, None),
         ("ฮีมาโตคริต (Hct)", "HCT", "ช>39,ญ>36", hct_low, None),
         ("เม็ดเลือดขาว (WBC)", "WBC (cumm)", "4-10k", 4000, 10000),
         ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150-500k", 150000, 500000),
     ]
-    cbc_rows = [[(L, f(get_float(C, person_data), l, h)), (f(get_float(C, person_data), l, h)[0], f(get_float(C, person_data), l, h)[1]), (N, f(get_float(C, person_data), l, h)[1])] for L, C, N, l, h in cbc_config]
-    
+    # === FIX: Changed from list comprehension to a readable for loop ===
+    cbc_rows = []
+    for L, C, N, l, h in cbc_config:
+        val = get_float(C, person_data)
+        result_text, is_abnormal = flag(val, l, h)
+        cbc_rows.append([(L, is_abnormal), (result_text, is_abnormal), (N, is_abnormal)])
+
     blood_config = [
         ("น้ำตาล (FBS)", "FBS", "74-106", 74, 106),
         ("ไต (Creatinine)", "Cr", "0.5-1.17", 0.5, 1.17),
