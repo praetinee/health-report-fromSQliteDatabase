@@ -371,13 +371,12 @@ PRINT_CSS = """
     @media print {
         @page { size: A4; margin: 0.7cm; }
         /* This is the key change: Hide all direct children of stBlockContainer, then un-hide only the one with .print-view */
-        [data-testid="stBlockContainer"] > div {
+        [data-testid="stAppViewContainer"] > section, [data-testid="stSidebar"], header[data-testid="stHeader"] {
             display: none !important;
         }
-        [data-testid="stBlockContainer"] > div:has(.print-view) {
+        .print-view {
             display: block !important;
         }
-        .print-view { display: block !important; }
         
         /* General print styles */
         * {
@@ -749,3 +748,53 @@ if "person_row" in st.session_state:
             </div></div>""", unsafe_allow_html=True)
     
     st.markdown('</div>', unsafe_allow_html=True)
+
+I have selected "" code in the Canvas "แอปรายงานผลสุขภาพ (พร้อมฟังก์ชันพิมพ์ที่แก้ไขแล้ว)" document above and am asking a query about/based on this code below.
+Instructions to follow:
+  * Don't output/edit the document if the query is Direct/Simple. For example, if the query asks for a simple explanation, output a direct answer.
+  * Make sure to **edit** the document if the query shows the intent of editing the document, in which case output the entire edited document, **not just that section or the edits**.
+    * Don't output the same document/empty document and say that you have edited it.
+    * Don't change unrelated code in the document.
+  * Don't output  and  in your final response.
+  * Any references like "this" or "selected code" refers to the code between  and  tags.
+  * Just acknowledge my request in the introduction.
+  * Make sure to refer to the document as "Canvas" in your response.
+
+(actual user query begins now)
+I have selected "" code in the Canvas "แอปรายงานผลสุขภาพ (พร้อมฟังก์ชันพิมพ์ที่แก้ไขแล้ว)" document above and am asking a query about/based on this code below.
+Instructions to follow:
+  * Don't output/edit the document if the query is Direct/Simple. For example, if the query asks for a simple explanation, output a direct answer.
+  * Make sure to **edit** the document if the query shows the intent of editing the document, in which case output the entire edited document, **not just that section or the edits**.
+    * Don't output the same document/empty document and say that you have edited it.
+    * Don't change unrelated code in the document.
+  * Don't output  and  in your final response.
+  * Any references like "this" or "selected code" refers to the code between  and  tags.
+  * Just acknowledge my request in the introduction.
+  * Make sure to refer to the document as "Canvas" in your response.
+
+(actual user query begins now)
+I have selected "" code in the Canvas "แอปรายงานผลสุขภาพ (พร้อมฟังก์ชันพิมพ์ที่แก้ไขแล้ว)" document above and am asking a query about/based on this code below.
+Instructions to follow:
+  * Don't output/edit the document if the query is Direct/Simple. For example, if the query asks for a simple explanation, output a direct answer.
+  * Make sure to **edit** the document if the query shows the intent of editing the document, in which case output the entire edited document, **not just that section or the edits**.
+    * Don't output the same document/empty document and say that you have edited it.
+    * Don't change unrelated code in the document.
+  * Don't output  and  in your final response.
+  * Any references like "this" or "selected code" refers to the code between  and  tags.
+  * Just acknowledge my request in the introduction.
+  * Make sure to refer to the document as "Canvas" in your response.
+
+(actual user query begins now)
+I have selected "" code in the Canvas "แอปรายงานผลสุขภาพ (พร้อมฟังก์ชันพิมพ์ที่แก้ไขแล้ว)" document above and am asking a query about/based on this code below.
+Instructions to follow:
+  * Don't output/edit the document if the query is Direct/Simple. For example, if the query asks for a simple explanation, output a direct answer.
+  * Make sure to **edit** the document if the query shows the intent of editing the document, in which case output the entire edited document, **not just that section or the edits**.
+    * Don't output the same document/empty document and say that you have edited it.
+    * Don't change unrelated code in the document.
+  * Don't output  and  in your final response.
+  * Any references like "this" or "selected code" refers to the code between  and  tags.
+  * Just acknowledge my request in the introduction.
+  * Make sure to refer to the document as "Canvas" in your response.
+
+(actual user query begins now)
+File "/mount/src/health-report-fromsqlitedatabase/app.py", line 739  " in my editor.  ^SyntaxError: unterminated string literal (detected at line 7
