@@ -865,10 +865,12 @@ if 'person_row' not in st.session_state:
 
 # Sidebar UI
 st.sidebar.markdown("<h3>ค้นหาข้อมูลผู้เข้ารับบริการ</h3>", unsafe_allow_html=True)
-search_query = st.sidebar.text_input("กรอก HN หรือ ชื่อ-สกุล", key="search_input")
+with st.sidebar.form(key='search_form'):
+    search_query = st.text_input("กรอก HN หรือ ชื่อ-สกุล", key="search_input")
+    submitted = st.form_submit_button("ค้นหา")
 
-if st.sidebar.button("ค้นหา", key="search_button"):
-    st.session_state.current_search_term = st.session_state.search_input
+if submitted:
+    st.session_state.current_search_term = search_query
     # Clear all dependent state to force a full refresh
     keys_to_clear = ['search_results_df', 'person_row', 'selected_year', 'selected_date']
     for key in keys_to_clear:
