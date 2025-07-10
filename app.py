@@ -11,38 +11,6 @@ from datetime import datetime
 import re
 import os
 
-# --- GEMINI INTEGRATION START ---
-# นำเข้า Library ของ Gemini
-import google.generativeai as genai
-
-# ตั้งค่า Gemini API Key อย่างปลอดภัย
-# โดยจะดึงค่ามาจาก Secrets ของ Streamlit ก่อน
-# หากไม่เจอ (เช่น ตอนรันบนเครื่องตัวเอง) จะไปหาจาก Environment Variable แทน
-try:
-    # สำหรับการ Deploy บน Streamlit Cloud
-    api_key = st.secrets["GEMINI_API_KEY"]
-except (KeyError, FileNotFoundError):
-    # สำหรับการรันบนเครื่อง Local
-    api_key = os.environ.get("GEMINI_API_KEY")
-
-# กำหนดค่า API Key ให้กับ Library ของ Google
-# หากมี Key จริงๆ ถึงจะทำการ configure
-if api_key:
-    genai.configure(api_key=api_key)
-else:
-    # ถ้าไม่มี Key เลย จะไม่สร้าง model เพื่อป้องกัน Error
-    # การแจ้งเตือนจะทำในส่วน UI แทน
-    pass
-
-def get_gemini_model():
-    """Function to get Gemini model only if API key is available."""
-    if api_key:
-        # --- FIX: Updated model name from 'gemini-pro' to 'gemini-1.5-flash-latest' ---
-        return genai.GenerativeModel('gemini-1.5-flash-latest')
-    return None
-# --- GEMINI INTEGRATION END ---
-
-
 def is_empty(val):
     return str(val).strip().lower() in ["", "-", "none", "nan", "null"]
 
@@ -903,7 +871,7 @@ if st.sidebar.button("ค้นหา", key="search_button"):
     st.session_state.current_search_term = st.session_state.search_input
     # Clear all dependent state to force a full refresh
     # FIX: Use .pop(key, None) to avoid errors if the key doesn't exist
-    keys_to_clear = ['search_results_df', 'person_row', 'selected_year', 'selected_date', 'gemini_response']
+    keys_to_clear = ['search_results_df', 'person_row', 'selected_year', 'selected_date']
     for key in keys_to_clear:
         st.session_state.pop(key, None)
 
@@ -936,15 +904,10 @@ if st.session_state.current_search_term:
 
             available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
             
-            # Use a callback to clear dependent state when selection changes
-            def on_selection_change():
-                st.session_state.pop('gemini_response', None)
-
             selected_year = st.selectbox(
                 "📅 เลือกปีที่ต้องการดูผลตรวจรายงาน",
                 options=available_years,
-                key="selected_year",
-                on_change=on_selection_change
+                key="selected_year"
             )
 
             # Date selector logic
@@ -956,8 +919,7 @@ if st.session_state.current_search_term:
                     selected_date = st.selectbox(
                         "🗓️ เลือกวันที่ตรวจ",
                         options=available_dates,
-                        key="selected_date",
-                        on_change=on_selection_change
+                        key="selected_date"
                     )
 
                     # Step 3: Select the final row to display
@@ -1352,80 +1314,6 @@ if st.session_state.get('person_row'):
             <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
         </div>
         """, unsafe_allow_html=True)
-
-    # --- GEMINI INTEGRATION START ---
-    # ส่วนนี้จะแสดงปุ่มและผลลัพธ์จาก Gemini
-    st.markdown("---") # Add a separator line
-    left_spacer_gemini, gemini_col, right_spacer_gemini = st.columns([0.5, 6, 0.5])
-
-    with gemini_col:
-        st.markdown(render_section_header("สรุปและให้คำแนะนำเพิ่มเติมโดย AI", "Powered by Google Gemini"), unsafe_allow_html=True)
-        
-        # ตรวจสอบว่ามี API Key หรือไม่ก่อนแสดงปุ่ม
-        if not api_key:
-            st.warning("ไม่สามารถใช้งานฟีเจอร์ AI ได้ เนื่องจากไม่ได้ตั้งค่า GEMINI_API_KEY ใน Secrets")
-        else:
-            if st.button("🤖 วิเคราะห์ผลตรวจด้วย AI"):
-                # สร้าง Prompt เพื่อส่งให้ Gemini
-                # รวบรวมข้อมูลที่สำคัญจากผลตรวจ
-                prompt_data = []
-                prompt_data.append(f"ข้อมูลผู้ป่วย: ชื่อ {person.get('ชื่อ-สกุล', '-')}, อายุ {person.get('อายุ', '-')} ปี, เพศ {person.get('เพศ', '-')}")
-                prompt_data.append(f"ค่าร่างกายเบื้องต้น: น้ำหนัก {weight_display}, ส่วนสูง {height_display}, ความดัน {bp_full}, ชีพจร {pulse}")
-                
-                # รวบรวมผลเลือดที่ผิดปกติ
-                abnormal_cbc = [f"{row[0][0]}={row[1][0]}" for row in cbc_rows if row[0][1]]
-                if abnormal_cbc:
-                    prompt_data.append(f"ผลตรวจเลือด CBC ที่ผิดปกติ: {', '.join(abnormal_cbc)}")
-
-                abnormal_blood = [f"{row[0][0]}={row[1][0]}" for row in blood_rows if row[0][1]]
-                if abnormal_blood:
-                    prompt_data.append(f"ผลตรวจเลือด Blood Chemistry ที่ผิดปกติ: {', '.join(abnormal_blood)}")
-
-                # รวบรวมผลตรวจอื่นๆ
-                prompt_data.append(f"ผลตรวจปัสสาวะ: {advice_urine(sex, person.get('Alb', '-'), person.get('sugar', '-'), person.get('RBC1', '-'), person.get('WBC1', '-')) or 'ปกติ'}")
-                prompt_data.append(f"ผลเอกซเรย์: {interpret_cxr(person.get(cxr_col, ''))}")
-                prompt_data.append(f"ผลคลื่นไฟฟ้าหัวใจ: {interpret_ekg(person.get(ekg_col, ''))}")
-                prompt_data.append(f"ความเห็นแพทย์: {doctor_suggestion}")
-
-                full_prompt = (
-                    "คุณคือผู้ช่วยแพทย์ผู้เชี่ยวชาญ กรุณาสรุปผลตรวจสุขภาพต่อไปนี้ให้ผู้ป่วยเข้าใจง่ายที่สุด "
-                    "โดยเน้นเฉพาะรายการที่ผิดปกติและให้คำแนะนำในการปฏิบัติตัวเบื้องต้นเป็นข้อๆ "
-                    "ใช้ภาษาไทยที่สุภาพและเป็นกันเอง:\n\n"
-                    + "\n".join(prompt_data)
-                )
-
-                with st.spinner("🧠 AI กำลังวิเคราะห์ข้อมูล... กรุณารอสักครู่"):
-                    try:
-                        model = get_gemini_model()
-                        if model:
-                            response = model.generate_content(full_prompt)
-                            st.session_state['gemini_response'] = response.text
-                        else:
-                            st.session_state['gemini_response'] = "เกิดข้อผิดพลาด: ไม่สามารถโหลดโมเดล AI ได้"
-                    except Exception as e:
-                        st.error(f"เกิดข้อผิดพลาดในการเรียกใช้ Gemini: {e}")
-                        st.session_state['gemini_response'] = None
-
-            # แสดงผลลัพธ์ถ้ามี
-            if 'gemini_response' in st.session_state and st.session_state['gemini_response']:
-                st.markdown(f"""
-                <div style='
-                    background-color: rgba(0, 128, 255, 0.1);
-                    color: var(--text-color);
-                    padding: 1.5rem 2rem;
-                    border-radius: 8px;
-                    line-height: 1.8;
-                    margin-top: 1rem;
-                    border: 1px solid rgba(0, 128, 255, 0.2);
-                '>
-                    {st.session_state['gemini_response']}
-                </div>
-                <div style='font-size: 12px; text-align: center; margin-top: 1rem; color: grey;'>
-                    <i>ข้อความนี้สร้างโดย AI เพื่อเป็นข้อมูลเบื้องต้นเท่านั้น ไม่สามารถใช้แทนคำวินิจฉัยของแพทย์ได้</i>
-                </div>
-                """, unsafe_allow_html=True)
-    # --- GEMINI INTEGRATION END ---
-
 
     # Doctor's Signature
     left_spacer4, signature_col, right_spacer4 = st.columns([0.5, 6, 0.5])
