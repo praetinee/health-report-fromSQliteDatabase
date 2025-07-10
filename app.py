@@ -1314,66 +1314,6 @@ if st.session_state.get('person_row'):
         </div>
         """, unsafe_allow_html=True)
 
-    # --- CHATGPT INTEGRATION START ---
-    # ส่วนนี้จะแสดงปุ่มและผลลัพธ์จาก ChatGPT
-    st.markdown("---") # Add a separator line
-    left_spacer_ai, ai_col, right_spacer_ai = st.columns([0.5, 6, 0.5])
-
-    with ai_col:
-        st.markdown(render_section_header("สรุปและให้คำแนะนำเพิ่มเติมโดย AI", "Powered by OpenAI"), unsafe_allow_html=True)
-        
-        # ตรวจสอบว่ามี API Key หรือไม่ก่อนแสดงปุ่ม
-        if not client:
-            st.warning("ไม่สามารถใช้งานฟีเจอร์ AI ได้ เนื่องจากไม่ได้ตั้งค่า OPENAI_API_KEY ใน Secrets")
-        else:
-            if st.button("🤖 วิเคราะห์ผลตรวจด้วย AI"):
-                # สร้าง Prompt เพื่อส่งให้ ChatGPT
-                prompt_data = []
-                prompt_data.append(f"ข้อมูลผู้ป่วย: ชื่อ {person.get('ชื่อ-สกุล', '-')}, อายุ {person.get('อายุ', '-')} ปี, เพศ {person.get('เพศ', '-')}")
-                prompt_data.append(f"ค่าร่างกายเบื้องต้น: น้ำหนัก {weight_display}, ส่วนสูง {height_display}, ความดัน {bp_full}, ชีพจร {pulse}")
-                
-                # รวบรวมผลเลือดที่ผิดปกติ
-                abnormal_cbc = [f"{row[0][0]}={row[1][0]}" for row in cbc_rows if row[0][1]]
-                if abnormal_cbc:
-                    prompt_data.append(f"ผลตรวจเลือด CBC ที่ผิดปกติ: {', '.join(abnormal_cbc)}")
-
-                abnormal_blood = [f"{row[0][0]}={row[1][0]}" for row in blood_rows if row[0][1]]
-                if abnormal_blood:
-                    prompt_data.append(f"ผลตรวจเลือด Blood Chemistry ที่ผิดปกติ: {', '.join(abnormal_blood)}")
-
-                # รวบรวมผลตรวจอื่นๆ
-                prompt_data.append(f"ผลตรวจปัสสาวะ: {advice_urine(sex, person.get('Alb', '-'), person.get('sugar', '-'), person.get('RBC1', '-'), person.get('WBC1', '-')) or 'ปกติ'}")
-                prompt_data.append(f"ผลเอกซเรย์: {interpret_cxr(person.get(cxr_col, ''))}")
-                prompt_data.append(f"ผลคลื่นไฟฟ้าหัวใจ: {interpret_ekg(person.get(ekg_col, ''))}")
-                prompt_data.append(f"ความเห็นแพทย์: {doctor_suggestion}")
-
-                full_prompt = "\n".join(prompt_data)
-
-                with st.spinner("🧠 AI กำลังวิเคราะห์ข้อมูล... กรุณารอสักครู่"):
-                    response_text = get_chatgpt_response(full_prompt)
-                    st.session_state['ai_response'] = response_text
-
-            # แสดงผลลัพธ์ถ้ามี
-            if 'ai_response' in st.session_state and st.session_state['ai_response']:
-                st.markdown(f"""
-                <div style='
-                    background-color: rgba(0, 128, 255, 0.1);
-                    color: var(--text-color);
-                    padding: 1.5rem 2rem;
-                    border-radius: 8px;
-                    line-height: 1.8;
-                    margin-top: 1rem;
-                    border: 1px solid rgba(0, 128, 255, 0.2);
-                '>
-                    {st.session_state['ai_response']}
-                </div>
-                <div style='font-size: 12px; text-align: center; margin-top: 1rem; color: grey;'>
-                    <i>ข้อความนี้สร้างโดย AI เพื่อเป็นข้อมูลเบื้องต้นเท่านั้น ไม่สามารถใช้แทนคำวินิจฉัยของแพทย์ได้</i>
-                </div>
-                """, unsafe_allow_html=True)
-    # --- CHATGPT INTEGRATION END ---
-
-
     # Doctor's Signature
     left_spacer4, signature_col, right_spacer4 = st.columns([0.5, 6, 0.5])
     with signature_col:
