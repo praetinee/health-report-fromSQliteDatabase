@@ -159,8 +159,6 @@ def interpret_bp(sbp, dbp):
     try:
         sbp = float(sbp)
         dbp = float(dbp)
-        if sbp == 0 or dbp == 0:
-            return "-"
         if sbp >= 140 or dbp >= 90:
             return "ความดันค่อนข้างสูง"
         return "ความดันปกติ"
@@ -181,9 +179,99 @@ def combined_health_advice(bmi, sbp, dbp):
         advice.append("ความดันโลหิตเริ่มสูง")
         
     if not advice:
-        return "น้ำหนักอยู่ในเกณฑ์ดีและความดันโลหิตปกติ แนะนำให้ดูแลเรื่องโภชนาการและการออกกำลังกายอย่างเหมาะสม"
+        return "น้ำหนักอยู่ในเกณฑ์ดีและความดันโลหิตปกติ ให้ดูแลเรื่องโภชนาการและการออกกำลังกายอย่างเหมาะสม"
         
     return " และ ".join(advice) + " แนะนำให้ปรับพฤติกรรมด้านอาหารและการออกกำลังกาย"
+
+# --- ⭐ ALL HELPER FUNCTIONS RESTORED ⭐ ---
+def kidney_summary_gfr_only(gfr_raw):
+    try:
+        gfr = float(str(gfr_raw).replace(",", "").strip())
+        if gfr == 0:
+            return ""
+        elif gfr < 60:
+            return "การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย"
+        else:
+            return "ปกติ"
+    except:
+        return ""
+
+def kidney_advice_from_summary(summary_text):
+    if summary_text == "การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย":
+        return (
+            "การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย "
+            "ลดอาหารเค็ม อาหารโปรตีนสูงย่อยยาก ดื่มน้ำ 8-10 แก้วต่อวัน "
+            "และไม่ควรกลั้นปัสสาวะ มีอาการบวมผิดปกติให้พบแพทย์"
+        )
+    return ""
+
+def fbs_advice(fbs_raw):
+    if is_empty(fbs_raw): return ""
+    try:
+        value = float(str(fbs_raw).replace(",", "").strip())
+        if 100 <= value < 106: return "ระดับน้ำตาลเริ่มสูงเล็กน้อย ควรปรับพฤติกรรมการบริโภคอาหารหวาน แป้ง และออกกำลังกาย"
+        if 106 <= value < 126: return "ระดับน้ำตาลสูงเล็กน้อย ควรลดอาหารหวาน แป้ง ของมัน ตรวจติดตามน้ำตาลซ้ำ และออกกำลังกายสม่ำเสมอ"
+        if value >= 126: return "ระดับน้ำตาลสูง ควรพบแพทย์เพื่อตรวจยืนยันเบาหวาน และติดตามอาการ"
+        return ""
+    except: return ""
+
+def summarize_liver(alp_val, sgot_val, sgpt_val):
+    try:
+        if float(alp_val) > 120 or float(sgot_val) > 36 or float(sgpt_val) > 40:
+            return "การทำงานของตับสูงกว่าเกณฑ์ปกติเล็กน้อย"
+        return "ปกติ"
+    except: return ""
+
+def liver_advice(summary_text):
+    if summary_text == "การทำงานของตับสูงกว่าเกณฑ์ปกติเล็กน้อย":
+        return "ควรลดอาหารไขมันสูงและตรวจติดตามการทำงานของตับซ้ำ"
+    return ""
+
+def uric_acid_advice(value_raw):
+    try:
+        if float(value_raw) > 7.2:
+            return "ควรลดอาหารที่มีพิวรีนสูง เช่น เครื่องในสัตว์ อาหารทะเล และพบแพทย์หากมีอาการปวดข้อ"
+        return ""
+    except: return ""
+
+def summarize_lipids(chol_raw, tgl_raw, ldl_raw):
+    try:
+        chol = float(str(chol_raw).replace(",", "").strip())
+        tgl = float(str(tgl_raw).replace(",", "").strip())
+        ldl = float(str(ldl_raw).replace(",", "").strip())
+        if chol >= 250 or tgl >= 250 or ldl >= 180: return "ไขมันในเลือดสูง"
+        if chol > 200 or tgl > 150 or ldl > 160: return "ไขมันในเลือดสูงเล็กน้อย"
+        return "ปกติ"
+    except: return ""
+
+def lipids_advice(summary_text):
+    if summary_text == "ไขมันในเลือดสูง":
+        return "ไขมันในเลือดสูง ควรลดอาหารที่มีไขมันอิ่มตัว เช่น ของทอด หนังสัตว์ ออกกำลังกายสม่ำเสมอ และพิจารณาพบแพทย์เพื่อตรวจติดตาม"
+    if summary_text == "ไขมันในเลือดสูงเล็กน้อย":
+        return "ไขมันในเลือดสูงเล็กน้อย ควรปรับพฤติกรรมการบริโภค ลดของมัน และออกกำลังกายเพื่อควบคุมระดับไขมัน"
+    return ""
+
+def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
+    advice_parts = []
+    try:
+        if float(hb) < (13 if sex == "ชาย" else 12):
+            advice_parts.append("ระดับฮีโมโกลบินต่ำ ควรตรวจหาภาวะโลหิตจางและติดตามซ้ำ")
+    except: pass
+    try:
+        if float(hct) < (39 if sex == "ชาย" else 36):
+            advice_parts.append("ค่าฮีมาโตคริตต่ำ ควรตรวจหาภาวะเลือดจางและตรวจติดตาม")
+    except: pass
+    try:
+        wbc_val = float(wbc)
+        if wbc_val < 4000: advice_parts.append("เม็ดเลือดขาวต่ำ อาจเกิดจากภูมิคุ้มกันลด ควรติดตาม")
+        elif wbc_val > 10000: advice_parts.append("เม็ดเลือดขาวสูง อาจมีการอักเสบ ติดเชื้อ หรือความผิดปกติ ควรพบแพทย์")
+    except: pass
+    try:
+        plt_val = float(plt)
+        if plt_val < 150000: advice_parts.append("เกล็ดเลือดต่ำ อาจมีภาวะเลือดออกง่าย ควรตรวจยืนยันซ้ำ")
+        elif plt_val > 500000: advice_parts.append("เกล็ดเลือดสูง ควรพบแพทย์เพื่อตรวจหาสาเหตุเพิ่มเติม")
+    except: pass
+    return " ".join(advice_parts)
 
 @st.cache_data(ttl=600)
 def load_sqlite_data():
@@ -224,10 +312,6 @@ st.markdown("""
     body, h1, h2, h3, h4, h5, h6, p, li, a, label, input, select, textarea, button, th, td {
         font-family: 'Sarabun', sans-serif !important;
     }
-    .report-container-for-print {
-        padding: 1rem;
-        border: 1px solid #ddd;
-    }
     
     @media print {
         @page {
@@ -266,6 +350,10 @@ st.markdown("""
             gap: 1rem !important;
         }
         
+        div[data-testid="stVerticalBlock"] > div[style*="flex:"] {
+            padding: 0 0.25rem !important;
+        }
+
         div, p, table, th, td {
             page-break-inside: avoid !important;
             margin: 0 !important;
@@ -274,7 +362,7 @@ st.markdown("""
             font-size: 8.5pt !important;
         }
         
-        h1, h2, p, .stMarkdown p {
+        h1, h2, .report-header-container p {
             text-align: center;
         }
         h1 { font-size: 14pt !important; margin-bottom: 2px !important; font-weight: bold;}
@@ -286,6 +374,7 @@ st.markdown("""
             text-align: left;
             margin-bottom: 3px !important;
         }
+        .advice-box p { text-align: left !important; }
 
         hr { display: none !important; }
         
@@ -357,7 +446,7 @@ if st.session_state.current_search_term:
 
             if selected_year:
                 year_df = results_df[results_df["Year"] == selected_year]
-                available_dates = sorted(year_df["วันที่ตรวจ"].dropna().unique(), key=lambda x: pd.to_datetime(x, errors='coerce', dayfirst=True), reverse=True)
+                available_dates = sorted(year_df["วันที่ตรวจ"].dropna().unique(), key=lambda x: pd.to_datetime(x, errors='coerce', dayfirst=True) if pd.notna(x) else pd.Timestamp.min, reverse=True)
                 if available_dates:
                     selected_date = st.selectbox("🗓️ เลือกวันที่ตรวจ", options=available_dates, key="selected_date")
                     if selected_date:
@@ -401,25 +490,19 @@ if st.session_state.get('person_row'):
     
     sbp = person.get("SBP", "")
     dbp = person.get("DBP", "")
-    pulse_raw = person.get("pulse", "-")
-    weight_raw = person.get("น้ำหนัก", "-")
-    height_raw = person.get("ส่วนสูง", "-")
-    waist_raw = person.get("รอบเอว", "-")
-
     try:
-        bmi_val = float(weight_raw) / ((float(height_raw) / 100) ** 2)
+        bmi_val = float(person.get("น้ำหนัก", 0)) / ((float(person.get("ส่วนสูง", 1)) / 100) ** 2)
     except:
         bmi_val = None
 
     bp_full = f"{sbp}/{dbp} ม.ม.ปรอท - {interpret_bp(sbp, dbp)}"
     
-    # Restructure patient info into 2 columns
     col1, col2 = st.columns(2)
     with col1:
         st.markdown(f"""
         <div class="patient-info">
             <p><b>ชื่อ-สกุล:</b> {person.get('ชื่อ-สกุล', '-')}</p>
-            <p><b>น้ำหนัก:</b> {weight_raw} กก.</p>
+            <p><b>น้ำหนัก:</b> {person.get('น้ำหนัก', '-')} กก.</p>
             <p><b>ความดันโลหิต:</b> {bp_full}</p>
         </div>
         """, unsafe_allow_html=True)
@@ -427,15 +510,14 @@ if st.session_state.get('person_row'):
         st.markdown(f"""
         <div class="patient-info">
             <p><b>อายุ:</b> {person.get('อายุ', '-')} ปี &nbsp;&nbsp;<b>เพศ:</b> {person.get('เพศ', '-')}</p>
-            <p><b>ส่วนสูง:</b> {height_raw} ซม. &nbsp;&nbsp;<b>รอบเอว:</b> {waist_raw} ซม.</p>
-            <p><b>ชีพจร:</b> {pulse_raw} ครั้ง/นาที</p>
+            <p><b>ส่วนสูง:</b> {person.get('ส่วนสูง', '-')} ซม. &nbsp;&nbsp;<b>รอบเอว:</b> {person.get('รอบเอว', '-')} ซม.</p>
+            <p><b>ชีพจร:</b> {person.get('pulse', '-')} ครั้ง/นาที</p>
         </div>
         """, unsafe_allow_html=True)
 
     advice_text = combined_health_advice(bmi_val, sbp, dbp)
     if advice_text:
-        st.markdown(f"<div class='advice-box'><b>คำแนะนำ:</b> {advice_text}</div>", unsafe_allow_html=True)
-
+        st.markdown(f"<div class='advice-box'><p><b>คำแนะนำ:</b> {advice_text}</p></div>", unsafe_allow_html=True)
 
     sex = str(person.get("เพศ", "")).strip()
     hb_low, hct_low = (13, 39) if sex == "ชาย" else (12, 36)
@@ -443,20 +525,18 @@ if st.session_state.get('person_row'):
     cbc_config = [
         ("ฮีโมโกลบิน (Hb)", "Hb(%)", f"> {hb_low} g/dl", hb_low, None),
         ("ฮีมาโตคริต (Hct)", "HCT", f"> {hct_low}%", hct_low, None),
-        ("เม็ดเลือดขาว (wbc)", "WBC (cumm)", "4,000 - 10,000 /cu.mm", 4000, 10000),
+        ("เม็ดเลือดขาว (wbc)", "WBC (cumm)", "4,000 - 10,000", 4000, 10000),
         ("นิวโทรฟิล (Neutrophil)", "Ne (%)", "43 - 70%", 43, 70),
         ("ลิมโฟไซต์ (Lymphocyte)", "Ly (%)", "20 - 44%", 20, 44),
         ("โมโนไซต์ (Monocyte)", "M", "3 - 9%", 3, 9),
         ("อีโอซิโนฟิล (Eosinophil)", "Eo", "0 - 9%", 0, 9),
         ("เบโซฟิล (Basophil)", "BA", "0 - 3%", 0, 3),
-        ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150,000 - 500,000 /cu.mm", 150000, 500000),
+        ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150,000 - 500,000", 150000, 500000),
     ]
 
-    cbc_rows = []
-    for label, col, norm, low, high in cbc_config:
-        val = get_float(col, person)
-        result, is_abn = flag(val, low, high)
-        cbc_rows.append([(label, is_abn), (result, is_abn), (norm, is_abn)])
+    cbc_rows = [(label, get_float(col, person), norm, low, high) for label, col, norm, low, high in cbc_config]
+    cbc_rows_display = [[(d[0], False), flag(d[1], d[3], d[4])[0], (d[2], False)] for d in cbc_rows]
+
 
     blood_config = [
         ("น้ำตาลในเลือด (FBS)", "FBS", "74 - 106 mg/dl", 74, 106),
@@ -472,29 +552,31 @@ if st.session_state.get('person_row'):
         ("การทำงานของไต (Cr)", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17),
         ("ประสิทธิภาพการกรองของไต (GFR)", "GFR", "> 60 mL/min", 60, None, True),
     ]
-
-    blood_rows = []
+    
+    blood_rows_data = []
     for label, col, norm, low, high, *opt in blood_config:
         higher = opt[0] if opt else False
         val = get_float(col, person)
-        result, is_abn = flag(val, low, high, higher)
-        blood_rows.append([(label, is_abn), (result, is_abn), (norm, is_abn)])
+        result_val, is_abn = flag(val, low, high, higher)
+        blood_rows_data.append([(label, is_abn), (result_val, is_abn), (norm, is_abn)])
 
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown(render_lab_table_html("ผลตรวจ CBC (Complete Blood Count)", None, ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows, "lab-table-1"), unsafe_allow_html=True)
+        st.markdown(render_lab_table_html("ผลตรวจ CBC (Complete Blood Count)", None, ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows_data[:len(cbc_rows)]), unsafe_allow_html=True)
     with col2:
-        st.markdown(render_lab_table_html("ผลตรวจเลือด (Blood Chemistry)", None, ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows, "lab-table-2"), unsafe_allow_html=True)
+        st.markdown(render_lab_table_html("ผลตรวจเลือด (Blood Chemistry)", None, ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows_data), unsafe_allow_html=True)
 
-    # Final Summary / Doctor's Note
     advice_list = []
-    advice_list.append(cbc_advice(
-        person.get("Hb(%)", ""), person.get("HCT", ""), person.get("WBC (cumm)", ""), person.get("Plt (/mm)", ""), sex=sex
-    ))
+    advice_list.append(kidney_advice_from_summary(kidney_summary_gfr_only(person.get("GFR", ""))))
+    advice_list.append(fbs_advice(person.get("FBS", "")))
+    advice_list.append(liver_advice(summarize_liver(person.get("ALP", ""), person.get("SGOT", ""), person.get("SGPT", ""))))
+    advice_list.append(uric_acid_advice(person.get("Uric Acid", "")))
+    advice_list.append(lipids_advice(summarize_lipids(person.get("CHOL", ""), person.get("TGL", ""), person.get("LDL", ""))))
+    advice_list.append(cbc_advice(person.get("Hb(%)", ""), person.get("HCT", ""), person.get("WBC (cumm)", ""), person.get("Plt (/mm)", ""), sex=sex))
     
     final_advice_html = " ".join([adv for adv in advice_list if adv])
     if final_advice_html:
-        st.markdown(f"<div class='advice-box'><b>อื่นๆ:</b> {final_advice_html}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='advice-box'><p><b>อื่นๆ:</b> {final_advice_html}</p></div>", unsafe_allow_html=True)
         
     st.markdown(f"""
     <div style='margin-top: 2rem; text-align: right; padding-right: 1rem;'>
