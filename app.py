@@ -36,7 +36,7 @@ def get_chatgpt_response(prompt):
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini", # ใช้โมเดล gpt-4o-mini ที่เร็วและคุ้มค่า
+            model="gpt-3.5-turbo"
             messages=[
                 {"role": "system", "content": "คุณคือผู้ช่วยแพทย์ผู้เชี่ยวชาญ สรุปผลตรวจสุขภาพให้ผู้ป่วยเข้าใจง่ายที่สุด โดยเน้นเฉพาะรายการที่ผิดปกติและให้คำแนะนำในการปฏิบัติตัวเบื้องต้นเป็นข้อๆ ใช้ภาษาไทยที่สุภาพและเป็นกันเอง"},
                 {"role": "user", "content": prompt}
