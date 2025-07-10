@@ -1446,7 +1446,7 @@ if st.session_state.person_row:
         '>
             <div style='
                 display: inline-block;
-                text-align: center;
+                text-align: cente
                 width: 340px;
             '>
                 <div style='
@@ -1459,3 +1459,5 @@ if st.session_state.person_row:
             </div>
         </div>
         """, unsafe_allow_html=True)
+" in the document.
+I want to add a feature that allows users to print the health report. Please add a "Print" button to the app. When the button is clicked, the app should generate a printable version of the report. The printable version should be well-formatted and easy to read. Please make sure that the "Print" button is only visible when a health report is being display
