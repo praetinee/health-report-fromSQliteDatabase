@@ -58,7 +58,7 @@ def normalize_thai_date(date_str):
             return f"{dt.day} {THAI_MONTHS_GLOBAL[dt.month]} {dt.year + 543}".replace('.', '')
 
         # Format: DD-MM-YYYY (e.g., 29-04-2565)
-        if re.match(r'^\d{1,2}-\d{1,2}/\d{4}$', s):
+        if re.match(r'^\d{1,2}-\d{1,2}-\d{4}$', s):
             day, month, year = map(int, s.split('-'))
             if year > 2500: # Assume Thai Buddhist year if year > 2500
                 year -= 543
@@ -827,30 +827,48 @@ st.markdown("""
     body, h1, h2, h3, h4, h5, h6, p, li, a, label, input, select, textarea, button, th, td {
         font-family: 'Sarabun', sans-serif !important;
     }
+    
     @media print {
+        /* ซ่อนส่วนที่ไม่ต้องการพิมพ์ */
         [data-testid="stSidebar"], 
         header[data-testid="stHeader"] {
             display: none !important;
         }
+
+        /* จัดการ Layout หลักให้เต็มหน้ากระดาษ */
         .main .block-container {
-            padding: 1cm 1.5cm !important;
+            padding: 0.5cm !important; /* ลด padding เพื่อให้มีเนื้อที่มากขึ้น */
             width: 100% !important;
             margin: 0 !important;
         }
+
         body {
-            font-size: 10pt !important;
+            font-size: 9pt !important; /* ลดขนาด font ลงอีก */
             margin: 0 !important;
             padding: 0 !important;
             background: #fff !important; 
             color: #000 !important;
         }
-        div[data-testid="stHorizontalBlock"] { display: block !important; }
+
+        /* --- ⭐ การแก้ไขคอลัมน์ที่สำคัญ ⭐ --- */
+        /* บังคับให้ st.columns แสดงผลข้างกันเหมือนเดิม */
+        div[data-testid="stHorizontalBlock"] {
+            display: flex;
+            flex-direction: row;
+            gap: 1rem; /* เพิ่มระยะห่างเล็กน้อยระหว่างคอลัมน์ */
+        }
+
+        /* ลดระยะห่างของทุกอย่างเพื่อให้กระชับที่สุด */
         div, p, h1, h2, table, th, td {
             page-break-inside: avoid !important;
-            margin-top: 2px !important; margin-bottom: 2px !important;
-            padding-top: 1px !important; padding-bottom: 1px !important;
-            line-height: 1.3 !important;
+            margin: 0 !important;
+            padding: 1px !important; /* ลด padding ลงอีก */
+            line-height: 1.2 !important; /* ลด line-height */
         }
+        
+        h1 { font-size: 16pt !important; }
+        h2 { font-size: 12pt !important; }
+        hr { display: none; } /* ซ่อนเส้นคั่น */
     }
     </style>
 """, unsafe_allow_html=True)
