@@ -89,7 +89,7 @@ def normalize_thai_date(date_str):
             current_ce_year = datetime.now().year
             if parsed_dt.year > current_ce_year + 50 and parsed_dt.year - 543 > 1900:
                 parsed_dt = parsed_dt.replace(year=parsed_dt.year - 543)
-            return f"{parsed_dt.day} {THAI_MONTHS_GLOBAL[parsed_dt.month]} {parsed_dt.year + 543}".replace('.', '')
+            return f"{parsed_dt.day} {THAI_MONTHS_GLOBAL[parsed_dt.month]} {dt.year + 543}".replace('.', '')
     except Exception:
         pass
 
@@ -204,6 +204,7 @@ def render_lab_table_html(title, subtitle, headers, rows, table_class="lab-table
     html_content += "</tbody></table></div>"
     return html_content
 
+# --- All other helper functions remain the same ---
 def kidney_summary_gfr_only(gfr_raw):
     try:
         gfr = float(str(gfr_raw).replace(",", "").strip())
@@ -858,7 +859,7 @@ st.markdown("""
         [data-testid="stSidebar"], 
         header[data-testid="stHeader"], 
         .stButton,
-        #print-button-wrapper { /* Hide the wrapper of our custom print button */
+        #print-link-button { /* Hide the print button itself */
             display: none !important;
         }
 
@@ -894,11 +895,8 @@ st.markdown("""
         }
     }
     
-    /* Style for the custom print button */
-    #print-button-wrapper {
-        width: 100%;
-    }
-    #print-button {
+    /* --- ⭐ NEW: Style for the custom print LINK to look like a BUTTON ⭐ --- */
+    #print-link-button {
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -913,17 +911,18 @@ st.markdown("""
         user-select: none;
         background-color: rgb(255, 255, 255);
         border: 1px solid rgba(49, 51, 63, 0.2);
+        text-decoration: none; /* remove underline from link */
     }
-    #print-button:hover {
+    #print-link-button:hover {
         border: 1px solid rgb(255, 75, 75);
         color: rgb(255, 75, 75);
+        text-decoration: none;
     }
-    #print-button:active {
+    #print-link-button:active {
         color: rgb(255, 255, 255);
         border: 1px solid rgb(255, 75, 75);
         background-color: rgb(255, 75, 75);
     }
-
     </style>
 """, unsafe_allow_html=True)
 
@@ -1011,34 +1010,14 @@ if st.session_state.current_search_term:
             else:
                  st.session_state.person_row = None
             
-            # --- ⭐ NEW: Add Print Button using a stable method ---
+            # --- ⭐ NEW: Add Print LINK styled as a BUTTON ---
             if st.session_state.get('person_row'):
                 st.markdown("---")
-                # Create a button using HTML with a specific ID
+                # Create a link with an href that executes JavaScript directly
                 st.markdown(
-                    '<div id="print-button-wrapper"><button id="print-button">🖨️ พิมพ์รายงานนี้</button></div>',
+                    '<a href="javascript:window.print()" id="print-link-button">🖨️ พิมพ์รายงานนี้</a>',
                     unsafe_allow_html=True
                 )
-
-# This JavaScript needs to be at the end of the script to ensure the button exists before the script runs
-# It finds the button by its ID and adds a click listener that calls window.print()
-st.components.v1.html("""
-    <script>
-    // Wait until the DOM is fully loaded before running the script
-    document.addEventListener("DOMContentLoaded", function() {
-        // Find the button by its unique ID
-        const printButton = document.getElementById('print-button');
-        
-        // If the button exists, add an event listener for 'click'
-        if (printButton) {
-            printButton.addEventListener('click', function() {
-                // When the button is clicked, trigger the browser's print dialog
-                window.print();
-            });
-        }
-    });
-    </script>
-    """, height=0)
 
 
 if not st.session_state.current_search_term:
@@ -1049,6 +1028,8 @@ if not st.session_state.current_search_term:
 
 # ==================== Display Health Report (Main Content) ====================
 if st.session_state.get('person_row'):
+    # --- All the code to display the report remains the same ---
+    # (The code from here to the end is unchanged)
     person = st.session_state.person_row
     year_display = person.get("Year", "-")
 
