@@ -902,11 +902,11 @@ search_query = st.sidebar.text_input("กรอก HN หรือ ชื่อ-
 if st.sidebar.button("ค้นหา", key="search_button"):
     st.session_state.current_search_term = st.session_state.search_input
     # Clear all dependent state to force a full refresh
+    # FIX: Use .pop(key, None) to avoid errors if the key doesn't exist
     keys_to_clear = ['search_results_df', 'person_row', 'selected_year', 'selected_date', 'gemini_response']
     for key in keys_to_clear:
-        if key in st.session_state:
-            del st.session_state[key]
-    # No st.rerun() needed here, Streamlit's natural flow is better
+        st.session_state.pop(key, None)
+
 
 # Main logic controller
 if st.session_state.current_search_term:
@@ -928,7 +928,7 @@ if st.session_state.current_search_term:
             st.sidebar.info("กรุณากรอก HN หรือ ชื่อ-สกุล เพื่อค้นหา")
 
     # Step 2: Display selectors if we have search results
-    if st.session_state.search_results_df is not None:
+    if st.session_state.get('search_results_df') is not None:
         results_df = st.session_state.search_results_df
         with st.sidebar:
             st.markdown("<hr>", unsafe_allow_html=True)
@@ -936,19 +936,15 @@ if st.session_state.current_search_term:
 
             available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
             
-            # Use a callback to clear dependent state when year changes
-            def on_year_change():
-                if 'selected_date' in st.session_state:
-                    del st.session_state['selected_date']
-                if 'gemini_response' in st.session_state:
-                    del st.session_state['gemini_response']
+            # Use a callback to clear dependent state when selection changes
+            def on_selection_change():
+                st.session_state.pop('gemini_response', None)
 
             selected_year = st.selectbox(
                 "📅 เลือกปีที่ต้องการดูผลตรวจรายงาน",
                 options=available_years,
-                format_func=lambda y: f"พ.ศ. {y}",
                 key="selected_year",
-                on_change=on_year_change
+                on_change=on_selection_change
             )
 
             # Date selector logic
@@ -957,15 +953,11 @@ if st.session_state.current_search_term:
                 available_dates = sorted(year_df["วันที่ตรวจ"].dropna().unique(), key=lambda x: pd.to_datetime(x, errors='coerce', dayfirst=True), reverse=True)
 
                 if available_dates:
-                    def on_date_change():
-                         if 'gemini_response' in st.session_state:
-                            del st.session_state['gemini_response']
-
                     selected_date = st.selectbox(
                         "🗓️ เลือกวันที่ตรวจ",
                         options=available_dates,
                         key="selected_date",
-                        on_change=on_date_change
+                        on_change=on_selection_change
                     )
 
                     # Step 3: Select the final row to display
@@ -987,7 +979,7 @@ else:
 
 
 # ==================== Display Health Report (Main Content) ====================
-if st.session_state.person_row:
+if st.session_state.get('person_row'):
     person = st.session_state.person_row
     year_display = person.get("Year", "-")
 
@@ -1458,4 +1450,4 @@ if st.session_state.person_row:
                 <div style='white-space: nowrap;'>เลขที่ใบอนุญาตผู้ประกอบวิชาชีพเวชกรรม ว.26674</div>
             </div>
         </div>
-        """, unsafe_allow_html=Tr
+        """, unsafe_allow_html=True)
