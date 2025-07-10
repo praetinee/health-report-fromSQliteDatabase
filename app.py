@@ -819,10 +819,10 @@ df = load_sqlite_data()
 # ==================== UI Setup and Search Form (Sidebar) ====================
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
-# Inject custom CSS for font, size control, and NEW printing rules
+# ⭐ Inject custom CSS for everything, including the new print button and print layout
 st.markdown("""
     <style>
-    /* --- General Styles (Your original styles remain here) --- */
+    /* --- General Styles --- */
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
     body, h1, h2, h3, h4, h5, h6, p, li, a, label, input, select, textarea, button, th, td,
     div[data-testid="stMarkdown"],
@@ -835,68 +835,49 @@ st.markdown("""
     body {
         font-size: 14px !important;
     }
-    .report-header-container h1 {
-        font-size: 1.8rem !important;
-        font-weight: bold;
-    }
-    .report-header-container h2 {
-        font-size: 1.2rem !important;
-        color: darkgrey;
-        font-weight: bold;
-    }
-    .st-sidebar h3 {
-        font-size: 18px !important;
-    }
-    .report-header-container * {
-        line-height: 1.7 !important; 
-        margin: 0.2rem 0 !important;
-        padding: 0 !important;
-    }
+    .report-header-container h1 { font-size: 1.8rem !important; font-weight: bold; }
+    .report-header-container h2 { font-size: 1.2rem !important; color: darkgrey; font-weight: bold; }
+    .st-sidebar h3 { font-size: 18px !important; }
+    .report-header-container * { line-height: 1.7 !important; margin: 0.2rem 0 !important; padding: 0 !important; }
     
-    /* --- ⭐ NEW & IMPROVED: Print-Specific Styles ⭐ --- */
+    /* --- Print-Specific Styles --- */
     @media print {
         /* Hide elements that shouldn't be printed */
         [data-testid="stSidebar"], 
-        header[data-testid="stHeader"], 
-        .stButton,
-        #print-link-button { /* Hide the print button itself */
+        header[data-testid="stHeader"] {
             display: none !important;
         }
 
-        /* Ensure main content uses the full page width with proper margins */
+        /* Ensure main content uses the full page width */
         .main .block-container {
-            padding: 1cm 1.5cm !important; /* Top/Bottom 1cm, Left/Right 1.5cm for A4 */
+            padding: 1cm 1.5cm !important;
             width: 100% !important;
             margin: 0 !important;
         }
         
         /* Reset body for printing */
         body {
-            font-size: 10pt !important; /* Smaller font size for print */
+            font-size: 10pt !important;
             margin: 0 !important;
             padding: 0 !important;
             background: #fff !important; 
             color: #000 !important;
         }
         
-        /* Force Streamlit's column containers to stack vertically instead of side-by-side */
-        div[data-testid="stHorizontalBlock"] {
-            display: block !important;
-        }
+        /* Force Streamlit's columns to stack vertically */
+        div[data-testid="stHorizontalBlock"] { display: block !important; }
         
         /* Make all sections compact */
         div, p, h1, h2, table, th, td {
-            page-break-inside: avoid !important; /* Try to prevent elements from splitting across pages */
-            margin-top: 2px !important;
-            margin-bottom: 2px !important;
-            padding-top: 1px !important;
-            padding-bottom: 1px !important;
+            page-break-inside: avoid !important;
+            margin-top: 2px !important; margin-bottom: 2px !important;
+            padding-top: 1px !important; padding-bottom: 1px !important;
             line-height: 1.3 !important;
         }
     }
     
-    /* --- ⭐ NEW: Style for the custom print LINK to look like a BUTTON ⭐ --- */
-    #print-link-button {
+    /* --- Style for the custom print BUTTON --- */
+    #print-button {
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -911,14 +892,12 @@ st.markdown("""
         user-select: none;
         background-color: rgb(255, 255, 255);
         border: 1px solid rgba(49, 51, 63, 0.2);
-        text-decoration: none; /* remove underline from link */
     }
-    #print-link-button:hover {
+    #print-button:hover {
         border: 1px solid rgb(255, 75, 75);
         color: rgb(255, 75, 75);
-        text-decoration: none;
     }
-    #print-link-button:active {
+    #print-button:active {
         color: rgb(255, 255, 255);
         border: 1px solid rgb(255, 75, 75);
         background-color: rgb(255, 75, 75);
@@ -926,6 +905,28 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+
+# ⭐ Inject the robust JavaScript to handle the print button
+st.markdown("""
+    <script>
+        // This function finds the button and attaches the print event.
+        const setupPrintButton = () => {
+            const button = document.getElementById('print-button');
+            // If the button exists and we haven't attached a listener yet...
+            if (button && !button.hasAttribute('data-listener-attached')) {
+                // When the button is clicked, call window.print()
+                button.addEventListener('click', () => window.print());
+                // Mark the button so we don't attach the listener again
+                button.setAttribute('data-listener-attached', 'true');
+            }
+        };
+
+        // Run the setup function every 500ms.
+        // This ensures that even if Streamlit re-renders the page,
+        // our script will find the button and make it work.
+        setInterval(setupPrintButton, 500);
+    </script>
+""", unsafe_allow_html=True)
 
 # --- STATE MANAGEMENT REFACTOR START ---
 
@@ -1010,12 +1011,12 @@ if st.session_state.current_search_term:
             else:
                  st.session_state.person_row = None
             
-            # --- ⭐ NEW: Add Print LINK styled as a BUTTON ---
+            # --- ⭐ NEW: Create the HTML button with a unique ID ---
             if st.session_state.get('person_row'):
                 st.markdown("---")
-                # Create a link with an href that executes JavaScript directly
+                # This is just a placeholder, the JavaScript above will make it work.
                 st.markdown(
-                    '<a href="javascript:window.print()" id="print-link-button">🖨️ พิมพ์รายงานนี้</a>',
+                    '<button id="print-button">🖨️ พิมพ์รายงานนี้</button>',
                     unsafe_allow_html=True
                 )
 
