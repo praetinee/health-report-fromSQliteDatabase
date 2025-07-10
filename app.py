@@ -11,48 +11,6 @@ from datetime import datetime
 import re
 import os
 
-# --- CHATGPT (OPENAI) INTEGRATION START ---
-# นำเข้า Library ของ OpenAI
-import openai
-
-# ตั้งค่า OpenAI API Key อย่างปลอดภัย
-try:
-    # สำหรับการ Deploy บน Streamlit Cloud
-    api_key = st.secrets["OPENAI_API_KEY"]
-except (KeyError, FileNotFoundError):
-    # สำหรับการรันบนเครื่อง Local
-    api_key = os.environ.get("OPENAI_API_KEY")
-
-# สร้าง client ของ OpenAI หากมี Key
-# The client holds the API key
-client = openai.OpenAI(api_key=api_key) if api_key else None
-
-def get_chatgpt_response(prompt):
-    """Function to get a response from ChatGPT using the new client method."""
-    if not client:
-        return None
-
-    try:
-        # ใช้ client.chat.completions.create ซึ่งเป็นวิธีที่ถูกต้องสำหรับ openai v1.0.0+
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "คุณคือผู้ช่วยแพทย์ผู้เชี่ยวชาญ สรุปผลตรวจสุขภาพให้ผู้ป่วยเข้าใจง่ายที่สุด โดยเน้นเฉพาะรายการที่ผิดปกติและให้คำแนะนำในการปฏิบัติตัวเบื้องต้นเป็นข้อๆ ใช้ภาษาไทยที่สุภาพและเป็นกันเอง"},
-                {"role": "user", "content": prompt}
-            ]
-        )
-        return response.choices[0].message.content
-    except openai.RateLimitError:
-        # The error handling for the new version is correct
-        st.error("เกิดข้อผิดพลาด: คุณใช้งานเกินโควต้าฟรีสำหรับวันนี้แล้ว กรุณาลองใหม่ในวันถัดไป หรือตรวจสอบแผนการใช้งานของคุณที่ OpenAI")
-        return None
-    except Exception as e:
-        # แสดงข้อผิดพลาดที่เกิดขึ้น เพื่อให้ง่ายต่อการตรวจสอบ
-        st.error(f"เกิดข้อผิดพลาดในการเรียกใช้ OpenAI API: {e}")
-        return None
-# --- CHATGPT (OPENAI) INTEGRATION END ---
-
-
 def is_empty(val):
     return str(val).strip().lower() in ["", "-", "none", "nan", "null"]
 
