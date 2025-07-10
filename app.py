@@ -784,13 +784,13 @@ def _render_lab_table_for_print(title, headers, rows):
     html += f"<th style='width:35%; text-align: left;'>{headers[2]}</th>"
     html += "</tr></thead><tbody>"
 
-    for row in rows:
-        is_abn = any(flag for _, flag in row)
+    for row_data in rows:
+        label, result, norm, is_abn = row_data
         row_class = "lab-table-abn" if is_abn else ""
         html += f"<tr class='{row_class}'>"
-        html += f"<td>{row[0][0]}</td>"
-        html += f"<td style='text-align: center;'>{row[1][0]}</td>"
-        html += f"<td>{row[2][0]}</td>"
+        html += f"<td>{label}</td>"
+        html += f"<td style='text-align: center;'>{result}</td>"
+        html += f"<td>{norm}</td>"
         html += "</tr>"
 
     html += "</tbody></table>"
@@ -807,8 +807,7 @@ def _render_urine_table_for_print(person_data, sex):
         ("เม็ดเลือดแดง (RBC)", person_data.get("RBC1", "-"), "0-2"),
         ("เม็ดเลือดขาว (WBC)", person_data.get("WBC1", "-"), "0-5"),
     ]
-    html = "<div class='section-header'>ผลการตรวจปัสสาวะ (Urinalysis)</div>"
-    html += "<table class='urine-table-print'><thead><tr>"
+    html = "<table class='urine-table-print'><thead><tr>"
     html += "<th style='width:45%; text-align:left;'>การตรวจ</th><th style='width:20%; text-align:center;'>ผลตรวจ</th><th style='width:35%; text-align:left;'>ค่าปกติ</th>"
     html += "</tr></thead><tbody>"
     for test, result, normal in urine_data:
@@ -855,39 +854,40 @@ def generate_print_view_html(person_data):
     except:
         bmi, bmi_str = 0, "-"
 
-    # --- Lab Data Preparation (Corrected cbc_rows) ---
+    # --- Lab Data Preparation (Corrected) ---
     cbc_config = [
-        ("ฮีโมโกลบิน (Hb)", "Hb(%)", "ช>13,ญ>12", hb_low, None),
-        ("ฮีมาโตคริต (Hct)", "HCT", "ช>39,ญ>36", hct_low, None),
-        ("เม็ดเลือดขาว (WBC)", "WBC (cumm)", "4-10k", 4000, 10000),
-        ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150-500k", 150000, 500000),
+        ("ฮีโมโกลบิน (Hb)", "Hb(%)", "ช>13,ญ>12", hb_low, None, False),
+        ("ฮีมาโตคริต (Hct)", "HCT", "ช>39,ญ>36", hct_low, None, False),
+        ("เม็ดเลือดขาว (WBC)", "WBC (cumm)", "4-10k", 4000, 10000, False),
+        ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150-500k", 150000, 500000, False),
     ]
-    # === FIX: Changed from list comprehension to a readable for loop ===
-    cbc_rows = []
-    for L, C, N, l, h in cbc_config:
-        val = get_float(C, person_data)
-        result_text, is_abnormal = flag(val, l, h)
-        cbc_rows.append([(L, is_abnormal), (result_text, is_abnormal), (N, is_abnormal)])
-
     blood_config = [
-        ("น้ำตาล (FBS)", "FBS", "74-106", 74, 106),
-        ("ไต (Creatinine)", "Cr", "0.5-1.17", 0.5, 1.17),
+        ("น้ำตาล (FBS)", "FBS", "74-106", 74, 106, False),
+        ("ไต (Creatinine)", "Cr", "0.5-1.17", 0.5, 1.17, False),
         ("ไต (eGFR)", "GFR", ">60", 60, None, True),
-        ("เก๊าท์ (Uric Acid)", "Uric Acid", "2.6-7.2", 2.6, 7.2),
-        ("ไขมัน (Cholesterol)", "CHOL", "<200", None, 200),
-        ("ไขมัน (Triglyceride)", "TGL", "<150", None, 150),
+        ("เก๊าท์ (Uric Acid)", "Uric Acid", "2.6-7.2", 2.6, 7.2, False),
+        ("ไขมัน (Cholesterol)", "CHOL", "<200", None, 200, False),
+        ("ไขมัน (Triglyceride)", "TGL", "<150", None, 150, False),
         ("ไขมันดี (HDL)", "HDL", ">40", 40, None, True),
-        ("ไขมันเลว (LDL)", "LDL", "<160", None, 160),
-        ("ตับ (SGOT)", "SGOT", "<37", None, 37),
-        ("ตับ (SGPT)", "SGPT", "<41", None, 41),
-        ("ตับ (ALP)", "ALP", "30-120", 30, 120),
+        ("ไขมันเลว (LDL)", "LDL", "<160", None, 160, False),
+        ("ตับ (SGOT)", "SGOT", "<37", None, 37, False),
+        ("ตับ (SGPT)", "SGPT", "<41", None, 41, False),
+        ("ตับ (ALP)", "ALP", "30-120", 30, 120, False),
     ]
+    
+    # Process lab data into a clean list
     blood_rows = []
-    for label, col, norm, low, high, *opt in blood_config:
-        higher_is_better = opt[0] if opt else False
+    for label, col, norm, low, high, higher_is_better in blood_config:
         val = get_float(col, person_data)
         result, is_abn = flag(val, low, high, higher_is_better)
-        blood_rows.append([(label, is_abn), (result, is_abn), (norm, is_abn)])
+        blood_rows.append((label, result, norm, is_abn))
+        
+    cbc_rows = []
+    for label, col, norm, low, high, higher_is_better in cbc_config:
+        val = get_float(col, person_data)
+        result, is_abn = flag(val, low, high, higher_is_better)
+        cbc_rows.append((label, result, norm, is_abn))
+
 
     # --- Other Test Results ---
     cxr_col = "CXR" if year_selected == (datetime.now().year + 543) else f"CXR{str(year_selected)[-2:]}"
@@ -941,7 +941,9 @@ def generate_print_view_html(person_data):
             {_render_lab_table_for_print("ความสมบูรณ์ของเลือด (CBC)", ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows)}
         </div>
         <div class="column-right">
+            <div class="section-header">ผลการตรวจปัสสาวะ (Urinalysis)</div>
             {_render_urine_table_for_print(person_data, sex)}
+
             <div class="section-header">ผลการตรวจอื่นๆ</div>
             <p class="other-results"><b>X-Ray:</b> {cxr_result}</p>
             <p class="other-results"><b>EKG:</b> {ekg_result}</p>
