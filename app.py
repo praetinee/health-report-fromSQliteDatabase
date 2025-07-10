@@ -42,7 +42,7 @@ def get_chatgpt_response(prompt):
             ]
         )
         return response['choices'][0]['message']['content']
-    except openai.error.RateLimitError:
+    except openai.RateLimitError:
         st.error("เกิดข้อผิดพลาด: คุณใช้งานเกินโควต้าฟรีสำหรับวันนี้แล้ว กรุณาลองใหม่ในวันถัดไป หรือตรวจสอบแผนการใช้งานของคุณที่ OpenAI")
         return None
     except Exception as e:
