@@ -58,7 +58,7 @@ def normalize_thai_date(date_str):
             return f"{dt.day} {THAI_MONTHS_GLOBAL[dt.month]} {dt.year + 543}".replace('.', '')
 
         # Format: DD-MM-YYYY (e.g., 29-04-2565)
-        if re.match(r'^\d{1,2}-\d{1,2}-\d{4}$', s):
+        if re.match(r'^\d{1,2}-\d{1,2}/\d{4}$', s):
             day, month, year = map(int, s.split('-'))
             if year > 2500: # Assume Thai Buddhist year if year > 2500
                 year -= 543
@@ -837,44 +837,47 @@ st.markdown("""
 
         /* จัดการ Layout หลักให้เต็มหน้ากระดาษ */
         .main .block-container {
-            padding: 0.5cm !important; /* ลด padding เพื่อให้มีเนื้อที่มากขึ้น */
+            padding: 0.5cm !important;
             width: 100% !important;
             margin: 0 !important;
         }
 
         body {
-            font-size: 9pt !important; /* ลดขนาด font ลงอีก */
+            font-size: 9pt !important;
             margin: 0 !important;
             padding: 0 !important;
         }
 
-        /* --- ⭐ การแก้ไขที่สำคัญสำหรับ Dark Mode ⭐ --- */
-        /* บังคับให้พื้นหลังเป็นสีขาวและตัวอักษรเป็นสีดำเสมอเมื่อพิมพ์ */
-        body, div, p, h1, h2, table, th, td, span, a {
-            background: #ffffff !important;
+        /* --- ⭐ การแก้ไขที่สำคัญสำหรับ Dark Mode และการแสดงสีพื้นหลัง ⭐ --- */
+        * {
+            background: transparent !important;
             color: #000000 !important;
             -webkit-print-color-adjust: exact !important; /* For Chrome, Safari */
-            color-adjust: exact !important; /* Standard */
+            print-color-adjust: exact !important; /* Standard */
         }
 
         /* บังคับให้ st.columns แสดงผลข้างกันเหมือนเดิม */
         div[data-testid="stHorizontalBlock"] {
-            display: flex;
-            flex-direction: row;
-            gap: 1rem; /* เพิ่มระยะห่างเล็กน้อยระหว่างคอลัมน์ */
+            display: flex !important;
+            flex-direction: row !important;
+            gap: 0.5rem !important; /* ลดระยะห่างระหว่างคอลัมน์ */
+        }
+        
+        div[data-testid="stVerticalBlock"] > div[style*="flex:"] {
+            padding: 0 0.25rem !important; /* ลด padding ของคอลัมน์ */
         }
 
         /* ลดระยะห่างของทุกอย่างเพื่อให้กระชับที่สุด */
         div, p, h1, h2, table, th, td {
             page-break-inside: avoid !important;
             margin: 0 !important;
-            padding: 1px !important; /* ลด padding ลงอีก */
-            line-height: 1.2 !important; /* ลด line-height */
+            padding: 1px !important;
+            line-height: 1.2 !important;
         }
         
         h1 { font-size: 16pt !important; }
         h2 { font-size: 12pt !important; }
-        hr { display: none; } /* ซ่อนเส้นคั่น */
+        hr { display: none !important; }
         
         /* ทำให้พื้นหลังของผลตรวจที่ผิดปกติยังคงแสดงสีอยู่ */
         .lab-table-abn, .urine-abn {
