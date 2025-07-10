@@ -4,3 +4,4 @@ numpy
 requests
 streamlit_js_eval
 google-generativeai
+openai
