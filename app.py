@@ -15,34 +15,35 @@ import os
 # นำเข้า Library ของ OpenAI
 import openai
 
-# ตั้งค่า OpenAI API Key อย่างปลอดภัย (ตามโครงสร้างโค้ดที่แนะนำ)
-# โดยจะดึงค่ามาจาก Secrets ของ Streamlit ก่อน
+# ตั้งค่า OpenAI API Key อย่างปลอดภัย
 try:
     # สำหรับการ Deploy บน Streamlit Cloud
-    openai.api_key = st.secrets["OPENAI_API_KEY"]
+    api_key = st.secrets["OPENAI_API_KEY"]
 except (KeyError, FileNotFoundError):
     # สำหรับการรันบนเครื่อง Local
-    openai.api_key = os.environ.get("OPENAI_API_KEY")
+    api_key = os.environ.get("OPENAI_API_KEY")
 
+# สร้าง client ของ OpenAI หากมี Key
+# The client holds the API key
+client = openai.OpenAI(api_key=api_key) if api_key else None
 
 def get_chatgpt_response(prompt):
-    """Function to get a response from ChatGPT using the older create method."""
-    if not openai.api_key:
-        st.error("ไม่สามารถใช้งานฟีเจอร์ AI ได้ เนื่องจากไม่ได้ตั้งค่า OPENAI_API_KEY ใน Secrets")
+    """Function to get a response from ChatGPT using the new client method."""
+    if not client:
         return None
 
     try:
-        # ใช้ openai.ChatCompletion.create ตามโค้dที่แนะนำ
-        # หมายเหตุ: วิธีนี้เป็นวิธีที่เก่ากว่า ปัจจุบันแนะนำให้ใช้ client.chat.completions.create
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo", # เปลี่ยนโมเดลตามที่แนะนำ
+        # ใช้ client.chat.completions.create ซึ่งเป็นวิธีที่ถูกต้องสำหรับ openai v1.0.0+
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "คุณคือผู้ช่วยแพทย์ผู้เชี่ยวชาญ สรุปผลตรวจสุขภาพให้ผู้ป่วยเข้าใจง่ายที่สุด โดยเน้นเฉพาะรายการที่ผิดปกติและให้คำแนะนำในการปฏิบัติตัวเบื้องต้นเป็นข้อๆ ใช้ภาษาไทยที่สุภาพและเป็นกันเอง"},
                 {"role": "user", "content": prompt}
             ]
         )
-        return response['choices'][0]['message']['content']
+        return response.choices[0].message.content
     except openai.RateLimitError:
+        # The error handling for the new version is correct
         st.error("เกิดข้อผิดพลาด: คุณใช้งานเกินโควต้าฟรีสำหรับวันนี้แล้ว กรุณาลองใหม่ในวันถัดไป หรือตรวจสอบแผนการใช้งานของคุณที่ OpenAI")
         return None
     except Exception as e:
@@ -1438,4 +1439,4 @@ if st.session_state.get('person_row'):
                 <div style='white-space: nowrap;'>เลขที่ใบอนุญาตผู้ประกอบวิชาชีพเวชกรรม ว.26674</div>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """, unsafe_allow_html=Tr
