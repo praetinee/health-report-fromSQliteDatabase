@@ -949,9 +949,11 @@ def generate_print_view_html(person_data):
         html_out += f"<div class='advice-box' style='font-size: 8pt !important;'><b>คำแนะนำผลปัสสาวะ:</b> {urine_advice}</div>"
 
     html_out += "<div class='section-header' style='margin-top: 5px;'>ผลตรวจอุจจาระ (Stool Examination)</div>"
-    stool_exam = interpret_stool_exam(person_data.get("Stool exam", ""))
-    stool_cs = interpret_stool_cs(person_data.get("Stool C/S", ""))
-    html_out += f"<p><b>ผลตรวจทั่วไป:</b> {stool_exam if stool_exam != '-' else 'ไม่ได้เข้ารับการตรวจ'}</p>"
+    stool_exam_raw = person_data.get("Stool exam", "")
+    stool_cs_raw = person_data.get("Stool C/S", "")
+    exam_text = interpret_stool_exam(stool_exam_raw)
+    cs_text = interpret_stool_cs(stool_cs_raw) # <-- บรรทัดที่เพิ่มเข้ามา
+    html_out += f"<p><b>ผลตรวจทั่วไป:</b> {exam_text if exam_text != '-' else 'ไม่ได้เข้ารับการตรวจ'}</p>"
     html_out += f"<p><b>ผลเพาะเชื้อ:</b> {cs_text if cs_text != '-' else 'ไม่ได้เข้ารับการตรวจ'}</p>"
     html_out += "</div>" # End Left Column
 
