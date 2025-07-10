@@ -882,19 +882,6 @@ st.markdown("""
         margin: 0.2rem 0 !important;
         padding: 0 !important;
     }
-    /* CSS for printing */
-    @media print {
-        /* Hide Streamlit's default header, sidebar, and all buttons */
-        header, [data-testid="stSidebar"], .stButton {
-            display: none !important;
-        }
-        /* Adjust main content padding for printing */
-        .main .block-container {
-            padding-top: 1rem !important;
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-        }
-    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -915,11 +902,11 @@ search_query = st.sidebar.text_input("กรอก HN หรือ ชื่อ-
 if st.sidebar.button("ค้นหา", key="search_button"):
     st.session_state.current_search_term = st.session_state.search_input
     # Clear all dependent state to force a full refresh
-    # FIX: Use .pop(key, None) to avoid errors if the key doesn't exist
     keys_to_clear = ['search_results_df', 'person_row', 'selected_year', 'selected_date', 'gemini_response']
     for key in keys_to_clear:
-        st.session_state.pop(key, None)
-
+        if key in st.session_state:
+            del st.session_state[key]
+    # No st.rerun() needed here, Streamlit's natural flow is better
 
 # Main logic controller
 if st.session_state.current_search_term:
@@ -949,16 +936,19 @@ if st.session_state.current_search_term:
 
             available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
             
-            # Use a callback to clear dependent state when selection changes
-            def on_selection_change():
-                st.session_state.pop('gemini_response', None)
+            # Use a callback to clear dependent state when year changes
+            def on_year_change():
+                if 'selected_date' in st.session_state:
+                    del st.session_state['selected_date']
+                if 'gemini_response' in st.session_state:
+                    del st.session_state['gemini_response']
 
             selected_year = st.selectbox(
                 "📅 เลือกปีที่ต้องการดูผลตรวจรายงาน",
                 options=available_years,
                 format_func=lambda y: f"พ.ศ. {y}",
                 key="selected_year",
-                on_change=on_selection_change
+                on_change=on_year_change
             )
 
             # Date selector logic
@@ -967,11 +957,15 @@ if st.session_state.current_search_term:
                 available_dates = sorted(year_df["วันที่ตรวจ"].dropna().unique(), key=lambda x: pd.to_datetime(x, errors='coerce', dayfirst=True), reverse=True)
 
                 if available_dates:
+                    def on_date_change():
+                         if 'gemini_response' in st.session_state:
+                            del st.session_state['gemini_response']
+
                     selected_date = st.selectbox(
                         "🗓️ เลือกวันที่ตรวจ",
                         options=available_dates,
                         key="selected_date",
-                        on_change=on_selection_change
+                        on_change=on_date_change
                     )
 
                     # Step 3: Select the final row to display
@@ -986,14 +980,6 @@ if st.session_state.current_search_term:
                     st.session_state.person_row = None
             else:
                  st.session_state.person_row = None
-            
-            # Add Print Button
-            if st.session_state.person_row:
-                st.markdown("---")
-                if st.sidebar.button("🖨️ พิมพ์รายงานนี้"):
-                    # Inject JavaScript to trigger the browser's print dialog
-                    st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
-
 else:
     st.info("เริ่มต้นใช้งานโดยการค้นหา HN หรือ ชื่อ-สกุล จากเมนูด้านซ้าย")
 
@@ -1472,4 +1458,4 @@ if st.session_state.person_row:
                 <div style='white-space: nowrap;'>เลขที่ใบอนุญาตผู้ประกอบวิชาชีพเวชกรรม ว.26674</div>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """, unsafe_allow_html=Tr
