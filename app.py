@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import sqlite3
 import requests
 import pandas as pd
@@ -57,7 +58,7 @@ def normalize_thai_date(date_str):
             return f"{dt.day} {THAI_MONTHS_GLOBAL[dt.month]} {dt.year + 543}".replace('.', '')
 
         # Format: DD-MM-YYYY (e.g., 29-04-2565)
-        if re.match(r'^\d{1,2}-\d{1,2}-\d{4}$', s):
+        if re.match(r'^\d{1,2}-\d{1,2}/\d{4}$', s):
             day, month, year = map(int, s.split('-'))
             if year > 2500: # Assume Thai Buddhist year if year > 2500
                 year -= 543
@@ -819,43 +820,23 @@ df = load_sqlite_data()
 # ==================== UI Setup and Search Form (Sidebar) ====================
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
-# ⭐ Inject custom CSS for everything, including the new print button and print layout
+# ⭐ Inject CSS for print layout
 st.markdown("""
     <style>
-    /* --- General Styles --- */
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
-    body, h1, h2, h3, h4, h5, h6, p, li, a, label, input, select, textarea, button, th, td,
-    div[data-testid="stMarkdown"],
-    div[data-testid="stInfo"],
-    div[data-testid="stSuccess"],
-    div[data-testid="stWarning"],
-    div[data-testid="stError"] {
+    body, h1, h2, h3, h4, h5, h6, p, li, a, label, input, select, textarea, button, th, td {
         font-family: 'Sarabun', sans-serif !important;
     }
-    body {
-        font-size: 14px !important;
-    }
-    .report-header-container h1 { font-size: 1.8rem !important; font-weight: bold; }
-    .report-header-container h2 { font-size: 1.2rem !important; color: darkgrey; font-weight: bold; }
-    .st-sidebar h3 { font-size: 18px !important; }
-    .report-header-container * { line-height: 1.7 !important; margin: 0.2rem 0 !important; padding: 0 !important; }
-    
-    /* --- Print-Specific Styles --- */
     @media print {
-        /* Hide elements that shouldn't be printed */
         [data-testid="stSidebar"], 
         header[data-testid="stHeader"] {
             display: none !important;
         }
-
-        /* Ensure main content uses the full page width */
         .main .block-container {
             padding: 1cm 1.5cm !important;
             width: 100% !important;
             margin: 0 !important;
         }
-        
-        /* Reset body for printing */
         body {
             font-size: 10pt !important;
             margin: 0 !important;
@@ -863,11 +844,7 @@ st.markdown("""
             background: #fff !important; 
             color: #000 !important;
         }
-        
-        /* Force Streamlit's columns to stack vertically */
         div[data-testid="stHorizontalBlock"] { display: block !important; }
-        
-        /* Make all sections compact */
         div, p, h1, h2, table, th, td {
             page-break-inside: avoid !important;
             margin-top: 2px !important; margin-bottom: 2px !important;
@@ -875,58 +852,9 @@ st.markdown("""
             line-height: 1.3 !important;
         }
     }
-    
-    /* --- Style for the custom print BUTTON --- */
-    #print-button {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 400;
-        padding: .25rem .75rem;
-        border-radius: .5rem;
-        min-height: 38.4px;
-        margin: 0px;
-        line-height: 1.6;
-        color: inherit;
-        width: 100%;
-        user-select: none;
-        background-color: rgb(255, 255, 255);
-        border: 1px solid rgba(49, 51, 63, 0.2);
-    }
-    #print-button:hover {
-        border: 1px solid rgb(255, 75, 75);
-        color: rgb(255, 75, 75);
-    }
-    #print-button:active {
-        color: rgb(255, 255, 255);
-        border: 1px solid rgb(255, 75, 75);
-        background-color: rgb(255, 75, 75);
-    }
     </style>
 """, unsafe_allow_html=True)
 
-
-# ⭐ Inject the robust JavaScript to handle the print button
-st.markdown("""
-    <script>
-        // This function finds the button and attaches the print event.
-        const setupPrintButton = () => {
-            const button = document.getElementById('print-button');
-            // If the button exists and we haven't attached a listener yet...
-            if (button && !button.hasAttribute('data-listener-attached')) {
-                // When the button is clicked, call window.print()
-                button.addEventListener('click', () => window.print());
-                // Mark the button so we don't attach the listener again
-                button.setAttribute('data-listener-attached', 'true');
-            }
-        };
-
-        // Run the setup function every 500ms.
-        // This ensures that even if Streamlit re-renders the page,
-        // our script will find the button and make it work.
-        setInterval(setupPrintButton, 500);
-    </script>
-""", unsafe_allow_html=True)
 
 # --- STATE MANAGEMENT REFACTOR START ---
 
@@ -1011,14 +939,48 @@ if st.session_state.current_search_term:
             else:
                  st.session_state.person_row = None
             
-            # --- ⭐ NEW: Create the HTML button with a unique ID ---
+            # --- ⭐ NEW: Add Print Button using a self-contained component ---
             if st.session_state.get('person_row'):
                 st.markdown("---")
-                # This is just a placeholder, the JavaScript above will make it work.
-                st.markdown(
-                    '<button id="print-button">🖨️ พิมพ์รายงานนี้</button>',
-                    unsafe_allow_html=True
-                )
+                
+                print_button_html = """
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                      <style>
+                        /* Style to make the button look like a native Streamlit button */
+                        body { margin: 0; font-family: 'Sarabun', sans-serif; }
+                        #print-btn {
+                            display: inline-flex; align-items: center; justify-content: center;
+                            font-weight: 400; padding: .25rem .75rem; border-radius: .5rem;
+                            min-height: 38.4px; margin: 0; line-height: 1.6;
+                            color: #31333F; width: 100%; user-select: none;
+                            background-color: #FFFFFF; border: 1px solid rgba(49, 51, 63, 0.2);
+                            box-sizing: border-box;
+                        }
+                        #print-btn:hover { border: 1px solid #FF4B4B; color: #FF4B4B; }
+                        #print-btn:active {
+                            color: #FFFFFF; border-color: #FF4B4B; background-color: #FF4B4B;
+                        }
+                        #print-btn:focus:not(:active) {
+                            border-color: #FF4B4B; box-shadow: 0 0 0 .2rem rgba(255, 75, 75, .5);
+                        }
+                      </style>
+                    </head>
+                    <body>
+                      <button id="print-btn">🖨️ พิมพ์รายงานนี้</button>
+                      <script>
+                        // Find the button within this component's document
+                        const button = document.getElementById('print-btn');
+                        button.addEventListener('click', function() {
+                          // Tell the PARENT window (the main app) to print itself
+                          window.parent.print();
+                        });
+                      </script>
+                    </body>
+                    </html>
+                """
+                components.html(print_button_html, height=40)
 
 
 if not st.session_state.current_search_term:
