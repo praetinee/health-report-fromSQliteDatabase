@@ -37,7 +37,8 @@ else:
 def get_gemini_model():
     """Function to get Gemini model only if API key is available."""
     if api_key:
-        return genai.GenerativeModel('gemini-pro')
+        # --- FIX: Updated model name from 'gemini-pro' to 'gemini-1.5-flash-latest' ---
+        return genai.GenerativeModel('gemini-1.5-flash-latest')
     return None
 # --- GEMINI INTEGRATION END ---
 
@@ -88,7 +89,7 @@ def normalize_thai_date(date_str):
             return f"{dt.day} {THAI_MONTHS_GLOBAL[dt.month]} {dt.year + 543}".replace('.', '')
 
         # Format: DD-MM-YYYY (e.g., 29-04-2565)
-        if re.match(r'^\d{1,2}-\d{1,2}-\d{4}$', s):
+        if re.match(r'^\d{1,2}-\d{1,2}/\d{4}$', s):
             day, month, year = map(int, s.split('-'))
             if year > 2500: # Assume Thai Buddhist year if year > 2500
                 year -= 543
@@ -898,6 +899,7 @@ if submitted_sidebar:
     st.session_state.pop("selected_exam_date_from_sidebar", None)
     st.session_state.pop("last_selected_year_sidebar", None) # Reset this on new search
     st.session_state.pop("last_selected_exam_date_sidebar", None) # Reset this on new search
+    st.session_state.pop("gemini_response", None) # Clear old AI response
 
 
     query_df = df.copy()
@@ -948,6 +950,7 @@ def update_year_selection():
         st.session_state.pop("selected_exam_date_from_sidebar", None)
         st.session_state.pop("person_row", None)
         st.session_state.pop("selected_row_found", None)
+        st.session_state.pop("gemini_response", None) # Clear old AI response
 
 def update_exam_date_selection():
     """Callback for exam date selectbox to update person_row immediately."""
@@ -955,6 +958,7 @@ def update_exam_date_selection():
     if st.session_state.get("last_selected_exam_date_sidebar") != new_exam_date:
         st.session_state["selected_exam_date_from_sidebar"] = new_exam_date
         st.session_state["last_selected_exam_date_sidebar"] = new_exam_date
+        st.session_state.pop("gemini_response", None) # Clear old AI response
 
 
 if "search_result" in st.session_state:
