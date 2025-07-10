@@ -911,7 +911,7 @@ if st.sidebar.button("ค้นหา", key="search_button"):
 # Main logic controller
 if st.session_state.current_search_term:
     # Step 1: Perform the search if results are not yet in state
-    if st.session_state.search_results_df is None:
+    if st.session_state.get('search_results_df') is None:
         search_term = st.session_state.current_search_term.strip()
         if search_term:
             if search_term.isdigit():
@@ -1450,4 +1450,4 @@ if st.session_state.get('person_row'):
                 <div style='white-space: nowrap;'>เลขที่ใบอนุญาตผู้ประกอบวิชาชีพเวชกรรม ว.26674</div>
             </div>
         </div>
-        """, unsafe_allow_html=Tr
+        """, unsafe_allow_html=True)
