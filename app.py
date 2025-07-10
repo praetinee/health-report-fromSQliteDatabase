@@ -711,7 +711,7 @@ def render_stool_html_table(exam, cs):
             width: 100%;
             border-collapse: collapse;
             color: var(--text-color);
-            table-layout: fixed; /* Ensure column widths are respected */
+            table-layout: fixed; /* Ensures column widths are respected */
             font-size: 14px;
         }
         .stool-table th {
@@ -1437,4 +1437,4 @@ if st.session_state.get('person_row'):
                 <div style='white-space: nowrap;'>เลขที่ใบอนุญาตผู้ประกอบวิชาชีพเวชกรรม ว.26674</div>
             </div>
         </div>
-        """, unsafe_allow_html=Tr
+        """, unsafe_allow_html=True)
