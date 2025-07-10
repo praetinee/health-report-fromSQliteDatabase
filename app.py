@@ -370,8 +370,16 @@ PRINT_CSS = """
     .print-view { display: none; }
     @media print {
         @page { size: A4; margin: 0.7cm; }
-        .live-view, [data-testid="stSidebar"], header[data-testid="stHeader"] { display: none !important; }
+        /* This is the key change: Hide all direct children of stBlockContainer, then un-hide only the one with .print-view */
+        [data-testid="stBlockContainer"] > div {
+            display: none !important;
+        }
+        [data-testid="stBlockContainer"] > div:has(.print-view) {
+            display: block !important;
+        }
         .print-view { display: block !important; }
+        
+        /* General print styles */
         * {
             background: transparent !important; color: #000 !important;
             box-shadow: none !important; text-shadow: none !important;
