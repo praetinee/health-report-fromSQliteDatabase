@@ -857,7 +857,8 @@ st.markdown("""
         /* Hide elements that shouldn't be printed */
         [data-testid="stSidebar"], 
         header[data-testid="stHeader"], 
-        .stButton {
+        .stButton,
+        #print-button-wrapper { /* Hide the wrapper of our custom print button */
             display: none !important;
         }
 
@@ -892,8 +893,40 @@ st.markdown("""
             line-height: 1.3 !important;
         }
     }
+    
+    /* Style for the custom print button */
+    #print-button-wrapper {
+        width: 100%;
+    }
+    #print-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 400;
+        padding: .25rem .75rem;
+        border-radius: .5rem;
+        min-height: 38.4px;
+        margin: 0px;
+        line-height: 1.6;
+        color: inherit;
+        width: 100%;
+        user-select: none;
+        background-color: rgb(255, 255, 255);
+        border: 1px solid rgba(49, 51, 63, 0.2);
+    }
+    #print-button:hover {
+        border: 1px solid rgb(255, 75, 75);
+        color: rgb(255, 75, 75);
+    }
+    #print-button:active {
+        color: rgb(255, 255, 255);
+        border: 1px solid rgb(255, 75, 75);
+        background-color: rgb(255, 75, 75);
+    }
+
     </style>
 """, unsafe_allow_html=True)
+
 
 # --- STATE MANAGEMENT REFACTOR START ---
 
@@ -978,13 +1011,37 @@ if st.session_state.current_search_term:
             else:
                  st.session_state.person_row = None
             
-            # Add Print Button
+            # --- ⭐ NEW: Add Print Button using a stable method ---
             if st.session_state.get('person_row'):
                 st.markdown("---")
-                if st.sidebar.button("🖨️ พิมพ์รายงานนี้"):
-                    # Inject JavaScript to trigger the browser's print dialog
-                    st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
-else:
+                # Create a button using HTML with a specific ID
+                st.markdown(
+                    '<div id="print-button-wrapper"><button id="print-button">🖨️ พิมพ์รายงานนี้</button></div>',
+                    unsafe_allow_html=True
+                )
+
+# This JavaScript needs to be at the end of the script to ensure the button exists before the script runs
+# It finds the button by its ID and adds a click listener that calls window.print()
+st.components.v1.html("""
+    <script>
+    // Wait until the DOM is fully loaded before running the script
+    document.addEventListener("DOMContentLoaded", function() {
+        // Find the button by its unique ID
+        const printButton = document.getElementById('print-button');
+        
+        // If the button exists, add an event listener for 'click'
+        if (printButton) {
+            printButton.addEventListener('click', function() {
+                // When the button is clicked, trigger the browser's print dialog
+                window.print();
+            });
+        }
+    });
+    </script>
+    """, height=0)
+
+
+if not st.session_state.current_search_term:
     st.info("เริ่มต้นใช้งานโดยการค้นหา HN หรือ ชื่อ-สกุล จากเมนูด้านซ้าย")
 
 # --- STATE MANAGEMENT REFACTOR END ---
