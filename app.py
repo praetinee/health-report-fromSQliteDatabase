@@ -89,7 +89,7 @@ def normalize_thai_date(date_str):
             return f"{dt.day} {THAI_MONTHS_GLOBAL[dt.month]} {dt.year + 543}".replace('.', '')
 
         # Format: DD-MM-YYYY (e.g., 29-04-2565)
-        if re.match(r'^\d{1,2}-\d{1,2}/\d{4}$', s):
+        if re.match(r'^\d{1,2}-\d{1,2}-\d{4}$', s):
             day, month, year = map(int, s.split('-'))
             if year > 2500: # Assume Thai Buddhist year if year > 2500
                 year -= 543
@@ -885,148 +885,110 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Main search form moved to sidebar
+# --- STATE MANAGEMENT REFACTOR START ---
+
+# Initialize state keys if they don't exist
+if 'current_search_term' not in st.session_state:
+    st.session_state.current_search_term = ""
+if 'search_results_df' not in st.session_state:
+    st.session_state.search_results_df = None
+if 'person_row' not in st.session_state:
+    st.session_state.person_row = None
+
+# Sidebar UI
 st.sidebar.markdown("<h3>ค้นหาข้อมูลผู้เข้ารับบริการ</h3>", unsafe_allow_html=True)
-search_query = st.sidebar.text_input("กรอก HN หรือ ชื่อ-สกุล")
-submitted_sidebar = st.sidebar.button("ค้นหา")
+search_query = st.sidebar.text_input("กรอก HN หรือ ชื่อ-สกุล", key="search_input")
 
+if st.sidebar.button("ค้นหา", key="search_button"):
+    st.session_state.current_search_term = st.session_state.search_input
+    # Clear all dependent state to force a full refresh
+    keys_to_clear = ['search_results_df', 'person_row', 'selected_year', 'selected_date', 'gemini_response']
+    for key in keys_to_clear:
+        if key in st.session_state:
+            del st.session_state[key]
+    # No st.rerun() needed here, Streamlit's natural flow is better
 
-if submitted_sidebar:
-    st.session_state.pop("search_result", None)
-    st.session_state.pop("person_row", None)
-    st.session_state.pop("selected_row_found", None)
-    st.session_state.pop("selected_year_from_sidebar", None)
-    st.session_state.pop("selected_exam_date_from_sidebar", None)
-    st.session_state.pop("last_selected_year_sidebar", None) # Reset this on new search
-    st.session_state.pop("last_selected_exam_date_sidebar", None) # Reset this on new search
-    st.session_state.pop("gemini_response", None) # Clear old AI response
-
-
-    query_df = df.copy()
-    search_term = search_query.strip()
-
-    if search_term:
-        if search_term.isdigit():
-            query_df = query_df[query_df["HN"] == search_term]
-        else:
-            query_df = query_df[query_df["ชื่อ-สกุล"].str.strip() == search_term]
-        
-        if query_df.empty:
-            st.sidebar.error("❌ ไม่พบข้อมูล กรุณาตรวจสอบข้อมูลที่กรอกอีกครั้ง")
-        else:
-            st.session_state["search_result"] = query_df
-            
-            # Select the most recent year/date from the found results for a person
-            first_available_year = sorted(query_df["Year"].dropna().unique().astype(int), reverse=True)[0]
-            
-            first_person_year_df = query_df[
-                (query_df["Year"] == first_available_year) &
-                (query_df["HN"] == query_df.iloc[0]["HN"]) # Use original HN for selecting row
-            ].drop_duplicates(subset=["HN", "วันที่ตรวจ"]).sort_values(by="วันที่ตรวจ", key=lambda x: pd.to_datetime(x, errors='coerce', dayfirst=True), ascending=False)
-            
-            if not first_person_year_df.empty:
-                st.session_state["person_row"] = first_person_year_df.iloc[0].to_dict()
-                st.session_state["selected_row_found"] = True
-                st.session_state["selected_year_from_sidebar"] = first_available_year
-                st.session_state["selected_exam_date_from_sidebar"] = first_person_year_df.iloc[0]["วันที่ตรวจ"]
-                st.session_state["last_selected_year_sidebar"] = first_available_year # Initialize for subsequent year changes
-                st.session_state["last_selected_exam_date_sidebar"] = first_person_year_df.iloc[0]["วันที่ตรวจ"] # Initialize
+# Main logic controller
+if st.session_state.current_search_term:
+    # Step 1: Perform the search if results are not yet in state
+    if st.session_state.search_results_df is None:
+        search_term = st.session_state.current_search_term.strip()
+        if search_term:
+            if search_term.isdigit():
+                results = df[df["HN"] == search_term]
             else:
-                st.session_state.pop("person_row", None)
-                st.session_state.pop("selected_row_found", None)
-                st.sidebar.error("❌ พบข้อมูลแต่ไม่สามารถแสดงผลได้ กรุณาลองใหม่")
-    else:
-        st.sidebar.info("กรุณากรอก HN หรือ ชื่อ-สกุล เพื่อค้นหา")
-
-
-# ==================== SELECT YEAR AND EXAM DATE IN SIDEBAR ====================
-
-def update_year_selection():
-    """Callback for year selectbox to ensure immediate update."""
-    new_year = st.session_state["year_select_sidebar"]
-    if st.session_state.get("last_selected_year_sidebar") != new_year:
-        st.session_state["selected_year_from_sidebar"] = new_year
-        st.session_state["last_selected_year_sidebar"] = new_year
-        st.session_state.pop("selected_exam_date_from_sidebar", None)
-        st.session_state.pop("person_row", None)
-        st.session_state.pop("selected_row_found", None)
-        st.session_state.pop("gemini_response", None) # Clear old AI response
-
-def update_exam_date_selection():
-    """Callback for exam date selectbox to update person_row immediately."""
-    new_exam_date = st.session_state["exam_date_select_sidebar"]
-    if st.session_state.get("last_selected_exam_date_sidebar") != new_exam_date:
-        st.session_state["selected_exam_date_from_sidebar"] = new_exam_date
-        st.session_state["last_selected_exam_date_sidebar"] = new_exam_date
-        st.session_state.pop("gemini_response", None) # Clear old AI response
-
-
-if "search_result" in st.session_state:
-    results_df = st.session_state["search_result"]
-
-    with st.sidebar:
-        st.markdown("<hr>", unsafe_allow_html=True)
-        st.markdown("<h3>เลือกปีและวันที่ตรวจ</h3>", unsafe_allow_html=True)
-
-        available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
-        
-        current_selected_year_index = 0
-        if "selected_year_from_sidebar" in st.session_state and st.session_state["selected_year_from_sidebar"] in available_years:
-            current_selected_year_index = available_years.index(st.session_state["selected_year_from_sidebar"])
-        
-        selected_year_from_sidebar = st.selectbox(
-            "📅 เลือกปีที่ต้องการดูผลตรวจรายงาน",
-            options=available_years,
-            index=current_selected_year_index,
-            format_func=lambda y: f"พ.ศ. {y}",
-            key="year_select_sidebar",
-            on_change=update_year_selection
-        )
-
-        if selected_year_from_sidebar:
-            selected_hn = results_df.iloc[0]["HN"]
-
-            person_year_df = results_df[
-                (results_df["Year"] == selected_year_from_sidebar) &
-                (results_df["HN"] == selected_hn)
-            ].drop_duplicates(subset=["HN", "วันที่ตรวจ"]).sort_values(by="วันที่ตรวจ", key=lambda x: pd.to_datetime(x, errors='coerce', dayfirst=True), ascending=False)
-
-            exam_dates_options = person_year_df["วันที่ตรวจ"].dropna().unique().tolist()
+                results = df[df["ชื่อ-สกุล"].str.strip() == search_term]
             
-            if exam_dates_options:
-                if len(exam_dates_options) == 1:
-                    st.session_state["selected_exam_date_from_sidebar"] = exam_dates_options[0]
-                    st.session_state["person_row"] = person_year_df[
-                        person_year_df["วันที่ตรวจ"] == st.session_state["selected_exam_date_from_sidebar"]
-                    ].iloc[0].to_dict()
-                    st.session_state["selected_row_found"] = True
-                    st.sidebar.info(f"ผลตรวจวันที่: **{exam_dates_options[0]}**")
-                else:
-                    current_selected_exam_date_index = 0
-                    if "selected_exam_date_from_sidebar" in st.session_state and st.session_state["selected_exam_date_from_sidebar"] in exam_dates_options:
-                        current_selected_exam_date_index = exam_dates_options.index(st.session_state["selected_exam_date_from_sidebar"])
-                    
-                    selected_exam_date_from_sidebar = st.selectbox(
+            if results.empty:
+                st.sidebar.error("❌ ไม่พบข้อมูล กรุณาตรวจสอบข้อมูลที่กรอกอีกครั้ง")
+                st.session_state.current_search_term = "" # Reset search term to prevent loop
+            else:
+                st.session_state.search_results_df = results
+        else:
+            st.sidebar.info("กรุณากรอก HN หรือ ชื่อ-สกุล เพื่อค้นหา")
+
+    # Step 2: Display selectors if we have search results
+    if st.session_state.search_results_df is not None:
+        results_df = st.session_state.search_results_df
+        with st.sidebar:
+            st.markdown("<hr>", unsafe_allow_html=True)
+            st.markdown("<h3>เลือกปีและวันที่ตรวจ</h3>", unsafe_allow_html=True)
+
+            available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
+            
+            # Use a callback to clear dependent state when year changes
+            def on_year_change():
+                if 'selected_date' in st.session_state:
+                    del st.session_state['selected_date']
+                if 'gemini_response' in st.session_state:
+                    del st.session_state['gemini_response']
+
+            selected_year = st.selectbox(
+                "📅 เลือกปีที่ต้องการดูผลตรวจรายงาน",
+                options=available_years,
+                format_func=lambda y: f"พ.ศ. {y}",
+                key="selected_year",
+                on_change=on_year_change
+            )
+
+            # Date selector logic
+            if selected_year:
+                year_df = results_df[results_df["Year"] == selected_year]
+                available_dates = sorted(year_df["วันที่ตรวจ"].dropna().unique(), key=lambda x: pd.to_datetime(x, errors='coerce', dayfirst=True), reverse=True)
+
+                if available_dates:
+                    def on_date_change():
+                         if 'gemini_response' in st.session_state:
+                            del st.session_state['gemini_response']
+
+                    selected_date = st.selectbox(
                         "🗓️ เลือกวันที่ตรวจ",
-                        options=exam_dates_options,
-                        index=current_selected_exam_date_index,
-                        key="exam_date_select_sidebar",
-                        on_change=update_exam_date_selection
+                        options=available_dates,
+                        key="selected_date",
+                        on_change=on_date_change
                     )
-                    
-                    st.session_state["person_row"] = person_year_df[
-                        person_year_df["วันที่ตรวจ"] == selected_exam_date_from_sidebar
-                    ].iloc[0].to_dict()
-                    st.session_state["selected_row_found"] = True
+
+                    # Step 3: Select the final row to display
+                    if selected_date:
+                        final_row_df = year_df[year_df["วันที่ตรวจ"] == selected_date]
+                        if not final_row_df.empty:
+                            st.session_state.person_row = final_row_df.iloc[0].to_dict()
+                        else:
+                             st.session_state.person_row = None # Should not happen
+                else:
+                    st.sidebar.warning(f"ไม่พบวันที่ตรวจสำหรับปี พ.ศ. {selected_year}")
+                    st.session_state.person_row = None
             else:
-                st.info("ไม่พบข้อมูลการตรวจสำหรับปีที่เลือก")
-                st.session_state.pop("person_row", None)
-                st.session_state.pop("selected_row_found", None)
+                 st.session_state.person_row = None
+else:
+    st.info("เริ่มต้นใช้งานโดยการค้นหา HN หรือ ชื่อ-สกุล จากเมนูด้านซ้าย")
+
+# --- STATE MANAGEMENT REFACTOR END ---
 
 
 # ==================== Display Health Report (Main Content) ====================
-if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
-    person = st.session_state["person_row"]
+if st.session_state.person_row:
+    person = st.session_state.person_row
     year_display = person.get("Year", "-")
 
     sbp = person.get("SBP", "")
@@ -1221,9 +1183,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         """, unsafe_allow_html=True)
 
     # ==================== Urinalysis Section ====================
-    selected_year = st.session_state.get("selected_year_from_sidebar", None)
-    if selected_year is None:
-        selected_year = datetime.now().year + 543
+    selected_year = st.session_state.get("selected_year", datetime.now().year + 543)
 
     with st.container():
         left_spacer_ua, col_ua_left, col_ua_right, right_spacer_ua = st.columns([0.5, 3, 3, 0.5])
@@ -1378,16 +1338,14 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             </div>
             """, unsafe_allow_html=True)
             
-#=========================== ความเห็นแพทย์ =======================
-if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
-    person = st.session_state["person_row"]
+    #=========================== ความเห็นแพทย์ =======================
     doctor_suggestion = str(person.get("DOCTER suggest", "")).strip()
     if doctor_suggestion.lower() in ["", "-", "none", "nan", "null"]:
         doctor_suggestion = "<i>ไม่มีคำแนะนำจากแพทย์</i>"
 
-    left_spacer3, main_col, right_spacer3 = st.columns([0.5, 6, 0.5])
+    left_spacer3, main_col_doc, right_spacer3 = st.columns([0.5, 6, 0.5])
 
-    with main_col:
+    with main_col_doc:
         st.markdown(f"""
         <div style='
             background-color: #1b5e20;
