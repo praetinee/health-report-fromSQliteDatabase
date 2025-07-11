@@ -58,7 +58,7 @@ def normalize_thai_date(date_str):
             return f"{dt.day} {THAI_MONTHS_GLOBAL[dt.month]} {dt.year + 543}".replace('.', '')
 
         # Format: DD-MM-YYYY (e.g., 29-04-2565)
-        if re.match(r'^\d{1,2}-\d{1,2}-\d{4}$', s):
+        if re.match(r'^\d{1,2}-\d{1,2}/\d{4}$', s):
             day, month, year = map(int, s.split('-'))
             if year > 2500: # Assume Thai Buddhist year if year > 2500
                 year -= 543
@@ -951,17 +951,22 @@ st.markdown("""
 # ==================== Search and Filter Section (Top of the page) ====================
 st.markdown("<h3 style='text-align: center; margin-bottom: 1rem;'>ค้นหาและเลือกผลตรวจ</h3>", unsafe_allow_html=True)
 
-# Define columns for the controls
-col1, col2, col3, col4 = st.columns([4, 1, 2, 2])
+# --- Search Input and Button ---
+# Use columns to center the main search area
+main_search_cols = st.columns([1, 2, 1])
+with main_search_cols[1]:
+    # Use inner columns for the text input and the button
+    search_input_cols = st.columns([4, 1])
+    with search_input_cols[0]:
+        search_query = st.text_input(
+            "กรอก HN หรือ ชื่อ-สกุล",
+            key="search_query_input"
+        )
+    with search_input_cols[1]:
+        # This empty space helps vertically align the button with the input box
+        st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
+        submitted_main = st.button("ค้นหา", use_container_width=True)
 
-with col1:
-    search_query = st.text_input(
-        "กรอก HN หรือ ชื่อ-สกุล", 
-        key="search_query_input"
-    )
-
-with col2:
-    submitted_main = st.button("ค้นหา", use_container_width=True)
 
 # --- State Initialization and Search Logic ---
 if submitted_main:
@@ -992,51 +997,55 @@ if submitted_main:
     else:
         st.info("กรุณากรอก HN หรือ ชื่อ-สกุล เพื่อค้นหา")
 
-# --- Display Filters and Handle Changes ---
+# --- Display Filters and Handle Changes (only after a search) ---
 if "search_result" in st.session_state:
     results_df = st.session_state["search_result"]
     selected_hn = results_df.iloc[0]["HN"]
 
-    # --- Year Selector ---
-    with col3:
-        available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
-        
-        def on_year_change():
-            st.session_state.selected_year = st.session_state.year_selector
-            year_df = st.session_state.search_result[st.session_state.search_result["Year"] == st.session_state.selected_year]
-            
-            if not year_df.empty:
-                latest_date_for_new_year = year_df.drop_duplicates(subset=["HN", "วันที่ตรวจ"]).sort_values(
-                    by="วันที่ตรวจ", key=lambda x: pd.to_datetime(x, errors='coerce', dayfirst=True), ascending=False
-                ).iloc[0]["วันที่ตรวจ"]
-                st.session_state.selected_exam_date = latest_date_for_new_year
+    # Use columns to center the filters
+    filter_center_cols = st.columns([1, 4, 1])
+    with filter_center_cols[1]:
+        filter_cols = st.columns(2)
+        # --- Year Selector ---
+        with filter_cols[0]:
+            available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
 
-        st.selectbox(
-            "ปีที่ตรวจ",
-            options=available_years,
-            key="year_selector",
-            on_change=on_year_change,
-            format_func=lambda y: f"พ.ศ. {y}",
-            index=available_years.index(st.session_state.selected_year) if 'selected_year' in st.session_state and st.session_state.selected_year in available_years else 0
-        )
+            def on_year_change():
+                st.session_state.selected_year = st.session_state.year_selector
+                year_df = st.session_state.search_result[st.session_state.search_result["Year"] == st.session_state.selected_year]
 
-    # --- Date Selector ---
-    with col4:
-        person_year_df = results_df[
-            (results_df["Year"] == st.session_state.selected_year) &
-            (results_df["HN"] == selected_hn)
-        ].drop_duplicates(subset=["HN", "วันที่ตรวจ"]).sort_values(by="วันที่ตรวจ", key=lambda x: pd.to_datetime(x, errors='coerce', dayfirst=True), ascending=False)
-        
-        exam_dates_options = person_year_df["วันที่ตรวจ"].dropna().unique().tolist()
+                if not year_df.empty:
+                    latest_date_for_new_year = year_df.drop_duplicates(subset=["HN", "วันที่ตรวจ"]).sort_values(
+                        by="วันที่ตรวจ", key=lambda x: pd.to_datetime(x, errors='coerce', dayfirst=True), ascending=False
+                    ).iloc[0]["วันที่ตรวจ"]
+                    st.session_state.selected_exam_date = latest_date_for_new_year
 
-        if exam_dates_options:
             st.selectbox(
-                "วันที่ตรวจ",
-                options=exam_dates_options,
-                key="selected_exam_date",
-                index=exam_dates_options.index(st.session_state.selected_exam_date) if 'selected_exam_date' in st.session_state and st.session_state.selected_exam_date in exam_dates_options else 0
+                "ปีที่ตรวจ",
+                options=available_years,
+                key="year_selector",
+                on_change=on_year_change,
+                format_func=lambda y: f"พ.ศ. {y}",
+                index=available_years.index(st.session_state.selected_year) if 'selected_year' in st.session_state and st.session_state.selected_year in available_years else 0
             )
-    
+
+        # --- Date Selector ---
+        with filter_cols[1]:
+            person_year_df = results_df[
+                (results_df["Year"] == st.session_state.selected_year) &
+                (results_df["HN"] == selected_hn)
+            ].drop_duplicates(subset=["HN", "วันที่ตรวจ"]).sort_values(by="วันที่ตรวจ", key=lambda x: pd.to_datetime(x, errors='coerce', dayfirst=True), ascending=False)
+
+            exam_dates_options = person_year_df["วันที่ตรวจ"].dropna().unique().tolist()
+
+            if exam_dates_options:
+                st.selectbox(
+                    "วันที่ตรวจ",
+                    options=exam_dates_options,
+                    key="selected_exam_date",
+                    index=exam_dates_options.index(st.session_state.selected_exam_date) if 'selected_exam_date' in st.session_state and st.session_state.selected_exam_date in exam_dates_options else 0
+                )
+
     # --- Set the final person_row for display ---
     if 'selected_year' in st.session_state and 'selected_exam_date' in st.session_state:
         final_df = results_df[
@@ -1454,3 +1463,15 @@ if "person_row" in st.session_state:
             </div>
         </div>
         """, unsafe_allow_html=True)
+" and am asking a query about/based on this code below.
+Instructions to follow:
+  * Don't output/edit the document if the query is Direct/Simple. For example, if the query asks for a simple explanation, output a direct answer.
+  * Make sure to **edit** the document if the query shows the intent of editing the document, in which case output the entire edited document, **not just that section or the edits**.
+    * Don't output the same document/empty document and say that you have edited it.
+    * Don't change unrelated code in the document.
+  * Don't output  and  in your final response.
+  * Any references like "this" or "selected code" refers to the code between  and  tags.
+  * Just acknowledge my request in the introduction.
+  * Make sure to refer to the document as "Canvas" in your response.
+
+Please make the search bar look like the provided ima
