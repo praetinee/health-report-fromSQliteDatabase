@@ -10,6 +10,7 @@ from collections import OrderedDict
 from datetime import datetime
 import re
 import streamlit.components.v1 as components
+import json
 
 # ==============================================================================
 # SECTION 1: CORE HELPER FUNCTIONS (UNCHANGED)
@@ -399,85 +400,58 @@ def merge_final_advice_grouped(messages):
 # This section creates a dedicated, simplified HTML report for printing.
 # ==============================================================================
 
-PRINT_CSS = """
+PRINT_WINDOW_CSS = """
 <style>
-    /* Hide the dedicated print view by default on screen */
-    .print-view { display: none; }
-
-    /* This block applies ONLY when the user prints */
-    @media print {
-        @page {
-            size: A4;
-            margin: 0.8cm;
-        }
-        
-        /* The core of the fix: hide everything on the page... */
-        body * {
-            visibility: hidden;
-        }
-        /* ...then make the print-view container and everything inside it visible again. */
-        .print-view, .print-view * {
-            visibility: visible;
-        }
-        
-        /* Position the print-view to fill the entire page. */
-        .print-view {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-        }
-
-        /* --- Start of specific styles for the content INSIDE .print-view --- */
-        * {
-            background: transparent !important;
-            color: #000 !important;
-            box-shadow: none !important;
-            text-shadow: none !important;
-            print-color-adjust: exact !important;
-            font-family: 'Sarabun', sans-serif !important;
-        }
-        h1 { font-size: 14pt !important; font-weight: bold; text-align: center; margin:0; padding:0; }
-        h2 { font-size: 11pt !important; text-align: center; margin:0 0 8px 0; padding:0; color: #333 !important; }
-        p, div, table, span { font-size: 9pt !important; line-height: 1.3 !important; }
-        .patient-info-print { border: 1px solid #000; padding: 5px; margin-bottom: 8px; text-align: left; }
-        .patient-info-print b { font-weight: bold; }
-        .main-content-flex { display: flex; flex-direction: row; gap: 0.7cm; width: 100%; }
-        .column-left { width: 55%; }
-        .column-right { width: 45%; }
-        .section-header-print {
-            background-color: #E0E0E0 !important;
-            font-weight: bold;
-            text-align: center;
-            padding: 3px;
-            margin-top: 8px;
-            margin-bottom: 4px;
-            border-radius: 3px;
-        }
-        table { width: 100%; border-collapse: collapse; page-break-inside: avoid; }
-        th, td { border: 1px solid #ccc; padding: 2px 4px; vertical-align: top; }
-        th { font-weight: bold; background-color: #F5F5F5 !important; }
-        .lab-table-print .test { width: 45%; }
-        .lab-table-print .result { width: 20%; text-align: center; }
-        .lab-table-print .norm { width: 35%; }
-        .lab-table-abn td { background-color: #F2F2F2 !important; font-weight: bold; }
-        .other-results { margin: 0; padding: 3px 4px; border-bottom: 1px dotted #eee; }
-        .advice-box { padding: 5px; border: 1px solid #ccc; border-radius: 4px; page-break-inside: avoid; margin-top: 4px; }
-        .advice-box b { font-weight: bold; }
-        .footer-section {
-            position: fixed;
-            bottom: 0.8cm;
-            left: 0.8cm;
-            right: 0.8cm;
-            border-top: 1px solid #000;
-            padding-top: 5px;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-        }
-        .signature-area { text-align: center; }
-        /* --- End of specific styles --- */
+    @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
+    @page {
+        size: A4;
+        margin: 0.8cm;
     }
+    * {
+        background: transparent !important;
+        color: #000 !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+        print-color-adjust: exact !important;
+        font-family: 'Sarabun', sans-serif !important;
+    }
+    body { padding: 0 !important; margin: 0 !important; }
+    h1 { font-size: 14pt !important; font-weight: bold; text-align: center; margin:0; padding:0; }
+    h2 { font-size: 11pt !important; text-align: center; margin:0 0 8px 0; padding:0; color: #333 !important; }
+    p, div, table, span { font-size: 9pt !important; line-height: 1.3 !important; }
+    .patient-info-print { border: 1px solid #000; padding: 5px; margin-bottom: 8px; text-align: left; }
+    .patient-info-print b { font-weight: bold; }
+    .main-content-flex { display: flex; flex-direction: row; gap: 0.7cm; width: 100%; }
+    .column-left { width: 55%; }
+    .column-right { width: 45%; }
+    .section-header-print {
+        background-color: #E0E0E0 !important;
+        font-weight: bold;
+        text-align: center;
+        padding: 3px;
+        margin-top: 8px;
+        margin-bottom: 4px;
+        border-radius: 3px;
+    }
+    table { width: 100%; border-collapse: collapse; page-break-inside: avoid; }
+    th, td { border: 1px solid #ccc; padding: 2px 4px; vertical-align: top; }
+    th { font-weight: bold; background-color: #F5F5F5 !important; }
+    .lab-table-print .test { width: 45%; }
+    .lab-table-print .result { width: 20%; text-align: center; }
+    .lab-table-print .norm { width: 35%; }
+    .lab-table-abn td { background-color: #F2F2F2 !important; font-weight: bold; }
+    .other-results { margin: 0; padding: 3px 4px; border-bottom: 1px dotted #eee; }
+    .advice-box { padding: 5px; border: 1px solid #ccc; border-radius: 4px; page-break-inside: avoid; margin-top: 4px; }
+    .advice-box b { font-weight: bold; }
+    .footer-section {
+        border-top: 1px solid #000;
+        padding-top: 5px;
+        margin-top: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+    }
+    .signature-area { text-align: center; }
 </style>
 """
 
@@ -634,7 +608,6 @@ def load_sqlite_data():
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
 # Inject CSS for printing and custom fonts
-st.markdown(PRINT_CSS, unsafe_allow_html=True)
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
@@ -742,11 +715,27 @@ if "search_result" in st.session_state:
                     """, unsafe_allow_html=True)
                 
                 # Use components.html to inject the script that adds functionality to the button
-                components.html("""
+                person_data_for_print = generate_printable_html(st.session_state.person_row)
+                js_content = json.dumps(person_data_for_print)
+                js_css = json.dumps(PRINT_WINDOW_CSS)
+
+                components.html(f"""
                     <script>
-                    document.getElementById("print-button").addEventListener("click", function() {
-                        window.print();
-                    });
+                    document.getElementById("print-button").addEventListener("click", function() {{
+                        const printWindow = window.open('', '_blank');
+                        printWindow.document.write('<html><head><title>Print Report</title>');
+                        printWindow.document.write({js_css});
+                        printWindow.document.write('</head><body>');
+                        printWindow.document.write({js_content});
+                        printWindow.document.write('</body></html>');
+                        printWindow.document.close();
+                        
+                        setTimeout(() => {{
+                            printWindow.focus();
+                            printWindow.print();
+                            printWindow.close();
+                        }}, 500);
+                    }});
                     </script>
                     """, height=0)
 
@@ -756,10 +745,7 @@ if "person_row" in st.session_state:
     person = st.session_state.person_row
     st.markdown("---")
     
-    # Generate and inject the hidden printable HTML. It's invisible on the screen.
-    st.markdown(f'<div class="print-view">{generate_printable_html(person)}</div>', unsafe_allow_html=True)
-    
-    # This container holds the visible, interactive app. It will be hidden when printing.
+    # This container holds the visible, interactive app.
     st.markdown('<div class="main-view">', unsafe_allow_html=True)
     
     # Header Section
