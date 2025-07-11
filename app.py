@@ -727,7 +727,7 @@ if "search_result" in st.session_state:
             st.write("") 
             st.write("")
             if st.session_state.get('person_row'):
-                # Use a custom HTML button that directly calls window.print()
+                # Create the button using HTML
                 st.markdown("""
                     <style>
                     .print-btn {
@@ -738,8 +738,18 @@ if "search_result" in st.session_state:
                     }
                     .print-btn:hover { background-color: #0b5ed7; border-color: #0a58ca; }
                     </style>
-                    <button onclick="window.print()" class="print-btn">🖨️ พิมพ์รายงาน</button>
+                    <button id="print-button" class="print-btn">🖨️ พิมพ์รายงาน</button>
                     """, unsafe_allow_html=True)
+                
+                # Use components.html to inject the script that adds functionality to the button
+                components.html("""
+                    <script>
+                    document.getElementById("print-button").addEventListener("click", function() {
+                        window.print();
+                    });
+                    </script>
+                    """, height=0)
+
 
 # --- Main content area ---
 if "person_row" in st.session_state:
