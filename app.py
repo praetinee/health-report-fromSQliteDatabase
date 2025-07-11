@@ -643,6 +643,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+df = load_sqlite_data()
+
 # --- Main Page Controls (No Sidebar) ---
 with st.container():
     st.markdown("### ค้นหาข้อมูลผู้เข้ารับบริการ")
@@ -653,15 +655,29 @@ with st.container():
     with col2:
         if st.button("ค้นหา", use_container_width=True):
             st.session_state.clear()
+            results = pd.DataFrame()  # Initialize empty results
+            error_occured = False
             if search_query:
-                if search_query.isdigit():
-                    results = df[df["HN"] == search_query]
+                search_query_stripped = search_query.strip()
+                if search_query_stripped.isdigit():
+                    if 'HN' in df.columns:
+                        results = df[df["HN"] == search_query_stripped]
+                    else:
+                        st.error("เกิดข้อผิดพลาด: ไม่พบคอลัมน์ 'HN' ในฐานข้อมูล")
+                        error_occured = True
                 else:
-                    results = df[df["ชื่อ-สกุล"].str.strip() == search_query]
-                if results.empty:
-                    st.error("❌ ไม่พบข้อมูล")
-                else:
-                    st.session_state["search_result"] = results
+                    if 'ชื่อ-สกุล' in df.columns:
+                        results = df[df["ชื่อ-สกุล"] == search_query_stripped]
+                    else:
+                        st.error("เกิดข้อผิดพลาด: ไม่พบคอลัมน์ 'ชื่อ-สกุล' ในฐานข้อมูล")
+                        st.info(f"คอลัมน์ที่พบในระบบ: {', '.join(df.columns.tolist())}")
+                        error_occured = True
+                
+                if not error_occured:
+                    if results.empty:
+                        st.error("❌ ไม่พบข้อมูล")
+                    else:
+                        st.session_state["search_result"] = results
             else:
                 st.info("กรุณากรอก HN หรือ ชื่อ-สกุล")
 
