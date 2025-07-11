@@ -12,7 +12,7 @@ import re
 import streamlit.components.v1 as components
 
 # ==============================================================================
-# SECTION 1: CORE HELPER FUNCTIONS (UNCHANGED FROM ORIGINAL)
+# SECTION 1: CORE HELPER FUNCTIONS (UNCHANGED)
 # ==============================================================================
 
 def is_empty(val):
@@ -395,19 +395,192 @@ def merge_final_advice_grouped(messages):
     return "<div style='margin-bottom:0.75rem;'>" + "</div><div style='margin-bottom:0.75rem;'>".join(output) + "</div>" if output else "ไม่พบคำแนะนำเพิ่มเติมจากผลตรวจ"
 
 # ==============================================================================
-# SECTION 2: PRINTING FUNCTIONALITY (REVISED)
+# SECTION 2: PRINTING FUNCTIONALITY (REVISED & RE-IMPLEMENTED)
 # ==============================================================================
 
-# This CSS will be applied only when printing. It hides the sidebar and header.
 PRINT_CSS = """
 <style>
+    /* Hide print view by default */
+    .print-view { display: none; }
+
     @media print {
-        [data-testid="stSidebar"], header[data-testid="stHeader"] {
+        @page {
+            size: A4;
+            margin: 0.8cm;
+        }
+        /* Hide the live view and sidebar/header when printing */
+        .main-view, [data-testid="stSidebar"], header[data-testid="stHeader"] {
             display: none !important;
         }
+        /* Show the print-specific view */
+        .print-view {
+            display: block !important;
+        }
+        /* General print styles */
+        * {
+            background: transparent !important;
+            color: #000 !important;
+            box-shadow: none !important;
+            text-shadow: none !important;
+            print-color-adjust: exact !important;
+            font-family: 'Sarabun', sans-serif !important;
+        }
+        body {
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        h1 { font-size: 14pt !important; font-weight: bold; text-align: center; margin:0; padding:0; }
+        h2 { font-size: 11pt !important; text-align: center; margin:0 0 8px 0; padding:0; color: #333 !important; }
+        p, div, table, span { font-size: 9pt !important; line-height: 1.3 !important; }
+        .patient-info-print { border: 1px solid #000; padding: 5px; margin-bottom: 8px; text-align: left; }
+        .patient-info-print b { font-weight: bold; }
+        .main-content-flex { display: flex; flex-direction: row; gap: 0.7cm; width: 100%; }
+        .column-left { width: 55%; }
+        .column-right { width: 45%; }
+        .section-header-print {
+            background-color: #E0E0E0 !important;
+            font-weight: bold;
+            text-align: center;
+            padding: 3px;
+            margin-top: 8px;
+            margin-bottom: 4px;
+            border-radius: 3px;
+        }
+        table { width: 100%; border-collapse: collapse; page-break-inside: avoid; }
+        th, td { border: 1px solid #ccc; padding: 2px 4px; vertical-align: top; }
+        th { font-weight: bold; background-color: #F5F5F5 !important; }
+        .lab-table-print .test { width: 45%; }
+        .lab-table-print .result { width: 20%; text-align: center; }
+        .lab-table-print .norm { width: 35%; }
+        .lab-table-abn td { background-color: #F2F2F2 !important; font-weight: bold; }
+        .other-results { margin: 0; padding: 3px 4px; border-bottom: 1px dotted #eee; }
+        .advice-box { padding: 5px; border: 1px solid #ccc; border-radius: 4px; page-break-inside: avoid; margin-top: 4px; }
+        .advice-box b { font-weight: bold; }
+        .footer-section {
+            position: fixed;
+            bottom: 0.8cm;
+            left: 0.8cm;
+            right: 0.8cm;
+            border-top: 1px solid #000;
+            padding-top: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+        .signature-area { text-align: center; }
     }
 </style>
 """
+
+def _render_lab_table_for_print(rows):
+    """Helper to render a lab table for the print view."""
+    html = "<table class='lab-table-print'><thead><tr><th class='test'>การตรวจ</th><th class='result'>ผล</th><th class='norm'>ค่าปกติ</th></tr></thead><tbody>"
+    for label, result, norm, is_abn in rows:
+        row_class = "lab-table-abn" if is_abn else ""
+        html += f"<tr class='{row_class}'><td>{label}</td><td class='result'>{result}</td><td>{norm}</td></tr>"
+    html += "</tbody></table>"
+    return html
+
+def _render_urine_table_for_print(person_data):
+    """Helper to render the urine table for the print view."""
+    urine_data = [
+        ("สี", person_data.get("Color", "-"), "Yellow"), ("น้ำตาล", person_data.get("sugar", "-"), "Negative"),
+        ("โปรตีน", person_data.get("Alb", "-"), "Negative"), ("pH", person_data.get("pH", "-"), "5.0-8.0"),
+        ("ถ.พ.", person_data.get("Spgr", "-"), "1.003-1.030"), ("RBC", person_data.get("RBC1", "-"), "0-2"),
+        ("WBC", person_data.get("WBC1", "-"), "0-5"),
+    ]
+    html = "<table class='urine-table-print'><thead><tr><th class='test'>การตรวจ</th><th class='result'>ผล</th><th class='norm'>ค่าปกติ</th></tr></thead><tbody>"
+    for test, result, normal in urine_data:
+        is_abn = is_urine_abnormal(test, result, normal)
+        row_class = "lab-table-abn" if is_abn else ""
+        result_display = str(safe_value(result)).replace("negative", "Neg").replace("trace", "Tr")
+        html += f"<tr class='{row_class}'><td>{test}</td><td class='result'>{result_display}</td><td>{normal}</td></tr>"
+    html += "</tbody></table>"
+    return html
+
+def generate_printable_html(person_data):
+    """Generates a self-contained HTML string formatted for printing."""
+    if not person_data: return ""
+    sex = str(person_data.get("เพศ", "ไม่ระบุ")).strip()
+    year_selected = int(person_data.get("Year", datetime.now().year + 543))
+    try:
+        age_str = str(int(float(person_data.get('อายุ', '-'))))
+        hn_str = str(int(float(person_data.get('HN', '-'))))
+    except (ValueError, TypeError):
+        age_str = str(person_data.get('อายุ', '-'))
+        hn_str = str(person_data.get('HN', '-'))
+
+    sbp, dbp = person_data.get("SBP", ""), person_data.get("DBP", "")
+    bp_val = f"{sbp}/{dbp}" if sbp and dbp else "-"
+    bp_interp = interpret_bp(sbp, dbp)
+    try:
+        bmi_str = f"{float(person_data.get('BMI', 0)):.1f}"
+    except (ValueError, TypeError):
+        bmi_str = "-"
+    
+    # --- Data Preparation ---
+    lab_configs = [
+        ("น้ำตาล (FBS)", "FBS", "74-106", 74, 106, False),
+        ("ไต (Creatinine)", "Cr", "0.5-1.17", 0.5, 1.17, False),
+        ("ไต (eGFR)", "GFR", ">60", 60, None, True),
+        ("เก๊าท์ (Uric Acid)", "Uric Acid", "2.6-7.2", 2.6, 7.2, False),
+        ("ไขมัน (Cholesterol)", "CHOL", "<200", None, 200, False),
+        ("ไขมัน (Triglyceride)", "TGL", "<150", None, 150, False),
+        ("ไขมันดี (HDL)", "HDL", ">40", 40, None, True),
+        ("ไขมันเลว (LDL)", "LDL", "<160", None, 160, False),
+        ("ตับ (SGOT)", "SGOT", "<37", None, 37, False),
+        ("ตับ (SGPT)", "SGPT", "<41", None, 41, False),
+        ("ตับ (ALP)", "ALP", "30-120", 30, 120, False),
+        ("ฮีโมโกลบิน (Hb)", "Hb(%)", "ช>13,ญ>12", 13 if sex=="ชาย" else 12, None, False),
+        ("ฮีมาโตคริต (Hct)", "HCT", "ช>39,ญ>36", 39 if sex=="ชาย" else 36, None, False),
+        ("เม็ดเลือดขาว (WBC)", "WBC (cumm)", "4-10k", 4000, 10000, False),
+        ("เกล็ดเลือด (Plt)", "Plt (/mm)", "150-500k", 150000, 500000, False),
+    ]
+    lab_rows_data = []
+    for label, col, norm, low, high, higher_is_better in lab_configs:
+        result, is_abn = flag(get_float(col, person_data), low, high, higher_is_better)
+        lab_rows_data.append((label, result, norm, is_abn))
+
+    cxr_result = interpret_cxr(person_data.get(f"CXR{str(year_selected)[-2:]}" if year_selected != (datetime.now().year + 543) else "CXR", ""))
+    ekg_result = interpret_ekg(person_data.get(get_ekg_col_name(year_selected), ""))
+    hep_b_advice = hepatitis_b_advice(safe_text(person_data.get("HbsAg")), safe_text(person_data.get("HbsAb")), safe_text(person_data.get("HBcAB")))
+    
+    advice_list = [
+        combined_health_advice(bmi_str, sbp, dbp), kidney_advice_from_summary(kidney_summary_gfr_only(person_data.get("GFR"))),
+        fbs_advice(person_data.get("FBS")), liver_advice(summarize_liver(person_data.get("ALP"), person_data.get("SGOT"), person_data.get("SGPT"))),
+        uric_acid_advice(person_data.get("Uric Acid")), lipids_advice(summarize_lipids(person_data.get("CHOL"), person_data.get("TGL"), person_data.get("LDL"))),
+        cbc_advice(person_data.get("Hb(%)"), person_data.get("HCT"), person_data.get("WBC (cumm)"), person_data.get("Plt (/mm)"), sex),
+        advice_urine(sex, person_data.get("Alb"), person_data.get("sugar"), person_data.get("RBC1"), person_data.get("WBC1"))
+    ]
+    final_advice_html = merge_final_advice_grouped([msg for msg in advice_list if msg])
+    doctor_suggestion = safe_text(person_data.get("DOCTER suggest", "ไม่มี"))
+
+    # --- HTML Assembly ---
+    return f"""
+    <div class="report-header-container">
+        <h1>รายงานผลการตรวจสุขภาพ</h1>
+        <h2>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย -</h2>
+    </div>
+    <div class="patient-info-print">
+        <b>ชื่อ-สกุล:</b> {person_data.get('ชื่อ-สกุล', '-')} &nbsp; <b>อายุ:</b> {age_str} ปี &nbsp; <b>เพศ:</b> {sex} &nbsp; <b>HN:</b> {hn_str} &nbsp; <b>วันที่ตรวจ:</b> {person_data.get('วันที่ตรวจ', '-')} <br>
+        <b>น้ำหนัก:</b> {person_data.get("น้ำหนัก", "-")} กก. &nbsp; <b>ส่วนสูง:</b> {person_data.get("ส่วนสูง", "-")} ซม. &nbsp; <b>BMI:</b> {bmi_str} &nbsp; <b>ความดัน:</b> {bp_val} ({bp_interp})
+    </div>
+    <div class="main-content-flex">
+        <div class="column-left">{_render_lab_table_for_print(lab_rows_data)}</div>
+        <div class="column-right">
+            <div class="section-header-print">ผลการตรวจปัสสาวะ</div>{_render_urine_table_for_print(person_data)}
+            <div class="section-header-print">ผลการตรวจอื่นๆ</div>
+            <p class="other-results"><b>X-Ray:</b> {cxr_result}</p>
+            <p class="other-results"><b>EKG:</b> {ekg_result}</p>
+            <p class="other-results"><b>Hepatitis B:</b> {hep_b_advice}</p>
+            <div class="section-header-print">คำแนะนำเบื้องต้น</div>
+            <div class="advice-box">{final_advice_html}</div>
+        </div>
+    </div>
+    <div class="footer-section">
+        <div><b>สรุปความเห็นของแพทย์:</b> {doctor_suggestion}</div>
+        <div class="signature-area">...........................................................<br><span>(นายแพทย์นพรัตน์ รัชฎาพร) ว.26674</span></div>
+    </div>"""
 
 def print_section():
     """Injects JavaScript to trigger the browser's print dialog."""
@@ -484,14 +657,13 @@ if "search_result" in st.session_state:
         st.markdown("<hr>", unsafe_allow_html=True)
         st.markdown("<h3>เลือกปีและวันที่ตรวจ</h3>", unsafe_allow_html=True)
         
-        # Helper function to sort Thai date strings
         def thai_date_str_to_datetime(date_str):
             try:
                 parts = date_str.split()
                 if len(parts) != 3: return datetime.min
                 day, month_name, year = int(parts[0]), parts[1], int(parts[2])
                 month_num = THAI_MONTH_TO_NUM_GLOBAL.get(month_name)
-                if month_num: return datetime(year, month_num, day)
+                if month_num: return datetime(year - 543, month_num, day) # Convert BE to CE for sorting
             except (ValueError, IndexError): return datetime.min
             return datetime.min
 
@@ -525,6 +697,12 @@ if "search_result" in st.session_state:
 # --- Main content area ---
 if "person_row" in st.session_state:
     person = st.session_state.person_row
+    
+    # Generate and inject the hidden printable HTML
+    st.markdown(f'<div class="print-view">{generate_printable_html(person)}</div>', unsafe_allow_html=True)
+    
+    # Start of the live view container
+    st.markdown('<div class="main-view">', unsafe_allow_html=True)
     
     # Header Section
     st.markdown(f"""<div class="report-header-container" style="text-align:center; margin-bottom:0.5rem;">
@@ -653,3 +831,6 @@ if "person_row" in st.session_state:
             <div style='white-space:nowrap;'>นายแพทย์นพรัตน์ รัชฎาพร</div>
             <div style='white-space:nowrap;'>เลขที่ใบอนุญาตผู้ประกอบวิชาชีพเวชกรรม ว.26674</div>
             </div></div>""", unsafe_allow_html=True)
+            
+    # End of the live view container
+    st.markdown('</div>', unsafe_allow_html=True)
