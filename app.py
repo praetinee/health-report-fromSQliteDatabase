@@ -46,7 +46,7 @@ def normalize_thai_date(date_str):
             if year > 2500: year -= 543
             dt = datetime(year, month, day)
             return f"{dt.day} {THAI_MONTHS_GLOBAL[dt.month]} {dt.year + 543}"
-        match = re.match(r'^(?P<day1>\d{1,2})(?:-\d{1,2})?\s*(?P<month_str>[ก-ฮ]+\.?)\s*(?P<year>\d{4})$', s)
+        match = re.match(r'^(?P<day1>\d{1,2})(?:-\d{1,2})?\s*(?P<month_str>[ก-ฮ]\.?)\s*(?P<year>\d{4})$', s)
         if match:
             day = int(match.group('day1'))
             month_str = match.group('month_str').strip().replace('.', '')
@@ -201,7 +201,7 @@ def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
     except: pass
     try:
         plt_val = float(plt)
-        if plt_val < 150000: advice_parts.append("เกล็ดเลือดต่ำ อาจมีภาวะเลือดออกง่าย ควรตรวจยืนยันซ้ำ")
+        if plt_val < 150000: advice_parts.append("เกล็ดเลือดต่ำ อาจมีภาวะเลือดออกง่ายควรตรวจยืนยันซ้ำ")
         elif plt_val > 500000: advice_parts.append("เกล็ดเลือดสูง ควรพบแพทย์เพื่อตรวจหาสาเหตุเพิ่มเติม")
     except: pass
     return " ".join(advice_parts)
@@ -303,10 +303,11 @@ def advice_urine(sex, alb, sugar, rbc, wbc):
 def is_urine_abnormal(test_name, value, normal_range):
     """Check if a urine test result is abnormal."""
     val = str(value or "").strip().lower()
-    if val in ["", "-", "none", "nan", "null"]: return False
     try:
-        if "ph" in test_name.lower(): return not (5.0 <= float(val) <= 8.0)
-        if "sp.gr" in test_name.lower(): return not (1.003 <= float(val) <= 1.030)
+        if "-" in str(normal_range):
+            low, high = map(float, normal_range.split("-"))
+            num_val = float(val)
+            if num_val < low or num_val > high: return True
     except: return True
     if "rbc" in test_name.lower(): return "พบ" in interpret_rbc(val).lower()
     if "wbc" in test_name.lower(): return "พบ" in interpret_wbc(val).lower()
@@ -429,7 +430,7 @@ PRINT_CSS = """
             padding: 0 !important;
             margin: 0 !important;
         }
-        h1 { font-size: 14pt !important; font-weight: bold; text-align: center; margin:0; padding:0; }
+        h1 { font-size: 14pt !important; font-weight: bold; text-align: center;margin:0; padding:0; }
         h2 { font-size: 11pt !important; text-align: center; margin:0 0 8px 0; padding:0; color: #333 !important; }
         p, div, table, span { font-size: 9pt !important; line-height: 1.3 !important; }
         .patient-info-print { border: 1px solid #000; padding: 5px; margin-bottom: 8px; text-align: left; }
@@ -454,7 +455,7 @@ PRINT_CSS = """
         .lab-table-print .norm { width: 35%; }
         .lab-table-abn td { background-color: #F2F2F2 !important; font-weight: bold; }
         .other-results { margin: 0; padding: 3px 4px; border-bottom: 1px dotted #eee; }
-        .advice-box { padding: 5px; border: 1px solid #ccc; border-radius: 4px; page-break-inside: avoid; margin-top: 4px; }
+        .advice-box { padding: 5px; border: 1px solid #ccc; border-radius: 4px;page-break-inside: avoid; margin-top: 4px; }
         .advice-box b { font-weight: bold; }
         .footer-section {
             position: fixed;
