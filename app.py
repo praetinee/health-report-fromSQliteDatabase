@@ -11,6 +11,8 @@ from datetime import datetime
 import re
 import streamlit.components.v1 as components
 import json
+from streamlit.components.v1 import html as st_html
+import json
 
 # ==============================================================================
 # SECTION 1: CORE HELPER FUNCTIONS (UNCHANGED)
@@ -700,45 +702,38 @@ if "search_result" in st.session_state:
             st.write("") 
             st.write("")
             if st.session_state.get('person_row'):
-                # Create the button using HTML
-                st.markdown("""
-                    <style>
-                    .print-btn {
-                        display: inline-flex; align-items: center; justify-content: center; font-weight: 400;
-                        padding: 0.25rem 0.75rem; border-radius: 0.5rem; min-height: 38.4px; margin: 0px;
-                        line-height: 1.6; width: 100%; user-select: none; background-color: #0d6efd;
-                        border: 1px solid #0d6efd; color: white; cursor: pointer;
-                    }
-                    .print-btn:hover { background-color: #0b5ed7; border-color: #0a58ca; }
-                    </style>
-                    <button id="print-button" class="print-btn">🖨️ พิมพ์รายงาน</button>
-                    """, unsafe_allow_html=True)
-                
-                # Use components.html to inject the script that adds functionality to the button
                 person_data_for_print = generate_printable_html(st.session_state.person_row)
                 js_content = json.dumps(person_data_for_print)
                 js_css = json.dumps(PRINT_WINDOW_CSS)
-
-                components.html(f"""
+        
+                st_html(f"""
+                    <style>
+                        .print-btn {{
+                            display: inline-flex; align-items: center; justify-content: center; font-weight: 400;
+                            padding: 0.25rem 0.75rem; border-radius: 0.5rem; min-height: 38.4px; margin: 0px;
+                            line-height: 1.6; width: 100%; user-select: none; background-color: #0d6efd;
+                            border: 1px solid #0d6efd; color: white; cursor: pointer;
+                        }}
+                        .print-btn:hover {{ background-color: #0b5ed7; border-color: #0a58ca; }}
+                    </style>
+                    <button id="print-button" class="print-btn">🖨️ พิมพ์รายงาน</button>
                     <script>
-                    document.getElementById("print-button").addEventListener("click", function() {{
-                        const printWindow = window.open('', '_blank');
-                        printWindow.document.write('<html><head><title>Print Report</title>');
-                        printWindow.document.write({js_css});
-                        printWindow.document.write('</head><body>');
-                        printWindow.document.write({js_content});
-                        printWindow.document.write('</body></html>');
-                        printWindow.document.close();
-                        
-                        setTimeout(() => {{
-                            printWindow.focus();
-                            printWindow.print();
-                            printWindow.close();
-                        }}, 500);
-                    }});
+                        document.getElementById("print-button").addEventListener("click", function() {{
+                            const printWindow = window.open('', '_blank');
+                            printWindow.document.write('<html><head><title>Print Report</title>');
+                            printWindow.document.write({js_css});
+                            printWindow.document.write('</head><body>');
+                            printWindow.document.write({js_content});
+                            printWindow.document.write('</body></html>');
+                            printWindow.document.close();
+                            setTimeout(() => {{
+                                printWindow.focus();
+                                printWindow.print();
+                                // printWindow.close();  // สามารถปล่อยให้ user ปิดเองเพื่อความปลอดภัย
+                            }}, 600);
+                        }});
                     </script>
-                    """, height=0)
-
+                """, height=100)
 
 # --- Main content area ---
 if "person_row" in st.session_state:
