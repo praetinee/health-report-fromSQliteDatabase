@@ -410,15 +410,25 @@ PRINT_CSS = """
             size: A4;
             margin: 0.8cm;
         }
-        /* Hide the main interactive app view, sidebar, and header */
-        .main-view, [data-testid="stSidebar"], header[data-testid="stHeader"] {
-            display: none !important;
+        
+        /* The core of the fix: hide everything on the page... */
+        body * {
+            visibility: hidden;
         }
-        /* Show the dedicated print view */
+        /* ...then make the print-view container and everything inside it visible again. */
+        .print-view, .print-view * {
+            visibility: visible;
+        }
+        
+        /* Position the print-view to fill the entire page. */
         .print-view {
-            display: block !important;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
         }
-        /* General styling for the printed page */
+
+        /* --- Start of specific styles for the content INSIDE .print-view --- */
         * {
             background: transparent !important;
             color: #000 !important;
@@ -427,7 +437,6 @@ PRINT_CSS = """
             print-color-adjust: exact !important;
             font-family: 'Sarabun', sans-serif !important;
         }
-        body { padding: 0 !important; margin: 0 !important; }
         h1 { font-size: 14pt !important; font-weight: bold; text-align: center; margin:0; padding:0; }
         h2 { font-size: 11pt !important; text-align: center; margin:0 0 8px 0; padding:0; color: #333 !important; }
         p, div, table, span { font-size: 9pt !important; line-height: 1.3 !important; }
@@ -467,6 +476,7 @@ PRINT_CSS = """
             align-items: flex-end;
         }
         .signature-area { text-align: center; }
+        /* --- End of specific styles --- */
     }
 </style>
 """
@@ -581,10 +591,6 @@ def generate_printable_html(person_data):
         <div class="signature-area">...........................................................<br><span>(นายแพทย์นพรัตน์ รัชฎาพร) ว.26674</span></div>
     </div>"""
 
-def print_section():
-    """Injects JavaScript to trigger the browser's print dialog."""
-    components.html('<script>window.print();</script>', height=0)
-
 # ==============================================================================
 # SECTION 3: MAIN APP LOGIC
 # ==============================================================================
@@ -689,9 +695,39 @@ if "search_result" in st.session_state:
                 st.session_state["person_row"] = person_df.iloc[0].to_dict()
 
         if st.session_state.get('person_row'):
-            st.markdown("---")
-            if st.sidebar.button("🖨️ พิมพ์รายงานนี้"):
-                print_section()
+            st.sidebar.markdown("---")
+            # Use a custom HTML button that directly calls window.print()
+            st.sidebar.markdown("""
+                <style>
+                .print-btn {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: 400;
+                    padding: 0.25rem 0.75rem;
+                    border-radius: 0.5rem;
+                    min-height: 38.4px;
+                    margin: 0px;
+                    line-height: 1.6;
+                    width: 100%;
+                    user-select: none;
+                    background-color: rgb(19, 23, 32);
+                    border: 1px solid rgba(250, 250, 250, 0.2);
+                    color: rgb(250, 250, 250);
+                    cursor: pointer;
+                }
+                .print-btn:hover {
+                    border: 1px solid rgb(0, 120, 212);
+                    color: rgb(0, 120, 212);
+                }
+                .print-btn:active {
+                    color: rgb(250, 250, 250);
+                    border: 1px solid rgb(0, 120, 212);
+                    background-color: rgb(0, 120, 212);
+                }
+                </style>
+                <button onclick="window.print()" class="print-btn">🖨️ พิมพ์รายงานนี้</button>
+                """, unsafe_allow_html=True)
 
 # --- Main content area ---
 if "person_row" in st.session_state:
@@ -775,7 +811,7 @@ if "person_row" in st.session_state:
     # General Advice Section
     advice_list = [
         kidney_advice_from_summary(kidney_summary_gfr_only(person.get("GFR"))), fbs_advice(person.get("FBS")),
-        liver_advice(summarize_liver(person.get("ALP"), person.get("SGOT"), person.get("SGPT"))),
+        liver_advice(summarize_liver(person.get("ALP"), person_get("SGOT"), person.get("SGPT"))),
         uric_acid_advice(person.get("Uric Acid")), lipids_advice(summarize_lipids(person.get("CHOL"), person.get("TGL"), person.get("LDL"))),
         cbc_advice(person.get("Hb(%)"), person.get("HCT"), person.get("WBC (cumm)"), person.get("Plt (/mm)"), sex)
     ]
