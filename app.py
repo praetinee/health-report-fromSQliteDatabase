@@ -133,7 +133,7 @@ def get_vitals_advice(bmi, sbp, dbp):
         elif sbp >= 120 or dbp >= 80: bp_text = "ความดันโลหิตเริ่มสูง"
 
     if bmi_text and bp_text: return f"{bmi_text} และ {bp_text} แนะนำให้ปรับพฤติกรรมด้านอาหารและการออกกำลังกาย"
-    if bmi_text: return f"{bmi_text} แนะนำให้ดูแลเรื่องโภชนาการและการออกกำลังกายอย่างเหมาะสม"
+    if bmi_text and not "ปกติ" in bmi_text: return f"{bmi_text} แนะนำให้ดูแลเรื่องโภชนาการและการออกกำลังกายอย่างเหมาะสม"
     if bp_text: return f"{bp_text} แนะนำให้ดูแลสุขภาพ และติดตามค่าความดันอย่างสม่ำเสมอ"
     if bmi_text == "น้ำหนักอยู่ในเกณฑ์ปกติ": return "น้ำหนักอยู่ในเกณฑ์ดี ควรรักษาพฤติกรรมสุขภาพนี้ต่อไป"
     return ""
@@ -196,6 +196,36 @@ def get_hepatitis_b_advice(hbsag, hbsab, hbcab):
         return "ไม่มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี ควรปรึกษาแพทย์เพื่อรับวัคซีน"
     return "ไม่สามารถสรุปผลชัดเจน แนะนำให้พบแพทย์เพื่อประเมินซ้ำ"
 
+def interpret_bp(sbp, dbp):
+    """Interprets blood pressure levels."""
+    if not sbp or not dbp or sbp == 0 or dbp == 0: return "-"
+    if sbp >= 160 or dbp >= 100: return "ความดันสูง"
+    if sbp >= 140 or dbp >= 90: return "ความดันสูงเล็กน้อย"
+    if sbp < 120 and dbp < 80: return "ความดันปกติ"
+    return "ความดันค่อนข้างสูง"
+
+def interpret_cxr(val):
+    """Interprets Chest X-ray results."""
+    val = str(val or "").strip()
+    if is_empty(val): return "ไม่ได้เข้ารับการตรวจเอกซเรย์"
+    if any(keyword in val.lower() for keyword in ["ผิดปกติ", "ฝ้า", "รอย", "abnormal", "infiltrate", "lesion"]):
+        return f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
+    return val
+
+def get_ekg_col_name(year):
+    """Determines the correct EKG column name based on the year."""
+    if not year: return "EKG"
+    current_thai_year = datetime.now().year + 543
+    return "EKG" if year == current_thai_year else f"EKG{str(year)[-2:]}"
+
+def interpret_ekg(val):
+    """Interprets EKG results."""
+    val = str(val or "").strip()
+    if is_empty(val): return "ไม่ได้เข้ารับการตรวจคลื่นไฟฟ้าหัวใจ"
+    if any(x in val.lower() for x in ["ผิดปกติ", "abnormal", "arrhythmia"]):
+        return f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
+    return val
+
 # ==============================================================================
 # 4. UI RENDERING FUNCTIONS
 # ==============================================================================
@@ -206,7 +236,7 @@ def render_main_css():
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
 
-    /* Apply Sarabun to all major elements, not Streamlit sidebar expander/collapse icon */
+    /* Apply Sarabun to all major elements, including Streamlit-specific ones */
     html, body, div, span, applet, object, iframe,
     h1, h2, h3, h4, h5, h6, p, blockquote, pre,
     a, abbr, acronym, address, big, cite, code,
@@ -219,7 +249,12 @@ def render_main_css():
     article, aside, canvas, details, embed,
     figure, figcaption, footer, header, hgroup,
     menu, nav, output, ruby, section, summary,
-    time, mark, audio, video, button, input, select, textarea {
+    time, mark, audio, video, button, input, select, textarea,
+    div[data-testid="stMarkdown"],
+    div[data-testid="stInfo"],
+    div[data-testid="stSuccess"],
+    div[data-testid="stWarning"],
+    div[data-testid="stError"] {
         font-family: 'Sarabun', sans-serif !important;
     }
     body { font-size: 14px !important; }
@@ -316,7 +351,6 @@ with st.sidebar:
             exam_dates = sorted(results_df[results_df["Year"] == selected_year]["วันที่ตรวจ"].dropna().unique(), reverse=True)
             if exam_dates:
                 selected_date = st.selectbox("🗓️ เลือกวันที่ตรวจ", exam_dates)
-                # Find and store the selected person's data row
                 person_row_df = results_df[(results_df["Year"] == selected_year) & (results_df["วันที่ตรวจ"] == selected_date)]
                 if not person_row_df.empty:
                     st.session_state.person_row = person_row_df.iloc[0].to_dict()
@@ -343,7 +377,7 @@ if 'person_row' in st.session_state and st.session_state.person_row:
     weight, height = get_float("น้ำหนัก", person), get_float("ส่วนสูง", person)
     sbp, dbp = get_float("SBP", person), get_float("DBP", person)
     bmi = (weight / ((height / 100) ** 2)) if weight and height else None
-    bp_interp = interpret_bp(sbp, dbp) if sbp and dbp else "-"
+    bp_interp = interpret_bp(sbp, dbp)
     
     st.markdown(f"""
     <hr>
@@ -370,7 +404,7 @@ if 'person_row' in st.session_state and st.session_state.person_row:
     
     def flag(val, low, high, higher_is_better=False):
         if val is None: return "-", False
-        is_abn = (val < low) if higher_is_better else (val < low or (high is not None and val > high))
+        is_abn = (val < low if low is not None else False) if higher_is_better else (val < low if low is not None else False) or (val > high if high is not None else False)
         return f"{val:.1f}", is_abn
 
     cbc_config = [
@@ -416,9 +450,9 @@ if 'person_row' in st.session_state and st.session_state.person_row:
     col3, col4 = st.columns(2)
     with col3:
         render_section_header("ผลตรวจปัสสาวะ (Urinalysis)")
-        st.info("ส่วนนี้อยู่ระหว่างการพัฒนา") # Placeholder for urine analysis
+        st.info("ส่วนนี้อยู่ระหว่างการพัฒนา") 
         render_section_header("ผลตรวจอุจจาระ (Stool Examination)")
-        st.info("ส่วนนี้อยู่ระหว่างการพัฒนา") # Placeholder for stool analysis
+        st.info("ส่วนนี้อยู่ระหว่างการพัฒนา") 
 
     with col4:
         render_section_header("ผลเอกซเรย์ (Chest X-ray)")
@@ -443,4 +477,3 @@ if 'person_row' in st.session_state and st.session_state.person_row:
         </div>
     </div>
     """, unsafe_allow_html=True)
-
