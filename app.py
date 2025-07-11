@@ -873,3 +873,66 @@ if "person_row" in st.session_state:
             
     # End of the live view container
     st.markdown('</div>', unsafe_allow_html=True)
+
+if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
+    # เพิ่มปุ่มปริ้น
+    print_button_html = """
+    <style>
+    .print-btn-custom {
+        position: fixed;
+        top: 22px;
+        right: 44px;
+        z-index: 10000;
+        background: #4CAF50;
+        color: #fff;
+        font-size: 15px;
+        padding: 7px 22px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.13);
+        transition: background 0.2s;
+    }
+    .print-btn-custom:hover { background: #256029; }
+    </style>
+    <button class="print-btn-custom" onclick="printReportSection()">ปริ้นผลตรวจ</button>
+    <script>
+    function printReportSection() {
+        var elements = document.querySelectorAll('main .block-container > *');
+        var printContents = "";
+        var foundReport = false;
+        for (let el of elements) {
+            // หาส่วนที่เป็นรายงาน (ไม่เอาส่วน sidebar หรือปุ่มค้นหา)
+            if (
+                el.querySelector &&
+                (
+                    el.querySelector('.report-header-container') ||
+                    el.textContent.includes('รายงานผลการตรวจสุขภาพ')
+                )
+            ) {
+                foundReport = true;
+            }
+            if (foundReport) {
+                printContents += el.outerHTML;
+            }
+        }
+        var originalContents = document.body.innerHTML;
+        var win = window.open('', '', 'height=900,width=800');
+        win.document.write('<html><head>');
+        // ดึง style และ font ทั้งหมด
+        var styles = document.querySelectorAll('style, link[rel=stylesheet]');
+        for (let s of styles) {
+            win.document.write(s.outerHTML);
+        }
+        // Google font
+        win.document.write("<link href='https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap' rel='stylesheet'>");
+        win.document.write('<style>body { font-family: "Sarabun", sans-serif !important; font-size:14px; } </style>');
+        win.document.write('</head><body>');
+        win.document.write(printContents);
+        win.document.write('</body></html>');
+        win.document.close();
+        setTimeout(() => { win.focus(); win.print(); }, 500);
+    }
+    </script>
+    """
+    components.html(print_button_html, height=50)
