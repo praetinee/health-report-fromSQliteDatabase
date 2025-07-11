@@ -46,7 +46,7 @@ def normalize_thai_date(date_str):
             if year > 2500: year -= 543
             dt = datetime(year, month, day)
             return f"{dt.day} {THAI_MONTHS_GLOBAL[dt.month]} {dt.year + 543}"
-        match = re.match(r'^(?P<day1>\d{1,2})(?:-\d{1,2})?\s*(?P<month_str>[ก-ฮ]\.?)\s*(?P<year>\d{4})$', s)
+        match = re.match(r'^(?P<day1>\d{1,2})(?:-\d{1,2})?\s*(?P<month_str>[ก-ฮ]+\.?)\s*(?P<year>\d{4})$', s)
         if match:
             day = int(match.group('day1'))
             month_str = match.group('month_str').strip().replace('.', '')
@@ -88,12 +88,12 @@ def flag(val, low=None, high=None, higher_is_better=False):
     return f"{val:.1f}", is_abnormal
 
 def render_section_header(title, subtitle=None):
-    """Render a styled section header."""
+    """Render a styled section header for the live view."""
     full_title = f"{title} <span style='font-weight: normal;'>({subtitle})</span>" if subtitle else title
     return f"<div style='background-color: #1b5e20; color: white; text-align: center; padding: 0.8rem 0.5rem; font-weight: bold; border-radius: 8px; margin-top: 2rem; margin-bottom: 1rem; font-size: 14px;'>{full_title}</div>"
 
 def render_lab_table_html(title, subtitle, headers, rows, table_class="lab-table"):
-    """Generate HTML for a lab results table."""
+    """Generate HTML for a lab results table for the live view."""
     style = f"""<style>
         .{table_class}-container {{ background-color: var(--background-color); margin-top: 1rem; }}
         .{table_class} {{ width: 100%; border-collapse: collapse; color: var(--text-color); table-layout: fixed; font-size: 14px; }}
@@ -201,7 +201,7 @@ def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
     except: pass
     try:
         plt_val = float(plt)
-        if plt_val < 150000: advice_parts.append("เกล็ดเลือดต่ำ อาจมีภาวะเลือดออกง่ายควรตรวจยืนยันซ้ำ")
+        if plt_val < 150000: advice_parts.append("เกล็ดเลือดต่ำ อาจมีภาวะเลือดออกง่าย ควรตรวจยืนยันซ้ำ")
         elif plt_val > 500000: advice_parts.append("เกล็ดเลือดสูง ควรพบแพทย์เพื่อตรวจหาสาเหตุเพิ่มเติม")
     except: pass
     return " ".join(advice_parts)
@@ -303,11 +303,10 @@ def advice_urine(sex, alb, sugar, rbc, wbc):
 def is_urine_abnormal(test_name, value, normal_range):
     """Check if a urine test result is abnormal."""
     val = str(value or "").strip().lower()
+    if val in ["", "-", "none", "nan", "null"]: return False
     try:
-        if "-" in str(normal_range):
-            low, high = map(float, normal_range.split("-"))
-            num_val = float(val)
-            if num_val < low or num_val > high: return True
+        if "ph" in test_name.lower(): return not (5.0 <= float(val) <= 8.0)
+        if "sp.gr" in test_name.lower(): return not (1.003 <= float(val) <= 1.030)
     except: return True
     if "rbc" in test_name.lower(): return "พบ" in interpret_rbc(val).lower()
     if "wbc" in test_name.lower(): return "พบ" in interpret_wbc(val).lower()
@@ -317,7 +316,7 @@ def is_urine_abnormal(test_name, value, normal_range):
     return False
 
 def render_urine_section(person_data, sex, year_selected):
-    """Render the entire urinalysis section with table and advice."""
+    """Render the entire urinalysis section for the live view."""
     urine_data = [
         ("สี (Colour)", person_data.get("Color", "-"), "Yellow, Pale Yellow"), ("น้ำตาล (Sugar)", person_data.get("sugar", "-"), "Negative"),
         ("โปรตีน (Albumin)", person_data.get("Alb", "-"), "Negative, trace"), ("กรด-ด่าง (pH)", person_data.get("pH", "-"), "5.0 - 8.0"),
@@ -347,7 +346,7 @@ def interpret_stool_cs(value):
     return "พบการติดเชื้อในอุจจาระ ให้พบแพทย์เพื่อตรวจรักษาเพิ่มเติม"
 
 def render_stool_html_table(exam, cs):
-    """Generate HTML table for stool exam results."""
+    """Generate HTML table for stool exam results for the live view."""
     return f"""<div class='stool-container' style="margin-top:1rem;"><table class='stool-table' style="width:100%;border-collapse:collapse;color:var(--text-color);font-size:14px;">
         <colgroup><col style="width:50%;"><col style="width:50%;"></colgroup>
         <tr><th style="background-color:var(--secondary-background-color);padding:3px 2px;text-align:left;font-weight:bold;">ผลตรวจอุจจาระทั่วไป</th><td style='text-align:left;padding:3px 2px;'>{exam if exam != "-" else "ไม่ได้เข้ารับการตรวจ"}</td></tr>
@@ -397,27 +396,29 @@ def merge_final_advice_grouped(messages):
 
 # ==============================================================================
 # SECTION 2: PRINTING FUNCTIONALITY (REVISED & RE-IMPLEMENTED)
+# This section creates a dedicated, simplified HTML report for printing.
 # ==============================================================================
 
 PRINT_CSS = """
 <style>
-    /* Hide print view by default */
+    /* Hide the dedicated print view by default on screen */
     .print-view { display: none; }
 
+    /* This block applies ONLY when the user prints */
     @media print {
         @page {
             size: A4;
             margin: 0.8cm;
         }
-        /* Hide the live view and sidebar/header when printing */
+        /* Hide the main interactive app view, sidebar, and header */
         .main-view, [data-testid="stSidebar"], header[data-testid="stHeader"] {
             display: none !important;
         }
-        /* Show the print-specific view */
+        /* Show the dedicated print view */
         .print-view {
             display: block !important;
         }
-        /* General print styles */
+        /* General styling for the printed page */
         * {
             background: transparent !important;
             color: #000 !important;
@@ -426,11 +427,8 @@ PRINT_CSS = """
             print-color-adjust: exact !important;
             font-family: 'Sarabun', sans-serif !important;
         }
-        body {
-            padding: 0 !important;
-            margin: 0 !important;
-        }
-        h1 { font-size: 14pt !important; font-weight: bold; text-align: center;margin:0; padding:0; }
+        body { padding: 0 !important; margin: 0 !important; }
+        h1 { font-size: 14pt !important; font-weight: bold; text-align: center; margin:0; padding:0; }
         h2 { font-size: 11pt !important; text-align: center; margin:0 0 8px 0; padding:0; color: #333 !important; }
         p, div, table, span { font-size: 9pt !important; line-height: 1.3 !important; }
         .patient-info-print { border: 1px solid #000; padding: 5px; margin-bottom: 8px; text-align: left; }
@@ -455,7 +453,7 @@ PRINT_CSS = """
         .lab-table-print .norm { width: 35%; }
         .lab-table-abn td { background-color: #F2F2F2 !important; font-weight: bold; }
         .other-results { margin: 0; padding: 3px 4px; border-bottom: 1px dotted #eee; }
-        .advice-box { padding: 5px; border: 1px solid #ccc; border-radius: 4px;page-break-inside: avoid; margin-top: 4px; }
+        .advice-box { padding: 5px; border: 1px solid #ccc; border-radius: 4px; page-break-inside: avoid; margin-top: 4px; }
         .advice-box b { font-weight: bold; }
         .footer-section {
             position: fixed;
@@ -519,7 +517,7 @@ def generate_printable_html(person_data):
     except (ValueError, TypeError):
         bmi_str = "-"
     
-    # --- Data Preparation ---
+    # --- Data Preparation for Print ---
     lab_configs = [
         ("น้ำตาล (FBS)", "FBS", "74-106", 74, 106, False),
         ("ไต (Creatinine)", "Cr", "0.5-1.17", 0.5, 1.17, False),
@@ -556,7 +554,7 @@ def generate_printable_html(person_data):
     final_advice_html = merge_final_advice_grouped([msg for msg in advice_list if msg])
     doctor_suggestion = safe_text(person_data.get("DOCTER suggest", "ไม่มี"))
 
-    # --- HTML Assembly ---
+    # --- HTML Assembly for Print ---
     return f"""
     <div class="report-header-container">
         <h1>รายงานผลการตรวจสุขภาพ</h1>
@@ -699,10 +697,10 @@ if "search_result" in st.session_state:
 if "person_row" in st.session_state:
     person = st.session_state.person_row
     
-    # Generate and inject the hidden printable HTML
+    # Generate and inject the hidden printable HTML. It's invisible on the screen.
     st.markdown(f'<div class="print-view">{generate_printable_html(person)}</div>', unsafe_allow_html=True)
     
-    # Start of the live view container
+    # This container holds the visible, interactive app. It will be hidden when printing.
     st.markdown('<div class="main-view">', unsafe_allow_html=True)
     
     # Header Section
