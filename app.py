@@ -639,28 +639,32 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- Sidebar for search and navigation ---
-st.sidebar.markdown("<h3>ค้นหาข้อมูลผู้เข้ารับบริการ</h3>", unsafe_allow_html=True)
-search_query = st.sidebar.text_input("กรอก HN หรือ ชื่อ-สกุล")
-if st.sidebar.button("ค้นหา"):
-    st.session_state.clear()
-    if search_query:
-        if search_query.isdigit():
-            results = df[df["HN"] == search_query]
-        else:
-            results = df[df["ชื่อ-สกุล"].str.strip() == search_query]
-        if results.empty:
-            st.sidebar.error("❌ ไม่พบข้อมูล")
-        else:
-            st.session_state["search_result"] = results
-    else:
-        st.sidebar.info("กรุณากรอก HN หรือ ชื่อ-สกุล")
+# --- Main Page Controls (No Sidebar) ---
+with st.container():
+    st.markdown("### ค้นหาข้อมูลผู้เข้ารับบริการ")
+    
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        search_query = st.text_input("กรอก HN หรือ ชื่อ-สกุล", label_visibility="collapsed")
+    with col2:
+        if st.button("ค้นหา", use_container_width=True):
+            st.session_state.clear()
+            if search_query:
+                if search_query.isdigit():
+                    results = df[df["HN"] == search_query]
+                else:
+                    results = df[df["ชื่อ-สกุล"].str.strip() == search_query]
+                if results.empty:
+                    st.error("❌ ไม่พบข้อมูล")
+                else:
+                    st.session_state["search_result"] = results
+            else:
+                st.info("กรุณากรอก HN หรือ ชื่อ-สกุล")
 
 if "search_result" in st.session_state:
-    results_df = st.session_state.search_result
-    with st.sidebar:
-        st.markdown("<hr>", unsafe_allow_html=True)
-        st.markdown("<h3>เลือกปีและวันที่ตรวจ</h3>", unsafe_allow_html=True)
+    with st.container():
+        st.markdown("---")
+        results_df = st.session_state.search_result
         
         def thai_date_str_to_datetime(date_str):
             try:
@@ -668,70 +672,60 @@ if "search_result" in st.session_state:
                 if len(parts) != 3: return datetime.min
                 day, month_name, year = int(parts[0]), parts[1], int(parts[2])
                 month_num = THAI_MONTH_TO_NUM_GLOBAL.get(month_name)
-                if month_num: return datetime(year - 543, month_num, day) # Convert BE to CE for sorting
+                if month_num: return datetime(year - 543, month_num, day)
             except (ValueError, IndexError): return datetime.min
             return datetime.min
 
         available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
         
-        year_index = 0
-        if 'selected_year' in st.session_state and st.session_state.selected_year in available_years:
-            year_index = available_years.index(st.session_state.selected_year)
+        sel_col1, sel_col2, sel_col3 = st.columns([2, 2, 1])
         
-        selected_year = st.selectbox("📅 เลือกปี", available_years, index=year_index, key="year_select", on_change=lambda: st.session_state.update(selected_year=st.session_state.year_select))
+        with sel_col1:
+            year_index = 0
+            if 'selected_year' in st.session_state and st.session_state.selected_year in available_years:
+                year_index = available_years.index(st.session_state.selected_year)
+            selected_year = st.selectbox("📅 เลือกปี", available_years, index=year_index, key="year_select", on_change=lambda: st.session_state.update(selected_year=st.session_state.year_select))
         
         person_year_df = results_df[(results_df["Year"] == selected_year) & (results_df["HN"] == results_df.iloc[0]["HN"])]
         exam_dates_options = sorted(person_year_df["วันที่ตรวจ"].dropna().unique(), key=thai_date_str_to_datetime, reverse=True)
         
-        if exam_dates_options:
-            date_index = 0
-            if 'selected_date' in st.session_state and st.session_state.selected_date in exam_dates_options:
-                date_index = exam_dates_options.index(st.session_state.selected_date)
+        with sel_col2:
+            if exam_dates_options:
+                date_index = 0
+                if 'selected_date' in st.session_state and st.session_state.selected_date in exam_dates_options:
+                    date_index = exam_dates_options.index(st.session_state.selected_date)
+                selected_date = st.selectbox("🗓️ เลือกวันที่", exam_dates_options, index=date_index, key="date_select", on_change=lambda: st.session_state.update(selected_date=st.session_state.date_select))
+                
+                person_df = person_year_df[person_year_df["วันที่ตรวจ"] == selected_date]
+                if not person_df.empty:
+                    st.session_state["person_row"] = person_df.iloc[0].to_dict()
+            else:
+                st.session_state.pop("person_row", None)
 
-            selected_date = st.selectbox("🗓️ เลือกวันที่", exam_dates_options, index=date_index, key="date_select", on_change=lambda: st.session_state.update(selected_date=st.session_state.date_select))
-            
-            person_df = person_year_df[person_year_df["วันที่ตรวจ"] == selected_date]
-            if not person_df.empty:
-                st.session_state["person_row"] = person_df.iloc[0].to_dict()
 
-        if st.session_state.get('person_row'):
-            st.sidebar.markdown("---")
-            # Use a custom HTML button that directly calls window.print()
-            st.sidebar.markdown("""
-                <style>
-                .print-btn {
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-weight: 400;
-                    padding: 0.25rem 0.75rem;
-                    border-radius: 0.5rem;
-                    min-height: 38.4px;
-                    margin: 0px;
-                    line-height: 1.6;
-                    width: 100%;
-                    user-select: none;
-                    background-color: rgb(19, 23, 32);
-                    border: 1px solid rgba(250, 250, 250, 0.2);
-                    color: rgb(250, 250, 250);
-                    cursor: pointer;
-                }
-                .print-btn:hover {
-                    border: 1px solid rgb(0, 120, 212);
-                    color: rgb(0, 120, 212);
-                }
-                .print-btn:active {
-                    color: rgb(250, 250, 250);
-                    border: 1px solid rgb(0, 120, 212);
-                    background-color: rgb(0, 120, 212);
-                }
-                </style>
-                <button onclick="window.print()" class="print-btn">🖨️ พิมพ์รายงานนี้</button>
-                """, unsafe_allow_html=True)
+        with sel_col3:
+            # Add some vertical space to align the button
+            st.write("") 
+            st.write("")
+            if st.session_state.get('person_row'):
+                # Use a custom HTML button that directly calls window.print()
+                st.markdown("""
+                    <style>
+                    .print-btn {
+                        display: inline-flex; align-items: center; justify-content: center; font-weight: 400;
+                        padding: 0.25rem 0.75rem; border-radius: 0.5rem; min-height: 38.4px; margin: 0px;
+                        line-height: 1.6; width: 100%; user-select: none; background-color: #0d6efd;
+                        border: 1px solid #0d6efd; color: white; cursor: pointer;
+                    }
+                    .print-btn:hover { background-color: #0b5ed7; border-color: #0a58ca; }
+                    </style>
+                    <button onclick="window.print()" class="print-btn">🖨️ พิมพ์รายงาน</button>
+                    """, unsafe_allow_html=True)
 
 # --- Main content area ---
 if "person_row" in st.session_state:
     person = st.session_state.person_row
+    st.markdown("---")
     
     # Generate and inject the hidden printable HTML. It's invisible on the screen.
     st.markdown(f'<div class="print-view">{generate_printable_html(person)}</div>', unsafe_allow_html=True)
@@ -811,7 +805,7 @@ if "person_row" in st.session_state:
     # General Advice Section
     advice_list = [
         kidney_advice_from_summary(kidney_summary_gfr_only(person.get("GFR"))), fbs_advice(person.get("FBS")),
-        liver_advice(summarize_liver(person.get("ALP"), person_get("SGOT"), person.get("SGPT"))),
+        liver_advice(summarize_liver(person.get("ALP"), person.get("SGOT"), person.get("SGPT"))),
         uric_acid_advice(person.get("Uric Acid")), lipids_advice(summarize_lipids(person.get("CHOL"), person.get("TGL"), person.get("LDL"))),
         cbc_advice(person.get("Hb(%)"), person.get("HCT"), person.get("WBC (cumm)"), person.get("Plt (/mm)"), sex)
     ]
