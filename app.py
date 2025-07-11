@@ -11,6 +11,7 @@ from datetime import datetime
 import re
 
 def is_empty(val):
+    """Check if a value is empty, null, or whitespace."""
     return str(val).strip().lower() in ["", "-", "none", "nan", "null"]
 
 # --- Global Helper Functions: START ---
@@ -38,6 +39,10 @@ THAI_MONTH_ABBR_TO_NUM_GLOBAL = {
 
 # Function to normalize and convert Thai dates
 def normalize_thai_date(date_str):
+    """
+    Parses various Thai date string formats and returns a standardized format.
+    Example output: "8 เมษายน 2565"
+    """
     if is_empty(date_str):
         return "-"
     
@@ -63,7 +68,7 @@ def normalize_thai_date(date_str):
             dt = datetime(year, month, day)
             return f"{dt.day} {THAI_MONTHS_GLOBAL[dt.month]} {dt.year + 543}".replace('.', '')
 
-        # Format: DD MonthNameYYYY (e.g., 8 เมษายน 2565) or DD-DD MonthNameYYYY (e.g., 15-16 กรกฎาคม 2564)
+        # Format: DD MonthName YYYY (e.g., 8 เมษายน 2565) or DD-DD MonthName YYYY (e.g., 15-16 กรกฎาคม 2564)
         match_thai_text_date = re.match(r'^(?P<day1>\d{1,2})(?:-\d{1,2})?\s*(?P<month_str>[ก-ฮ]+\.?)\s*(?P<year>\d{4})$', s)
         if match_thai_text_date:
             day = int(match_thai_text_date.group('day1'))
@@ -76,50 +81,58 @@ def normalize_thai_date(date_str):
                     dt = datetime(year - 543, month_num, day)
                     return f"{day} {THAI_MONTHS_GLOBAL[dt.month]} {year}".replace('.', '')
                 except ValueError:
-                    pass
+                    pass # Invalid day for month, will be handled by fallback
 
     except Exception:
-        pass
+        pass # Fallback to general parsing
 
     # Fallback to pandas for robust parsing if other specific regex fail
     try:
         parsed_dt = pd.to_datetime(s, dayfirst=True, errors='coerce')
         if pd.notna(parsed_dt):
             current_ce_year = datetime.now().year
+            # Heuristic to check if the year is a Buddhist year
             if parsed_dt.year > current_ce_year + 50 and parsed_dt.year - 543 > 1900:
                 parsed_dt = parsed_dt.replace(year=parsed_dt.year - 543)
             return f"{parsed_dt.day} {THAI_MONTHS_GLOBAL[parsed_dt.month]} {parsed_dt.year + 543}".replace('.', '')
     except Exception:
-        pass
+        pass # If all parsing fails, return original string
 
-    return s
+    return s # Return original string if no format matches
 
 def get_float(col, person_data):
+    """Safely get a float value from person data dictionary."""
     try:
         val = person_data.get(col, "")
         if is_empty(val):
             return None
         return float(str(val).replace(",", "").strip())
-    except:
+    except (ValueError, TypeError):
         return None
 
 def flag(val, low=None, high=None, higher_is_better=False):
+    """
+    Formats a numeric value and returns a flag if it's outside the normal range.
+    Returns: (formatted_string, is_abnormal_boolean)
+    """
     try:
         val = float(str(val).replace(",", "").strip())
-    except:
+    except (ValueError, TypeError, AttributeError):
         return "-", False
 
-    if higher_is_better and low is not None:
-        return f"{val:.1f}", val < low
-
-    if low is not None and val < low:
-        return f"{val:.1f}", True
-    if high is not None and val > high:
-        return f"{val:.1f}", True
+    if higher_is_better:
+        if low is not None and val < low:
+            return f"{val:.1f}", True
+    else:
+        if low is not None and val < low:
+            return f"{val:.1f}", True
+        if high is not None and val > high:
+            return f"{val:.1f}", True
 
     return f"{val:.1f}", False
 
 def render_section_header(title, subtitle=None):
+    """Renders a styled section header."""
     if subtitle:
         full_title = f"{title} <span style='font-weight: normal;'>({subtitle})</span>"
     else:
@@ -142,6 +155,7 @@ def render_section_header(title, subtitle=None):
     """
 
 def render_lab_table_html(title, subtitle, headers, rows, table_class="lab-table"):
+    """Generates HTML for a lab results table."""
     style = f"""
     <style>
         .{table_class}-container {{
@@ -183,7 +197,8 @@ def render_lab_table_html(title, subtitle, headers, rows, table_class="lab-table
     html_content = f"{style}{header_html}<div class='{table_class}-container'><table class='{table_class}'>"
     html_content += """
         <colgroup>
-            <col style="width: 33.33%;"> <col style="width: 33.33%;"> <col style="width: 33.33%;"> </colgroup>
+            <col style="width: 33.33%;"> <col style="width: 33.33%;"> <col style="width: 33.33%;">
+        </colgroup>
     """
     html_content += "<thead><tr>"
     for i, h in enumerate(headers):
@@ -204,6 +219,7 @@ def render_lab_table_html(title, subtitle, headers, rows, table_class="lab-table
     return html_content
 
 def kidney_summary_gfr_only(gfr_raw):
+    """Provides a summary of kidney function based on GFR."""
     try:
         gfr = float(str(gfr_raw).replace(",", "").strip())
         if gfr == 0:
@@ -212,10 +228,11 @@ def kidney_summary_gfr_only(gfr_raw):
             return "การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย"
         else:
             return "ปกติ"
-    except:
+    except (ValueError, TypeError):
         return ""
 
 def kidney_advice_from_summary(summary_text):
+    """Provides advice based on the kidney summary."""
     if summary_text == "การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย":
         return (
             "การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย "
@@ -225,6 +242,7 @@ def kidney_advice_from_summary(summary_text):
     return ""
 
 def fbs_advice(fbs_raw):
+    """Provides advice based on Fasting Blood Sugar (FBS) level."""
     if is_empty(fbs_raw):
         return ""
     try:
@@ -239,10 +257,11 @@ def fbs_advice(fbs_raw):
             return "ระดับน้ำตาลสูง ควรพบแพทย์เพื่อตรวจยืนยันเบาหวาน และติดตามอาการ"
         else:
             return ""
-    except:
+    except (ValueError, TypeError):
         return ""
 
 def summarize_liver(alp_val, sgot_val, sgpt_val):
+    """Summarizes liver function based on ALP, SGOT, and SGPT."""
     try:
         alp = float(alp_val)
         sgot = float(sgot_val)
@@ -252,10 +271,11 @@ def summarize_liver(alp_val, sgot_val, sgpt_val):
         if alp > 120 or sgot > 36 or sgpt > 40:
             return "การทำงานของตับสูงกว่าเกณฑ์ปกติเล็กน้อย"
         return "ปกติ"
-    except:
+    except (ValueError, TypeError):
         return ""
 
 def liver_advice(summary_text):
+    """Provides advice based on the liver summary."""
     if summary_text == "การทำงานของตับสูงกว่าเกณฑ์ปกติเล็กน้อย":
         return "ควรลดอาหารไขมันสูงและตรวจติดตามการทำงานของตับซ้ำ"
     elif summary_text == "ปกติ":
@@ -263,15 +283,17 @@ def liver_advice(summary_text):
     return "-"
 
 def uric_acid_advice(value_raw):
+    """Provides advice based on Uric Acid level."""
     try:
         value = float(value_raw)
         if value > 7.2:
             return "ควรลดอาหารที่มีพิวรีนสูง เช่น เครื่องในสัตว์ อาหารทะเล และพบแพทย์หากมีอาการปวดข้อ"
         return ""
-    except:
+    except (ValueError, TypeError):
         return "-"
 
 def summarize_lipids(chol_raw, tgl_raw, ldl_raw):
+    """Summarizes lipid profile."""
     try:
         chol = float(str(chol_raw).replace(",", "").strip())
         tgl = float(str(tgl_raw).replace(",", "").strip())
@@ -284,10 +306,11 @@ def summarize_lipids(chol_raw, tgl_raw, ldl_raw):
             return "ปกติ"
         else:
             return "ไขมันในเลือดสูงเล็กน้อย"
-    except:
+    except (ValueError, TypeError):
         return ""
 
 def lipids_advice(summary_text):
+    """Provides advice based on the lipid summary."""
     if summary_text == "ไขมันในเลือดสูง":
         return (
             "ไขมันในเลือดสูง ควรลดอาหารที่มีไขมันอิ่มตัว เช่น ของทอด หนังสัตว์ "
@@ -301,6 +324,7 @@ def lipids_advice(summary_text):
     return ""
 
 def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
+    """Provides advice based on Complete Blood Count (CBC) results."""
     advice_parts = []
 
     try:
@@ -308,7 +332,7 @@ def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
         hb_ref = 13 if sex == "ชาย" else 12
         if hb_val < hb_ref:
             advice_parts.append("ระดับฮีโมโกลบินต่ำ ควรตรวจหาภาวะโลหิตจางและติดตามซ้ำ")
-    except:
+    except (ValueError, TypeError):
         pass
 
     try:
@@ -316,7 +340,7 @@ def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
         hct_ref = 39 if sex == "ชาย" else 36
         if hct_val < hct_ref:
             advice_parts.append("ค่าฮีมาโตคริตต่ำ ควรตรวจหาภาวะเลือดจางและตรวจติดตาม")
-    except:
+    except (ValueError, TypeError):
         pass
 
     try:
@@ -325,7 +349,7 @@ def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
             advice_parts.append("เม็ดเลือดขาวต่ำ อาจเกิดจากภูมิคุ้มกันลด ควรติดตาม")
         elif wbc_val > 10000:
             advice_parts.append("เม็ดเลือดขาวสูง อาจมีการอักเสบ ติดเชื้อ หรือความผิดปกติ ควรพบแพทย์")
-    except:
+    except (ValueError, TypeError):
         pass
 
     try:
@@ -334,12 +358,13 @@ def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
             advice_parts.append("เกล็ดเลือดต่ำ อาจมีภาวะเลือดออกง่าย ควรตรวจยืนยันซ้ำ")
         elif plt_val > 500000:
             advice_parts.append("เกล็ดเลือดสูง ควรพบแพทย์เพื่อตรวจหาสาเหตุเพิ่มเติม")
-    except:
+    except (ValueError, TypeError):
         pass
 
     return " ".join(advice_parts)
 
 def interpret_bp(sbp, dbp):
+    """Interprets blood pressure levels."""
     try:
         sbp = float(sbp)
         dbp = float(dbp)
@@ -353,21 +378,22 @@ def interpret_bp(sbp, dbp):
             return "ความดันปกติ"
         else:
             return "ความดันค่อนข้างสูง"
-    except:
+    except (ValueError, TypeError):
         return "-"
 
 def combined_health_advice(bmi, sbp, dbp):
+    """Provides combined advice for BMI and blood pressure."""
     if is_empty(bmi) and is_empty(sbp) and is_empty(dbp):
         return ""
     
     try:
         bmi = float(bmi)
-    except:
+    except (ValueError, TypeError):
         bmi = None
     try:
         sbp = float(sbp)
         dbp = float(dbp)
-    except:
+    except (ValueError, TypeError):
         sbp = dbp = None
     
     bmi_text = ""
@@ -406,12 +432,14 @@ def safe_text(val):
     return "-" if str(val).strip().lower() in ["", "none", "nan", "-"] else str(val).strip()
 
 def safe_value(val):
+    """Safely formats a value for display, returning '-' for empty/null values."""
     val = str(val or "").strip()
     if val.lower() in ["", "nan", "none", "-"]:
         return "-"
     return val
     
 def interpret_alb(value):
+    """Interprets urine albumin results."""
     val = str(value).strip().lower()
     if val == "negative":
         return "ไม่พบ"
@@ -422,6 +450,7 @@ def interpret_alb(value):
     return "-"
     
 def interpret_sugar(value):
+    """Interprets urine sugar results."""
     val = str(value).strip().lower()
     if val == "negative":
         return "ไม่พบ"
@@ -432,6 +461,7 @@ def interpret_sugar(value):
     return "-"
     
 def parse_range_or_number(val):
+    """Parses a string that could be a number or a range (e.g., '2-5')."""
     val = val.replace("cell/hpf", "").replace("cells/hpf", "").replace("cell", "").strip().lower()
     try:
         if "-" in val:
@@ -440,10 +470,11 @@ def parse_range_or_number(val):
         else:
             num = float(val)
             return num, num
-    except:
+    except (ValueError, TypeError):
         return None, None
     
 def interpret_rbc(value):
+    """Interprets urine Red Blood Cell (RBC) count."""
     val = str(value or "").strip().lower()
     if val in ["-", "", "none", "nan"]:
         return "-"
@@ -458,6 +489,7 @@ def interpret_rbc(value):
         return "พบเม็ดเลือดแดงในปัสสาวะ"
     
 def interpret_wbc(value):
+    """Interprets urine White Blood Cell (WBC) count."""
     val = str(value or "").strip().lower()
     if val in ["-", "", "none", "nan"]:
         return "-"
@@ -472,6 +504,7 @@ def interpret_wbc(value):
         return "พบเม็ดเลือดขาวในปัสสาวะ"
     
 def advice_urine(sex, alb, sugar, rbc, wbc):
+    """Provides advice based on urinalysis results."""
     alb_t = interpret_alb(alb)
     sugar_t = interpret_sugar(sugar)
     rbc_t = interpret_rbc(rbc)
@@ -496,6 +529,7 @@ def advice_urine(sex, alb, sugar, rbc, wbc):
     return "ควรตรวจปัสสาวะซ้ำเพื่อติดตามผล"
     
 def is_urine_abnormal(test_name, value, normal_range):
+    """Checks if a urine test result is abnormal."""
     val = str(value or "").strip().lower()
     if val in ["", "-", "none", "nan", "null"]:
         return False
@@ -503,13 +537,13 @@ def is_urine_abnormal(test_name, value, normal_range):
     if test_name == "กรด-ด่าง (pH)":
         try:
             return not (5.0 <= float(val) <= 8.0)
-        except:
+        except (ValueError, TypeError):
             return True
     
     if test_name == "ความถ่วงจำเพาะ (Sp.gr)":
         try:
             return not (1.003 <= float(val) <= 1.030)
-        except:
+        except (ValueError, TypeError):
             return True
     
     if test_name == "เม็ดเลือดแดง (RBC)":
@@ -530,6 +564,7 @@ def is_urine_abnormal(test_name, value, normal_range):
     return False
 
 def render_urine_section(person_data, sex, year_selected):
+    """Renders the entire urinalysis section including table and summary."""
     alb_raw = person_data.get("Alb", "-")
     sugar_raw = person_data.get("sugar", "-")
     rbc_raw = person_data.get("RBC1", "-")
@@ -588,7 +623,8 @@ def render_urine_section(person_data, sex, year_selected):
     html_content += "<div class='urine-table-container'><table class='urine-table'>"
     html_content += """
         <colgroup>
-            <col style="width: 33.33%;"> <col style="width: 33.33%;"> <col style="width: 33.33%;"> </colgroup>
+            <col style="width: 33.33%;"> <col style="width: 33.33%;"> <col style="width: 33.33%;">
+        </colgroup>
     """
     html_content += "<thead><tr>"
     html_content += "<th style='text-align: left;'>การตรวจ</th>"
@@ -642,6 +678,7 @@ def render_urine_section(person_data, sex, year_selected):
 
 
 def interpret_stool_exam(val):
+    """Interprets stool examination results."""
     val = str(val or "").strip().lower()
     if val in ["", "-", "none", "nan"]:
         return "-"
@@ -652,6 +689,7 @@ def interpret_stool_exam(val):
     return val
 
 def interpret_stool_cs(value):
+    """Interprets stool culture and sensitivity results."""
     value = str(value or "").strip()
     if value in ["", "-", "none", "nan"]:
         return "-"
@@ -660,6 +698,7 @@ def interpret_stool_cs(value):
     return "พบการติดเชื้อในอุจจาระ ให้พบแพทย์เพื่อตรวจรักษาเพิ่มเติม"
 
 def render_stool_html_table(exam, cs):
+    """Renders an HTML table for stool examination results."""
     style = """
     <style>
         .stool-container {
@@ -694,7 +733,8 @@ def render_stool_html_table(exam, cs):
     <div class='stool-container'>
         <table class='stool-table'>
             <colgroup>
-                <col style="width: 50%;"> <col style="width: 50%;"> </colgroup>
+                <col style="width: 50%;"> <col style="width: 50%;">
+            </colgroup>
             <tr>
                 <th>ผลตรวจอุจจาระทั่วไป</th>
                 <td style='text-align: left;'>{exam if exam != "-" else "ไม่ได้เข้ารับการตรวจ"}</td>
@@ -709,6 +749,7 @@ def render_stool_html_table(exam, cs):
     return style + html_content
 
 def interpret_cxr(val):
+    """Interprets Chest X-ray results."""
     val = str(val or "").strip()
     if is_empty(val):
         return "ไม่ได้เข้ารับการตรวจเอกซเรย์"
@@ -717,10 +758,12 @@ def interpret_cxr(val):
     return val
 
 def get_ekg_col_name(year):
+    """Determines the correct EKG column name based on the year."""
     current_thai_year = datetime.now().year + 543
     return "EKG" if year == current_thai_year else f"EKG{str(year)[-2:]}"
 
 def interpret_ekg(val):
+    """Interprets EKG results."""
     val = str(val or "").strip()
     if is_empty(val):
         return "ไม่ได้เข้ารับการตรวจคลื่นไฟฟ้าหัวใจ"
@@ -729,6 +772,7 @@ def interpret_ekg(val):
     return val
 
 def hepatitis_b_advice(hbsag, hbsab, hbcab):
+    """Provides advice based on Hepatitis B panel results."""
     hbsag = hbsag.lower()
     hbsab = hbsab.lower()
     hbcab = hbcab.lower()
@@ -744,6 +788,7 @@ def hepatitis_b_advice(hbsag, hbsab, hbcab):
     return "ไม่สามารถสรุปผลชัดเจน แนะนำให้พบแพทย์เพื่อประเมินซ้ำ"
 
 def merge_final_advice_grouped(messages):
+    """Groups and merges final advice messages."""
     groups = {
         "FBS": [], "ไต": [], "ตับ": [], "ยูริค": [], "ไขมัน": [], "อื่นๆ": []
     }
@@ -779,21 +824,25 @@ def merge_final_advice_grouped(messages):
 
 @st.cache_data(ttl=600)
 def load_sqlite_data():
+    """Loads data from a SQLite database file hosted on Google Drive."""
     try:
+        # The file ID for the SQLite database on Google Drive
         file_id = "1HruO9AMrUfniC8hBWtumVdxLJayEc1Xr"
         download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
         response = requests.get(download_url)
-        response.raise_for_status()
+        response.raise_for_status() # Raise an exception for bad status codes
 
-        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".db")
-        tmp.write(response.content)
-        tmp.flush()
-        tmp.close()
+        # Write content to a temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as tmp:
+            tmp.write(response.content)
+            tmp_path = tmp.name
 
-        conn = sqlite3.connect(tmp.name)
+        # Connect to the SQLite database and read data
+        conn = sqlite3.connect(tmp_path)
         df_loaded = pd.read_sql("SELECT * FROM health_data", conn)
         conn.close()
 
+        # --- Data Cleaning and Preprocessing ---
         df_loaded.columns = df_loaded.columns.str.strip()
         df_loaded['เลขบัตรประชาชน'] = df_loaded['เลขบัตรประชาชน'].astype(str).str.strip()
         
@@ -803,6 +852,7 @@ def load_sqlite_data():
         df_loaded['ชื่อ-สกุล'] = df_loaded['ชื่อ-สกุล'].astype(str).str.strip()
         df_loaded['Year'] = df_loaded['Year'].astype(int)
 
+        # Normalize date format
         df_loaded['วันที่ตรวจ'] = df_loaded['วันที่ตรวจ'].apply(normalize_thai_date)
         df_loaded.replace(["-", "None", None], pd.NA, inplace=True)
 
@@ -878,6 +928,7 @@ submitted_sidebar = st.sidebar.button("ค้นหา")
 
 
 if submitted_sidebar:
+    # Clear previous search results and selections from session state
     st.session_state.pop("search_result", None)
     st.session_state.pop("person_row", None)
     st.session_state.pop("selected_row_found", None)
@@ -891,6 +942,7 @@ if submitted_sidebar:
     search_term = search_query.strip()
 
     if search_term:
+        # Search by HN if input is numeric, otherwise by name
         if search_term.isdigit():
             query_df = query_df[query_df["HN"] == search_term]
         else:
@@ -901,7 +953,7 @@ if submitted_sidebar:
         else:
             st.session_state["search_result"] = query_df
             
-            # Select the most recent year/date from the found results for a person
+            # Automatically select the most recent year/date from the found results
             first_available_year = sorted(query_df["Year"].dropna().unique().astype(int), reverse=True)[0]
             
             first_person_year_df = query_df[
@@ -927,11 +979,12 @@ if submitted_sidebar:
 # ==================== SELECT YEAR AND EXAM DATE IN SIDEBAR ====================
 
 def update_year_selection():
-    """Callback for year selectbox to ensure immediate update."""
+    """Callback for year selectbox to ensure immediate update of dependent selections."""
     new_year = st.session_state["year_select_sidebar"]
     if st.session_state.get("last_selected_year_sidebar") != new_year:
         st.session_state["selected_year_from_sidebar"] = new_year
         st.session_state["last_selected_year_sidebar"] = new_year
+        # Reset date and row selection when year changes
         st.session_state.pop("selected_exam_date_from_sidebar", None)
         st.session_state.pop("person_row", None)
         st.session_state.pop("selected_row_found", None)
@@ -953,6 +1006,7 @@ if "search_result" in st.session_state:
 
         available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
         
+        # Determine the index for the year selectbox
         current_selected_year_index = 0
         if "selected_year_from_sidebar" in st.session_state and st.session_state["selected_year_from_sidebar"] in available_years:
             current_selected_year_index = available_years.index(st.session_state["selected_year_from_sidebar"])
@@ -969,6 +1023,7 @@ if "search_result" in st.session_state:
         if selected_year_from_sidebar:
             selected_hn = results_df.iloc[0]["HN"]
 
+            # Filter data for the selected person and year
             person_year_df = results_df[
                 (results_df["Year"] == selected_year_from_sidebar) &
                 (results_df["HN"] == selected_hn)
@@ -978,6 +1033,7 @@ if "search_result" in st.session_state:
             
             if exam_dates_options:
                 if len(exam_dates_options) == 1:
+                    # If only one date, select it automatically
                     st.session_state["selected_exam_date_from_sidebar"] = exam_dates_options[0]
                     st.session_state["person_row"] = person_year_df[
                         person_year_df["วันที่ตรวจ"] == st.session_state["selected_exam_date_from_sidebar"]
@@ -985,6 +1041,7 @@ if "search_result" in st.session_state:
                     st.session_state["selected_row_found"] = True
                     st.sidebar.info(f"ผลตรวจวันที่: **{exam_dates_options[0]}**")
                 else:
+                    # If multiple dates, show a selectbox
                     current_selected_exam_date_index = 0
                     if "selected_exam_date_from_sidebar" in st.session_state and st.session_state["selected_exam_date_from_sidebar"] in exam_dates_options:
                         current_selected_exam_date_index = exam_dates_options.index(st.session_state["selected_exam_date_from_sidebar"])
@@ -997,6 +1054,7 @@ if "search_result" in st.session_state:
                         on_change=update_exam_date_selection
                     )
                     
+                    # Update the selected row based on the chosen date
                     st.session_state["person_row"] = person_year_df[
                         person_year_df["วันที่ตรวจ"] == selected_exam_date_from_sidebar
                     ].iloc[0].to_dict()
@@ -1012,6 +1070,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     person = st.session_state["person_row"]
     year_display = person.get("Year", "-")
 
+    # --- Extract basic vitals ---
     sbp = person.get("SBP", "")
     dbp = person.get("DBP", "")
     pulse_raw = person.get("pulse", "-")
@@ -1020,7 +1079,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     waist_raw = person.get("รอบเอว", "-")
     check_date = person.get("วันที่ตรวจ", "-")
 
-    # --- NEW: Unified Header Block (MODIFIED) ---
+    # --- Unified Header Block (MODIFIED) ---
     report_header_html = f"""
     <div class="report-header-container" style="text-align: center; margin-bottom: 0.5rem;">
         <h1>รายงานผลการตรวจสุขภาพ</h1>
@@ -1032,19 +1091,19 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     """
     st.markdown(report_header_html, unsafe_allow_html=True)
     
-    # --- The rest of the report starts here ---
+    # --- Calculate BMI and format vitals for display ---
     try:
         weight_val = float(str(weight_raw).replace("กก.", "").strip())
         height_val = float(str(height_raw).replace("ซม.", "").strip())
         bmi_val = weight_val / ((height_val / 100) ** 2) if height_val > 0 else None
-    except:
+    except (ValueError, TypeError):
         bmi_val = None
 
     try:
         sbp_int = int(float(sbp))
         dbp_int = int(float(dbp))
         bp_val = f"{sbp_int}/{dbp_int} ม.ม.ปรอท"
-    except:
+    except (ValueError, TypeError):
         sbp_int = dbp_int = None
         bp_val = "-"
     
@@ -1057,7 +1116,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
 
     try:
         pulse_val = int(float(pulse_raw))
-    except:
+    except (ValueError, TypeError):
         pulse_val = None
 
     pulse = f"{pulse_val} ครั้ง/นาที" if pulse_val is not None else "-"
@@ -1068,7 +1127,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     advice_text = combined_health_advice(bmi_val, sbp, dbp)
     summary_advice = html.escape(advice_text) if advice_text else ""
     
-    # This block now only contains personal info, not the header.
+    # --- Display Personal Info and Vitals Summary ---
     st.markdown(f"""
     <div>
         <hr>
@@ -1090,22 +1149,20 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     </div>
     """, unsafe_allow_html=True)
 
+    # --- Determine sex-specific reference ranges ---
     sex = str(person.get("เพศ", "")).strip()
-
     if sex not in ["ชาย", "หญิง"]:
         st.warning("⚠️ เพศไม่ถูกต้องหรือไม่มีข้อมูล กำลังใช้ค่าอ้างอิงเริ่มต้น")
         sex = "ไม่ระบุ"
 
     if sex == "หญิง":
-        hb_low = 12
-        hct_low = 36
+        hb_low, hct_low = 12, 36
     elif sex == "ชาย":
-        hb_low = 13
-        hct_low = 39
+        hb_low, hct_low = 13, 39
     else: # Default for "ไม่ระบุ" or invalid sex
-        hb_low = 12
-        hct_low = 36
+        hb_low, hct_low = 12, 36
 
+    # --- Lab Test Configurations ---
     cbc_config = [
         ("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None),
         ("ฮีมาโตคริต (Hct)", "HCT", "ชาย > 39%, หญิง > 36%", hct_low, None),
@@ -1141,11 +1198,12 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
 
     blood_rows = []
     for label, col, norm, low, high, *opt in blood_config:
-        higher = opt[0] if opt else False
+        higher_is_better = opt[0] if opt else False
         val = get_float(col, person)
-        result, is_abn = flag(val, low, high, higher)
+        result, is_abn = flag(val, low, high, higher_is_better)
         blood_rows.append([(label, is_abn), (result, is_abn), (norm, is_abn)])
 
+    # --- Display CBC and Blood Chemistry Tables ---
     left_spacer, col1, col2, right_spacer = st.columns([0.5, 3, 3, 0.5])
 
     with col1:
@@ -1165,20 +1223,20 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     tgl_raw = person.get("TGL", "")
     ldl_raw = person.get("LDL", "")
 
-    advice_list = []
-    kidney_summary = kidney_summary_gfr_only(gfr_raw)
-    advice_list.append(kidney_advice_from_summary(kidney_summary))
-    advice_list.append(fbs_advice(fbs_raw))
-    advice_list.append(liver_advice(summarize_liver(alp_raw, sgot_raw, sgpt_raw)))
-    advice_list.append(uric_acid_advice(uric_raw))
-    advice_list.append(lipids_advice(summarize_lipids(chol_raw, tgl_raw, ldl_raw)))
-    advice_list.append(cbc_advice(
-        person.get("Hb(%)", ""), 
-        person.get("HCT", ""), 
-        person.get("WBC (cumm)", ""), 
-        person.get("Plt (/mm)", ""),
-        sex=sex
-    ))
+    advice_list = [
+        kidney_advice_from_summary(kidney_summary_gfr_only(gfr_raw)),
+        fbs_advice(fbs_raw),
+        liver_advice(summarize_liver(alp_raw, sgot_raw, sgpt_raw)),
+        uric_acid_advice(uric_raw),
+        lipids_advice(summarize_lipids(chol_raw, tgl_raw, ldl_raw)),
+        cbc_advice(
+            person.get("Hb(%)", ""), 
+            person.get("HCT", ""), 
+            person.get("WBC (cumm)", ""), 
+            person.get("Plt (/mm)", ""),
+            sex=sex
+        )
+    ]
 
     spacer_l, main_col, spacer_r = st.columns([0.5, 6, 0.5])
 
@@ -1203,18 +1261,17 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         </div>
         """, unsafe_allow_html=True)
 
-    # ==================== Urinalysis Section ====================
-    selected_year = st.session_state.get("selected_year_from_sidebar", None)
-    if selected_year is None:
-        selected_year = datetime.now().year + 543
+    # ==================== Other Tests Section ====================
+    selected_year = st.session_state.get("selected_year_from_sidebar", datetime.now().year + 543)
 
     with st.container():
         left_spacer_ua, col_ua_left, col_ua_right, right_spacer_ua = st.columns([0.5, 3, 3, 0.5])
         
         with col_ua_left:
+            # --- Urinalysis Section ---
             render_urine_section(person, sex, selected_year)
 
-            # ==================== Stool Section ====================
+            # --- Stool Section ---
             st.markdown(render_section_header("ผลตรวจอุจจาระ (Stool Examination)"), unsafe_allow_html=True)
             
             stool_exam_raw = person.get("Stool exam", "")
@@ -1226,7 +1283,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             st.markdown(render_stool_html_table(exam_text, cs_text), unsafe_allow_html=True)
 
         with col_ua_right:
-            # ============ X-ray Section ============
+            # --- X-ray Section ---
             st.markdown(render_section_header("ผลเอกซเรย์ (Chest X-ray)"), unsafe_allow_html=True)
             
             selected_year_int = int(selected_year)
@@ -1248,7 +1305,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             </div>
             """, unsafe_allow_html=True)
 
-            # ==================== EKG Section ====================
+            # --- EKG Section ---
             st.markdown(render_section_header("ผลคลื่นไฟฟ้าหัวใจ (EKG)"), unsafe_allow_html=True)
 
             ekg_col = get_ekg_col_name(selected_year_int)
@@ -1269,7 +1326,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             </div>
             """, unsafe_allow_html=True)
 
-            # ==================== Section: Hepatitis A ====================
+            # --- Section: Hepatitis A ---
             st.markdown(render_section_header("ผลการตรวจไวรัสตับอักเสบเอ (Viral hepatitis A)"), unsafe_allow_html=True)
             
             hep_a_raw = safe_text(person.get("Hepatitis A"))
@@ -1285,7 +1342,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             </div>
             """, unsafe_allow_html=True)
             
-            # ================ Section: Hepatitis B =================
+            # --- Section: Hepatitis B ---
             hep_check_date_raw = person.get("ปีตรวจHEP")
             hep_check_date = normalize_thai_date(hep_check_date_raw)
             
@@ -1360,8 +1417,8 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                 {advice}
             </div>
             """, unsafe_allow_html=True)
-                
-#=========================== ความเห็นแพทย์ =======================
+            
+#=========================== Doctor's Suggestion =======================
 if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
     person = st.session_state["person_row"]
     doctor_suggestion = str(person.get("DOCTER suggest", "")).strip()
