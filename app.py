@@ -127,13 +127,13 @@ def flag(val, low=None, high=None, higher_is_better=False):
 def render_section_header(title, subtitle=None):
     """Renders a styled section header."""
     if subtitle:
-        full_title = f"{title} <span style='font-weight: normal;'>({subtitle})</span>"
+        full_title = f"{title} <span style='font-weight: normal; color: #a0a0a0;'>({subtitle})</span>"
     else:
         full_title = title
 
     return f"""
     <div style='
-        background-color: #1b5e20;
+        background-color: #2E7D32; /* Darker Green */
         color: white;
         text-align: center;
         padding: 0.8rem 0.5rem;
@@ -152,35 +152,39 @@ def render_lab_table_html(title, subtitle, headers, rows, table_class="lab-table
     style = f"""
     <style>
         .{table_class}-container {{
-            background-color: var(--background-color);
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 5px;
             margin-top: 1rem;
         }}
         .{table_class} {{
             width: 100%;
             border-collapse: collapse;
             color: var(--text-color);
-            table-layout: fixed; /* Ensures column widths are respected */
+            table-layout: fixed;
             font-size: 14px;
         }}
         .{table_class} thead th {{
-            background-color: var(--secondary-background-color);
-            color: var(--text-color);
-            padding: 2px 2px; /* Adjusted padding to make columns closer */
+            background-color: #2a2a2a;
+            color: #e0e0e0;
+            padding: 4px 4px;
             text-align: center;
             font-weight: bold;
-            border: 1px solid transparent;
+            border-bottom: 2px solid #2E7D32;
         }}
         .{table_class} td {{
-            padding: 2px 2px; /* Adjusted padding to make columns closer */
-            border: 1px solid transparent;
+            padding: 4px 4px;
+            border: none;
             text-align: center;
-            color: var(--text-color);
+            color: #fafafa;
         }}
         .{table_class}-abn {{
-            background-color: rgba(255, 64, 64, 0.25); /* Translucent red */
+            background-color: rgba(255, 64, 64, 0.25);
+            font-weight: bold;
         }}
-        .{table_class}-row {{
-            background-color: rgba(255,255,255,0.02);
+        .{table_class} tr:not(:last-child) td {{
+             border-bottom: 1px solid #2a2a2a;
         }}
     </style>
     """
@@ -190,22 +194,22 @@ def render_lab_table_html(title, subtitle, headers, rows, table_class="lab-table
     html_content = f"{style}{header_html}<div class='{table_class}-container'><table class='{table_class}'>"
     html_content += """
         <colgroup>
-            <col style="width: 33.33%;"> <col style="width: 33.33%;"> <col style="width: 33.33%;"> </colgroup>
+            <col style="width: 40%;"> <col style="width: 20%;"> <col style="width: 40%;"> </colgroup>
     """
     html_content += "<thead><tr>"
     for i, h in enumerate(headers):
-        align = "left" if i == 0 else ("left" if i == 2 else "center") # 'การตรวจ' and 'ค่าปกติ' left-aligned, 'ผล' center-aligned
+        align = "left" if i == 0 else ("left" if i == 2 else "center")
         html_content += f"<th style='text-align: {align};'>{h}</th>"
     html_content += "</tr></thead><tbody>"
     
     for row in rows:
         is_abn = any(flag for _, flag in row)
-        row_class = f"{table_class}-abn" if is_abn else f"{table_class}-row"
+        row_class_td = "class='urine-abn'" if is_abn else ""
         
         html_content += f"<tr>"
-        html_content += f"<td class='{row_class}' style='text-align: left;'>{row[0][0]}</td>"
-        html_content += f"<td class='{row_class}'>{row[1][0]}</td>"
-        html_content += f"<td class='{row_class}' style='text-align: left;'>{row[2][0]}</td>"
+        html_content += f"<td {row_class_td} style='text-align: left;'>{row[0][0]}</td>"
+        html_content += f"<td {row_class_td}>{row[1][0]}</td>"
+        html_content += f"<td {row_class_td} style='text-align: left;'>{row[2][0]}</td>"
         html_content += f"</tr>"
     html_content += "</tbody></table></div>"
     return html_content
@@ -579,35 +583,38 @@ def render_urine_section(person_data, sex, year_selected):
     style = """
     <style>
         .urine-table-container {
-            background-color: var(--background-color);
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 5px;
             margin-top: 1rem;
         }
         .urine-table {
             width: 100%;
             border-collapse: collapse;
-            color: var(--text-color);
-            table-layout: fixed; /* Ensures column widths are respected */
+            color: #fafafa;
+            table-layout: fixed;
             font-size: 14px;
         }
         .urine-table thead th {
-            background-color: var(--secondary-background-color);
-            color: var(--text-color);
-            padding: 3px 2px; /* Adjusted padding to make columns closer */
+            background-color: #2a2a2a;
+            color: #e0e0e0;
+            padding: 4px 4px;
             text-align: center;
             font-weight: bold;
-            border: 1px solid transparent;
+            border-bottom: 2px solid #2E7D32;
         }
         .urine-table td {
-            padding: 3px 2px; /* Adjusted padding to make columns closer */
-            border: 1px solid transparent;
+            padding: 4px 4px;
+            border: none;
             text-align: center;
-            color: var(--text-color);
         }
         .urine-abn {
             background-color: rgba(255, 64, 64, 0.25);
+            font-weight: bold;
         }
-        .urine-row {
-            background-color: rgba(255,255,255,0.02);
+        .urine-table tr:not(:last-child) td {
+             border-bottom: 1px solid #2a2a2a;
         }
     </style>
     """
@@ -615,7 +622,7 @@ def render_urine_section(person_data, sex, year_selected):
     html_content += "<div class='urine-table-container'><table class='urine-table'>"
     html_content += """
         <colgroup>
-            <col style="width: 33.33%;"> <col style="width: 33.33%;"> <col style="width: 33.33%;"> </colgroup>
+            <col style="width: 40%;"> <col style="width: 20%;"> <col style="width: 40%;"> </colgroup>
     """
     html_content += "<thead><tr>"
     html_content += "<th style='text-align: left;'>การตรวจ</th>"
@@ -625,11 +632,11 @@ def render_urine_section(person_data, sex, year_selected):
     
     for _, row in df_urine.iterrows():
         is_abn = is_urine_abnormal(row["การตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"])
-        css_class = "urine-abn" if is_abn else "urine-row"
-        html_content += f"<tr class='{css_class}'>"
-        html_content += f"<td style='text-align: left;'>{row['การตรวจ']}</td>"
-        html_content += f"<td>{safe_value(row['ผลตรวจ'])}</td>"
-        html_content += f"<td style='text-align: left;'>{row['ค่าปกติ']}</td>"
+        css_class = "class='urine-abn'" if is_abn else ""
+        html_content += f"<tr >"
+        html_content += f"<td {css_class} style='text-align: left;'>{row['การตรวจ']}</td>"
+        html_content += f"<td {css_class}>{safe_value(row['ผลตรวจ'])}</td>"
+        html_content += f"<td {css_class} style='text-align: left;'>{row['ค่าปกติ']}</td>"
         html_content += "</tr>"
     html_content += "</tbody></table></div>"
     st.markdown(html_content, unsafe_allow_html=True)
@@ -644,11 +651,12 @@ def render_urine_section(person_data, sex, year_selected):
         st.markdown(f"""
             <div style='
                 background-color: rgba(255, 255, 0, 0.2);
-                color: var(--text-color);
+                color: #fafafa;
                 padding: 1rem;
                 border-radius: 6px;
                 margin-top: 1rem;
                 font-size: 14px;
+                border: 1px solid rgba(255, 255, 0, 0.4);
             '>
                 {summary}
             </div>
@@ -657,11 +665,12 @@ def render_urine_section(person_data, sex, year_selected):
         st.markdown(f"""
             <div style='
                 background-color: rgba(57, 255, 20, 0.2);
-                color: var(--text-color);
+                color: #fafafa;
                 padding: 1rem;
                 border-radius: 6px;
                 margin-top: 1rem;
                 font-size: 14px;
+                border: 1px solid rgba(57, 255, 20, 0.4);
             '>
                 ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ
             </div>
@@ -693,38 +702,44 @@ def render_stool_html_table(exam, cs):
     style = """
     <style>
         .stool-container {
-            background-color: var(--background-color);
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 5px;
             margin-top: 1rem;
         }
         .stool-table {
             width: 100%;
             border-collapse: collapse;
-            color: var(--text-color);
-            table-layout: fixed; /* Ensure column widths are respected */
+            color: #fafafa;
+            table-layout: fixed;
             font-size: 14px;
         }
         .stool-table th {
-            background-color: var(--secondary-background-color);
-            color: var(--text-color);
-            padding: 3px 2px; /* Adjusted padding to make columns closer */
+            background-color: transparent;
+            color: #e0e0e0;
+            padding: 8px 4px;
             text-align: left;
-            width: 50%; /* Equal width for 2 columns */
+            width: 40%;
             font-weight: bold;
-            border: 1px solid transparent;
         }
         .stool-table td {
-            padding: 3px 2px; /* Adjusted padding to make columns closer */
-            border: 1px solid transparent;
-            width: 50%; /* Equal width for 2 columns */
-            color: var(--text-color);
+            padding: 8px 4px;
+            width: 60%;
+            color: #fafafa;
         }
+        .stool-table tr:first-child td, .stool-table tr:first-child th {{
+             border-bottom: 1px solid #2a2a2a;
+        }}
     </style>
     """
     html_content = f"""
+    {style}
     <div class='stool-container'>
         <table class='stool-table'>
             <colgroup>
-                <col style="width: 50%;"> <col style="width: 50%;"> </colgroup>
+                <col style="width: 40%;"> <col style="width: 60%;"> 
+            </colgroup>
             <tr>
                 <th>ผลตรวจอุจจาระทั่วไป</th>
                 <td style='text-align: left;'>{exam if exam != "-" else "ไม่ได้เข้ารับการตรวจ"}</td>
@@ -736,7 +751,7 @@ def render_stool_html_table(exam, cs):
         </table>
     </div>
     """
-    return style + html_content
+    return html_content
 
 def interpret_cxr(val):
     """Interprets Chest X-ray results."""
@@ -803,7 +818,7 @@ def merge_final_advice_grouped(messages):
     for title, msgs in groups.items():
         if msgs:
             unique_msgs = list(OrderedDict.fromkeys(msgs))
-            output.append(f"<b>{title}:</b> {' '.join(unique_msgs)}")
+            output.append(f"<b style='color: #e0e0e0;'>{title}:</b> {' '.join(unique_msgs)}")
             
     if not output:
         return "ไม่พบคำแนะนำเพิ่มเติมจากผลตรวจ"
@@ -854,45 +869,80 @@ df = load_sqlite_data()
 # ==================== UI Setup and Main Page Layout ====================
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
-# Inject custom CSS for font and size control
+# Inject custom CSS for font and dark theme
 st.markdown("""
     <style>
     /* Import Sarabun font from Google Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
 
-    /* Apply Sarabun font to all common text elements */
-    body, h1, h2, h3, h4, h5, h6, p, li, a, label, input, select, textarea, button, th, td,
-    div[data-testid="stMarkdown"],
-    div[data-testid="stInfo"],
-    div[data-testid="stSuccess"],
-    div[data-testid="stWarning"],
-    div[data-testid="stError"] {
+    /* --- Universal Font and Dark Theme --- */
+    html, body, [class*="st-"] {
         font-family: 'Sarabun', sans-serif !important;
+        background-color: #0f1116; /* Dark background */
+        color: #fafafa; /* Light text */
     }
     
-    /* Set a base font size for the body */
-    body {
-        font-size: 14px !important;
+    /* --- Main Headers --- */
+    h1, h2, h3 {
+        color: #fafafa !important;
     }
-    
-    /* Set specific size for main report title (h1) */
     .report-header-container h1 {
         font-size: 1.8rem !important;
         font-weight: bold;
     }
-
-    /* Style for the clinic subtitle (h2) */
     .report-header-container h2 {
-        font-size: 1.2rem !important; /* Size between h1 and body text */
-        color: darkgrey;
+        font-size: 1.2rem !important;
+        color: #a0a0a0 !important; /* Lighter grey for subtitle */
         font-weight: bold;
     }
-
-    /* Control spacing for all elements in header */
     .report-header-container * {
         line-height: 1.7 !important; 
         margin: 0.2rem 0 !important;
         padding: 0 !important;
+    }
+    hr {
+        background-color: #333;
+        height: 1px;
+        border: none;
+    }
+
+    /* --- Input Widgets Styling --- */
+    /* Text Input */
+    div[data-testid="stTextInput"] input {
+        background-color: #262730;
+        color: #fafafa;
+        border: 1px solid #444;
+        border-radius: 8px;
+        padding: 10px;
+    }
+    /* Selectbox */
+    div[data-testid="stSelectbox"] > div {
+        background-color: #262730;
+        color: #fafafa;
+        border: 1px solid #444;
+        border-radius: 8px;
+    }
+    div[data-testid="stSelectbox"] label {
+        color: #a0a0a0 !important; /* Lighter color for labels */
+        font-size: 13px;
+    }
+    /* Button */
+    button[data-testid="stButton"] {
+        background-color: #4A5568;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 8px 16px;
+    }
+    button[data-testid="stButton"]:hover {
+        background-color: #2D3748;
+    }
+    
+    /* --- General Info/Error boxes --- */
+    div[data-testid="stInfo"], div[data-testid="stError"] {
+        border-radius: 8px;
+        border: 1px solid #444;
+        background-color: #262730;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -902,13 +952,11 @@ st.markdown("""
 st.markdown("<h3 style='text-align: center; margin-bottom: 1rem;'>ค้นหาและเลือกผลตรวจ</h3>", unsafe_allow_html=True)
 
 # Define columns for the controls
-col1, col2, col3, col4 = st.columns([3, 1, 2, 2])
+col1, col2, col3, col4 = st.columns([4, 1, 2, 2])
 
 with col1:
     search_query = st.text_input(
-        "Search Query", 
-        label_visibility="collapsed", 
-        placeholder="กรอก HN หรือ ชื่อ-สกุล",
+        "กรอก HN หรือ ชื่อ-สกุล", 
         key="search_query_input"
     )
 
@@ -918,6 +966,7 @@ with col2:
 # --- State Initialization and Search Logic ---
 if submitted_main:
     st.session_state.clear() # Clear all state for a new search
+    st.session_state.search_query_persisted = search_query # Persist the search query
     search_term = search_query.strip()
     if search_term:
         query_df = df.copy()
@@ -953,9 +1002,8 @@ if "search_result" in st.session_state:
         available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
         
         def on_year_change():
-            # When year changes, reset the date to the latest available for the new year
-            new_year = st.session_state.year_selector
-            year_df = st.session_state.search_result[st.session_state.search_result["Year"] == new_year]
+            st.session_state.selected_year = st.session_state.year_selector
+            year_df = st.session_state.search_result[st.session_state.search_result["Year"] == st.session_state.selected_year]
             
             if not year_df.empty:
                 latest_date_for_new_year = year_df.drop_duplicates(subset=["HN", "วันที่ตรวจ"]).sort_values(
@@ -969,12 +1017,11 @@ if "search_result" in st.session_state:
             key="year_selector",
             on_change=on_year_change,
             format_func=lambda y: f"พ.ศ. {y}",
-            index=available_years.index(st.session_state.selected_year) if st.session_state.selected_year in available_years else 0
+            index=available_years.index(st.session_state.selected_year) if 'selected_year' in st.session_state and st.session_state.selected_year in available_years else 0
         )
 
     # --- Date Selector ---
     with col4:
-        # Get available dates for the currently selected year
         person_year_df = results_df[
             (results_df["Year"] == st.session_state.selected_year) &
             (results_df["HN"] == selected_hn)
@@ -983,36 +1030,31 @@ if "search_result" in st.session_state:
         exam_dates_options = person_year_df["วันที่ตรวจ"].dropna().unique().tolist()
 
         if exam_dates_options:
-            if len(exam_dates_options) == 1:
-                # If only one date, just display it (optional)
-                st.markdown(f"<div style='padding-top: 8px; text-align: center;'>วันที่: {exam_dates_options[0]}</div>", unsafe_allow_html=True)
-                st.session_state.selected_exam_date = exam_dates_options[0]
-            else:
-                st.selectbox(
-                    "วันที่ตรวจ",
-                    options=exam_dates_options,
-                    key="selected_exam_date",
-                    index=exam_dates_options.index(st.session_state.selected_exam_date) if st.session_state.selected_exam_date in exam_dates_options else 0
-                )
+            st.selectbox(
+                "วันที่ตรวจ",
+                options=exam_dates_options,
+                key="selected_exam_date",
+                index=exam_dates_options.index(st.session_state.selected_exam_date) if 'selected_exam_date' in st.session_state and st.session_state.selected_exam_date in exam_dates_options else 0
+            )
     
     # --- Set the final person_row for display ---
-    final_df = results_df[
-        (results_df["Year"] == st.session_state.selected_year) &
-        (results_df["วันที่ตรวจ"] == st.session_state.selected_exam_date) &
-        (results_df["HN"] == selected_hn)
-    ]
-    if not final_df.empty:
-        st.session_state["person_row"] = final_df.iloc[0].to_dict()
-    else:
-        st.session_state.pop("person_row", None)
+    if 'selected_year' in st.session_state and 'selected_exam_date' in st.session_state:
+        final_df = results_df[
+            (results_df["Year"] == st.session_state.selected_year) &
+            (results_df["วันที่ตรวจ"] == st.session_state.selected_exam_date) &
+            (results_df["HN"] == selected_hn)
+        ]
+        if not final_df.empty:
+            st.session_state["person_row"] = final_df.iloc[0].to_dict()
+        else:
+            st.session_state.pop("person_row", None)
 
 
 # ==================== Display Health Report (Main Content) ====================
 if "person_row" in st.session_state:
     st.markdown("<hr>", unsafe_allow_html=True)
     person = st.session_state["person_row"]
-    year_display = person.get("Year", "-")
-
+    
     sbp = person.get("SBP", "")
     dbp = person.get("DBP", "")
     pulse_raw = person.get("pulse", "-")
@@ -1026,8 +1068,8 @@ if "person_row" in st.session_state:
     <div class="report-header-container" style="text-align: center; margin-bottom: 0.5rem;">
         <h1>รายงานผลการตรวจสุขภาพ</h1>
         <h2>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม -</h2>
-        <p>ชั้น 2 อาคารผู้ป่วยนอก-อุบัติเหตุ โรงพยาบาลสันทราย 201 หมู่ 11 ถ.เชียงใหม่–พร้าว ต.หนองหาร อ.สันทราย จ.เชียงใหม่ 50290</p>
-        <p>ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167</p>
+        <p style="color: #a0a0a0;">ชั้น 2 อาคารผู้ป่วยนอก-อุบัติเหตุ โรงพยาบาลสันทราย 201 หมู่ 11 ถ.เชียงใหม่–พร้าว ต.หนองหาร อ.สันทราย จ.เชียงใหม่ 50290</p>
+        <p style="color: #a0a0a0;">ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167</p>
         <p><b>วันที่ตรวจ:</b> {check_date or "-"}</p>
     </div>
     """
@@ -1054,7 +1096,7 @@ if "person_row" in st.session_state:
         bp_full = "-"
     else:
         bp_desc = interpret_bp(sbp, dbp)
-        bp_full = f"{bp_val} - {bp_desc}" if bp_desc != "-" else bp_val
+        bp_full = f"{bp_val} - <span style='color: #a0a0a0;'>{bp_desc}</span>" if bp_desc != "-" else bp_val
 
     try:
         pulse_val = int(float(pulse_raw))
@@ -1073,21 +1115,21 @@ if "person_row" in st.session_state:
     st.markdown(f"""
     <div>
         <hr>
-        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; margin-top: 24px; margin-bottom: 20px; text-align: center;">
-            <div><b>ชื่อ-สกุล:</b> {person.get('ชื่อ-สกุล', '-')}</div>
-            <div><b>อายุ:</b> {str(int(float(person.get('อายุ')))) if str(person.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')} ปี</div>
-            <div><b>เพศ:</b> {person.get('เพศ', '-')}</div>
-            <div><b>HN:</b> {str(int(float(person.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person.get('HN', '-')}</div>
-            <div><b>หน่วยงาน:</b> {person.get('หน่วยงาน', '-')}</div>
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; margin-top: 24px; margin-bottom: 20px; text-align: center; font-size: 15px;">
+            <div><b style="color: #a0a0a0;">ชื่อ-สกุล:</b> {person.get('ชื่อ-สกุล', '-')}</div>
+            <div><b style="color: #a0a0a0;">อายุ:</b> {str(int(float(person.get('อายุ')))) if str(person.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')} ปี</div>
+            <div><b style="color: #a0a0a0;">เพศ:</b> {person.get('เพศ', '-')}</div>
+            <div><b style="color: #a0a0a0;">HN:</b> {str(int(float(person.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person.get('HN', '-')}</div>
+            <div><b style="color: #a0a0a0;">หน่วยงาน:</b> {person.get('หน่วยงาน', '-')}</div>
         </div>
-        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; margin-bottom: 16px; text-align: center;">
-            <div><b>น้ำหนัก:</b> {weight_display}</div>
-            <div><b>ส่วนสูง:</b> {height_display}</div>
-            <div><b>รอบเอว:</b> {waist_display}</div>
-            <div><b>ความดันโลหิต:</b> {bp_full}</div>
-            <div><b>ชีพจร:</b> {pulse}</div>
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; margin-bottom: 16px; text-align: center; font-size: 15px;">
+            <div><b style="color: #a0a0a0;">น้ำหนัก:</b> {weight_display}</div>
+            <div><b style="color: #a0a0a0;">ส่วนสูง:</b> {height_display}</div>
+            <div><b style="color: #a0a0a0;">รอบเอว:</b> {waist_display}</div>
+            <div><b style="color: #a0a0a0;">ความดันโลหิต:</b> {bp_full}</div>
+            <div><b style="color: #a0a0a0;">ชีพจร:</b> {pulse}</div>
         </div>
-        {f"<div style='margin-top: 16px; text-align: center;'><b>คำแนะนำ:</b> {summary_advice}</div>" if summary_advice else ""}
+        {f"<div style='margin-top: 16px; text-align: center; font-size: 15px;'><b style='color: #a0a0a0;'>คำแนะนำ:</b> {summary_advice}</div>" if summary_advice else ""}
     </div>
     """, unsafe_allow_html=True)
 
@@ -1150,10 +1192,10 @@ if "person_row" in st.session_state:
     left_spacer, col1, col2, right_spacer = st.columns([0.5, 3, 3, 0.5])
 
     with col1:
-        st.markdown(render_lab_table_html("ผลตรวจ CBC (Complete Blood Count)", None, ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows), unsafe_allow_html=True)
+        st.markdown(render_lab_table_html("ผลตรวจ CBC", "Complete Blood Count", ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows), unsafe_allow_html=True)
     
     with col2:
-        st.markdown(render_lab_table_html("ผลตรวจเลือด (Blood Chemistry)", None, ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows), unsafe_allow_html=True)
+        st.markdown(render_lab_table_html("ผลตรวจเลือด", "Blood Chemistry", ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows), unsafe_allow_html=True)
 
     # ==================== Combined Recommendations ====================
     gfr_raw = person.get("GFR", "")
@@ -1190,14 +1232,18 @@ if "person_row" in st.session_state:
         background_color_general_advice = (
             "rgba(255, 255, 0, 0.2)" if has_general_advice else "rgba(57, 255, 20, 0.2)"
         )
+        border_color_general_advice = (
+            "rgba(255, 255, 0, 0.4)" if has_general_advice else "rgba(57, 255, 20, 0.4)"
+        )
 
         st.markdown(f"""
         <div style="
             background-color: {background_color_general_advice};
+            border: 1px solid {border_color_general_advice};
             padding: 1rem 2.5rem;
             border-radius: 10px;
             line-height: 1.5;
-            color: var(--text-color);
+            color: #fafafa;
             font-size: 14px;
         ">
             {final_advice_html}
@@ -1214,7 +1260,7 @@ if "person_row" in st.session_state:
             render_urine_section(person, sex, selected_year_int)
 
             # --- Stool Section ---
-            st.markdown(render_section_header("ผลตรวจอุจจาระ (Stool Examination)"), unsafe_allow_html=True)
+            st.markdown(render_section_header("ผลตรวจอุจจาระ", "Stool Examination"), unsafe_allow_html=True)
             
             stool_exam_raw = person.get("Stool exam", "")
             stool_cs_raw = person.get("Stool C/S", "")
@@ -1226,7 +1272,7 @@ if "person_row" in st.session_state:
 
         with col_ua_right:
             # --- X-ray Section ---
-            st.markdown(render_section_header("ผลเอกซเรย์ (Chest X-ray)"), unsafe_allow_html=True)
+            st.markdown(render_section_header("ผลเอกซเรย์", "Chest X-ray"), unsafe_allow_html=True)
             
             cxr_col = "CXR" if selected_year_int == (datetime.now().year + 543) else f"CXR{str(selected_year_int)[-2:]}"
             cxr_raw = person.get(cxr_col, "")
@@ -1234,11 +1280,12 @@ if "person_row" in st.session_state:
             
             st.markdown(f"""
             <div style='
-                background-color: var(--background-color);
-                color: var(--text-color);
+                background-color: #1a1a1a;
+                border: 1px solid #333;
+                color: #fafafa;
                 line-height: 1.6;
                 padding: 1.25rem;
-                border-radius: 6px;
+                border-radius: 8px;
                 margin-bottom: 1.5rem;
                 font-size: 14px;
             '>
@@ -1247,7 +1294,7 @@ if "person_row" in st.session_state:
             """, unsafe_allow_html=True)
 
             # --- EKG Section ---
-            st.markdown(render_section_header("ผลคลื่นไฟฟ้าหัวใจ (EKG)"), unsafe_allow_html=True)
+            st.markdown(render_section_header("ผลคลื่นไฟฟ้าหัวใจ", "EKG"), unsafe_allow_html=True)
 
             ekg_col = get_ekg_col_name(selected_year_int)
             ekg_raw = person.get(ekg_col, "")
@@ -1255,11 +1302,12 @@ if "person_row" in st.session_state:
 
             st.markdown(f"""
             <div style='
-                background-color: var(--secondary-background-color);
-                color: var(--text-color);
+                background-color: #1a1a1a;
+                border: 1px solid #333;
+                color: #fafafa;
                 line-height: 1.6;
                 padding: 1.25rem;
-                border-radius: 6px;
+                border-radius: 8px;
                 margin-bottom: 1.5rem;
                 font-size: 14px;
             '>
@@ -1268,15 +1316,16 @@ if "person_row" in st.session_state:
             """, unsafe_allow_html=True)
 
             # --- Section: Hepatitis A ---
-            st.markdown(render_section_header("ผลการตรวจไวรัสตับอักเสบเอ (Viral hepatitis A)"), unsafe_allow_html=True)
+            st.markdown(render_section_header("ผลตรวจไวรัสตับอักเสบเอ", "Viral hepatitis A"), unsafe_allow_html=True)
             
             hep_a_raw = safe_text(person.get("Hepatitis A"))
             st.markdown(f"""
             <div style='
                 padding: 1rem;
-                border-radius: 6px;
+                border-radius: 8px;
                 margin-bottom: 1.5rem;
-                background-color: rgba(255,255,255,0.05);
+                background-color: #1a1a1a;
+                border: 1px solid #333;
                 font-size: 14px;
             '>
                 {hep_a_raw}
@@ -1287,33 +1336,32 @@ if "person_row" in st.session_state:
             hep_check_date_raw = person.get("ปีตรวจHEP")
             hep_check_date = normalize_thai_date(hep_check_date_raw)
             
-            st.markdown(render_section_header("ผลการตรวจไวรัสตับอักเสบบี (Viral hepatitis B)"), unsafe_allow_html=True)
+            st.markdown(render_section_header("ผลตรวจไวรัสตับอักเสบบี", "Viral hepatitis B"), unsafe_allow_html=True)
             
             hbsag_raw = safe_text(person.get("HbsAg"))
             hbsab_raw = safe_text(person.get("HbsAb"))
             hbcab_raw = safe_text(person.get("HBcAB"))
             
             st.markdown(f"""
-            <div style="margin-bottom: 1rem;">
+            <div style="margin-bottom: 1rem; background-color: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 0.5rem;">
             <table style='
                 width: 100%;
                 text-align: center;
                 border-collapse: collapse;
-                min-width: 300px;
                 font-size: 14px;
             '>
                 <thead>
-                    <tr>
-                        <th style="padding: 8px; border: 1px solid transparent;">HBsAg</th>
-                        <th style="padding: 8px; border: 1px solid transparent;">HBsAb</th>
-                        <th style="padding: 8px; border: 1px solid transparent;">HBcAb</th>
+                    <tr style="border-bottom: 2px solid #2E7D32;">
+                        <th style="padding: 8px; color: #e0e0e0;">HBsAg</th>
+                        <th style="padding: 8px; color: #e0e0e0;">HBsAb</th>
+                        <th style="padding: 8px; color: #e0e0e0;">HBcAb</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td style="padding: 8px; border: 1px solid transparent;">{hbsag_raw}</td>
-                        <td style="padding: 8px; border: 1px solid transparent;">{hbsab_raw}</td>
-                        <td style="padding: 8px; border: 1px solid transparent;">{hbcab_raw}</td>
+                        <td style="padding: 8px;">{hbsag_raw}</td>
+                        <td style="padding: 8px;">{hbsab_raw}</td>
+                        <td style="padding: 8px;">{hbcab_raw}</td>
                     </tr>
                 </tbody>
             </table>
@@ -1326,15 +1374,16 @@ if "person_row" in st.session_state:
             st.markdown(f"""
             <div style='
                 padding: 0.75rem 1rem;
-                background-color: rgba(255,255,255,0.05);
-                border-radius: 6px;
+                background-color: #1a1a1a;
+                border: 1px solid #333;
+                border-radius: 8px;
                 margin-bottom: 1.5rem;
                 line-height: 1.8;
                 font-size: 14px;
             '>
-                <b>วันที่ตรวจภูมิคุ้มกัน:</b> {hep_check_date}<br>
-                <b>ประวัติโรคไวรัสตับอักเสบบี ปี พ.ศ. {selected_year_int}:</b> {hep_history}<br>
-                <b>ประวัติการได้รับวัคซีนในปี พ.ศ. {selected_year_int}:</b> {hep_vaccine}
+                <b style="color: #a0a0a0;">วันที่ตรวจภูมิคุ้มกัน:</b> {hep_check_date}<br>
+                <b style="color: #a0a0a0;">ประวัติโรคไวรัสตับอักเสบบี ปี พ.ศ. {selected_year_int}:</b> {hep_history}<br>
+                <b style="color: #a0a0a0;">ประวัติการได้รับวัคซีนในปี พ.ศ. {selected_year_int}:</b> {hep_vaccine}
             </div>
             """, unsafe_allow_html=True)
             
@@ -1342,16 +1391,19 @@ if "person_row" in st.session_state:
             
             if advice.strip() == "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี":
                 bg_color = "rgba(57, 255, 20, 0.2)"
+                border_color = "rgba(57, 255, 20, 0.4)"
             else:
                 bg_color = "rgba(255, 255, 0, 0.2)"
+                border_color = "rgba(255, 255, 0, 0.4)"
 
             st.markdown(f"""
             <div style='
                 line-height: 1.6;
                 padding: 1rem 1.5rem;
-                border-radius: 6px;
+                border-radius: 8px;
                 background-color: {bg_color};
-                color: var(--text-color);
+                border: 1px solid {border_color};
+                color: #fafafa;
                 margin-bottom: 1.5rem;
                 font-size: 14px;
             '>
@@ -1369,7 +1421,7 @@ if "person_row" in st.session_state:
     with doctor_col:
         st.markdown(f"""
         <div style='
-            background-color: #1b5e20;
+            background-color: #2E7D32;
             color: white;
             padding: 1.5rem 2rem;
             border-radius: 8px;
@@ -1378,13 +1430,14 @@ if "person_row" in st.session_state:
             margin-bottom: 2rem;
             font-size: 14px;
         '>
-            <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
+            <b style="font-size: 16px;">สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
         </div>
 
         <div style='
             margin-top: 7rem;
             text-align: right;
             padding-right: 1rem;
+            color: #a0a0a0;
         '>
             <div style='
                 display: inline-block;
@@ -1392,7 +1445,7 @@ if "person_row" in st.session_state:
                 width: 340px;
             '>
                 <div style='
-                    border-bottom: 1px dotted #ccc;
+                    border-bottom: 1px dotted #555;
                     margin-bottom: 0.5rem;
                     width: 100%;
                 '></div>
