@@ -626,7 +626,6 @@ def load_sqlite_data():
         st.error(f"❌ โหลดฐานข้อมูลไม่สำเร็จ: {e}")
         st.stop()
 
-df = load_sqlite_data()
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
 # Inject CSS for printing and custom fonts
@@ -704,11 +703,9 @@ if "search_result" in st.session_state:
 
 
         with sel_col3:
-            # Add some vertical space to align the button
             st.write("") 
             st.write("")
             if st.session_state.get('person_row'):
-                # Use a custom HTML button that directly calls window.print()
                 st.markdown("""
                     <style>
                     .print-btn {
