@@ -727,6 +727,7 @@ if "search_result" in st.session_state:
             st.write("") 
             st.write("")
             if st.session_state.get('person_row'):
+                # Use a custom HTML button that directly calls window.print()
                 st.markdown("""
                     <style>
                     .print-btn {
