@@ -709,7 +709,7 @@ def render_stool_html_table(exam, cs):
             width: 100%;
             border-collapse: collapse;
             color: var(--text-color);
-            table-layout: fixed; /* Ensure column widths are respected */
+            table-layout: fixed; /* Ensures column widths are respected */
             font-size: 14px;
         }
         .stool-table th {
@@ -870,15 +870,9 @@ st.set_page_config(page_title="ระบบรายงานสุขภาพ"
 # Inject custom CSS for font and size control (MODIFIED)
 st.markdown("""
     <style>
-    /* Import Sarabun font from Google Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
 
-    /*
-      Apply Sarabun font to all common text elements. This approach is
-      more specific than the universal selector (*) and avoids overriding
-      the font for special elements like Streamlit's internal icons
-      (e.g., the sidebar collapse button).
-    */
+    /* Apply Sarabun to all major elements, not Streamlit sidebar expander/collapse icon */
     body, h1, h2, h3, h4, h5, h6, p, li, a, label, input, select, textarea, button, th, td,
     div[data-testid="stMarkdown"],
     div[data-testid="stInfo"],
@@ -887,37 +881,22 @@ st.markdown("""
     div[data-testid="stError"] {
         font-family: 'Sarabun', sans-serif !important;
     }
-    
-    /* Set a base font size for the body */
-    body {
-        font-size: 14px !important;
-    }
-    
-    /* Set specific size for main report title (h1) */
+    body { font-size: 14px !important; }
     .report-header-container h1 {
         font-size: 1.8rem !important;
         font-weight: bold;
     }
-
-    /* Style for the clinic subtitle (h2) */
     .report-header-container h2 {
-        font-size: 1.2rem !important; /* Size between h1 and body text */
+        font-size: 1.2rem !important;
         color: darkgrey;
         font-weight: bold;
     }
-
-    /* Set specific size for sidebar titles (h3) */
-    .st-sidebar h3 {
-        font-size: 18px !important; /* Slightly larger than body text */
-    }
-
-    /* Control spacing for all elements in header */
+    .st-sidebar h3 { font-size: 18px !important; }
     .report-header-container * {
         line-height: 1.7 !important; 
         margin: 0.2rem 0 !important;
         padding: 0 !important;
     }
-
     </style>
 """, unsafe_allow_html=True)
 
