@@ -611,7 +611,12 @@ def load_sqlite_data():
         df_loaded.columns = df_loaded.columns.str.strip()
         df_loaded['เลขบัตรประชาชน'] = df_loaded['เลขบัตรประชาชน'].astype(str).str.strip()
         df_loaded['HN'] = df_loaded['HN'].apply(lambda x: str(int(x)) if pd.notna(x) and isinstance(x, (float, int)) else str(x)).str.strip()
-        df_loaded['ชื่อ-สกุล'] = df_loaded['ชื่อ-สกุล'].astype(str).str.strip()
+        
+        # --- FIX for KeyError ---
+        # Ensure the 'ชื่อ-สกุล' column exists and is of string type to prevent errors.
+        if 'ชื่อ-สกุล' in df_loaded.columns:
+            df_loaded['ชื่อ-สกุล'] = df_loaded['ชื่อ-สกุล'].astype(str).str.strip()
+
         df_loaded['Year'] = df_loaded['Year'].astype(int)
         df_loaded['วันที่ตรวจ'] = df_loaded['วันที่ตรวจ'].apply(normalize_thai_date)
         df_loaded.replace(["-", "None", None], pd.NA, inplace=True)
