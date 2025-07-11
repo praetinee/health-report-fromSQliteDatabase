@@ -398,174 +398,10 @@ def merge_final_advice_grouped(messages):
     return "<div style='margin-bottom:0.75rem;'>" + "</div><div style='margin-bottom:0.75rem;'>".join(output) + "</div>" if output else "ไม่พบคำแนะนำเพิ่มเติมจากผลตรวจ"
 
 # ==============================================================================
-# SECTION 2: PRINTING FUNCTIONALITY (REVISED & RE-IMPLEMENTED)
-# This section creates a dedicated, simplified HTML report for printing.
+# SECTION 2: PRINTING FUNCTIONALITY (REMOVED)
 # ==============================================================================
 
-PRINT_WINDOW_CSS = """
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
-    @page {
-        size: A4;
-        margin: 0.8cm;
-    }
-    * {
-        background: transparent !important;
-        color: #000 !important;
-        box-shadow: none !important;
-        text-shadow: none !important;
-        print-color-adjust: exact !important;
-        font-family: 'Sarabun', sans-serif !important;
-    }
-    body { padding: 0 !important; margin: 0 !important; }
-    h1 { font-size: 14pt !important; font-weight: bold; text-align: center; margin:0; padding:0; }
-    h2 { font-size: 11pt !important; text-align: center; margin:0 0 8px 0; padding:0; color: #333 !important; }
-    p, div, table, span { font-size: 9pt !important; line-height: 1.3 !important; }
-    .patient-info-print { border: 1px solid #000; padding: 5px; margin-bottom: 8px; text-align: left; }
-    .patient-info-print b { font-weight: bold; }
-    .main-content-flex { display: flex; flex-direction: row; gap: 0.7cm; width: 100%; }
-    .column-left { width: 55%; }
-    .column-right { width: 45%; }
-    .section-header-print {
-        background-color: #E0E0E0 !important;
-        font-weight: bold;
-        text-align: center;
-        padding: 3px;
-        margin-top: 8px;
-        margin-bottom: 4px;
-        border-radius: 3px;
-    }
-    table { width: 100%; border-collapse: collapse; page-break-inside: avoid; }
-    th, td { border: 1px solid #ccc; padding: 2px 4px; vertical-align: top; }
-    th { font-weight: bold; background-color: #F5F5F5 !important; }
-    .lab-table-print .test { width: 45%; }
-    .lab-table-print .result { width: 20%; text-align: center; }
-    .lab-table-print .norm { width: 35%; }
-    .lab-table-abn td { background-color: #F2F2F2 !important; font-weight: bold; }
-    .other-results { margin: 0; padding: 3px 4px; border-bottom: 1px dotted #eee; }
-    .advice-box { padding: 5px; border: 1px solid #ccc; border-radius: 4px; page-break-inside: avoid; margin-top: 4px; }
-    .advice-box b { font-weight: bold; }
-    .footer-section {
-        border-top: 1px solid #000;
-        padding-top: 5px;
-        margin-top: 2rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-end;
-    }
-    .signature-area { text-align: center; }
-</style>
-"""
-
-def _render_lab_table_for_print(rows):
-    """Helper to render a lab table for the print view."""
-    html = "<table class='lab-table-print'><thead><tr><th class='test'>การตรวจ</th><th class='result'>ผล</th><th class='norm'>ค่าปกติ</th></tr></thead><tbody>"
-    for label, result, norm, is_abn in rows:
-        row_class = "lab-table-abn" if is_abn else ""
-        html += f"<tr class='{row_class}'><td>{label}</td><td class='result'>{result}</td><td>{norm}</td></tr>"
-    html += "</tbody></table>"
-    return html
-
-def _render_urine_table_for_print(person_data):
-    """Helper to render the urine table for the print view."""
-    urine_data = [
-        ("สี", person_data.get("Color", "-"), "Yellow"), ("น้ำตาล", person_data.get("sugar", "-"), "Negative"),
-        ("โปรตีน", person_data.get("Alb", "-"), "Negative"), ("pH", person_data.get("pH", "-"), "5.0-8.0"),
-        ("ถ.พ.", person_data.get("Spgr", "-"), "1.003-1.030"), ("RBC", person_data.get("RBC1", "-"), "0-2"),
-        ("WBC", person_data.get("WBC1", "-"), "0-5"),
-    ]
-    html = "<table class='urine-table-print'><thead><tr><th class='test'>การตรวจ</th><th class='result'>ผล</th><th class='norm'>ค่าปกติ</th></tr></thead><tbody>"
-    for test, result, normal in urine_data:
-        is_abn = is_urine_abnormal(test, result, normal)
-        row_class = "lab-table-abn" if is_abn else ""
-        result_display = str(safe_value(result)).replace("negative", "Neg").replace("trace", "Tr")
-        html += f"<tr class='{row_class}'><td>{test}</td><td class='result'>{result_display}</td><td>{normal}</td></tr>"
-    html += "</tbody></table>"
-    return html
-
-def generate_printable_html(person_data):
-    """Generates a self-contained HTML string formatted for printing."""
-    if not person_data: return ""
-    sex = str(person_data.get("เพศ", "ไม่ระบุ")).strip()
-    year_selected = int(person_data.get("Year", datetime.now().year + 543))
-    try:
-        age_str = str(int(float(person_data.get('อายุ', '-'))))
-        hn_str = str(int(float(person_data.get('HN', '-'))))
-    except (ValueError, TypeError):
-        age_str = str(person_data.get('อายุ', '-'))
-        hn_str = str(person_data.get('HN', '-'))
-
-    sbp, dbp = person_data.get("SBP", ""), person_data.get("DBP", "")
-    bp_val = f"{sbp}/{dbp}" if sbp and dbp else "-"
-    bp_interp = interpret_bp(sbp, dbp)
-    try:
-        bmi_str = f"{float(person_data.get('BMI', 0)):.1f}"
-    except (ValueError, TypeError):
-        bmi_str = "-"
-    
-    # --- Data Preparation for Print ---
-    lab_configs = [
-        ("น้ำตาล (FBS)", "FBS", "74-106", 74, 106, False),
-        ("ไต (Creatinine)", "Cr", "0.5-1.17", 0.5, 1.17, False),
-        ("ไต (eGFR)", "GFR", ">60", 60, None, True),
-        ("เก๊าท์ (Uric Acid)", "Uric Acid", "2.6-7.2", 2.6, 7.2, False),
-        ("ไขมัน (Cholesterol)", "CHOL", "<200", None, 200, False),
-        ("ไขมัน (Triglyceride)", "TGL", "<150", None, 150, False),
-        ("ไขมันดี (HDL)", "HDL", ">40", 40, None, True),
-        ("ไขมันเลว (LDL)", "LDL", "<160", None, 160, False),
-        ("ตับ (SGOT)", "SGOT", "<37", None, 37, False),
-        ("ตับ (SGPT)", "SGPT", "<41", None, 41, False),
-        ("ตับ (ALP)", "ALP", "30-120", 30, 120, False),
-        ("ฮีโมโกลบิน (Hb)", "Hb(%)", "ช>13,ญ>12", 13 if sex=="ชาย" else 12, None, False),
-        ("ฮีมาโตคริต (Hct)", "HCT", "ช>39,ญ>36", 39 if sex=="ชาย" else 36, None, False),
-        ("เม็ดเลือดขาว (WBC)", "WBC (cumm)", "4-10k", 4000, 10000, False),
-        ("เกล็ดเลือด (Plt)", "Plt (/mm)", "150-500k", 150000, 500000, False),
-    ]
-    lab_rows_data = []
-    for label, col, norm, low, high, higher_is_better in lab_configs:
-        result, is_abn = flag(get_float(col, person_data), low, high, higher_is_better)
-        lab_rows_data.append((label, result, norm, is_abn))
-
-    cxr_result = interpret_cxr(person_data.get(f"CXR{str(year_selected)[-2:]}" if year_selected != (datetime.now().year + 543) else "CXR", ""))
-    ekg_result = interpret_ekg(person_data.get(get_ekg_col_name(year_selected), ""))
-    hep_b_advice = hepatitis_b_advice(safe_text(person_data.get("HbsAg")), safe_text(person_data.get("HbsAb")), safe_text(person_data.get("HBcAB")))
-    
-    advice_list = [
-        combined_health_advice(bmi_str, sbp, dbp), kidney_advice_from_summary(kidney_summary_gfr_only(person_data.get("GFR"))),
-        fbs_advice(person_data.get("FBS")), liver_advice(summarize_liver(person_data.get("ALP"), person_data.get("SGOT"), person_data.get("SGPT"))),
-        uric_acid_advice(person_data.get("Uric Acid")), lipids_advice(summarize_lipids(person_data.get("CHOL"), person_data.get("TGL"), person_data.get("LDL"))),
-        cbc_advice(person_data.get("Hb(%)"), person_data.get("HCT"), person_data.get("WBC (cumm)"), person_data.get("Plt (/mm)"), sex),
-        advice_urine(sex, person_data.get("Alb"), person_data.get("sugar"), person_data.get("RBC1"), person_data.get("WBC1"))
-    ]
-    final_advice_html = merge_final_advice_grouped([msg for msg in advice_list if msg])
-    doctor_suggestion = safe_text(person_data.get("DOCTER suggest", "ไม่มี"))
-
-    # --- HTML Assembly for Print ---
-    return f"""
-    <div class="report-header-container">
-        <h1>รายงานผลการตรวจสุขภาพ</h1>
-        <h2>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย -</h2>
-    </div>
-    <div class="patient-info-print">
-        <b>ชื่อ-สกุล:</b> {person_data.get('ชื่อ-สกุล', '-')} &nbsp; <b>อายุ:</b> {age_str} ปี &nbsp; <b>เพศ:</b> {sex} &nbsp; <b>HN:</b> {hn_str} &nbsp; <b>วันที่ตรวจ:</b> {person_data.get('วันที่ตรวจ', '-')} <br>
-        <b>น้ำหนัก:</b> {person_data.get("น้ำหนัก", "-")} กก. &nbsp; <b>ส่วนสูง:</b> {person_data.get("ส่วนสูง", "-")} ซม. &nbsp; <b>BMI:</b> {bmi_str} &nbsp; <b>ความดัน:</b> {bp_val} ({bp_interp})
-    </div>
-    <div class="main-content-flex">
-        <div class="column-left">{_render_lab_table_for_print(lab_rows_data)}</div>
-        <div class="column-right">
-            <div class="section-header-print">ผลการตรวจปัสสาวะ</div>{_render_urine_table_for_print(person_data)}
-            <div class="section-header-print">ผลการตรวจอื่นๆ</div>
-            <p class="other-results"><b>X-Ray:</b> {cxr_result}</p>
-            <p class="other-results"><b>EKG:</b> {ekg_result}</p>
-            <p class="other-results"><b>Hepatitis B:</b> {hep_b_advice}</p>
-            <div class="section-header-print">คำแนะนำเบื้องต้น</div>
-            <div class="advice-box">{final_advice_html}</div>
-        </div>
-    </div>
-    <div class="footer-section">
-        <div><b>สรุปความเห็นของแพทย์:</b> {doctor_suggestion}</div>
-        <div class="signature-area">...........................................................<br><span>(นายแพทย์นพรัตน์ รัชฎาพร) ว.26674</span></div>
-    </div>"""
+# All functions and variables related to printing have been removed from this section.
 
 # ==============================================================================
 # SECTION 3: MAIN APP LOGIC
@@ -587,7 +423,7 @@ def load_sqlite_data():
         df_loaded.columns = df_loaded.columns.str.strip()
         df_loaded['เลขบัตรประชาชน'] = df_loaded['เลขบัตรประชาชน'].astype(str).str.strip()
         df_loaded['HN'] = df_loaded['HN'].apply(lambda x: str(int(x)) if pd.notna(x) and isinstance(x, (float, int)) else str(x)).str.strip()
-        
+
         # --- FIX for KeyError ---
         # Ensure the 'ชื่อ-สกุล' column exists and is of string type to prevent errors.
         if 'ชื่อ-สกุล' in df_loaded.columns:
@@ -609,7 +445,7 @@ def load_sqlite_data():
 
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
-# Inject CSS for printing and custom fonts
+# Inject CSS for custom fonts
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
@@ -623,7 +459,7 @@ df = load_sqlite_data()
 # --- Main Page Controls (No Sidebar) ---
 with st.container():
     st.markdown("### ค้นหาข้อมูลผู้เข้ารับบริการ")
-    
+
     col1, col2 = st.columns([3, 1])
     with col1:
         search_query = st.text_input("กรอก HN หรือ ชื่อ-สกุล", label_visibility="collapsed")
@@ -647,7 +483,7 @@ with st.container():
                         st.error("เกิดข้อผิดพลาด: ไม่พบคอลัมน์ 'ชื่อ-สกุล' ในฐานข้อมูล")
                         st.info(f"คอลัมน์ที่พบในระบบ: {', '.join(df.columns.tolist())}")
                         error_occured = True
-                
+
                 if not error_occured:
                     if results.empty:
                         st.error("❌ ไม่พบข้อมูล")
@@ -660,7 +496,7 @@ if "search_result" in st.session_state:
     with st.container():
         st.markdown("---")
         results_df = st.session_state.search_result
-        
+
         def thai_date_str_to_datetime(date_str):
             try:
                 parts = date_str.split()
@@ -672,84 +508,48 @@ if "search_result" in st.session_state:
             return datetime.min
 
         available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
-        
-        sel_col1, sel_col2, sel_col3 = st.columns([2, 2, 1])
-        
+
+        sel_col1, sel_col2 = st.columns([1, 1])
+
         with sel_col1:
             year_index = 0
             if 'selected_year' in st.session_state and st.session_state.selected_year in available_years:
                 year_index = available_years.index(st.session_state.selected_year)
             selected_year = st.selectbox("📅 เลือกปี", available_years, index=year_index, key="year_select", on_change=lambda: st.session_state.update(selected_year=st.session_state.year_select))
-        
+
         person_year_df = results_df[(results_df["Year"] == selected_year) & (results_df["HN"] == results_df.iloc[0]["HN"])]
         exam_dates_options = sorted(person_year_df["วันที่ตรวจ"].dropna().unique(), key=thai_date_str_to_datetime, reverse=True)
-        
+
         with sel_col2:
             if exam_dates_options:
                 date_index = 0
                 if 'selected_date' in st.session_state and st.session_state.selected_date in exam_dates_options:
                     date_index = exam_dates_options.index(st.session_state.selected_date)
                 selected_date = st.selectbox("🗓️ เลือกวันที่", exam_dates_options, index=date_index, key="date_select", on_change=lambda: st.session_state.update(selected_date=st.session_state.date_select))
-                
+
                 person_df = person_year_df[person_year_df["วันที่ตรวจ"] == selected_date]
                 if not person_df.empty:
                     st.session_state["person_row"] = person_df.iloc[0].to_dict()
             else:
                 st.session_state.pop("person_row", None)
-
-
-        with sel_col3:
-            st.write("") 
-            st.write("")
-            if st.session_state.get('person_row'):
-                person_data_for_print = generate_printable_html(st.session_state.person_row)
-                js_content = json.dumps(person_data_for_print)
-                js_css = json.dumps(PRINT_WINDOW_CSS)
         
-                st_html(f"""
-                    <style>
-                        .print-btn {{
-                            display: inline-flex; align-items: center; justify-content: center; font-weight: 400;
-                            padding: 0.25rem 0.75rem; border-radius: 0.5rem; min-height: 38.4px; margin: 0px;
-                            line-height: 1.6; width: 100%; user-select: none; background-color: #0d6efd;
-                            border: 1px solid #0d6efd; color: white; cursor: pointer;
-                        }}
-                        .print-btn:hover {{ background-color: #0b5ed7; border-color: #0a58ca; }}
-                    </style>
-                    <button id="print-button" class="print-btn">🖨️ พิมพ์รายงาน</button>
-                    <script>
-                        document.getElementById("print-button").addEventListener("click", function() {{
-                            const printWindow = window.open('', '_blank');
-                            printWindow.document.write('<html><head><title>Print Report</title>');
-                            printWindow.document.write({js_css});
-                            printWindow.document.write('</head><body>');
-                            printWindow.document.write({js_content});
-                            printWindow.document.write('</body></html>');
-                            printWindow.document.close();
-                            setTimeout(() => {{
-                                printWindow.focus();
-                                printWindow.print();
-                                // printWindow.close();  // สามารถปล่อยให้ user ปิดเองเพื่อความปลอดภัย
-                            }}, 600);
-                        }});
-                    </script>
-                """, height=100)
+        # The print button column has been removed.
 
 # --- Main content area ---
 if "person_row" in st.session_state:
     person = st.session_state.person_row
     st.markdown("---")
-    
+
     # This container holds the visible, interactive app.
     st.markdown('<div class="main-view">', unsafe_allow_html=True)
-    
+
     # Header Section
     st.markdown(f"""<div class="report-header-container" style="text-align:center; margin-bottom:0.5rem;">
         <h1>รายงานผลการตรวจสุขภาพ</h1><h2>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม -</h2>
         <p>ชั้น 2 อาคารผู้ป่วยนอก-อุบัติเหตุ โรงพยาบาลสันทราย 201 หมู่ 11 ถ.เชียงใหม่–พร้าว ต.หนองหาร อ.สันทราย จ.เชียงใหม่ 50290</p>
         <p>ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167</p>
         <p><b>วันที่ตรวจ:</b> {person.get("วันที่ตรวจ", "-")}</p></div>""", unsafe_allow_html=True)
-    
+
     # Patient Info and Vitals
     try: bmi_val = float(person.get("BMI", 0))
     except: bmi_val = 0
@@ -772,7 +572,7 @@ if "person_row" in st.session_state:
     # Blood Test Results
     sex = str(person.get("เพศ", "")).strip() or "ไม่ระบุ"
     hb_low, hct_low = (13, 39) if sex == "ชาย" else (12, 36)
-    
+
     cbc_config = [
         ("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None),
         ("ฮีมาโตคริต (Hct)", "HCT", "ชาย > 39%, หญิง > 36%", hct_low, None),
@@ -802,7 +602,7 @@ if "person_row" in st.session_state:
     for l, c, n, lo, hi in cbc_config:
         f = flag(get_float(c, person), lo, hi)
         cbc_rows.append([(l, f[1]), (f[0], f[1]), (n, f[1])])
-        
+
     blood_rows = []
     for l, c, n, lo, hi, hig in blood_config:
         f = flag(get_float(c, person), lo, hi, hig)
@@ -811,7 +611,7 @@ if "person_row" in st.session_state:
     _, c1, c2, _ = st.columns([0.5, 3, 3, 0.5])
     with c1: st.markdown(render_lab_table_html("ผลตรวจ CBC (Complete Blood Count)", None, ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows), unsafe_allow_html=True)
     with c2: st.markdown(render_lab_table_html("ผลตรวจเลือด (Blood Chemistry)", None, ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows), unsafe_allow_html=True)
-    
+
     # General Advice Section
     advice_list = [
         kidney_advice_from_summary(kidney_summary_gfr_only(person.get("GFR"))), fbs_advice(person.get("FBS")),
@@ -870,69 +670,6 @@ if "person_row" in st.session_state:
             <div style='white-space:nowrap;'>นายแพทย์นพรัตน์ รัชฎาพร</div>
             <div style='white-space:nowrap;'>เลขที่ใบอนุญาตผู้ประกอบวิชาชีพเวชกรรม ว.26674</div>
             </div></div>""", unsafe_allow_html=True)
-            
+
     # End of the live view container
     st.markdown('</div>', unsafe_allow_html=True)
-
-if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
-    # เพิ่มปุ่มปริ้น
-    print_button_html = """
-    <style>
-    .print-btn-custom {
-        position: fixed;
-        top: 22px;
-        right: 44px;
-        z-index: 10000;
-        background: #4CAF50;
-        color: #fff;
-        font-size: 15px;
-        padding: 7px 22px;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.13);
-        transition: background 0.2s;
-    }
-    .print-btn-custom:hover { background: #256029; }
-    </style>
-    <button class="print-btn-custom" onclick="printReportSection()">ปริ้นผลตรวจ</button>
-    <script>
-    function printReportSection() {
-        var elements = document.querySelectorAll('main .block-container > *');
-        var printContents = "";
-        var foundReport = false;
-        for (let el of elements) {
-            // หาส่วนที่เป็นรายงาน (ไม่เอาส่วน sidebar หรือปุ่มค้นหา)
-            if (
-                el.querySelector &&
-                (
-                    el.querySelector('.report-header-container') ||
-                    el.textContent.includes('รายงานผลการตรวจสุขภาพ')
-                )
-            ) {
-                foundReport = true;
-            }
-            if (foundReport) {
-                printContents += el.outerHTML;
-            }
-        }
-        var originalContents = document.body.innerHTML;
-        var win = window.open('', '', 'height=900,width=800');
-        win.document.write('<html><head>');
-        // ดึง style และ font ทั้งหมด
-        var styles = document.querySelectorAll('style, link[rel=stylesheet]');
-        for (let s of styles) {
-            win.document.write(s.outerHTML);
-        }
-        // Google font
-        win.document.write("<link href='https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap' rel='stylesheet'>");
-        win.document.write('<style>body { font-family: "Sarabun", sans-serif !important; font-size:14px; } </style>');
-        win.document.write('</head><body>');
-        win.document.write(printContents);
-        win.document.write('</body></html>');
-        win.document.close();
-        setTimeout(() => { win.focus(); win.print(); }, 500);
-    }
-    </script>
-    """
-    components.html(print_button_html, height=50)
