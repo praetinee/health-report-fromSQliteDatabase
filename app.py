@@ -1181,7 +1181,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         st.markdown(f"""
         <div style="
             background-color: {background_color_general_advice};
-            padding: 0.6rem 2.5rem 0.2rem;
+            padding: 0.6rem 2.5rem;
             border-radius: 10px;
             line-height: 1.6;
             color: var(--text-color);
