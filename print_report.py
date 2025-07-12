@@ -621,6 +621,8 @@ def render_other_results_html(person, sex):
         ("ความถ่วงจำเพาะ (Sp.gr)", person.get("Spgr", "-"), "1.003 - 1.030"),
         ("เม็ดเลือดแดง (RBC)", rbc_raw, "0 - 2 cell/HPF"),
         ("เม็ดเลือดขาว (WBC)", wbc_raw, "0 - 5 cell/HPF"),
+        ("เซลล์เยื่อบุผิว (Squam.epit.)", person.get("SQ-epi", "-"), "0 - 10 cell/HPF"),
+        ("อื่นๆ", person.get("ORTER", "-"), "-"),
     ]
     urine_rows = []
     for label, val_key, norm in urine_data:
@@ -652,6 +654,24 @@ def render_other_results_html(person, sex):
         <tr><td style="text-align: left; width: 40%;"><b>ผลคลื่นไฟฟ้าหัวใจ (EKG)</b></td><td style="text-align: left;">{ekg_result}</td></tr>
     </table>
     """
+    
+    # Hepatitis
+    hep_a_raw = safe_text(person.get("Hepatitis A"))
+    hbsag_raw = safe_text(person.get("HbsAg"))
+    hbsab_raw = safe_text(person.get("HbsAb"))
+    hbcab_raw = safe_text(person.get("HBcAB"))
+    hep_b_advice = hepatitis_b_advice(hbsag_raw, hbsab_raw, hbcab_raw)
+    
+    hepatitis_html = f"""
+    {render_section_header("ผลตรวจไวรัสตับอักเสบ")}
+    <table class="print-lab-table">
+        <tr><td style="text-align: left; width: 40%;"><b>ไวรัสตับอักเสบ เอ</b></td><td style="text-align: left;">{hep_a_raw}</td></tr>
+        <tr><td style="text-align: left; width: 40%;"><b>ไวรัสตับอักเสบ บี (HBsAg)</b></td><td style="text-align: left;">{hbsag_raw}</td></tr>
+        <tr><td style="text-align: left; width: 40%;"><b>ภูมิคุ้มกัน (HBsAb)</b></td><td style="text-align: left;">{hbsab_raw}</td></tr>
+        <tr><td style="text-align: left; width: 40%;"><b>การติดเชื้อ (HBcAb)</b></td><td style="text-align: left;">{hbcab_raw}</td></tr>
+        <tr><td colspan="2" style="text-align: left; background-color: #f8f9fa;"><b>คำแนะนำ:</b> {hep_b_advice}</td></tr>
+    </table>
+    """
 
     return f"""
     <table style="width: 100%; border-collapse: collapse; page-break-inside: avoid;">
@@ -662,6 +682,7 @@ def render_other_results_html(person, sex):
             </td>
             <td style="width: 50%; vertical-align: top; padding-left: 5px;">
                 {other_tests_html}
+                {hepatitis_html}
             </td>
         </tr>
     </table>
