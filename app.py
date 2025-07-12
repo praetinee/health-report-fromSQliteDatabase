@@ -920,12 +920,11 @@ with st.container():
             
             if query_df.empty:
                 st.error("❌ ไม่พบข้อมูล กรุณาตรวจสอบข้อมูลที่กรอกอีกครั้ง")
+                st.session_state["search_result"] = pd.DataFrame() # Set empty dataframe to clear results
             else:
                 st.session_state["search_result"] = query_df
                 st.session_state["selected_year_from_main"] = sorted(query_df["Year"].dropna().unique().astype(int), reverse=True)[0]
-                # No need to set person_row here, let the main script flow handle it after rerun
-                st.rerun()
-
+                
     # --- Dropdown Population and Row Selection ---
     search_performed = "search_result" in st.session_state
     available_years = []
@@ -934,7 +933,7 @@ with st.container():
     current_date_idx = 0
     person_year_df = pd.DataFrame()
 
-    if search_performed:
+    if search_performed and not st.session_state["search_result"].empty:
         results_df = st.session_state["search_result"]
         selected_hn = results_df.iloc[0]["HN"]
         available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
