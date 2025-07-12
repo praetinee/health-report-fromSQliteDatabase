@@ -255,7 +255,7 @@ def merge_final_advice_grouped(messages):
         elif "พิวรีน" in msg or "ยูริค" in msg: groups["ยูริค"].append(msg)
         elif "ไขมัน" in msg: groups["ไขมัน"].append(msg)
         else: groups["อื่นๆ"].append(msg)
-        
+            
     output = []
     for title, msgs in groups.items():
         if msgs:
@@ -333,7 +333,7 @@ def advice_urine(sex, alb, sugar, rbc, wbc):
     wbc_t = interpret_wbc(wbc)
     
     if all(x in ["-", "ปกติ", "ไม่พบ", "พบโปรตีนในปัสสาวะเล็กน้อย", "พบน้ำตาลในปัสสาวะเล็กน้อย"]
-                   for x in [alb_t, sugar_t, rbc_t, wbc_t]):
+                     for x in [alb_t, sugar_t, rbc_t, wbc_t]):
         return ""
     
     if "พบน้ำตาลในปัสสาวะ" in sugar_t and "เล็กน้อย" not in sugar_t:
@@ -491,15 +491,15 @@ def render_lab_table_html(title, subtitle, headers, rows, table_class="print-lab
     html_content += "</tbody></table>"
     return html_content
 
+
 def render_html_header(person):
     check_date = person.get("วันที่ตรวจ", "-")
-    # เฉพาะ header นี้ใช้ขนาด h1/h2/p แบบในตัวอย่างภาพ
     return f"""
     <div class="report-header-container" style="text-align: center; margin-bottom: 0.5rem; margin-top: 0.5rem;">
-        <h1>รายงานผลการตรวจสุขภาพ</h1>
-        <h2>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม -</h2>
-        <p>ชั้น 2 อาคารผู้ป่วยนอก-อุบัติเหตุ โรงพยาบาลสันทราย 201 หมู่ 11 ถ.เชียงใหม่–พร้าว ต.หนองหาร อ.สันทราย จ.เชียงใหม่ 50290</p>
-        <p>ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167 | <b>วันที่ตรวจ:</b> {check_date or "-"}</p>
+        <h1 style="font-size: 1.2rem; margin:0;">รายงานผลการตรวจสุขภาพ</h1>
+        <h2 style="font-size: 0.8rem; margin:0;">- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม -</h2>
+        <p style="font-size: 0.7rem; margin:0;">ชั้น 2 อาคารผู้ป่วยนอก-อุบัติเหตุ โรงพยาบาลสันทราย 201 หมู่ 11 ถ.เชียงใหม่–พร้าว ต.หนองหาร อ.สันทราย จ.เชียงใหม่ 50290</p>
+        <p style="font-size: 0.7rem; margin:0;">ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167 | <b>วันที่ตรวจ:</b> {check_date or "-"}</p>
     </div>
     """
 
@@ -523,10 +523,10 @@ def render_personal_info(person):
     except:
         sbp_int = dbp_int = None
         bp_val = "-"
-
+    
     bp_desc = interpret_bp(sbp, dbp)
     bp_full = f"{bp_val} - {bp_desc}" if bp_desc != "-" else bp_val
-
+    
     advice_text = combined_health_advice(bmi_val, sbp, dbp)
     summary_advice = html.escape(advice_text) if advice_text else ""
 
@@ -552,63 +552,63 @@ def render_personal_info(person):
     """
 
 def render_lab_section(person, sex):
-    """
-    สร้างส่วนของผลตรวจเลือดทั้งหมด (Kidney, Liver, Lipids, CBC)
-    """
-    # 1. Kidney Function
-    kidney_rows = [
-        [("BUN", False), flag(person.get("BUN", ""), high=20), ("7-20 mg/dL", False)],
-        [("Creatinine", False), flag(person.get("Creatinine", ""), high=1.2), ("0.6-1.2 mg/dL", False)],
-        [("eGFR", False), flag(person.get("GFR", ""), low=60, higher_is_better=True), ("> 60 ml/min/1.73m²", False)],
-    ]
-    kidney_html = render_lab_table_html("ผลตรวจการทำงานของไต", "Kidney Function", ["การตรวจ", "ผลตรวจ", "ค่าปกติ"], kidney_rows)
+    # CBC Data
+    if sex == "หญิง": hb_low, hct_low = 12, 36
+    elif sex == "ชาย": hb_low, hct_low = 13, 39
+    else: hb_low, hct_low = 12, 36
 
-    # 2. Liver Function
-    liver_rows = [
-        [("SGOT", False), flag(person.get("SGOT", ""), high=36), ("< 37 U/L", False)],
-        [("SGPT", False), flag(person.get("SGPT", ""), high=40), ("< 41 U/L", False)],
-        [("Alkaline Phosphatase", False), flag(person.get("ALP", ""), high=120), ("40-129 U/L", False)],
+    cbc_config = [
+        ("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None),
+        ("ฮีมาโตคริต (Hct)", "HCT", "ชาย > 39%, หญิง > 36%", hct_low, None),
+        ("เม็ดเลือดขาว (wbc)", "WBC (cumm)", "4,000 - 10,000 /cu.mm", 4000, 10000),
+        ("นิวโทรฟิล (Neutrophil)", "Ne (%)", "43 - 70%", 43, 70),
+        ("ลิมโฟไซต์ (Lymphocyte)", "Ly (%)", "20 - 44%", 20, 44),
+        ("โมโนไซต์ (Monocyte)", "M", "3 - 9%", 3, 9),
+        ("อีโอซิโนฟิล (Eosinophil)", "Eo", "0 - 9%", 0, 9),
+        ("เบโซฟิล (Basophil)", "BA", "0 - 3%", 0, 3),
+        ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150,000 - 500,000 /cu.mm", 150000, 500000),
     ]
-    liver_html = render_lab_table_html("ผลตรวจการทำงานของตับ", "Liver Function", ["การตรวจ", "ผลตรวจ", "ค่าปกติ"], liver_rows)
-
-    # 3. Lipid Profile & Uric Acid
-    lipids_rows = [
-        [("Cholesterol", False), flag(person.get("CHOL", ""), high=200), ("< 200 mg/dL", False)],
-        [("Triglyceride", False), flag(person.get("TGL", ""), high=150), ("< 150 mg/dL", False)],
-        [("HDL", False), flag(person.get("HDL", ""), low=40, higher_is_better=True), ("> 40 mg/dL", False)],
-        [("LDL", False), flag(person.get("LDL", ""), high=130), ("< 130 mg/dL", False)],
-        [("Uric Acid", False), flag(person.get("Uric Acid", ""), high=7.2), ("2.4-7.2 mg/dL", False)],
+    cbc_rows = []
+    for label, col, norm, low, high in cbc_config:
+        val = get_float(col, person)
+        result, is_abn = flag(val, low, high)
+        cbc_rows.append([(label, is_abn), (result, is_abn), (norm, is_abn)])
+    
+    # Blood Chemistry Data
+    blood_config = [
+        ("น้ำตาลในเลือด (FBS)", "FBS", "74 - 106 mg/dl", 74, 106),
+        ("การทำงานของไต (BUN)", "BUN", "7.9 - 20 mg/dl", 7.9, 20),
+        ("การทำงานของไต (Cr)", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17),
+        ("ประสิทธิภาพการกรองของไต (GFR)", "GFR", "> 60 mL/min", 60, None, True),
+        ("กรดยูริก (Uric Acid)", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2),
+        ("คลอเรสเตอรอล (CHOL)", "CHOL", "150 - 200 mg/dl", 150, 200),
+        ("ไตรกลีเซอไรด์ (TGL)", "TGL", "35 - 150 mg/dl", 35, 150),
+        ("ไขมันดี (HDL)", "HDL", "> 40 mg/dl", 40, None, True),
+        ("ไขมันเลว (LDL)", "LDL", "0 - 160 mg/dl", 0, 160),
+        ("การทำงานของเอนไซม์ตับ (SGOT)", "SGOT", "< 37 U/L", None, 37),
+        ("การทำงานของเอนไซม์ตับ (SGPT)", "SGPT", "< 41 U/L", None, 41),
     ]
-    lipids_html = render_lab_table_html("ผลตรวจไขมันในเลือดและกรดยูริค", "Lipid Profile & Uric Acid", ["การตรวจ", "ผลตรวจ", "ค่าปกติ"], lipids_rows)
+    blood_rows = []
+    for label, col, norm, low, high, *opt in blood_config:
+        higher = opt[0] if opt else False
+        val = get_float(col, person)
+        result, is_abn = flag(val, low, high, higher)
+        blood_rows.append([(label, is_abn), (result, is_abn), (norm, is_abn)])
 
-    # 4. CBC
-    hb_low = 13 if sex == "ชาย" else 12
-    hct_low = 39 if sex == "ชาย" else 36
-    cbc_rows = [
-        [("Hemoglobin (Hb)", False), flag(person.get("Hb(%)", ""), low=hb_low), (f"{hb_low}-17 g/dL", False)],
-        [("Hematocrit (Hct)", False), flag(person.get("HCT", ""), low=hct_low), (f"{hct_low}-50 %", False)],
-        [("WBC", False), flag(person.get("WBC (cumm)", ""), low=4000, high=10000), ("4,000-10,000 cell/mm³", False)],
-        [("Platelet Count", False), flag(person.get("Plt (/mm)", ""), low=150000, high=450000), ("150,000-450,000 /mm³", False)],
-        [("FBS", False), flag(person.get("FBS", ""), high=100), ("70-100 mg/dL", False)],
-    ]
-    cbc_html = render_lab_table_html("ผลตรวจความสมบูรณ์ของเม็ดเลือดและน้ำตาล", "CBC & Glucose", ["การตรวจ", "ผลตรวจ", "ค่าปกติ"], cbc_rows)
-
+    cbc_html = render_lab_table_html("ผลตรวจ CBC", None, ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows, "print-lab-table")
+    blood_html = render_lab_table_html("ผลตรวจเลือด", None, ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows, "print-lab-table")
+    
     return f"""
     <table style="width: 100%; border-collapse: collapse; page-break-inside: avoid;">
         <tr>
-            <td style="width: 50%; vertical-align: top; padding-right: 5px;">
-                {kidney_html}
-                {liver_html}
-            </td>
-            <td style="width: 50%; vertical-align: top; padding-left: 5px;">
-                {lipids_html}
-                {cbc_html}
-            </td>
+            <td style="width: 50%; vertical-align: top; padding-right: 5px;">{cbc_html}</td>
+            <td style="width: 50%; vertical-align: top; padding-left: 5px;">{blood_html}</td>
         </tr>
     </table>
     """
 
 def render_other_results_html(person, sex):
+    # Urinalysis
     urine_data = [
         ("สี (Colour)", "Color", "Yellow, Pale Yellow"),
         ("น้ำตาล (Sugar)", "sugar", "Negative"),
@@ -627,6 +627,7 @@ def render_other_results_html(person, sex):
         urine_rows.append([(label, is_abn), (safe_value(val), is_abn), (norm, is_abn)])
     urine_html = render_lab_table_html("ผลการตรวจปัสสาวะ", "Urinalysis", ["การตรวจ", "ผลตรวจ", "ค่าปกติ"], urine_rows, "print-lab-table")
 
+    # Urine Advice Box - SHOW IMMEDIATELY AFTER urine table, in left column
     urine_summary = advice_urine(sex, person.get("Alb", "-"), person.get("sugar", "-"), person.get("RBC1", "-"), person.get("WBC1", "-"))
     urine_advice_box_html = ""
     if urine_summary:
@@ -639,12 +640,14 @@ def render_other_results_html(person, sex):
             border: 1px solid #ddd;
             border-radius: 8px;
             line-height: 1.5;
+            font-size: 11px;
             padding: 0.4rem 1.5rem;
             ">
             <b>คำแนะนำผลตรวจปัสสาวะ:</b> {urine_summary}
         </div>
         """
 
+    # Stool
     stool_exam_raw = person.get("Stool exam", "")
     stool_cs_raw = person.get("Stool C/S", "")
     stool_exam_text = interpret_stool_exam(stool_exam_raw)
@@ -657,6 +660,7 @@ def render_other_results_html(person, sex):
     </table>
     """
 
+    # Other tests
     year = person.get("Year", datetime.now().year + 543)
     cxr_result = interpret_cxr(person.get(f"CXR{str(year)[-2:]}" if year != (datetime.now().year+543) else "CXR", ""))
     ekg_result = interpret_ekg(person.get(get_ekg_col_name(year), ""))
@@ -668,6 +672,7 @@ def render_other_results_html(person, sex):
     </table>
     """
 
+    # Hepatitis
     hep_a_raw = safe_text(person.get("Hepatitis A"))
     hbsag_raw = safe_text(person.get("HbsAg"))
     hbsab_raw = safe_text(person.get("HbsAb"))
@@ -685,15 +690,17 @@ def render_other_results_html(person, sex):
     </table>
     """
 
+    # Doctor Suggestion - SHOW AFTER hepatitis, in right column
     doctor_suggestion = str(person.get("DOCTER suggest", "")).strip()
     if is_empty(doctor_suggestion):
         doctor_suggestion = "<i>ไม่มีคำแนะนำจากแพทย์</i>"
     doctor_suggestion_html = f"""
-    <div style="background-color: #e8f5e9; color: #1b5e20; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; margin-top: 1rem; border: 1px solid #a5d6a7;">
+    <div style="background-color: #e8f5e9; color: #1b5e20; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; margin-top: 1rem; font-size: 11px; border: 1px solid #a5d6a7;">
         <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
     </div>
     """
 
+    # RE-ARRANGE layout
     return f"""
     <table style="width: 100%; border-collapse: collapse; page-break-inside: avoid;">
         <tr>
@@ -712,14 +719,19 @@ def render_other_results_html(person, sex):
     """
 
 def generate_printable_report(person):
+    """
+    Generates a full, self-contained HTML string for the health report.
+    """
     sex = str(person.get("เพศ", "")).strip()
     if sex not in ["ชาย", "หญิง"]: sex = "ไม่ระบุ"
-
+    
+    # --- Generate all HTML parts ---
     header_html = render_html_header(person)
     personal_info_html = render_personal_info(person)
     lab_section_html = render_lab_section(person, sex)
     other_results_html = render_other_results_html(person, sex)
 
+    # --- Blood Advice Box ---
     blood_advice_list = [
         kidney_advice_from_summary(kidney_summary_gfr_only(person.get("GFR", ""))),
         fbs_advice(person.get("FBS", "")),
@@ -731,13 +743,14 @@ def generate_printable_report(person):
     final_blood_advice_html = merge_final_advice_grouped(blood_advice_list)
     has_blood_advice = "ไม่พบคำแนะนำเพิ่มเติม" not in final_blood_advice_html
     bg_color_blood_advice = "#fff8e1" if has_blood_advice else "#e8f5e9"
-
+    
     blood_advice_box_html = f"""
-    <div style="background-color: {bg_color_blood_advice}; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; margin-top: 0.5rem; border: 1px solid #ddd;">
+    <div style="background-color: {bg_color_blood_advice}; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; font-size: 11px; margin-top: 0.5rem; border: 1px solid #ddd;">
         {final_blood_advice_html}
     </div>
     """
 
+    # --- Signature ---
     signature_html = """
     <div style="margin-top: 2rem; text-align: right; padding-right: 1rem; page-break-inside: avoid;">
         <div style="display: inline-block; text-align: center; width: 280px;">
@@ -748,6 +761,7 @@ def generate_printable_report(person):
     </div>
     """
 
+    # --- Assemble the final HTML page ---
     final_html = f"""
     <!DOCTYPE html>
     <html lang="th">
@@ -758,19 +772,12 @@ def generate_printable_report(person):
             @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
             body {{
                 font-family: 'Sarabun', sans-serif !important;
-                font-size: 10pt;
+                font-size: 9px;
                 margin: 10mm;
                 color: #333;
             }}
-            p, div, span, td, th, input, textarea, b, i, label, ul, ol, li {{
-                font-size: inherit !important;
-                font-family: inherit !important;
-                line-height: 1.5;
-            }}
-            table {{
-                width: 100%;
-                border-collapse: collapse;
-            }}
+            p {{ margin: 0.1rem 0; }}
+            table {{ border-collapse: collapse; width: 100%; }}
             .print-lab-table td, .print-lab-table th {{
                 padding: 1px 3px;
                 border: 1px solid #ccc;
@@ -778,10 +785,6 @@ def generate_printable_report(person):
             }}
             .print-lab-table th {{ background-color: #f2f2f2; font-weight: bold; }}
             .print-lab-table-abn {{ background-color: #ffdddd !important; }}
-            /* ส่วน header (เท่ารูป) */
-            .report-header-container h1 {{ font-size: 1.2rem !important; }}
-            .report-header-container h2 {{ font-size: 0.8rem !important; }}
-            .report-header-container p  {{ font-size: 0.7rem !important; }}
             @media print {{
                 body {{ -webkit-print-color-adjust: exact; margin: 0; }}
             }}
