@@ -877,6 +877,7 @@ def update_year_selection():
         st.session_state.pop("selected_exam_date_from_main", None)
         st.session_state.pop("person_row", None)
         st.session_state.pop("selected_row_found", None)
+        st.rerun()
 
 def update_exam_date_selection():
     """Callback for exam date selectbox to update state."""
@@ -884,6 +885,7 @@ def update_exam_date_selection():
     if st.session_state.get("last_selected_exam_date_main") != new_exam_date:
         st.session_state["selected_exam_date_from_main"] = new_exam_date
         st.session_state["last_selected_exam_date_main"] = new_exam_date
+        st.rerun()
 
 
 # --- Search and Selection Area ---
