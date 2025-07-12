@@ -303,41 +303,32 @@ def lipids_advice(summary_text):
 
 def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
     advice_parts = []
-
     try:
         hb_val = float(hb)
         hb_ref = 13 if sex == "ชาย" else 12
         if hb_val < hb_ref:
             advice_parts.append("ระดับฮีโมโกลบินต่ำ ควรตรวจหาภาวะโลหิตจางและติดตามซ้ำ")
-    except:
-        pass
-
+    except: pass
     try:
         hct_val = float(hct)
         hct_ref = 39 if sex == "ชาย" else 36
         if hct_val < hct_ref:
             advice_parts.append("ค่าฮีมาโตคริตต่ำ ควรตรวจหาภาวะเลือดจางและตรวจติดตาม")
-    except:
-        pass
-
+    except: pass
     try:
         wbc_val = float(wbc)
         if wbc_val < 4000:
             advice_parts.append("เม็ดเลือดขาวต่ำ อาจเกิดจากภูมิคุ้มกันลด ควรติดตาม")
         elif wbc_val > 10000:
             advice_parts.append("เม็ดเลือดขาวสูง อาจมีการอักเสบ ติดเชื้อ หรือความผิดปกติ ควรพบแพทย์")
-    except:
-        pass
-
+    except: pass
     try:
         plt_val = float(plt)
         if plt_val < 150000:
             advice_parts.append("เกล็ดเลือดต่ำ อาจมีภาวะเลือดออกง่าย ควรตรวจยืนยันซ้ำ")
         elif plt_val > 500000:
             advice_parts.append("เกล็ดเลือดสูง ควรพบแพทย์เพื่อตรวจหาสาเหตุเพิ่มเติม")
-    except:
-        pass
-
+    except: pass
     return " ".join(advice_parts)
 
 def interpret_bp(sbp, dbp):
@@ -360,7 +351,6 @@ def interpret_bp(sbp, dbp):
 def combined_health_advice(bmi, sbp, dbp):
     if is_empty(bmi) and is_empty(sbp) and is_empty(dbp):
         return ""
-    
     try:
         bmi = float(bmi)
     except:
@@ -619,71 +609,22 @@ def render_urine_section(person_data, sex, year_selected):
 
 
 def interpret_stool_exam(val):
-    val = str(val or "").strip().lower()
-    if val in ["", "-", "none", "nan"]:
-        return "-"
-    elif val == "normal":
+    if is_empty(val):
+        return "ไม่ได้เข้ารับการตรวจ"
+    val_lower = str(val).strip().lower()
+    if val_lower == "normal":
         return "ไม่พบเม็ดเลือดขาวในอุจจาระ ถือว่าปกติ"
-    elif "wbc" in val or "เม็ดเลือดขาว" in val:
+    elif "wbc" in val_lower or "เม็ดเลือดขาว" in val_lower:
         return "พบเม็ดเลือดขาวในอุจจาระ นัดตรวจซ้ำ"
     return val
 
 def interpret_stool_cs(value):
-    value = str(value or "").strip()
-    if value in ["", "-", "none", "nan"]:
-        return "-"
-    if "ไม่พบ" in value or "ปกติ" in value:
+    if is_empty(value):
+        return "ไม่ได้เข้ารับการตรวจ"
+    val_strip = str(value).strip()
+    if "ไม่พบ" in val_strip or "ปกติ" in val_strip:
         return "ไม่พบการติดเชื้อ"
     return "พบการติดเชื้อในอุจจาระ ให้พบแพทย์เพื่อตรวจรักษาเพิ่มเติม"
-
-def render_stool_html_table(exam, cs):
-    style = """
-    <style>
-        .stool-container {
-            background-color: var(--background-color);
-            margin-top: 1rem;
-        }
-        .stool-table {
-            width: 100%;
-            border-collapse: collapse;
-            color: var(--text-color);
-            table-layout: fixed; /* Ensures column widths are respected */
-            font-size: 14px;
-        }
-        .stool-table th {
-            background-color: var(--secondary-background-color);
-            color: var(--text-color);
-            padding: 3px 2px; /* Adjusted padding to make columns closer */
-            text-align: left;
-            width: 50%; /* Equal width for 2 columns */
-            font-weight: bold;
-            border: 1px solid transparent;
-        }
-        .stool-table td {
-            padding: 3px 2px; /* Adjusted padding to make columns closer */
-            border: 1px solid transparent;
-            width: 50%; /* Equal width for 2 columns */
-            color: var(--text-color);
-        }
-    </style>
-    """
-    html_content = f"""
-    <div class='stool-container'>
-        <table class='stool-table'>
-            <colgroup>
-                <col style="width: 50%;"> <col style="width: 50%;"> </colgroup>
-            <tr>
-                <th>ผลตรวจอุจจาระทั่วไป</th>
-                <td style='text-align: left;'>{exam if exam != "-" else "ไม่ได้เข้ารับการตรวจ"}</td>
-            </tr>
-            <tr>
-                <th>ผลตรวจอุจจาระเพาะเชื้อ</th>
-                <td style='text-align: left;'>{cs if cs != "-" else "ไม่ได้เข้ารับการตรวจ"}</td>
-            </tr>
-        </table>
-    </div>
-    """
-    return style + html_content
 
 def interpret_cxr(val):
     val = str(val or "").strip()
@@ -724,22 +665,15 @@ def merge_final_advice_grouped(messages):
     groups = {
         "FBS": [], "ไต": [], "ตับ": [], "ยูริค": [], "ไขมัน": [], "อื่นๆ": []
     }
-
     for msg in messages:
         if not msg or msg.strip() in ["-", ""]:
             continue
-        if "น้ำตาล" in msg:
-            groups["FBS"].append(msg)
-        elif "ไต" in msg:
-            groups["ไต"].append(msg)
-        elif "ตับ" in msg:
-            groups["ตับ"].append(msg)
-        elif "พิวรีน" in msg or "ยูริค" in msg:
-            groups["ยูริค"].append(msg)
-        elif "ไขมัน" in msg:
-            groups["ไขมัน"].append(msg)
-        else:
-            groups["อื่นๆ"].append(msg)
+        if "น้ำตาล" in msg: groups["FBS"].append(msg)
+        elif "ไต" in msg: groups["ไต"].append(msg)
+        elif "ตับ" in msg: groups["ตับ"].append(msg)
+        elif "พิวรีน" in msg or "ยูริค" in msg: groups["ยูริค"].append(msg)
+        elif "ไขมัน" in msg: groups["ไขมัน"].append(msg)
+        else: groups["อื่นๆ"].append(msg)
             
     output = []
     for title, msgs in groups.items():
@@ -749,8 +683,6 @@ def merge_final_advice_grouped(messages):
             
     if not output:
         return "ไม่พบคำแนะนำเพิ่มเติมจากผลตรวจ"
-
-    # Join with <br> to create line breaks without extra bottom margin on the last item.
     return "<br>".join(output)
 
 # --- Global Helper Functions: END ---
@@ -1197,7 +1129,29 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         left_spacer_ua, col_ua_left, col_ua_right, right_spacer_ua = st.columns([0.5, 3, 3, 0.5])
         
         with col_ua_left:
-            render_urine_section(person, sex, selected_year)
+            urine_summary, has_urine_result = render_urine_section(person, sex, selected_year)
+            if has_urine_result:
+                if urine_summary:
+                    bg_color = "rgba(255, 255, 0, 0.2)"
+                    advice_text = f"<b>&emsp;ผลตรวจปัสสาวะ:</b> {urine_summary}"
+                else:
+                    bg_color = "rgba(57, 255, 20, 0.2)"
+                    advice_text = "<b>&emsp;ผลตรวจปัสสาวะ:</b> อยู่ในเกณฑ์ปกติ"
+
+                st.markdown(f"""
+                <div style="
+                    background-color: {bg_color};
+                    padding: 0.6rem 1.5rem;
+                    border-radius: 10px;
+                    line-height: 1.6;
+                    color: var(--text-color);
+                    font-size: 14px;
+                    margin-top: 1rem;
+                ">
+                    {advice_text}
+                </div>
+                """, unsafe_allow_html=True)
+
 
             # ==================== Stool Section ====================
             st.markdown(render_section_header("ผลตรวจอุจจาระ (Stool Examination)"), unsafe_allow_html=True)
