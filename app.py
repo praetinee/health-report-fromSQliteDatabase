@@ -869,21 +869,15 @@ st.markdown("""
 # --- Callbacks for updating selections ---
 def update_year_selection():
     """Callback for year selectbox to update state."""
-    new_year = st.session_state["year_select_main"]
-    if st.session_state.get("last_selected_year_main") != new_year:
-        st.session_state["selected_year_from_main"] = new_year
-        st.session_state["last_selected_year_main"] = new_year
-        # When year changes, clear the date selection to force re-selection of the latest date for the new year
-        st.session_state.pop("selected_exam_date_from_main", None)
-        st.session_state.pop("person_row", None)
-        st.session_state.pop("selected_row_found", None)
+    st.session_state.selected_year_from_main = st.session_state.year_select_main
+    # When year changes, clear the date selection to force re-selection of the latest date for the new year
+    st.session_state.pop("selected_exam_date_from_main", None)
+    st.session_state.pop("person_row", None)
+    st.session_state.pop("selected_row_found", None)
 
 def update_exam_date_selection():
     """Callback for exam date selectbox to update state."""
-    new_exam_date = st.session_state["exam_date_select_main"]
-    if st.session_state.get("last_selected_exam_date_main") != new_exam_date:
-        st.session_state["selected_exam_date_from_main"] = new_exam_date
-        st.session_state["last_selected_exam_date_main"] = new_exam_date
+    st.session_state.selected_exam_date_from_main = st.session_state.exam_date_select_main
 
 
 # --- Search and Selection Area ---
