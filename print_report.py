@@ -533,14 +533,14 @@ def render_personal_info(person):
     return f"""
     <div class="personal-info-container">
         <hr style="margin-top: 0.5rem; margin-bottom: 0.5rem;">
-        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-bottom: 0.2rem; text-align: left;">
+        <div style="display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 20px; margin-bottom: 0.2rem; text-align: left;">
             <span><b>ชื่อ-สกุล:</b> {person.get('ชื่อ-สกุล', '-')}</span>
             <span><b>อายุ:</b> {str(int(float(person.get('อายุ')))) if str(person.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')} ปี</span>
             <span><b>เพศ:</b> {person.get('เพศ', '-')}</span>
             <span><b>HN:</b> {str(int(float(person.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person.get('HN', '-')}</span>
             <span><b>หน่วยงาน:</b> {person.get('หน่วยงาน', '-')}</span>
         </div>
-        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-bottom: 0.5rem; text-align: left;">
+        <div style="display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 20px; margin-bottom: 0.5rem; text-align: left;">
             <span><b>น้ำหนัก:</b> {person.get("น้ำหนัก", "-")} กก.</span>
             <span><b>ส่วนสูง:</b> {person.get("ส่วนสูง", "-")} ซม.</span>
             <span><b>รอบเอว:</b> {person.get("รอบเอว", "-")} ซม.</span>
@@ -671,17 +671,6 @@ def render_other_results_html(person, sex):
     </table>
     """
 
-    # --- Doctor Suggestion ---
-    doctor_suggestion = str(person.get("DOCTER suggest", "")).strip()
-    if is_empty(doctor_suggestion):
-        doctor_suggestion = "<i>ไม่มีคำแนะนำจากแพทย์</i>"
-    
-    doctor_suggestion_html = f"""
-    <div style="background-color: #e8f5e9; color: #1b5e20; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; margin-top: 1rem; font-size: 11px; border: 1px solid #a5d6a7;">
-        <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
-    </div>
-    """
-
     return f"""
     <table style="width: 100%; border-collapse: collapse; page-break-inside: avoid;">
         <tr>
@@ -692,7 +681,6 @@ def render_other_results_html(person, sex):
             <td style="width: 50%; vertical-align: top; padding-left: 5px;">
                 {other_tests_html}
                 {hepatitis_html}
-                {doctor_suggestion_html}
             </td>
         </tr>
     </table>
@@ -741,6 +729,17 @@ def generate_printable_report(person):
         </div>
         """
 
+    # --- Doctor Suggestion ---
+    doctor_suggestion = str(person.get("DOCTER suggest", "")).strip()
+    if is_empty(doctor_suggestion):
+        doctor_suggestion = "<i>ไม่มีคำแนะนำจากแพทย์</i>"
+    
+    doctor_suggestion_html = f"""
+    <div style="background-color: #e8f5e9; color: #1b5e20; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; margin-top: 1rem; font-size: 11px; border: 1px solid #a5d6a7;">
+        <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
+    </div>
+    """
+
     # --- Signature ---
     signature_html = """
     <div style="margin-top: 2rem; text-align: right; padding-right: 1rem; page-break-inside: avoid;">
@@ -788,6 +787,7 @@ def generate_printable_report(person):
         {blood_advice_box_html}
         {other_results_html}
         {urine_advice_box_html}
+        {doctor_suggestion_html}
         {signature_html}
     </body>
     </html>
