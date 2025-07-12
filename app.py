@@ -933,29 +933,29 @@ with st.container():
     current_date_idx = 0
     person_year_df = pd.DataFrame()
 
-    if search_performed and not st.session_state["search_result"].empty:
+    if search_performed and not st.session_state.get("search_result", pd.DataFrame()).empty:
         results_df = st.session_state["search_result"]
         selected_hn = results_df.iloc[0]["HN"]
         available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
         
-        if st.session_state.get("selected_year_from_main") in available_years:
-            current_year_idx = available_years.index(st.session_state["selected_year_from_main"])
-        
-        selected_year = available_years[current_year_idx]
-        
-        person_year_df = results_df[
-            (results_df["Year"] == selected_year) & (results_df["HN"] == selected_hn)
-        ].drop_duplicates(subset=["HN", "วันที่ตรวจ"]).sort_values(by="วันที่ตรวจ", key=lambda x: pd.to_datetime(x, errors='coerce', dayfirst=True), ascending=False)
-        
-        if not person_year_df.empty:
-            exam_dates_options = person_year_df["วันที่ตรวจ"].dropna().unique().tolist()
-            if exam_dates_options: # Check if list is not empty
-                if st.session_state.get("selected_exam_date_from_main") in exam_dates_options:
-                    current_date_idx = exam_dates_options.index(st.session_state["selected_exam_date_from_main"])
-                else:
-                    # If date is invalid for the current year (e.g., after year change), select the first one
-                    st.session_state["selected_exam_date_from_main"] = exam_dates_options[0]
-                    current_date_idx = 0
+        if available_years:
+            if st.session_state.get("selected_year_from_main") in available_years:
+                current_year_idx = available_years.index(st.session_state["selected_year_from_main"])
+            
+            selected_year = available_years[current_year_idx]
+            
+            person_year_df = results_df[
+                (results_df["Year"] == selected_year) & (results_df["HN"] == selected_hn)
+            ].drop_duplicates(subset=["HN", "วันที่ตรวจ"]).sort_values(by="วันที่ตรวจ", key=lambda x: pd.to_datetime(x, errors='coerce', dayfirst=True), ascending=False)
+            
+            if not person_year_df.empty:
+                exam_dates_options = person_year_df["วันที่ตรวจ"].dropna().unique().tolist()
+                if exam_dates_options: # Check if list is not empty
+                    if st.session_state.get("selected_exam_date_from_main") in exam_dates_options:
+                        current_date_idx = exam_dates_options.index(st.session_state["selected_exam_date_from_main"])
+                    else:
+                        st.session_state["selected_exam_date_from_main"] = exam_dates_options[0]
+                        current_date_idx = 0
     
     # Render dropdowns
     with col2:
