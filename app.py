@@ -877,7 +877,6 @@ def update_year_selection():
         st.session_state.pop("selected_exam_date_from_main", None)
         st.session_state.pop("person_row", None)
         st.session_state.pop("selected_row_found", None)
-        st.rerun()
 
 def update_exam_date_selection():
     """Callback for exam date selectbox to update state."""
@@ -885,7 +884,6 @@ def update_exam_date_selection():
     if st.session_state.get("last_selected_exam_date_main") != new_exam_date:
         st.session_state["selected_exam_date_from_main"] = new_exam_date
         st.session_state["last_selected_exam_date_main"] = new_exam_date
-        st.rerun()
 
 
 # --- Search and Selection Area ---
@@ -924,28 +922,9 @@ with st.container():
                 st.error("❌ ไม่พบข้อมูล กรุณาตรวจสอบข้อมูลที่กรอกอีกครั้ง")
             else:
                 st.session_state["search_result"] = query_df
-                
-                first_available_year = sorted(query_df["Year"].dropna().unique().astype(int), reverse=True)[0]
-                
-                first_person_year_df = query_df[
-                    (query_df["Year"] == first_available_year) &
-                    (query_df["HN"] == query_df.iloc[0]["HN"])
-                ].drop_duplicates(subset=["HN", "วันที่ตรวจ"]).sort_values(by="วันที่ตรวจ", key=lambda x: pd.to_datetime(x, errors='coerce', dayfirst=True), ascending=False)
-                
-                if not first_person_year_df.empty:
-                    st.session_state["person_row"] = first_person_year_df.iloc[0].to_dict()
-                    st.session_state["selected_row_found"] = True
-                    st.session_state["selected_year_from_main"] = first_available_year
-                    st.session_state["selected_exam_date_from_main"] = first_person_year_df.iloc[0]["วันที่ตรวจ"]
-                    st.session_state["last_selected_year_main"] = first_available_year
-                    st.session_state["last_selected_exam_date_main"] = first_person_year_df.iloc[0]["วันที่ตรวจ"]
-                    st.rerun()
-                else:
-                    st.session_state.pop("person_row", None)
-                    st.session_state.pop("selected_row_found", None)
-                    st.error("❌ พบข้อมูลแต่ไม่สามารถแสดงผลได้ กรุณาลองใหม่")
-        else:
-            st.info("กรุณากรอก HN หรือ ชื่อ-สกุล เพื่อค้นหา")
+                st.session_state["selected_year_from_main"] = sorted(query_df["Year"].dropna().unique().astype(int), reverse=True)[0]
+                # No need to set person_row here, let the main script flow handle it after rerun
+                st.rerun()
 
     # --- Dropdown Population and Row Selection ---
     search_performed = "search_result" in st.session_state
