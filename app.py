@@ -135,7 +135,7 @@ def render_section_header(title, subtitle=None):
         border-radius: 8px;
         margin-top: 2rem;
         margin-bottom: 1rem;
-        font-size: 14px;
+        font-size: 16px;
     '>
         {full_title}
     </div>
@@ -153,7 +153,7 @@ def render_lab_table_html(title, subtitle, headers, rows, table_class="lab-table
             border-collapse: collapse;
             color: var(--text-color);
             table-layout: fixed; /* Ensures column widths are respected */
-            font-size: 14px;
+            font-size: 16px;
         }}
         .{table_class} thead th {{
             background-color: var(--secondary-background-color);
@@ -519,10 +519,11 @@ def is_urine_abnormal(test_name, value, normal_range):
         return "พบ" in interpret_wbc(val).lower()
     
     if test_name == "น้ำตาล (Sugar)":
-        return interpret_sugar(val).lower() != "ไม่พบ"
+        return val.lower() not in ["negative"]
     
     if test_name == "โปรตีน (Albumin)":
-        return interpret_alb(val).lower() != "ไม่พบ"
+        # Corrected logic: Abnormal only if it's not 'negative' and not 'trace'.
+        return val.lower() not in ["negative", "trace"]
     
     if test_name == "สี (Colour)":
         return val not in ["yellow", "pale yellow", "colorless", "paleyellow", "light yellow"]
@@ -560,7 +561,7 @@ def render_urine_section(person_data, sex, year_selected):
             border-collapse: collapse;
             color: var(--text-color);
             table-layout: fixed; /* Ensures column widths are respected */
-            font-size: 14px;
+            font-size: 16px;
         }
         .urine-table thead th {
             background-color: var(--secondary-background-color);
@@ -621,7 +622,7 @@ def render_urine_section(person_data, sex, year_selected):
                 padding: 1rem;
                 border-radius: 6px;
                 margin-top: 1rem;
-                font-size: 14px;
+                font-size: 16px;
             '>
                 {summary}
             </div>
@@ -634,7 +635,7 @@ def render_urine_section(person_data, sex, year_selected):
                 padding: 1rem;
                 border-radius: 6px;
                 margin-top: 1rem;
-                font-size: 14px;
+                font-size: 16px;
             '>
                 ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ
             </div>
@@ -671,7 +672,7 @@ def render_stool_html_table(exam, cs):
             border-collapse: collapse;
             color: var(--text-color);
             table-layout: fixed; /* Ensures column widths are respected */
-            font-size: 14px;
+            font-size: 16px;
         }
         .stool-table th {
             background-color: var(--secondary-background-color);
@@ -830,7 +831,7 @@ st.markdown("""
     
     /* Set a base font size for the body */
     body {
-        font-size: 14px !important;
+        font-size: 16px !important;
     }
     
     /* Set specific size for main report title (h1) */
@@ -841,14 +842,14 @@ st.markdown("""
 
     /* Style for the clinic subtitle (h2) */
     .report-header-container h2 {
-        font-size: 1.2rem !important; /* Size between h1 and body text */
+        font-size: 1rem !important; /* Changed to 16px */
         color: darkgrey;
         font-weight: bold;
     }
 
     /* Set specific size for section titles (h3) */
     h3 {
-        font-size: 18px !important; /* Slightly larger than body text */
+        font-size: 16px !important; /* Changed to 16px */
     }
 
     /* Control spacing for all elements in header */
@@ -1189,7 +1190,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             border-radius: 10px;
             line-height: 1.5;
             color: var(--text-color);
-            font-size: 14px;
+            font-size: 16px;
         ">
             {final_advice_html}
         </div>
@@ -1234,7 +1235,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                 padding: 1.25rem;
                 border-radius: 6px;
                 margin-bottom: 1.5rem;
-                font-size: 14px;
+                font-size: 16px;
             '>
                 {cxr_result}
             </div>
@@ -1255,7 +1256,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                 padding: 1.25rem;
                 border-radius: 6px;
                 margin-bottom: 1.5rem;
-                font-size: 14px;
+                font-size: 16px;
             '>
                 {ekg_result}
             </div>
@@ -1271,7 +1272,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                 border-radius: 6px;
                 margin-bottom: 1.5rem;
                 background-color: rgba(255,255,255,0.05);
-                font-size: 14px;
+                font-size: 16px;
             '>
                 {hep_a_raw}
             </div>
@@ -1294,7 +1295,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                 text-align: center;
                 border-collapse: collapse;
                 min-width: 300px;
-                font-size: 14px;
+                font-size: 16px;
             '>
                 <thead>
                     <tr>
@@ -1324,7 +1325,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                 border-radius: 6px;
                 margin-bottom: 1.5rem;
                 line-height: 1.8;
-                font-size: 14px;
+                font-size: 16px;
             '>
                 <b>วันที่ตรวจภูมิคุ้มกัน:</b> {hep_check_date}<br>
                 <b>ประวัติโรคไวรัสตับอักเสบบี ปี พ.ศ. {selected_year}:</b> {hep_history}<br>
@@ -1347,7 +1348,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                 background-color: {bg_color};
                 color: var(--text-color);
                 margin-bottom: 1.5rem;
-                font-size: 14px;
+                font-size: 16px;
             '>
                 {advice}
             </div>
@@ -1372,7 +1373,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             line-height: 1.6;
             margin-top: 2rem;
             margin-bottom: 2rem;
-            font-size: 14px;
+            font-size: 16px;
         '>
             <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
         </div>
