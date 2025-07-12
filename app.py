@@ -1069,7 +1069,8 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     # This block now only contains personal info, not the header.
     st.markdown(f"""
     <div class="personal-info-container">
-        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; margin-top: 0.5rem; margin-bottom: 0.2rem; text-align: center;">
+        <hr style="margin-top: 0.5rem; margin-bottom: 0.5rem;">
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; margin-bottom: 0.2rem; text-align: center;">
             <div><b>ชื่อ-สกุล:</b> {person.get('ชื่อ-สกุล', '-')}</div>
             <div><b>อายุ:</b> {str(int(float(person.get('อายุ')))) if str(person.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')} ปี</div>
             <div><b>เพศ:</b> {person.get('เพศ', '-')}</div>
@@ -1084,7 +1085,6 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             <div><b>ชีพจร:</b> {pulse}</div>
         </div>
         {f"<div style='margin-top: 1rem; text-align: center;'><b>คำแนะนำ:</b> {summary_advice}</div>" if summary_advice else ""}
-        <hr style="margin-top: 1.5rem;">
     </div>
     """, unsafe_allow_html=True)
 
