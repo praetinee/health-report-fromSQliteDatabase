@@ -698,27 +698,27 @@ def generate_printable_report(person):
     header_html = render_html_header(person)
     personal_info_html = render_personal_info(person)
     lab_section_html = render_lab_section(person, sex)
-    
-    # --- Blood Advice Box ---
-    blood_advice_list = [
+    other_results_html = render_other_results_html(person, sex)
+
+    # --- Final Advice Box ---
+    advice_list = [
         kidney_advice_from_summary(kidney_summary_gfr_only(person.get("GFR", ""))),
         fbs_advice(person.get("FBS", "")),
         liver_advice(summarize_liver(person.get("ALP", ""), person.get("SGOT", ""), person.get("SGPT", ""))),
         uric_acid_advice(person.get("Uric Acid", "")),
         lipids_advice(summarize_lipids(person.get("CHOL", ""), person.get("TGL", ""), person.get("LDL", ""))),
         cbc_advice(person.get("Hb(%)", ""), person.get("HCT", ""), person.get("WBC (cumm)", ""), person.get("Plt (/mm)", ""), sex=sex),
+        advice_urine(sex, person.get("Alb", "-"), person.get("sugar", "-"), person.get("RBC1", "-"), person.get("WBC1", "-"))
     ]
-    final_blood_advice_html = merge_final_advice_grouped(blood_advice_list)
-    has_blood_advice = "ไม่พบคำแนะนำเพิ่มเติม" not in final_blood_advice_html
-    bg_color_blood_advice = "#fff8e1" if has_blood_advice else "#e8f5e9"
+    final_advice_html = merge_final_advice_grouped(advice_list)
+    has_general_advice = "ไม่พบคำแนะนำเพิ่มเติม" not in final_advice_html
+    bg_color_advice = "#fff8e1" if has_general_advice else "#e8f5e9"
     
-    blood_advice_box_html = f"""
-    <div style="background-color: {bg_color_blood_advice}; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; font-size: 11px; margin-top: 0.5rem; border: 1px solid #ddd;">
-        {final_blood_advice_html}
+    advice_box_html = f"""
+    <div style="background-color: {bg_color_advice}; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; font-size: 11px; margin-top: 1rem; border: 1px solid #ddd;">
+        {final_advice_html}
     </div>
     """
-
-    other_results_html = render_other_results_html(person, sex)
 
     # --- Doctor Suggestion ---
     doctor_suggestion = str(person.get("DOCTER suggest", "")).strip()
@@ -753,14 +753,14 @@ def generate_printable_report(person):
             @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
             body {{
                 font-family: 'Sarabun', sans-serif !important;
-                font-size: 10px;
-                margin: 15px;
+                font-size: 9px;
+                margin: 10mm;
                 color: #333;
             }}
             p {{ margin: 0.1rem 0; }}
             table {{ border-collapse: collapse; width: 100%; }}
             .print-lab-table td, .print-lab-table th {{
-                padding: 2px 4px;
+                padding: 1px 3px;
                 border: 1px solid #ccc;
                 text-align: center;
             }}
