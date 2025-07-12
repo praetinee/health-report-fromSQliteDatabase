@@ -854,11 +854,15 @@ st.markdown("""
 
     /* Control spacing for all elements in header */
     .report-header-container * {
-        line-height: 1.7 !important; 
-        margin: 0.2rem 0 !important;
+        line-height: 1.4 !important; 
+        margin: 0.1rem 0 !important;
         padding: 0 !important;
     }
     
+    .personal-info-container div {
+        line-height: 1.4 !important;
+    }
+
     </style>
 """, unsafe_allow_html=True)
 
@@ -1064,7 +1068,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     
     # This block now only contains personal info, not the header.
     st.markdown(f"""
-    <div>
+    <div class="personal-info-container">
         <hr>
         <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; margin-top: 24px; margin-bottom: 20px; text-align: center;">
             <div><b>ชื่อ-สกุล:</b> {person.get('ชื่อ-สกุล', '-')}</div>
