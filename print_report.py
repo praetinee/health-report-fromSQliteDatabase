@@ -533,14 +533,14 @@ def render_personal_info(person):
     return f"""
     <div class="personal-info-container">
         <hr style="margin-top: 0.5rem; margin-bottom: 0.5rem;">
-        <div style="display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 20px; margin-bottom: 0.2rem; text-align: left;">
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 0.2rem; text-align: center;">
             <span><b>ชื่อ-สกุล:</b> {person.get('ชื่อ-สกุล', '-')}</span>
             <span><b>อายุ:</b> {str(int(float(person.get('อายุ')))) if str(person.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')} ปี</span>
             <span><b>เพศ:</b> {person.get('เพศ', '-')}</span>
             <span><b>HN:</b> {str(int(float(person.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person.get('HN', '-')}</span>
             <span><b>หน่วยงาน:</b> {person.get('หน่วยงาน', '-')}</span>
         </div>
-        <div style="display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 20px; margin-bottom: 0.5rem; text-align: left;">
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 0.5rem; text-align: center;">
             <span><b>น้ำหนัก:</b> {person.get("น้ำหนัก", "-")} กก.</span>
             <span><b>ส่วนสูง:</b> {person.get("ส่วนสูง", "-")} ซม.</span>
             <span><b>รอบเอว:</b> {person.get("รอบเอว", "-")} ซม.</span>
