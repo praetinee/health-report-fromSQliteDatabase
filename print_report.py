@@ -790,8 +790,8 @@ def generate_printable_report(person):
         {header_html}
         {personal_info_html}
         {lab_section_html}
-        {other_results_html}
         {advice_box_html}
+        {other_results_html}
         {doctor_suggestion_html}
         {signature_html}
     </body>
