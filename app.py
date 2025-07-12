@@ -131,7 +131,7 @@ def render_section_header(title, subtitle=None):
             display: inline-block;
             background-color: #1b5e20;
             color: white;
-            padding: 0.8rem 1.5rem;
+            padding: 0.4rem 1.5rem;
             font-weight: bold;
             border-radius: 8px;
             margin-top: 2rem;
@@ -1372,7 +1372,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                 display: inline-block;
                 background-color: #1b5e20;
                 color: white;
-                padding: 1.5rem 2rem;
+                padding: 0.8rem 1.5rem;
                 border-radius: 8px;
                 line-height: 1.6;
                 margin-top: 2rem;
