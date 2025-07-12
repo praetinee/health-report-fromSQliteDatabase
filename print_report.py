@@ -265,6 +265,177 @@ def merge_final_advice_grouped(messages):
     if not output:
         return "ไม่พบคำแนะนำเพิ่มเติมจากผลตรวจ"
     return "<br>".join(output)
+    
+def interpret_alb(value):
+    val = str(value).strip().lower()
+    if val == "negative":
+        return "ไม่พบ"
+    elif val in ["trace", "1+", "2+"]:
+        return "พบโปรตีนในปัสสาวะเล็กน้อย"
+    elif val in ["3+", "4+"]:
+        return "พบโปรตีนในปัสสาวะ"
+    return "-"
+    
+def interpret_sugar(value):
+    val = str(value).strip().lower()
+    if val == "negative":
+        return "ไม่พบ"
+    elif val == "trace":
+        return "พบน้ำตาลในปัสสาวะเล็กน้อย"
+    elif val in ["1+", "2+", "3+", "4+", "5+", "6+"]:
+        return "พบน้ำตาลในปัสสาวะ"
+    return "-"
+    
+def parse_range_or_number(val):
+    val = val.replace("cell/hpf", "").replace("cells/hpf", "").replace("cell", "").strip().lower()
+    try:
+        if "-" in val:
+            low, high = map(float, val.split("-"))
+            return low, high
+        else:
+            num = float(val)
+            return num, num
+    except:
+        return None, None
+    
+def interpret_rbc(value):
+    val = str(value or "").strip().lower()
+    if val in ["-", "", "none", "nan"]:
+        return "-"
+    low, high = parse_range_or_number(val)
+    if high is None:
+        return value
+    if high <= 2:
+        return "ปกติ"
+    elif high <= 5:
+        return "พบเม็ดเลือดแดงในปัสสาวะเล็กน้อย"
+    else:
+        return "พบเม็ดเลือดแดงในปัสสาวะ"
+    
+def interpret_wbc(value):
+    val = str(value or "").strip().lower()
+    if val in ["-", "", "none", "nan"]:
+        return "-"
+    low, high = parse_range_or_number(val)
+    if high is None:
+        return value
+    if high <= 5:
+        return "ปกติ"
+    elif high <= 10:
+        return "พบเม็ดเลือดขาวในปัสสาวะเล็กน้อย"
+    else:
+        return "พบเม็ดเลือดขาวในปัสสาวะ"
+    
+def advice_urine(sex, alb, sugar, rbc, wbc):
+    alb_t = interpret_alb(alb)
+    sugar_t = interpret_sugar(sugar)
+    rbc_t = interpret_rbc(rbc)
+    wbc_t = interpret_wbc(wbc)
+    
+    if all(x in ["-", "ปกติ", "ไม่พบ", "พบโปรตีนในปัสสาวะเล็กน้อย", "พบน้ำตาลในปัสสาวะเล็กน้อย"]
+                     for x in [alb_t, sugar_t, rbc_t, wbc_t]):
+        return ""
+    
+    if "พบน้ำตาลในปัสสาวะ" in sugar_t and "เล็กน้อย" not in sugar_t:
+        return "ควรลดการบริโภคน้ำตาล และตรวจระดับน้ำตาลในเลือดเพิ่มเติม"
+    
+    if sex == "หญิง" and "พบเม็ดเลือดแดง" in rbc_t and "ปกติ" in wbc_t:
+        return "อาจมีปนเปื้อนจากประจำเดือน แนะนำให้ตรวจซ้ำ"
+    
+    if sex == "ชาย" and "พบเม็ดเลือดแดง" in rbc_t and "ปกติ" in wbc_t:
+        return "พบเม็ดเลือดแดงในปัสสาวะ ควรตรวจทางเดินปัสสาวะเพิ่มเติม"
+    
+    if "พบเม็ดเลือดขาว" in wbc_t and "เล็กน้อย" not in wbc_t:
+        return "อาจมีการอักเสบของระบบทางเดินปัสสาวะ แนะนำให้ตรวจซ้ำ"
+    
+    return "ควรตรวจปัสสาวะซ้ำเพื่อติดตามผล"
+    
+def is_urine_abnormal(test_name, value, normal_range):
+    val = str(value or "").strip().lower()
+    if val in ["", "-", "none", "nan", "null"]:
+        return False
+    
+    if test_name == "กรด-ด่าง (pH)":
+        try:
+            return not (5.0 <= float(val) <= 8.0)
+        except:
+            return True
+    
+    if test_name == "ความถ่วงจำเพาะ (Sp.gr)":
+        try:
+            return not (1.003 <= float(val) <= 1.030)
+        except:
+            return True
+    
+    if test_name == "เม็ดเลือดแดง (RBC)":
+        return "พบ" in interpret_rbc(val).lower()
+    
+    if test_name == "เม็ดเลือดขาว (WBC)":
+        return "พบ" in interpret_wbc(val).lower()
+    
+    if test_name == "น้ำตาล (Sugar)":
+        return val.lower() not in ["negative"]
+    
+    if test_name == "โปรตีน (Albumin)":
+        return val.lower() not in ["negative", "trace"]
+    
+    if test_name == "สี (Colour)":
+        return val not in ["yellow", "pale yellow", "colorless", "paleyellow", "light yellow"]
+    
+    return False
+
+def interpret_stool_exam(val):
+    val = str(val or "").strip().lower()
+    if val in ["", "-", "none", "nan"]:
+        return "-"
+    elif val == "normal":
+        return "ไม่พบเม็ดเลือดขาวในอุจจาระ ถือว่าปกติ"
+    elif "wbc" in val or "เม็ดเลือดขาว" in val:
+        return "พบเม็ดเลือดขาวในอุจจาระ นัดตรวจซ้ำ"
+    return val
+
+def interpret_stool_cs(value):
+    value = str(value or "").strip()
+    if value in ["", "-", "none", "nan"]:
+        return "-"
+    if "ไม่พบ" in value or "ปกติ" in value:
+        return "ไม่พบการติดเชื้อ"
+    return "พบการติดเชื้อในอุจจาระ ให้พบแพทย์เพื่อตรวจรักษาเพิ่มเติม"
+
+def interpret_cxr(val):
+    val = str(val or "").strip()
+    if is_empty(val):
+        return "ไม่ได้เข้ารับการตรวจเอกซเรย์"
+    if any(keyword in val.lower() for keyword in ["ผิดปกติ", "ฝ้า", "รอย", "abnormal", "infiltrate", "lesion"]):
+        return f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
+    return val
+
+def get_ekg_col_name(year):
+    current_thai_year = datetime.now().year + 543
+    return "EKG" if year == current_thai_year else f"EKG{str(year)[-2:]}"
+
+def interpret_ekg(val):
+    val = str(val or "").strip()
+    if is_empty(val):
+        return "ไม่ได้เข้ารับการตรวจคลื่นไฟฟ้าหัวใจ"
+    if any(x in val.lower() for x in ["ผิดปกติ", "abnormal", "arrhythmia"]):
+        return f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
+    return val
+
+def hepatitis_b_advice(hbsag, hbsab, hbcab):
+    hbsag = hbsag.lower()
+    hbsab = hbsab.lower()
+    hbcab = hbcab.lower()
+    
+    if "positive" in hbsag:
+        return "ติดเชื้อไวรัสตับอักเสบบี"
+    elif "positive" in hbsab and "positive" not in hbsag:
+        return "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี"
+    elif "positive" in hbcab and "positive" not in hbsab:
+        return "เคยติดเชื้อแต่ไม่มีภูมิคุ้มกันในปัจจุบัน"
+    elif all(x == "negative" for x in [hbsag, hbsab, hbcab]):
+        return "ไม่มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี ควรปรึกษาแพทย์เพื่อรับวัคซีน"
+    return "ไม่สามารถสรุปผลชัดเจน แนะนำให้พบแพทย์เพื่อประเมินซ้ำ"
 
 # --- HTML Rendering Functions ---
 
@@ -431,6 +602,66 @@ def render_lab_section(person, sex):
         </tr>
     </table>
     """
+    
+def render_other_results_html(person, sex):
+    # Urinalysis
+    alb_raw = person.get("Alb", "-")
+    sugar_raw = person.get("sugar", "-")
+    rbc_raw = person.get("RBC1", "-")
+    wbc_raw = person.get("WBC1", "-")
+    urine_data = [
+        ("สี (Colour)", person.get("Color", "-"), "Yellow, Pale Yellow"),
+        ("น้ำตาล (Sugar)", sugar_raw, "Negative"),
+        ("โปรตีน (Albumin)", alb_raw, "Negative, trace"),
+        ("กรด-ด่าง (pH)", person.get("pH", "-"), "5.0 - 8.0"),
+        ("ความถ่วงจำเพาะ (Sp.gr)", person.get("Spgr", "-"), "1.003 - 1.030"),
+        ("เม็ดเลือดแดง (RBC)", rbc_raw, "0 - 2 cell/HPF"),
+        ("เม็ดเลือดขาว (WBC)", wbc_raw, "0 - 5 cell/HPF"),
+    ]
+    urine_rows = []
+    for label, val_key, norm in urine_data:
+        val = person.get(val_key, "-") if isinstance(val_key, str) else val_key
+        is_abn = is_urine_abnormal(label, val, norm)
+        urine_rows.append([(label, is_abn), (safe_value(val), is_abn), (norm, is_abn)])
+    
+    urine_html = render_lab_table_html("ผลการตรวจปัสสาวะ", "Urinalysis", ["การตรวจ", "ผลตรวจ", "ค่าปกติ"], urine_rows, "print-lab-table")
+    urine_summary = advice_urine(sex, alb_raw, sugar_raw, rbc_raw, wbc_raw)
+    if not urine_summary:
+        urine_summary = "ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ"
+    urine_advice_html = f"<div style='padding: 5px; border: 1px solid #ccc; border-radius: 5px; margin-top: 5px; background-color: #f8f9fa;'><b>คำแนะนำ:</b> {urine_summary}</div>"
+
+    # Stool
+    stool_exam_text = interpret_stool_exam(person.get("Stool exam", ""))
+    stool_cs_text = interpret_stool_cs(person.get("Stool C/S", ""))
+    stool_html = f"""
+    {render_section_header("ผลตรวจอุจจาระ (Stool Examination)")}
+    <table class="print-lab-table">
+        <tr><td style="text-align: left; width: 50%;"><b>ผลตรวจอุจจาระทั่วไป</b></td><td style="text-align: left; width: 50%;">{stool_exam_text}</td></tr>
+        <tr><td style="text-align: left; width: 50%;"><b>ผลตรวจอุจจาระเพาะเชื้อ</b></td><td style="text-align: left; width: 50%;">{stool_cs_text}</td></tr>
+    </table>
+    """
+
+    # Other tests
+    year = person.get("Year", datetime.now().year + 543)
+    cxr_result = interpret_cxr(person.get(f"CXR{str(year)[-2:]}" if year != (datetime.now().year+543) else "CXR", ""))
+    ekg_result = interpret_ekg(person.get(get_ekg_col_name(year), ""))
+    other_tests_html = f"""
+    {render_section_header("ผลตรวจอื่นๆ")}
+    <table class="print-lab-table">
+        <tr><td style="text-align: left; width: 50%;"><b>ผลเอกซเรย์ (Chest X-ray)</b></td><td style="text-align: left; width: 50%;">{cxr_result}</td></tr>
+        <tr><td style="text-align: left; width: 50%;"><b>ผลคลื่นไฟฟ้าหัวใจ (EKG)</b></td><td style="text-align: left; width: 50%;">{ekg_result}</td></tr>
+    </table>
+    """
+
+    return f"""
+    <div style="margin-top: 1rem;">
+        {urine_html}
+        {urine_advice_html}
+        {stool_html}
+        {other_tests_html}
+    </div>
+    """
+
 
 def generate_printable_report(person):
     """
@@ -443,6 +674,7 @@ def generate_printable_report(person):
     header_html = render_html_header(person)
     personal_info_html = render_personal_info(person)
     lab_section_html = render_lab_section(person, sex)
+    other_results_html = render_other_results_html(person, sex)
 
     # --- Final Advice Box ---
     advice_list = [
@@ -521,6 +753,7 @@ def generate_printable_report(person):
         {personal_info_html}
         {lab_section_html}
         {advice_box_html}
+        {other_results_html}
         {doctor_suggestion_html}
         {signature_html}
     </body>
