@@ -823,13 +823,19 @@ st.markdown("""
     /* Import Sarabun font from Google Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
 
-    /* Apply Sarabun font to all common text elements */
-    body, h1, h2, h3, h4, h5, h6, p, li, a, label, input, select, textarea, button, th, td,
+    /* Apply Sarabun font to common text elements, excluding generic buttons */
+    body, h1, h2, h3, h4, h5, h6, p, li, a, label, input, select, textarea, th, td,
     div[data-testid="stMarkdown"],
     div[data-testid="stInfo"],
     div[data-testid="stSuccess"],
     div[data-testid="stWarning"],
     div[data-testid="stError"] {
+        font-family: 'Sarabun', sans-serif !important;
+    }
+
+    /* Apply Sarabun font specifically to buttons within the main content area,
+       which avoids affecting the sidebar toggle icon. */
+    div[data-testid="stBlock"] button {
         font-family: 'Sarabun', sans-serif !important;
     }
     
