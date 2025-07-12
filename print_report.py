@@ -120,7 +120,7 @@ def uric_acid_advice(value_raw):
             return "ควรลดอาหารที่มีพิวรีนสูง เช่น เครื่องในสัตว์ อาหารทะเล และพบแพทย์หากมีอาการปวดข้อ"
         return ""
     except:
-        return "-"
+        return ""
 
 def summarize_lipids(chol_raw, tgl_raw, ldl_raw):
     try:
