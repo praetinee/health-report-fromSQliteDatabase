@@ -11,7 +11,6 @@ from datetime import datetime
 import re
 
 def is_empty(val):
-    """Check if a value is empty, null, or whitespace."""
     return str(val).strip().lower() in ["", "-", "none", "nan", "null"]
 
 # --- Global Helper Functions: START ---
@@ -39,7 +38,6 @@ THAI_MONTH_ABBR_TO_NUM_GLOBAL = {
 
 # Function to normalize and convert Thai dates
 def normalize_thai_date(date_str):
-    """Normalizes various Thai date string formats into a standard 'DD Month YYYY' format."""
     if is_empty(date_str):
         return "-"
     
@@ -58,7 +56,7 @@ def normalize_thai_date(date_str):
             return f"{dt.day} {THAI_MONTHS_GLOBAL[dt.month]} {dt.year + 543}".replace('.', '')
 
         # Format: DD-MM-YYYY (e.g., 29-04-2565)
-        if re.match(r'^\d{1,2}-\d{1,2}/\d{4}$', s):
+        if re.match(r'^\d{1,2}-\d{1,2}-\d{4}$', s):
             day, month, year = map(int, s.split('-'))
             if year > 2500: # Assume Thai Buddhist year if year > 2500
                 year -= 543
@@ -88,17 +86,15 @@ def normalize_thai_date(date_str):
         parsed_dt = pd.to_datetime(s, dayfirst=True, errors='coerce')
         if pd.notna(parsed_dt):
             current_ce_year = datetime.now().year
-            # Heuristic to detect BE year and convert to CE
             if parsed_dt.year > current_ce_year + 50 and parsed_dt.year - 543 > 1900:
                 parsed_dt = parsed_dt.replace(year=parsed_dt.year - 543)
             return f"{parsed_dt.day} {THAI_MONTHS_GLOBAL[parsed_dt.month]} {parsed_dt.year + 543}".replace('.', '')
     except Exception:
         pass
 
-    return s # Return original string if all parsing fails
+    return s
 
 def get_float(col, person_data):
-    """Safely convert a value from person_data to a float."""
     try:
         val = person_data.get(col, "")
         if is_empty(val):
@@ -108,7 +104,6 @@ def get_float(col, person_data):
         return None
 
 def flag(val, low=None, high=None, higher_is_better=False):
-    """Formats a numeric value and flags it if it's outside the normal range."""
     try:
         val = float(str(val).replace(",", "").strip())
     except:
@@ -125,15 +120,14 @@ def flag(val, low=None, high=None, higher_is_better=False):
     return f"{val:.1f}", False
 
 def render_section_header(title, subtitle=None):
-    """Renders a styled section header."""
     if subtitle:
-        full_title = f"{title} <span style='font-weight: normal; color: #a0a0a0;'>({subtitle})</span>"
+        full_title = f"{title} <span style='font-weight: normal;'>({subtitle})</span>"
     else:
         full_title = title
 
     return f"""
     <div style='
-        background-color: #2E7D32; /* Darker Green */
+        background-color: #1b5e20;
         color: white;
         text-align: center;
         padding: 0.8rem 0.5rem;
@@ -148,43 +142,38 @@ def render_section_header(title, subtitle=None):
     """
 
 def render_lab_table_html(title, subtitle, headers, rows, table_class="lab-table"):
-    """Renders a styled HTML table for lab results."""
     style = f"""
     <style>
         .{table_class}-container {{
-            background-color: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 8px;
-            padding: 5px;
+            background-color: var(--background-color);
             margin-top: 1rem;
         }}
         .{table_class} {{
             width: 100%;
             border-collapse: collapse;
             color: var(--text-color);
-            table-layout: fixed;
+            table-layout: fixed; /* Ensures column widths are respected */
             font-size: 14px;
         }}
         .{table_class} thead th {{
-            background-color: #2a2a2a;
-            color: #e0e0e0;
-            padding: 4px 4px;
+            background-color: var(--secondary-background-color);
+            color: var(--text-color);
+            padding: 2px 2px; /* Adjusted padding to make columns closer */
             text-align: center;
             font-weight: bold;
-            border-bottom: 2px solid #2E7D32;
+            border: 1px solid transparent;
         }}
         .{table_class} td {{
-            padding: 4px 4px;
-            border: none;
+            padding: 2px 2px; /* Adjusted padding to make columns closer */
+            border: 1px solid transparent;
             text-align: center;
-            color: #fafafa;
+            color: var(--text-color);
         }}
         .{table_class}-abn {{
-            background-color: rgba(255, 64, 64, 0.25);
-            font-weight: bold;
+            background-color: rgba(255, 64, 64, 0.25); /* Translucent red */
         }}
-        .{table_class} tr:not(:last-child) td {{
-             border-bottom: 1px solid #2a2a2a;
+        .{table_class}-row {{
+            background-color: rgba(255,255,255,0.02);
         }}
     </style>
     """
@@ -194,28 +183,27 @@ def render_lab_table_html(title, subtitle, headers, rows, table_class="lab-table
     html_content = f"{style}{header_html}<div class='{table_class}-container'><table class='{table_class}'>"
     html_content += """
         <colgroup>
-            <col style="width: 40%;"> <col style="width: 20%;"> <col style="width: 40%;"> </colgroup>
+            <col style="width: 33.33%;"> <col style="width: 33.33%;"> <col style="width: 33.33%;"> </colgroup>
     """
     html_content += "<thead><tr>"
     for i, h in enumerate(headers):
-        align = "left" if i == 0 else ("left" if i == 2 else "center")
+        align = "left" if i == 0 else ("left" if i == 2 else "center") # 'การตรวจ' and 'ค่าปกติ' left-aligned, 'ผล' center-aligned
         html_content += f"<th style='text-align: {align};'>{h}</th>"
     html_content += "</tr></thead><tbody>"
     
     for row in rows:
         is_abn = any(flag for _, flag in row)
-        row_class_td = "class='urine-abn'" if is_abn else ""
+        row_class = f"{table_class}-abn" if is_abn else f"{table_class}-row"
         
         html_content += f"<tr>"
-        html_content += f"<td {row_class_td} style='text-align: left;'>{row[0][0]}</td>"
-        html_content += f"<td {row_class_td}>{row[1][0]}</td>"
-        html_content += f"<td {row_class_td} style='text-align: left;'>{row[2][0]}</td>"
+        html_content += f"<td class='{row_class}' style='text-align: left;'>{row[0][0]}</td>"
+        html_content += f"<td class='{row_class}'>{row[1][0]}</td>"
+        html_content += f"<td class='{row_class}' style='text-align: left;'>{row[2][0]}</td>"
         html_content += f"</tr>"
     html_content += "</tbody></table></div>"
     return html_content
 
 def kidney_summary_gfr_only(gfr_raw):
-    """Provides a summary of kidney function based on GFR."""
     try:
         gfr = float(str(gfr_raw).replace(",", "").strip())
         if gfr == 0:
@@ -228,7 +216,6 @@ def kidney_summary_gfr_only(gfr_raw):
         return ""
 
 def kidney_advice_from_summary(summary_text):
-    """Provides advice based on the kidney summary."""
     if summary_text == "การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย":
         return (
             "การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย "
@@ -238,7 +225,6 @@ def kidney_advice_from_summary(summary_text):
     return ""
 
 def fbs_advice(fbs_raw):
-    """Provides advice based on FBS (Fasting Blood Sugar) level."""
     if is_empty(fbs_raw):
         return ""
     try:
@@ -257,7 +243,6 @@ def fbs_advice(fbs_raw):
         return ""
 
 def summarize_liver(alp_val, sgot_val, sgpt_val):
-    """Summarizes liver function based on ALP, SGOT, and SGPT."""
     try:
         alp = float(alp_val)
         sgot = float(sgot_val)
@@ -271,7 +256,6 @@ def summarize_liver(alp_val, sgot_val, sgpt_val):
         return ""
 
 def liver_advice(summary_text):
-    """Provides advice based on the liver summary."""
     if summary_text == "การทำงานของตับสูงกว่าเกณฑ์ปกติเล็กน้อย":
         return "ควรลดอาหารไขมันสูงและตรวจติดตามการทำงานของตับซ้ำ"
     elif summary_text == "ปกติ":
@@ -279,7 +263,6 @@ def liver_advice(summary_text):
     return "-"
 
 def uric_acid_advice(value_raw):
-    """Provides advice based on Uric Acid level."""
     try:
         value = float(value_raw)
         if value > 7.2:
@@ -289,7 +272,6 @@ def uric_acid_advice(value_raw):
         return "-"
 
 def summarize_lipids(chol_raw, tgl_raw, ldl_raw):
-    """Summarizes lipid profile."""
     try:
         chol = float(str(chol_raw).replace(",", "").strip())
         tgl = float(str(tgl_raw).replace(",", "").strip())
@@ -306,7 +288,6 @@ def summarize_lipids(chol_raw, tgl_raw, ldl_raw):
         return ""
 
 def lipids_advice(summary_text):
-    """Provides advice based on the lipid summary."""
     if summary_text == "ไขมันในเลือดสูง":
         return (
             "ไขมันในเลือดสูง ควรลดอาหารที่มีไขมันอิ่มตัว เช่น ของทอด หนังสัตว์ "
@@ -320,7 +301,6 @@ def lipids_advice(summary_text):
     return ""
 
 def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
-    """Provides advice based on CBC results."""
     advice_parts = []
 
     try:
@@ -360,7 +340,6 @@ def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
     return " ".join(advice_parts)
 
 def interpret_bp(sbp, dbp):
-    """Interprets blood pressure levels."""
     try:
         sbp = float(sbp)
         dbp = float(dbp)
@@ -378,7 +357,6 @@ def interpret_bp(sbp, dbp):
         return "-"
 
 def combined_health_advice(bmi, sbp, dbp):
-    """Provides combined health advice based on BMI and blood pressure."""
     if is_empty(bmi) and is_empty(sbp) and is_empty(dbp):
         return ""
     
@@ -428,14 +406,12 @@ def safe_text(val):
     return "-" if str(val).strip().lower() in ["", "none", "nan", "-"] else str(val).strip()
 
 def safe_value(val):
-    """Safely formats a value for display, returning '-' for empty values."""
     val = str(val or "").strip()
     if val.lower() in ["", "nan", "none", "-"]:
         return "-"
     return val
     
 def interpret_alb(value):
-    """Interprets albumin (protein) in urine results."""
     val = str(value).strip().lower()
     if val == "negative":
         return "ไม่พบ"
@@ -446,7 +422,6 @@ def interpret_alb(value):
     return "-"
     
 def interpret_sugar(value):
-    """Interprets sugar in urine results."""
     val = str(value).strip().lower()
     if val == "negative":
         return "ไม่พบ"
@@ -457,7 +432,6 @@ def interpret_sugar(value):
     return "-"
     
 def parse_range_or_number(val):
-    """Parses a string that could be a number or a range (e.g., '1-5')."""
     val = val.replace("cell/hpf", "").replace("cells/hpf", "").replace("cell", "").strip().lower()
     try:
         if "-" in val:
@@ -470,7 +444,6 @@ def parse_range_or_number(val):
         return None, None
     
 def interpret_rbc(value):
-    """Interprets RBC in urine results."""
     val = str(value or "").strip().lower()
     if val in ["-", "", "none", "nan"]:
         return "-"
@@ -485,7 +458,6 @@ def interpret_rbc(value):
         return "พบเม็ดเลือดแดงในปัสสาวะ"
     
 def interpret_wbc(value):
-    """Interprets WBC in urine results."""
     val = str(value or "").strip().lower()
     if val in ["-", "", "none", "nan"]:
         return "-"
@@ -500,7 +472,6 @@ def interpret_wbc(value):
         return "พบเม็ดเลือดขาวในปัสสาวะ"
     
 def advice_urine(sex, alb, sugar, rbc, wbc):
-    """Provides advice based on urinalysis results."""
     alb_t = interpret_alb(alb)
     sugar_t = interpret_sugar(sugar)
     rbc_t = interpret_rbc(rbc)
@@ -525,7 +496,6 @@ def advice_urine(sex, alb, sugar, rbc, wbc):
     return "ควรตรวจปัสสาวะซ้ำเพื่อติดตามผล"
     
 def is_urine_abnormal(test_name, value, normal_range):
-    """Checks if a urine test result is abnormal."""
     val = str(value or "").strip().lower()
     if val in ["", "-", "none", "nan", "null"]:
         return False
@@ -560,7 +530,6 @@ def is_urine_abnormal(test_name, value, normal_range):
     return False
 
 def render_urine_section(person_data, sex, year_selected):
-    """Renders the entire urinalysis section including table and summary."""
     alb_raw = person_data.get("Alb", "-")
     sugar_raw = person_data.get("sugar", "-")
     rbc_raw = person_data.get("RBC1", "-")
@@ -583,38 +552,35 @@ def render_urine_section(person_data, sex, year_selected):
     style = """
     <style>
         .urine-table-container {
-            background-color: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 8px;
-            padding: 5px;
+            background-color: var(--background-color);
             margin-top: 1rem;
         }
         .urine-table {
             width: 100%;
             border-collapse: collapse;
-            color: #fafafa;
-            table-layout: fixed;
+            color: var(--text-color);
+            table-layout: fixed; /* Ensures column widths are respected */
             font-size: 14px;
         }
         .urine-table thead th {
-            background-color: #2a2a2a;
-            color: #e0e0e0;
-            padding: 4px 4px;
+            background-color: var(--secondary-background-color);
+            color: var(--text-color);
+            padding: 3px 2px; /* Adjusted padding to make columns closer */
             text-align: center;
             font-weight: bold;
-            border-bottom: 2px solid #2E7D32;
+            border: 1px solid transparent;
         }
         .urine-table td {
-            padding: 4px 4px;
-            border: none;
+            padding: 3px 2px; /* Adjusted padding to make columns closer */
+            border: 1px solid transparent;
             text-align: center;
+            color: var(--text-color);
         }
         .urine-abn {
             background-color: rgba(255, 64, 64, 0.25);
-            font-weight: bold;
         }
-        .urine-table tr:not(:last-child) td {
-             border-bottom: 1px solid #2a2a2a;
+        .urine-row {
+            background-color: rgba(255,255,255,0.02);
         }
     </style>
     """
@@ -622,7 +588,7 @@ def render_urine_section(person_data, sex, year_selected):
     html_content += "<div class='urine-table-container'><table class='urine-table'>"
     html_content += """
         <colgroup>
-            <col style="width: 40%;"> <col style="width: 20%;"> <col style="width: 40%;"> </colgroup>
+            <col style="width: 33.33%;"> <col style="width: 33.33%;"> <col style="width: 33.33%;"> </colgroup>
     """
     html_content += "<thead><tr>"
     html_content += "<th style='text-align: left;'>การตรวจ</th>"
@@ -632,11 +598,11 @@ def render_urine_section(person_data, sex, year_selected):
     
     for _, row in df_urine.iterrows():
         is_abn = is_urine_abnormal(row["การตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"])
-        css_class = "class='urine-abn'" if is_abn else ""
-        html_content += f"<tr >"
-        html_content += f"<td {css_class} style='text-align: left;'>{row['การตรวจ']}</td>"
-        html_content += f"<td {css_class}>{safe_value(row['ผลตรวจ'])}</td>"
-        html_content += f"<td {css_class} style='text-align: left;'>{row['ค่าปกติ']}</td>"
+        css_class = "urine-abn" if is_abn else "urine-row"
+        html_content += f"<tr class='{css_class}'>"
+        html_content += f"<td style='text-align: left;'>{row['การตรวจ']}</td>"
+        html_content += f"<td>{safe_value(row['ผลตรวจ'])}</td>"
+        html_content += f"<td style='text-align: left;'>{row['ค่าปกติ']}</td>"
         html_content += "</tr>"
     html_content += "</tbody></table></div>"
     st.markdown(html_content, unsafe_allow_html=True)
@@ -651,12 +617,11 @@ def render_urine_section(person_data, sex, year_selected):
         st.markdown(f"""
             <div style='
                 background-color: rgba(255, 255, 0, 0.2);
-                color: #fafafa;
+                color: var(--text-color);
                 padding: 1rem;
                 border-radius: 6px;
                 margin-top: 1rem;
                 font-size: 14px;
-                border: 1px solid rgba(255, 255, 0, 0.4);
             '>
                 {summary}
             </div>
@@ -665,12 +630,11 @@ def render_urine_section(person_data, sex, year_selected):
         st.markdown(f"""
             <div style='
                 background-color: rgba(57, 255, 20, 0.2);
-                color: #fafafa;
+                color: var(--text-color);
                 padding: 1rem;
                 border-radius: 6px;
                 margin-top: 1rem;
                 font-size: 14px;
-                border: 1px solid rgba(57, 255, 20, 0.4);
             '>
                 ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ
             </div>
@@ -678,7 +642,6 @@ def render_urine_section(person_data, sex, year_selected):
 
 
 def interpret_stool_exam(val):
-    """Interprets stool examination results."""
     val = str(val or "").strip().lower()
     if val in ["", "-", "none", "nan"]:
         return "-"
@@ -689,7 +652,6 @@ def interpret_stool_exam(val):
     return val
 
 def interpret_stool_cs(value):
-    """Interprets stool culture and sensitivity results."""
     value = str(value or "").strip()
     if value in ["", "-", "none", "nan"]:
         return "-"
@@ -698,48 +660,41 @@ def interpret_stool_cs(value):
     return "พบการติดเชื้อในอุจจาระ ให้พบแพทย์เพื่อตรวจรักษาเพิ่มเติม"
 
 def render_stool_html_table(exam, cs):
-    """Renders a styled HTML table for stool results."""
     style = """
     <style>
         .stool-container {
-            background-color: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 8px;
-            padding: 5px;
+            background-color: var(--background-color);
             margin-top: 1rem;
         }
         .stool-table {
             width: 100%;
             border-collapse: collapse;
-            color: #fafafa;
-            table-layout: fixed;
+            color: var(--text-color);
+            table-layout: fixed; /* Ensures column widths are respected */
             font-size: 14px;
         }
         .stool-table th {
-            background-color: transparent;
-            color: #e0e0e0;
-            padding: 8px 4px;
+            background-color: var(--secondary-background-color);
+            color: var(--text-color);
+            padding: 3px 2px; /* Adjusted padding to make columns closer */
             text-align: left;
-            width: 40%;
+            width: 50%; /* Equal width for 2 columns */
             font-weight: bold;
+            border: 1px solid transparent;
         }
         .stool-table td {
-            padding: 8px 4px;
-            width: 60%;
-            color: #fafafa;
+            padding: 3px 2px; /* Adjusted padding to make columns closer */
+            border: 1px solid transparent;
+            width: 50%; /* Equal width for 2 columns */
+            color: var(--text-color);
         }
-        .stool-table tr:first-child td, .stool-table tr:first-child th {{
-             border-bottom: 1px solid #2a2a2a;
-        }}
     </style>
     """
     html_content = f"""
-    {style}
     <div class='stool-container'>
         <table class='stool-table'>
             <colgroup>
-                <col style="width: 40%;"> <col style="width: 60%;"> 
-            </colgroup>
+                <col style="width: 50%;"> <col style="width: 50%;"> </colgroup>
             <tr>
                 <th>ผลตรวจอุจจาระทั่วไป</th>
                 <td style='text-align: left;'>{exam if exam != "-" else "ไม่ได้เข้ารับการตรวจ"}</td>
@@ -751,10 +706,9 @@ def render_stool_html_table(exam, cs):
         </table>
     </div>
     """
-    return html_content
+    return style + html_content
 
 def interpret_cxr(val):
-    """Interprets Chest X-ray results."""
     val = str(val or "").strip()
     if is_empty(val):
         return "ไม่ได้เข้ารับการตรวจเอกซเรย์"
@@ -763,12 +717,10 @@ def interpret_cxr(val):
     return val
 
 def get_ekg_col_name(year):
-    """Determines the correct EKG column name based on the year."""
     current_thai_year = datetime.now().year + 543
     return "EKG" if year == current_thai_year else f"EKG{str(year)[-2:]}"
 
 def interpret_ekg(val):
-    """Interprets EKG results."""
     val = str(val or "").strip()
     if is_empty(val):
         return "ไม่ได้เข้ารับการตรวจคลื่นไฟฟ้าหัวใจ"
@@ -777,7 +729,6 @@ def interpret_ekg(val):
     return val
 
 def hepatitis_b_advice(hbsag, hbsab, hbcab):
-    """Provides advice based on Hepatitis B panel results."""
     hbsag = hbsag.lower()
     hbsab = hbsab.lower()
     hbcab = hbcab.lower()
@@ -793,7 +744,6 @@ def hepatitis_b_advice(hbsag, hbsab, hbcab):
     return "ไม่สามารถสรุปผลชัดเจน แนะนำให้พบแพทย์เพื่อประเมินซ้ำ"
 
 def merge_final_advice_grouped(messages):
-    """Merges and groups final advice messages."""
     groups = {
         "FBS": [], "ไต": [], "ตับ": [], "ยูริค": [], "ไขมัน": [], "อื่นๆ": []
     }
@@ -818,7 +768,7 @@ def merge_final_advice_grouped(messages):
     for title, msgs in groups.items():
         if msgs:
             unique_msgs = list(OrderedDict.fromkeys(msgs))
-            output.append(f"<b style='color: #e0e0e0;'>{title}:</b> {' '.join(unique_msgs)}")
+            output.append(f"<b>{title}:</b> {' '.join(unique_msgs)}")
             
     if not output:
         return "ไม่พบคำแนะนำเพิ่มเติมจากผลตรวจ"
@@ -829,23 +779,21 @@ def merge_final_advice_grouped(messages):
 
 @st.cache_data(ttl=600)
 def load_sqlite_data():
-    """Loads health data from a SQLite database file hosted on Google Drive."""
     try:
         file_id = "1HruO9AMrUfniC8hBWtumVdxLJayEc1Xr"
         download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
         response = requests.get(download_url)
         response.raise_for_status()
 
-        # Write content to a temporary file
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as tmp:
-            tmp.write(response.content)
-            tmp_path = tmp.name
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".db")
+        tmp.write(response.content)
+        tmp.flush()
+        tmp.close()
 
-        conn = sqlite3.connect(tmp_path)
+        conn = sqlite3.connect(tmp.name)
         df_loaded = pd.read_sql("SELECT * FROM health_data", conn)
         conn.close()
 
-        # Data cleaning and type conversion
         df_loaded.columns = df_loaded.columns.str.strip()
         df_loaded['เลขบัตรประชาชน'] = df_loaded['เลขบัตรประชาชน'].astype(str).str.strip()
         
@@ -866,204 +814,201 @@ def load_sqlite_data():
 # --- Load data when the app starts. This line MUST be here and not inside any function or if block ---
 df = load_sqlite_data()
 
-# ==================== UI Setup and Main Page Layout ====================
+# ==================== UI Setup and Search Form (Main Area) ====================
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
-# Inject custom CSS for font and dark theme
+# Inject custom CSS for font and size control
 st.markdown("""
     <style>
     /* Import Sarabun font from Google Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
 
-    /* --- Universal Font and Dark Theme --- */
-    html, body, [class*="st-"] {
+    /* Apply Sarabun font to all common text elements */
+    body, h1, h2, h3, h4, h5, h6, p, li, a, label, input, select, textarea, button, th, td,
+    div[data-testid="stMarkdown"],
+    div[data-testid="stInfo"],
+    div[data-testid="stSuccess"],
+    div[data-testid="stWarning"],
+    div[data-testid="stError"] {
         font-family: 'Sarabun', sans-serif !important;
-        background-color: #0f1116; /* Dark background */
-        color: #fafafa; /* Light text */
     }
     
-    /* --- Main Headers --- */
-    h1, h2, h3 {
-        color: #fafafa !important;
+    /* Set a base font size for the body */
+    body {
+        font-size: 14px !important;
     }
+    
+    /* Set specific size for main report title (h1) */
     .report-header-container h1 {
         font-size: 1.8rem !important;
         font-weight: bold;
     }
+
+    /* Style for the clinic subtitle (h2) */
     .report-header-container h2 {
-        font-size: 1.2rem !important;
-        color: #a0a0a0 !important; /* Lighter grey for subtitle */
+        font-size: 1.2rem !important; /* Size between h1 and body text */
+        color: darkgrey;
         font-weight: bold;
     }
+
+    /* Set specific size for section titles (h3) */
+    h3 {
+        font-size: 18px !important; /* Slightly larger than body text */
+    }
+
+    /* Control spacing for all elements in header */
     .report-header-container * {
         line-height: 1.7 !important; 
         margin: 0.2rem 0 !important;
         padding: 0 !important;
     }
-    hr {
-        background-color: #333;
-        height: 1px;
-        border: none;
-    }
-
-    /* --- Input Widgets Styling --- */
-    /* Text Input */
-    div[data-testid="stTextInput"] input {
-        background-color: #262730;
-        color: #fafafa;
-        border: 1px solid #444;
-        border-radius: 8px;
-        padding: 10px;
-    }
-    /* Selectbox */
-    div[data-testid="stSelectbox"] > div {
-        background-color: #262730;
-        color: #fafafa;
-        border: 1px solid #444;
-        border-radius: 8px;
-    }
-    div[data-testid="stSelectbox"] label {
-        color: #a0a0a0 !important; /* Lighter color for labels */
-        font-size: 13px;
-    }
-    /* Button */
-    button[data-testid="stButton"] {
-        background-color: #4A5568;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 8px 16px;
-    }
-    button[data-testid="stButton"]:hover {
-        background-color: #2D3748;
-    }
     
-    /* --- General Info/Error boxes --- */
-    div[data-testid="stInfo"], div[data-testid="stError"] {
-        border-radius: 8px;
-        border: 1px solid #444;
-        background-color: #262730;
-    }
     </style>
 """, unsafe_allow_html=True)
 
+# --- Callbacks for updating selections ---
+def update_year_selection():
+    """Callback for year selectbox to update state."""
+    new_year = st.session_state["year_select_main"]
+    if st.session_state.get("last_selected_year_main") != new_year:
+        st.session_state["selected_year_from_main"] = new_year
+        st.session_state["last_selected_year_main"] = new_year
+        # When year changes, clear the date selection to force re-selection of the latest date for the new year
+        st.session_state.pop("selected_exam_date_from_main", None)
+        st.session_state.pop("person_row", None)
+        st.session_state.pop("selected_row_found", None)
 
-# ==================== Search and Filter Section (Top of the page) ====================
-st.markdown("<h3 style='text-align: center; margin-bottom: 1rem;'>ค้นหาและเลือกผลตรวจ</h3>", unsafe_allow_html=True)
-
-# --- Search Input and Button ---
-# Use columns to center the main search area
-main_search_cols = st.columns([1, 2, 1])
-with main_search_cols[1]:
-    # Use inner columns for the text input and the button
-    search_input_cols = st.columns([4, 1])
-    with search_input_cols[0]:
-        search_query = st.text_input(
-            "กรอก HN หรือ ชื่อ-สกุล",
-            key="search_query_input"
-        )
-    with search_input_cols[1]:
-        # This empty space helps vertically align the button with the input box
-        st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
-        submitted_main = st.button("ค้นหา", use_container_width=True)
+def update_exam_date_selection():
+    """Callback for exam date selectbox to update state."""
+    new_exam_date = st.session_state["exam_date_select_main"]
+    if st.session_state.get("last_selected_exam_date_main") != new_exam_date:
+        st.session_state["selected_exam_date_from_main"] = new_exam_date
+        st.session_state["last_selected_exam_date_main"] = new_exam_date
 
 
-# --- State Initialization and Search Logic ---
-if submitted_main:
-    st.session_state.clear() # Clear all state for a new search
-    st.session_state.search_query_persisted = search_query # Persist the search query
-    search_term = search_query.strip()
-    if search_term:
+# --- Search and Selection Area ---
+with st.container():
+    st.markdown("<h3>ค้นหาและเลือกผลตรวจ</h3>", unsafe_allow_html=True)
+    
+    # Layout for the combined controls
+    col1, col2, col3, col4 = st.columns([2, 1, 1, 0.8])
+
+    with col1:
+        search_query = st.text_input("กรอก HN หรือ ชื่อ-สกุล", key="search_query_main", label_visibility="collapsed", placeholder="HN หรือ ชื่อ-สกุล")
+
+    with col4:
+        submitted_main = st.button("ค้นหา", use_container_width=True, key="search_button_main")
+
+    # --- Search Logic ---
+    if submitted_main:
+        st.session_state.pop("search_result", None)
+        st.session_state.pop("person_row", None)
+        st.session_state.pop("selected_row_found", None)
+        st.session_state.pop("selected_year_from_main", None)
+        st.session_state.pop("selected_exam_date_from_main", None)
+        st.session_state.pop("last_selected_year_main", None) 
+        st.session_state.pop("last_selected_exam_date_main", None)
+
         query_df = df.copy()
-        if search_term.isdigit():
-            query_df = query_df[query_df["HN"] == search_term]
-        else:
-            query_df = query_df[query_df["ชื่อ-สกุล"].str.strip() == search_term]
-        
-        if query_df.empty:
-            st.error("❌ ไม่พบข้อมูล กรุณาตรวจสอบข้อมูลที่กรอกอีกครั้ง")
-        else:
-            st.session_state["search_result"] = query_df
-            # Set initial year and date to the most recent
-            latest_year = sorted(query_df["Year"].dropna().unique().astype(int), reverse=True)[0]
-            st.session_state.selected_year = latest_year
+        search_term = search_query.strip()
+
+        if search_term:
+            if search_term.isdigit():
+                query_df = query_df[query_df["HN"] == search_term]
+            else:
+                query_df = query_df[query_df["ชื่อ-สกุล"].str.strip() == search_term]
             
-            latest_year_df = query_df[query_df["Year"] == latest_year]
-            latest_date = latest_year_df.drop_duplicates(subset=["HN", "วันที่ตรวจ"]).sort_values(
-                by="วันที่ตรวจ", key=lambda x: pd.to_datetime(x, errors='coerce', dayfirst=True), ascending=False
-            ).iloc[0]["วันที่ตรวจ"]
-            st.session_state.selected_exam_date = latest_date
-            st.rerun() # Rerun to update the UI with filters
-    else:
-        st.info("กรุณากรอก HN หรือ ชื่อ-สกุล เพื่อค้นหา")
-
-# --- Display Filters and Handle Changes (only after a search) ---
-if "search_result" in st.session_state:
-    results_df = st.session_state["search_result"]
-    selected_hn = results_df.iloc[0]["HN"]
-
-    # Use columns to center the filters
-    filter_center_cols = st.columns([1, 4, 1])
-    with filter_center_cols[1]:
-        filter_cols = st.columns(2)
-        # --- Year Selector ---
-        with filter_cols[0]:
-            available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
-
-            def on_year_change():
-                st.session_state.selected_year = st.session_state.year_selector
-                year_df = st.session_state.search_result[st.session_state.search_result["Year"] == st.session_state.selected_year]
-
-                if not year_df.empty:
-                    latest_date_for_new_year = year_df.drop_duplicates(subset=["HN", "วันที่ตรวจ"]).sort_values(
-                        by="วันที่ตรวจ", key=lambda x: pd.to_datetime(x, errors='coerce', dayfirst=True), ascending=False
-                    ).iloc[0]["วันที่ตรวจ"]
-                    st.session_state.selected_exam_date = latest_date_for_new_year
-
-            st.selectbox(
-                "ปีที่ตรวจ",
-                options=available_years,
-                key="year_selector",
-                on_change=on_year_change,
-                format_func=lambda y: f"พ.ศ. {y}",
-                index=available_years.index(st.session_state.selected_year) if 'selected_year' in st.session_state and st.session_state.selected_year in available_years else 0
-            )
-
-        # --- Date Selector ---
-        with filter_cols[1]:
-            person_year_df = results_df[
-                (results_df["Year"] == st.session_state.selected_year) &
-                (results_df["HN"] == selected_hn)
-            ].drop_duplicates(subset=["HN", "วันที่ตรวจ"]).sort_values(by="วันที่ตรวจ", key=lambda x: pd.to_datetime(x, errors='coerce', dayfirst=True), ascending=False)
-
-            exam_dates_options = person_year_df["วันที่ตรวจ"].dropna().unique().tolist()
-
-            if exam_dates_options:
-                st.selectbox(
-                    "วันที่ตรวจ",
-                    options=exam_dates_options,
-                    key="selected_exam_date",
-                    index=exam_dates_options.index(st.session_state.selected_exam_date) if 'selected_exam_date' in st.session_state and st.session_state.selected_exam_date in exam_dates_options else 0
-                )
-
-    # --- Set the final person_row for display ---
-    if 'selected_year' in st.session_state and 'selected_exam_date' in st.session_state:
-        final_df = results_df[
-            (results_df["Year"] == st.session_state.selected_year) &
-            (results_df["วันที่ตรวจ"] == st.session_state.selected_exam_date) &
-            (results_df["HN"] == selected_hn)
-        ]
-        if not final_df.empty:
-            st.session_state["person_row"] = final_df.iloc[0].to_dict()
+            if query_df.empty:
+                st.error("❌ ไม่พบข้อมูล กรุณาตรวจสอบข้อมูลที่กรอกอีกครั้ง")
+            else:
+                st.session_state["search_result"] = query_df
+                
+                first_available_year = sorted(query_df["Year"].dropna().unique().astype(int), reverse=True)[0]
+                
+                first_person_year_df = query_df[
+                    (query_df["Year"] == first_available_year) &
+                    (query_df["HN"] == query_df.iloc[0]["HN"])
+                ].drop_duplicates(subset=["HN", "วันที่ตรวจ"]).sort_values(by="วันที่ตรวจ", key=lambda x: pd.to_datetime(x, errors='coerce', dayfirst=True), ascending=False)
+                
+                if not first_person_year_df.empty:
+                    st.session_state["person_row"] = first_person_year_df.iloc[0].to_dict()
+                    st.session_state["selected_row_found"] = True
+                    st.session_state["selected_year_from_main"] = first_available_year
+                    st.session_state["selected_exam_date_from_main"] = first_person_year_df.iloc[0]["วันที่ตรวจ"]
+                    st.session_state["last_selected_year_main"] = first_available_year
+                    st.session_state["last_selected_exam_date_main"] = first_person_year_df.iloc[0]["วันที่ตรวจ"]
+                    st.rerun()
+                else:
+                    st.session_state.pop("person_row", None)
+                    st.session_state.pop("selected_row_found", None)
+                    st.error("❌ พบข้อมูลแต่ไม่สามารถแสดงผลได้ กรุณาลองใหม่")
         else:
-            st.session_state.pop("person_row", None)
+            st.info("กรุณากรอก HN หรือ ชื่อ-สกุล เพื่อค้นหา")
+
+    # --- Dropdown Population and Row Selection ---
+    search_performed = "search_result" in st.session_state
+    available_years = []
+    exam_dates_options = []
+    current_year_idx = 0
+    current_date_idx = 0
+    person_year_df = pd.DataFrame()
+
+    if search_performed:
+        results_df = st.session_state["search_result"]
+        selected_hn = results_df.iloc[0]["HN"]
+        available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
+        
+        if st.session_state.get("selected_year_from_main") in available_years:
+            current_year_idx = available_years.index(st.session_state["selected_year_from_main"])
+        
+        selected_year = available_years[current_year_idx]
+        
+        person_year_df = results_df[
+            (results_df["Year"] == selected_year) & (results_df["HN"] == selected_hn)
+        ].drop_duplicates(subset=["HN", "วันที่ตรวจ"]).sort_values(by="วันที่ตรวจ", key=lambda x: pd.to_datetime(x, errors='coerce', dayfirst=True), ascending=False)
+        
+        if not person_year_df.empty:
+            exam_dates_options = person_year_df["วันที่ตรวจ"].dropna().unique().tolist()
+            if st.session_state.get("selected_exam_date_from_main") in exam_dates_options:
+                current_date_idx = exam_dates_options.index(st.session_state["selected_exam_date_from_main"])
+            else:
+                # If date is invalid for the current year (e.g., after year change), select the first one
+                st.session_state["selected_exam_date_from_main"] = exam_dates_options[0]
+                current_date_idx = 0
+    
+    # Render dropdowns
+    with col2:
+        st.selectbox(
+            "ปี พ.ศ.", options=available_years, index=current_year_idx,
+            format_func=lambda y: f"พ.ศ. {y}", key="year_select_main",
+            on_change=update_year_selection, disabled=not search_performed, label_visibility="collapsed"
+        )
+
+    with col3:
+        st.selectbox(
+            "วันที่ตรวจ", options=exam_dates_options, index=current_date_idx,
+            key="exam_date_select_main", on_change=update_exam_date_selection,
+            disabled=(not search_performed or len(exam_dates_options) <= 1), label_visibility="collapsed"
+        )
+
+    # --- Final Row Selection Logic ---
+    if search_performed and not person_year_df.empty:
+        final_date = st.session_state.get("exam_date_select_main")
+        if final_date:
+            selected_row_df = person_year_df[person_year_df["วันที่ตรวจ"] == final_date]
+            if not selected_row_df.empty:
+                st.session_state["person_row"] = selected_row_df.iloc[0].to_dict()
+                st.session_state["selected_row_found"] = True
+            else:
+                st.session_state.pop("person_row", None)
+                st.session_state.pop("selected_row_found", None)
 
 
 # ==================== Display Health Report (Main Content) ====================
-if "person_row" in st.session_state:
-    st.markdown("<hr>", unsafe_allow_html=True)
+if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
     person = st.session_state["person_row"]
-    
+    year_display = person.get("Year", "-")
+
     sbp = person.get("SBP", "")
     dbp = person.get("DBP", "")
     pulse_raw = person.get("pulse", "-")
@@ -1072,13 +1017,13 @@ if "person_row" in st.session_state:
     waist_raw = person.get("รอบเอว", "-")
     check_date = person.get("วันที่ตรวจ", "-")
 
-    # --- Unified Header Block ---
+    # --- NEW: Unified Header Block (MODIFIED) ---
     report_header_html = f"""
-    <div class="report-header-container" style="text-align: center; margin-bottom: 0.5rem;">
+    <div class="report-header-container" style="text-align: center; margin-bottom: 0.5rem; margin-top: 2rem;">
         <h1>รายงานผลการตรวจสุขภาพ</h1>
         <h2>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม -</h2>
-        <p style="color: #a0a0a0;">ชั้น 2 อาคารผู้ป่วยนอก-อุบัติเหตุ โรงพยาบาลสันทราย 201 หมู่ 11 ถ.เชียงใหม่–พร้าว ต.หนองหาร อ.สันทราย จ.เชียงใหม่ 50290</p>
-        <p style="color: #a0a0a0;">ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167</p>
+        <p>ชั้น 2 อาคารผู้ป่วยนอก-อุบัติเหตุ โรงพยาบาลสันทราย 201 หมู่ 11 ถ.เชียงใหม่–พร้าว ต.หนองหาร อ.สันทราย จ.เชียงใหม่ 50290</p>
+        <p>ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167</p>
         <p><b>วันที่ตรวจ:</b> {check_date or "-"}</p>
     </div>
     """
@@ -1105,7 +1050,7 @@ if "person_row" in st.session_state:
         bp_full = "-"
     else:
         bp_desc = interpret_bp(sbp, dbp)
-        bp_full = f"{bp_val} - <span style='color: #a0a0a0;'>{bp_desc}</span>" if bp_desc != "-" else bp_val
+        bp_full = f"{bp_val} - {bp_desc}" if bp_desc != "-" else bp_val
 
     try:
         pulse_val = int(float(pulse_raw))
@@ -1124,21 +1069,21 @@ if "person_row" in st.session_state:
     st.markdown(f"""
     <div>
         <hr>
-        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; margin-top: 24px; margin-bottom: 20px; text-align: center; font-size: 15px;">
-            <div><b style="color: #a0a0a0;">ชื่อ-สกุล:</b> {person.get('ชื่อ-สกุล', '-')}</div>
-            <div><b style="color: #a0a0a0;">อายุ:</b> {str(int(float(person.get('อายุ')))) if str(person.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')} ปี</div>
-            <div><b style="color: #a0a0a0;">เพศ:</b> {person.get('เพศ', '-')}</div>
-            <div><b style="color: #a0a0a0;">HN:</b> {str(int(float(person.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person.get('HN', '-')}</div>
-            <div><b style="color: #a0a0a0;">หน่วยงาน:</b> {person.get('หน่วยงาน', '-')}</div>
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; margin-top: 24px; margin-bottom: 20px; text-align: center;">
+            <div><b>ชื่อ-สกุล:</b> {person.get('ชื่อ-สกุล', '-')}</div>
+            <div><b>อายุ:</b> {str(int(float(person.get('อายุ')))) if str(person.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')} ปี</div>
+            <div><b>เพศ:</b> {person.get('เพศ', '-')}</div>
+            <div><b>HN:</b> {str(int(float(person.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person.get('HN', '-')}</div>
+            <div><b>หน่วยงาน:</b> {person.get('หน่วยงาน', '-')}</div>
         </div>
-        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; margin-bottom: 16px; text-align: center; font-size: 15px;">
-            <div><b style="color: #a0a0a0;">น้ำหนัก:</b> {weight_display}</div>
-            <div><b style="color: #a0a0a0;">ส่วนสูง:</b> {height_display}</div>
-            <div><b style="color: #a0a0a0;">รอบเอว:</b> {waist_display}</div>
-            <div><b style="color: #a0a0a0;">ความดันโลหิต:</b> {bp_full}</div>
-            <div><b style="color: #a0a0a0;">ชีพจร:</b> {pulse}</div>
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; margin-bottom: 16px; text-align: center;">
+            <div><b>น้ำหนัก:</b> {weight_display}</div>
+            <div><b>ส่วนสูง:</b> {height_display}</div>
+            <div><b>รอบเอว:</b> {waist_display}</div>
+            <div><b>ความดันโลหิต:</b> {bp_full}</div>
+            <div><b>ชีพจร:</b> {pulse}</div>
         </div>
-        {f"<div style='margin-top: 16px; text-align: center; font-size: 15px;'><b style='color: #a0a0a0;'>คำแนะนำ:</b> {summary_advice}</div>" if summary_advice else ""}
+        {f"<div style='margin-top: 16px; text-align: center;'><b>คำแนะนำ:</b> {summary_advice}</div>" if summary_advice else ""}
     </div>
     """, unsafe_allow_html=True)
 
@@ -1201,10 +1146,10 @@ if "person_row" in st.session_state:
     left_spacer, col1, col2, right_spacer = st.columns([0.5, 3, 3, 0.5])
 
     with col1:
-        st.markdown(render_lab_table_html("ผลตรวจ CBC", "Complete Blood Count", ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows), unsafe_allow_html=True)
+        st.markdown(render_lab_table_html("ผลตรวจ CBC (Complete Blood Count)", None, ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows), unsafe_allow_html=True)
     
     with col2:
-        st.markdown(render_lab_table_html("ผลตรวจเลือด", "Blood Chemistry", ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows), unsafe_allow_html=True)
+        st.markdown(render_lab_table_html("ผลตรวจเลือด (Blood Chemistry)", None, ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows), unsafe_allow_html=True)
 
     # ==================== Combined Recommendations ====================
     gfr_raw = person.get("GFR", "")
@@ -1241,35 +1186,33 @@ if "person_row" in st.session_state:
         background_color_general_advice = (
             "rgba(255, 255, 0, 0.2)" if has_general_advice else "rgba(57, 255, 20, 0.2)"
         )
-        border_color_general_advice = (
-            "rgba(255, 255, 0, 0.4)" if has_general_advice else "rgba(57, 255, 20, 0.4)"
-        )
 
         st.markdown(f"""
         <div style="
             background-color: {background_color_general_advice};
-            border: 1px solid {border_color_general_advice};
             padding: 1rem 2.5rem;
             border-radius: 10px;
             line-height: 1.5;
-            color: #fafafa;
+            color: var(--text-color);
             font-size: 14px;
         ">
             {final_advice_html}
         </div>
         """, unsafe_allow_html=True)
 
-    # ==================== Urinalysis and Other Sections ====================
-    selected_year_int = int(st.session_state.get("selected_year", datetime.now().year + 543))
+    # ==================== Urinalysis Section ====================
+    selected_year = st.session_state.get("selected_year_from_main", None)
+    if selected_year is None:
+        selected_year = datetime.now().year + 543
 
     with st.container():
         left_spacer_ua, col_ua_left, col_ua_right, right_spacer_ua = st.columns([0.5, 3, 3, 0.5])
         
         with col_ua_left:
-            render_urine_section(person, sex, selected_year_int)
+            render_urine_section(person, sex, selected_year)
 
-            # --- Stool Section ---
-            st.markdown(render_section_header("ผลตรวจอุจจาระ", "Stool Examination"), unsafe_allow_html=True)
+            # ==================== Stool Section ====================
+            st.markdown(render_section_header("ผลตรวจอุจจาระ (Stool Examination)"), unsafe_allow_html=True)
             
             stool_exam_raw = person.get("Stool exam", "")
             stool_cs_raw = person.get("Stool C/S", "")
@@ -1280,21 +1223,21 @@ if "person_row" in st.session_state:
             st.markdown(render_stool_html_table(exam_text, cs_text), unsafe_allow_html=True)
 
         with col_ua_right:
-            # --- X-ray Section ---
-            st.markdown(render_section_header("ผลเอกซเรย์", "Chest X-ray"), unsafe_allow_html=True)
+            # ============ X-ray Section ============
+            st.markdown(render_section_header("ผลเอกซเรย์ (Chest X-ray)"), unsafe_allow_html=True)
             
+            selected_year_int = int(selected_year)
             cxr_col = "CXR" if selected_year_int == (datetime.now().year + 543) else f"CXR{str(selected_year_int)[-2:]}"
             cxr_raw = person.get(cxr_col, "")
             cxr_result = interpret_cxr(cxr_raw)
             
             st.markdown(f"""
             <div style='
-                background-color: #1a1a1a;
-                border: 1px solid #333;
-                color: #fafafa;
+                background-color: var(--background-color);
+                color: var(--text-color);
                 line-height: 1.6;
                 padding: 1.25rem;
-                border-radius: 8px;
+                border-radius: 6px;
                 margin-bottom: 1.5rem;
                 font-size: 14px;
             '>
@@ -1302,8 +1245,8 @@ if "person_row" in st.session_state:
             </div>
             """, unsafe_allow_html=True)
 
-            # --- EKG Section ---
-            st.markdown(render_section_header("ผลคลื่นไฟฟ้าหัวใจ", "EKG"), unsafe_allow_html=True)
+            # ==================== EKG Section ====================
+            st.markdown(render_section_header("ผลคลื่นไฟฟ้าหัวใจ (EKG)"), unsafe_allow_html=True)
 
             ekg_col = get_ekg_col_name(selected_year_int)
             ekg_raw = person.get(ekg_col, "")
@@ -1311,12 +1254,11 @@ if "person_row" in st.session_state:
 
             st.markdown(f"""
             <div style='
-                background-color: #1a1a1a;
-                border: 1px solid #333;
-                color: #fafafa;
+                background-color: var(--secondary-background-color);
+                color: var(--text-color);
                 line-height: 1.6;
                 padding: 1.25rem;
-                border-radius: 8px;
+                border-radius: 6px;
                 margin-bottom: 1.5rem;
                 font-size: 14px;
             '>
@@ -1324,53 +1266,53 @@ if "person_row" in st.session_state:
             </div>
             """, unsafe_allow_html=True)
 
-            # --- Section: Hepatitis A ---
-            st.markdown(render_section_header("ผลตรวจไวรัสตับอักเสบเอ", "Viral hepatitis A"), unsafe_allow_html=True)
+            # ==================== Section: Hepatitis A ====================
+            st.markdown(render_section_header("ผลการตรวจไวรัสตับอักเสบเอ (Viral hepatitis A)"), unsafe_allow_html=True)
             
             hep_a_raw = safe_text(person.get("Hepatitis A"))
             st.markdown(f"""
             <div style='
                 padding: 1rem;
-                border-radius: 8px;
+                border-radius: 6px;
                 margin-bottom: 1.5rem;
-                background-color: #1a1a1a;
-                border: 1px solid #333;
+                background-color: rgba(255,255,255,0.05);
                 font-size: 14px;
             '>
                 {hep_a_raw}
             </div>
             """, unsafe_allow_html=True)
             
-            # --- Section: Hepatitis B ---
+            # ================ Section: Hepatitis B =================
             hep_check_date_raw = person.get("ปีตรวจHEP")
             hep_check_date = normalize_thai_date(hep_check_date_raw)
             
-            st.markdown(render_section_header("ผลตรวจไวรัสตับอักเสบบี", "Viral hepatitis B"), unsafe_allow_html=True)
+            st.markdown(render_section_header("ผลการตรวจไวรัสตับอักเสบบี (Viral hepatitis B)"), unsafe_allow_html=True)
             
             hbsag_raw = safe_text(person.get("HbsAg"))
             hbsab_raw = safe_text(person.get("HbsAb"))
             hbcab_raw = safe_text(person.get("HBcAB"))
             
             st.markdown(f"""
-            <div style="margin-bottom: 1rem; background-color: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 0.5rem;">
+            <div style="margin-bottom: 1rem;">
             <table style='
                 width: 100%;
                 text-align: center;
                 border-collapse: collapse;
+                min-width: 300px;
                 font-size: 14px;
             '>
                 <thead>
-                    <tr style="border-bottom: 2px solid #2E7D32;">
-                        <th style="padding: 8px; color: #e0e0e0;">HBsAg</th>
-                        <th style="padding: 8px; color: #e0e0e0;">HBsAb</th>
-                        <th style="padding: 8px; color: #e0e0e0;">HBcAb</th>
+                    <tr>
+                        <th style="padding: 8px; border: 1px solid transparent;">HBsAg</th>
+                        <th style="padding: 8px; border: 1px solid transparent;">HBsAb</th>
+                        <th style="padding: 8px; border: 1px solid transparent;">HBcAb</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td style="padding: 8px;">{hbsag_raw}</td>
-                        <td style="padding: 8px;">{hbsab_raw}</td>
-                        <td style="padding: 8px;">{hbcab_raw}</td>
+                        <td style="padding: 8px; border: 1px solid transparent;">{hbsag_raw}</td>
+                        <td style="padding: 8px; border: 1px solid transparent;">{hbsab_raw}</td>
+                        <td style="padding: 8px; border: 1px solid transparent;">{hbcab_raw}</td>
                     </tr>
                 </tbody>
             </table>
@@ -1383,16 +1325,15 @@ if "person_row" in st.session_state:
             st.markdown(f"""
             <div style='
                 padding: 0.75rem 1rem;
-                background-color: #1a1a1a;
-                border: 1px solid #333;
-                border-radius: 8px;
+                background-color: rgba(255,255,255,0.05);
+                border-radius: 6px;
                 margin-bottom: 1.5rem;
                 line-height: 1.8;
                 font-size: 14px;
             '>
-                <b style="color: #a0a0a0;">วันที่ตรวจภูมิคุ้มกัน:</b> {hep_check_date}<br>
-                <b style="color: #a0a0a0;">ประวัติโรคไวรัสตับอักเสบบี ปี พ.ศ. {selected_year_int}:</b> {hep_history}<br>
-                <b style="color: #a0a0a0;">ประวัติการได้รับวัคซีนในปี พ.ศ. {selected_year_int}:</b> {hep_vaccine}
+                <b>วันที่ตรวจภูมิคุ้มกัน:</b> {hep_check_date}<br>
+                <b>ประวัติโรคไวรัสตับอักเสบบี ปี พ.ศ. {selected_year}:</b> {hep_history}<br>
+                <b>ประวัติการได้รับวัคซีนในปี พ.ศ. {selected_year}:</b> {hep_vaccine}
             </div>
             """, unsafe_allow_html=True)
             
@@ -1400,27 +1341,26 @@ if "person_row" in st.session_state:
             
             if advice.strip() == "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี":
                 bg_color = "rgba(57, 255, 20, 0.2)"
-                border_color = "rgba(57, 255, 20, 0.4)"
             else:
                 bg_color = "rgba(255, 255, 0, 0.2)"
-                border_color = "rgba(255, 255, 0, 0.4)"
 
             st.markdown(f"""
             <div style='
                 line-height: 1.6;
                 padding: 1rem 1.5rem;
-                border-radius: 8px;
+                border-radius: 6px;
                 background-color: {bg_color};
-                border: 1px solid {border_color};
-                color: #fafafa;
+                color: var(--text-color);
                 margin-bottom: 1.5rem;
                 font-size: 14px;
             '>
                 {advice}
             </div>
             """, unsafe_allow_html=True)
-                
-    # =========================== Doctor's Suggestion =======================
+            
+#=========================== ความเห็นแพทย์ =======================
+if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
+    person = st.session_state["person_row"]
     doctor_suggestion = str(person.get("DOCTER suggest", "")).strip()
     if doctor_suggestion.lower() in ["", "-", "none", "nan", "null"]:
         doctor_suggestion = "<i>ไม่มีคำแนะนำจากแพทย์</i>"
@@ -1430,7 +1370,7 @@ if "person_row" in st.session_state:
     with doctor_col:
         st.markdown(f"""
         <div style='
-            background-color: #2E7D32;
+            background-color: #1b5e20;
             color: white;
             padding: 1.5rem 2rem;
             border-radius: 8px;
@@ -1439,14 +1379,13 @@ if "person_row" in st.session_state:
             margin-bottom: 2rem;
             font-size: 14px;
         '>
-            <b style="font-size: 16px;">สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
+            <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
         </div>
 
         <div style='
             margin-top: 7rem;
             text-align: right;
             padding-right: 1rem;
-            color: #a0a0a0;
         '>
             <div style='
                 display: inline-block;
@@ -1454,7 +1393,7 @@ if "person_row" in st.session_state:
                 width: 340px;
             '>
                 <div style='
-                    border-bottom: 1px dotted #555;
+                    border-bottom: 1px dotted #ccc;
                     margin-bottom: 0.5rem;
                     width: 100%;
                 '></div>
