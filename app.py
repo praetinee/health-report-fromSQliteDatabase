@@ -9,6 +9,7 @@ import numpy as np
 from collections import OrderedDict
 from datetime import datetime
 import re
+import print_report # <-- เพิ่มการ import โมดูลสำหรับพิมพ์
 
 def is_empty(val):
     return str(val).strip().lower() in ["", "-", "none", "nan", "null"]
@@ -531,6 +532,9 @@ def is_urine_abnormal(test_name, value, normal_range):
     return False
 
 def render_urine_section(person_data, sex, year_selected):
+    """
+    Renders the urinalysis table and returns the summary text for later display.
+    """
     alb_raw = person_data.get("Alb", "-")
     sugar_raw = person_data.get("sugar", "-")
     rbc_raw = person_data.get("RBC1", "-")
@@ -566,13 +570,13 @@ def render_urine_section(person_data, sex, year_selected):
         .urine-table thead th {
             background-color: var(--secondary-background-color);
             color: var(--text-color);
-            padding: 3px 2px; /* Adjusted padding to make columns closer */
+            padding: 3px 2px;
             text-align: center;
             font-weight: bold;
             border: 1px solid transparent;
         }
         .urine-table td {
-            padding: 3px 2px; /* Adjusted padding to make columns closer */
+            padding: 3px 2px;
             border: 1px solid transparent;
             text-align: center;
             color: var(--text-color);
@@ -609,37 +613,9 @@ def render_urine_section(person_data, sex, year_selected):
     st.markdown(html_content, unsafe_allow_html=True)
     
     summary = advice_urine(sex, alb_raw, sugar_raw, rbc_raw, wbc_raw)
-    
     has_any_urine_result = any(not is_empty(val) for _, val, _ in urine_data)
 
-    if not has_any_urine_result:
-        pass
-    elif summary:
-        st.markdown(f"""
-            <div style='
-                background-color: rgba(255, 255, 0, 0.2);
-                color: var(--text-color);
-                padding: 0.4rem;
-                border-radius: 6px;
-                margin-top: 1rem;
-                font-size: 14px;
-            '>
-                {summary}
-            </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.markdown(f"""
-            <div style='
-                background-color: rgba(57, 255, 20, 0.2);
-                color: var(--text-color);
-                padding: 0.4rem;
-                border-radius: 6px;
-                margin-top: 1rem;
-                font-size: 14px;
-            '>
-                ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ
-            </div>
-        """, unsafe_allow_html=True)
+    return summary, has_any_urine_result
 
 
 def interpret_stool_exam(val):
@@ -1009,6 +985,17 @@ if not results_df.empty:
 if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
     person = st.session_state["person_row"]
     year_display = person.get("Year", "-")
+
+    # --- Add Print Button to Sidebar ---
+    st.sidebar.header("ตัวเลือกรายงาน")
+    report_html = print_report.generate_printable_report(person)
+    st.sidebar.download_button(
+        label="📄 พิมพ์รายงาน",
+        data=report_html,
+        file_name=f"Health_Report_{person.get('HN', 'NA')}_{person.get('Year', 'NA')}.html",
+        mime="text/html",
+    )
+
 
     sbp = person.get("SBP", "")
     dbp = person.get("DBP", "")
