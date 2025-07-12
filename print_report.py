@@ -627,7 +627,21 @@ def render_other_results_html(person, sex):
         urine_rows.append([(label, is_abn), (safe_value(val), is_abn), (norm, is_abn)])
     
     urine_html = render_lab_table_html("ผลการตรวจปัสสาวะ", "Urinalysis", ["การตรวจ", "ผลตรวจ", "ค่าปกติ"], urine_rows, "print-lab-table")
-    
+    urine_summary = advice_urine(sex, person.get("Alb", "-"), person.get("sugar", "-"), person.get("RBC1", "-"), person.get("WBC1", "-"))
+    urine_advice_html = ""
+    if any(not is_empty(person.get(key)) for label, key, norm in urine_data):
+        if urine_summary:
+            bg_color = "#fff8e1"
+            advice_text = f"<b>&emsp;ผลตรวจปัสสาวะ:</b> {urine_summary}"
+        else:
+            bg_color = "#e8f5e9"
+            advice_text = "<b>&emsp;ผลตรวจปัสสาวะ:</b> อยู่ในเกณฑ์ปกติ"
+        urine_advice_html = f"""
+        <div style="background-color: {bg_color}; padding: 0.4rem 1rem; border-radius: 8px; line-height: 1.5; font-size: 11px; margin-top: 0.5rem; border: 1px solid #ddd;">
+            {advice_text}
+        </div>
+        """
+
     # Stool
     stool_exam_raw = person.get("Stool exam", "")
     stool_cs_raw = person.get("Stool C/S", "")
@@ -676,6 +690,7 @@ def render_other_results_html(person, sex):
         <tr>
             <td style="width: 50%; vertical-align: top; padding-right: 5px;">
                 {urine_html}
+                {urine_advice_html}
                 {stool_html}
             </td>
             <td style="width: 50%; vertical-align: top; padding-left: 5px;">
@@ -708,7 +723,6 @@ def generate_printable_report(person):
         uric_acid_advice(person.get("Uric Acid", "")),
         lipids_advice(summarize_lipids(person.get("CHOL", ""), person.get("TGL", ""), person.get("LDL", ""))),
         cbc_advice(person.get("Hb(%)", ""), person.get("HCT", ""), person.get("WBC (cumm)", ""), person.get("Plt (/mm)", ""), sex=sex),
-        advice_urine(sex, person.get("Alb", "-"), person.get("sugar", "-"), person.get("RBC1", "-"), person.get("WBC1", "-"))
     ]
     final_advice_html = merge_final_advice_grouped(advice_list)
     has_general_advice = "ไม่พบคำแนะนำเพิ่มเติม" not in final_advice_html
