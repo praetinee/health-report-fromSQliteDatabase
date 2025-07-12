@@ -854,13 +854,13 @@ st.markdown("""
 
     /* Control spacing for all elements in header */
     .report-header-container * {
-        line-height: 1.4 !important; 
+        line-height: 1.2 !important; 
         margin: 0.1rem 0 !important;
         padding: 0 !important;
     }
     
     .personal-info-container div {
-        line-height: 1.4 !important;
+        line-height: 1.2 !important;
     }
 
     </style>
@@ -1020,7 +1020,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
 
     # --- NEW: Unified Header Block (MODIFIED) ---
     report_header_html = f"""
-    <div class="report-header-container" style="text-align: center; margin-bottom: 0.5rem; margin-top: 2rem;">
+    <div class="report-header-container" style="text-align: center; margin-bottom: 0rem; margin-top: 2rem;">
         <h1>รายงานผลการตรวจสุขภาพ</h1>
         <h2>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม -</h2>
         <p>ชั้น 2 อาคารผู้ป่วยนอก-อุบัติเหตุ โรงพยาบาลสันทราย 201 หมู่ 11 ถ.เชียงใหม่–พร้าว ต.หนองหาร อ.สันทราย จ.เชียงใหม่ 50290</p>
@@ -1069,22 +1069,22 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     # This block now only contains personal info, not the header.
     st.markdown(f"""
     <div class="personal-info-container">
-        <hr>
-        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; margin-top: 24px; margin-bottom: 20px; text-align: center;">
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; margin-top: 0.5rem; margin-bottom: 0.2rem; text-align: center;">
             <div><b>ชื่อ-สกุล:</b> {person.get('ชื่อ-สกุล', '-')}</div>
             <div><b>อายุ:</b> {str(int(float(person.get('อายุ')))) if str(person.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')} ปี</div>
             <div><b>เพศ:</b> {person.get('เพศ', '-')}</div>
             <div><b>HN:</b> {str(int(float(person.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person.get('HN', '-')}</div>
             <div><b>หน่วยงาน:</b> {person.get('หน่วยงาน', '-')}</div>
         </div>
-        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; margin-bottom: 16px; text-align: center;">
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; margin-bottom: 1rem; text-align: center;">
             <div><b>น้ำหนัก:</b> {weight_display}</div>
             <div><b>ส่วนสูง:</b> {height_display}</div>
             <div><b>รอบเอว:</b> {waist_display}</div>
             <div><b>ความดันโลหิต:</b> {bp_full}</div>
             <div><b>ชีพจร:</b> {pulse}</div>
         </div>
-        {f"<div style='margin-top: 16px; text-align: center;'><b>คำแนะนำ:</b> {summary_advice}</div>" if summary_advice else ""}
+        {f"<div style='margin-top: 1rem; text-align: center;'><b>คำแนะนำ:</b> {summary_advice}</div>" if summary_advice else ""}
+        <hr style="margin-top: 1.5rem;">
     </div>
     """, unsafe_allow_html=True)
 
