@@ -255,7 +255,7 @@ def merge_final_advice_grouped(messages):
         elif "พิวรีน" in msg or "ยูริค" in msg: groups["ยูริค"].append(msg)
         elif "ไขมัน" in msg: groups["ไขมัน"].append(msg)
         else: groups["อื่นๆ"].append(msg)
-            
+        
     output = []
     for title, msgs in groups.items():
         if msgs:
@@ -333,7 +333,7 @@ def advice_urine(sex, alb, sugar, rbc, wbc):
     wbc_t = interpret_wbc(wbc)
     
     if all(x in ["-", "ปกติ", "ไม่พบ", "พบโปรตีนในปัสสาวะเล็กน้อย", "พบน้ำตาลในปัสสาวะเล็กน้อย"]
-                     for x in [alb_t, sugar_t, rbc_t, wbc_t]):
+                   for x in [alb_t, sugar_t, rbc_t, wbc_t]):
         return ""
     
     if "พบน้ำตาลในปัสสาวะ" in sugar_t and "เล็กน้อย" not in sugar_t:
@@ -551,7 +551,62 @@ def render_personal_info(person):
     </div>
     """
 
-# ... (render_lab_section, render_other_results_html, helper functions ทั้งหมดเดิม ไม่ต้องแก้ style ภายใน) ...
+def render_lab_section(person, sex):
+    """
+    สร้างส่วนของผลตรวจเลือดทั้งหมด (Kidney, Liver, Lipids, CBC)
+    """
+    # 1. Kidney Function
+    kidney_rows = [
+        [("BUN", False), flag(person.get("BUN", ""), high=20), ("7-20 mg/dL", False)],
+        [("Creatinine", False), flag(person.get("Creatinine", ""), high=1.2), ("0.6-1.2 mg/dL", False)],
+        [("eGFR", False), flag(person.get("GFR", ""), low=60, higher_is_better=True), ("> 60 ml/min/1.73m²", False)],
+    ]
+    kidney_html = render_lab_table_html("ผลตรวจการทำงานของไต", "Kidney Function", ["การตรวจ", "ผลตรวจ", "ค่าปกติ"], kidney_rows)
+
+    # 2. Liver Function
+    liver_rows = [
+        [("SGOT", False), flag(person.get("SGOT", ""), high=36), ("< 37 U/L", False)],
+        [("SGPT", False), flag(person.get("SGPT", ""), high=40), ("< 41 U/L", False)],
+        [("Alkaline Phosphatase", False), flag(person.get("ALP", ""), high=120), ("40-129 U/L", False)],
+    ]
+    liver_html = render_lab_table_html("ผลตรวจการทำงานของตับ", "Liver Function", ["การตรวจ", "ผลตรวจ", "ค่าปกติ"], liver_rows)
+
+    # 3. Lipid Profile & Uric Acid
+    lipids_rows = [
+        [("Cholesterol", False), flag(person.get("CHOL", ""), high=200), ("< 200 mg/dL", False)],
+        [("Triglyceride", False), flag(person.get("TGL", ""), high=150), ("< 150 mg/dL", False)],
+        [("HDL", False), flag(person.get("HDL", ""), low=40, higher_is_better=True), ("> 40 mg/dL", False)],
+        [("LDL", False), flag(person.get("LDL", ""), high=130), ("< 130 mg/dL", False)],
+        [("Uric Acid", False), flag(person.get("Uric Acid", ""), high=7.2), ("2.4-7.2 mg/dL", False)],
+    ]
+    lipids_html = render_lab_table_html("ผลตรวจไขมันในเลือดและกรดยูริค", "Lipid Profile & Uric Acid", ["การตรวจ", "ผลตรวจ", "ค่าปกติ"], lipids_rows)
+
+    # 4. CBC
+    hb_low = 13 if sex == "ชาย" else 12
+    hct_low = 39 if sex == "ชาย" else 36
+    cbc_rows = [
+        [("Hemoglobin (Hb)", False), flag(person.get("Hb(%)", ""), low=hb_low), (f"{hb_low}-17 g/dL", False)],
+        [("Hematocrit (Hct)", False), flag(person.get("HCT", ""), low=hct_low), (f"{hct_low}-50 %", False)],
+        [("WBC", False), flag(person.get("WBC (cumm)", ""), low=4000, high=10000), ("4,000-10,000 cell/mm³", False)],
+        [("Platelet Count", False), flag(person.get("Plt (/mm)", ""), low=150000, high=450000), ("150,000-450,000 /mm³", False)],
+        [("FBS", False), flag(person.get("FBS", ""), high=100), ("70-100 mg/dL", False)],
+    ]
+    cbc_html = render_lab_table_html("ผลตรวจความสมบูรณ์ของเม็ดเลือดและน้ำตาล", "CBC & Glucose", ["การตรวจ", "ผลตรวจ", "ค่าปกติ"], cbc_rows)
+
+    return f"""
+    <table style="width: 100%; border-collapse: collapse; page-break-inside: avoid;">
+        <tr>
+            <td style="width: 50%; vertical-align: top; padding-right: 5px;">
+                {kidney_html}
+                {liver_html}
+            </td>
+            <td style="width: 50%; vertical-align: top; padding-left: 5px;">
+                {lipids_html}
+                {cbc_html}
+            </td>
+        </tr>
+    </table>
+    """
 
 def render_other_results_html(person, sex):
     urine_data = [
@@ -711,6 +766,10 @@ def generate_printable_report(person):
                 font-size: inherit !important;
                 font-family: inherit !important;
                 line-height: 1.5;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
             }}
             .print-lab-table td, .print-lab-table th {{
                 padding: 1px 3px;
