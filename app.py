@@ -901,29 +901,28 @@ with st.container():
 
     # --- Search Logic ---
     if submitted_main:
-        st.session_state.pop("search_result", None)
-        st.session_state.pop("person_row", None)
-        st.session_state.pop("selected_row_found", None)
-        st.session_state.pop("selected_year_from_main", None)
-        st.session_state.pop("selected_exam_date_from_main", None)
-        st.session_state.pop("last_selected_year_main", None) 
-        st.session_state.pop("last_selected_exam_date_main", None)
+        # Reset state for a new search
+        keys_to_delete = [k for k in st.session_state if k.startswith(('search_', 'person_', 'selected_'))]
+        for key in keys_to_delete:
+            del st.session_state[key]
 
         query_df = df.copy()
         search_term = search_query.strip()
 
         if search_term:
             if search_term.isdigit():
-                query_df = query_df[query_df["HN"] == search_term]
+                results_df = df[df["HN"] == search_term].copy()
             else:
-                query_df = query_df[query_df["ชื่อ-สกุล"].str.strip() == search_term]
+                # Normalize whitespace for more robust name matching
+                normalized_search_term = re.sub(r'\s+', ' ', search_term)
+                results_df = df[df["ชื่อ-สกุล"].str.replace(r'\s+', ' ', regex=True).str.strip() == normalized_search_term].copy()
             
-            if query_df.empty:
+            if results_df.empty:
                 st.error("❌ ไม่พบข้อมูล กรุณาตรวจสอบข้อมูลที่กรอกอีกครั้ง")
-                st.session_state["search_result"] = pd.DataFrame() # Set empty dataframe to clear results
+                st.session_state["search_result"] = pd.DataFrame()
             else:
-                st.session_state["search_result"] = query_df
-                st.session_state["selected_year_from_main"] = sorted(query_df["Year"].dropna().unique().astype(int), reverse=True)[0]
+                st.session_state["search_result"] = results_df
+                st.rerun() # Force a rerun to update the UI with the new search results
                 
     # --- Dropdown Population and Row Selection ---
     search_performed = "search_result" in st.session_state
@@ -939,23 +938,25 @@ with st.container():
         available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
         
         if available_years:
-            if st.session_state.get("selected_year_from_main") in available_years:
-                current_year_idx = available_years.index(st.session_state["selected_year_from_main"])
+            # Determine the selected year
+            if "selected_year_from_main" not in st.session_state:
+                st.session_state["selected_year_from_main"] = available_years[0]
             
-            selected_year = available_years[current_year_idx]
-            
+            selected_year = st.session_state["selected_year_from_main"]
+            current_year_idx = available_years.index(selected_year)
+
             person_year_df = results_df[
                 (results_df["Year"] == selected_year) & (results_df["HN"] == selected_hn)
             ].drop_duplicates(subset=["HN", "วันที่ตรวจ"]).sort_values(by="วันที่ตรวจ", key=lambda x: pd.to_datetime(x, errors='coerce', dayfirst=True), ascending=False)
             
             if not person_year_df.empty:
                 exam_dates_options = person_year_df["วันที่ตรวจ"].dropna().unique().tolist()
-                if exam_dates_options: # Check if list is not empty
-                    if st.session_state.get("selected_exam_date_from_main") in exam_dates_options:
-                        current_date_idx = exam_dates_options.index(st.session_state["selected_exam_date_from_main"])
-                    else:
-                        st.session_state["selected_exam_date_from_main"] = exam_dates_options[0]
-                        current_date_idx = 0
+                if exam_dates_options:
+                    if "selected_exam_date_from_main" not in st.session_state or st.session_state.get("selected_exam_date_from_main") not in exam_dates_options:
+                         st.session_state["selected_exam_date_from_main"] = exam_dates_options[0]
+                    
+                    current_date_idx = exam_dates_options.index(st.session_state["selected_exam_date_from_main"])
+
     
     # Render dropdowns
     with col2:
