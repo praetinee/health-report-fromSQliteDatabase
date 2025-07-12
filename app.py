@@ -626,6 +626,55 @@ def interpret_stool_cs(value):
         return "ไม่พบการติดเชื้อ"
     return "พบการติดเชื้อในอุจจาระ ให้พบแพทย์เพื่อตรวจรักษาเพิ่มเติม"
 
+def render_stool_html_table(exam, cs):
+    style = """
+    <style>
+        .stool-container {
+            background-color: var(--background-color);
+            margin-top: 1rem;
+        }
+        .stool-table {
+            width: 100%;
+            border-collapse: collapse;
+            color: var(--text-color);
+            table-layout: fixed; /* Ensures column widths are respected */
+            font-size: 14px;
+        }
+        .stool-table th {
+            background-color: var(--secondary-background-color);
+            color: var(--text-color);
+            padding: 3px 2px; /* Adjusted padding to make columns closer */
+            text-align: left;
+            width: 50%; /* Equal width for 2 columns */
+            font-weight: bold;
+            border: 1px solid transparent;
+        }
+        .stool-table td {
+            padding: 3px 2px; /* Adjusted padding to make columns closer */
+            border: 1px solid transparent;
+            width: 50%; /* Equal width for 2 columns */
+            color: var(--text-color);
+        }
+    </style>
+    """
+    html_content = f"""
+    <div class='stool-container'>
+        <table class='stool-table'>
+            <colgroup>
+                <col style="width: 50%;"> <col style="width: 50%;"> </colgroup>
+            <tr>
+                <th>ผลตรวจอุจจาระทั่วไป</th>
+                <td style='text-align: left;'>{exam}</td>
+            </tr>
+            <tr>
+                <th>ผลตรวจอุจจาระเพาะเชื้อ</th>
+                <td style='text-align: left;'>{cs}</td>
+            </tr>
+        </table>
+    </div>
+    """
+    return style + html_content
+
 def interpret_cxr(val):
     val = str(val or "").strip()
     if is_empty(val):
