@@ -56,7 +56,7 @@ def normalize_thai_date(date_str):
             return f"{dt.day} {THAI_MONTHS_GLOBAL[dt.month]} {dt.year + 543}".replace('.', '')
 
         # Format: DD-MM-YYYY (e.g., 29-04-2565)
-        if re.match(r'^\d{1,2}-\d{1,2}-\d{4}$', s):
+        if re.match(r'^\d{1,2}-\d{1,2}/\d{4}$', s):
             day, month, year = map(int, s.split('-'))
             if year > 2500: # Assume Thai Buddhist year if year > 2500
                 year -= 543
@@ -823,19 +823,8 @@ st.markdown("""
     /* Import Sarabun font from Google Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
 
-    /* Apply Sarabun font to common text elements, excluding generic buttons */
-    body, h1, h2, h3, h4, h5, h6, p, li, a, label, input, select, textarea, th, td,
-    div[data-testid="stMarkdown"],
-    div[data-testid="stInfo"],
-    div[data-testid="stSuccess"],
-    div[data-testid="stWarning"],
-    div[data-testid="stError"] {
-        font-family: 'Sarabun', sans-serif !important;
-    }
-
-    /* Apply Sarabun font specifically to buttons within the main content area,
-       which avoids affecting the sidebar toggle icon. */
-    div[data-testid="stBlock"] button {
+    /* Apply Sarabun font to ALL elements universally */
+    * {
         font-family: 'Sarabun', sans-serif !important;
     }
     
