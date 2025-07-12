@@ -450,12 +450,12 @@ def render_section_header(title, subtitle=None):
         background-color: #f0f2f6;
         color: #333;
         text-align: center;
-        padding: 0.4rem 0.5rem;
+        padding: 0.2rem 0.4rem;
         font-weight: bold;
-        border-radius: 8px;
-        margin-top: 1.5rem;
-        margin-bottom: 0.5rem;
-        font-size: 14px;
+        border-radius: 6px;
+        margin-top: 1rem;
+        margin-bottom: 0.4rem;
+        font-size: 12px;
         border: 1px solid #ddd;
     '>
         {full_title}
@@ -495,12 +495,11 @@ def render_lab_table_html(title, subtitle, headers, rows, table_class="print-lab
 def render_html_header(person):
     check_date = person.get("วันที่ตรวจ", "-")
     return f"""
-    <div class="report-header-container" style="text-align: center; margin-bottom: 1rem; margin-top: 1rem;">
-        <h1>รายงานผลการตรวจสุขภาพ</h1>
-        <h2>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม -</h2>
-        <p>ชั้น 2 อาคารผู้ป่วยนอก-อุบัติเหตุ โรงพยาบาลสันทราย 201 หมู่ 11 ถ.เชียงใหม่–พร้าว ต.หนองหาร อ.สันทราย จ.เชียงใหม่ 50290</p>
-        <p>ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167</p>
-        <p><b>วันที่ตรวจ:</b> {check_date or "-"}</p>
+    <div class="report-header-container" style="text-align: center; margin-bottom: 1rem; margin-top: 0.5rem;">
+        <h1 style="font-size: 1.4rem;">รายงานผลการตรวจสุขภาพ</h1>
+        <h2 style="font-size: 0.9rem;">- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม -</h2>
+        <p style="font-size: 0.8rem;">ชั้น 2 อาคารผู้ป่วยนอก-อุบัติเหตุ โรงพยาบาลสันทราย 201 หมู่ 11 ถ.เชียงใหม่–พร้าว ต.หนองหาร อ.สันทราย จ.เชียงใหม่ 50290</p>
+        <p style="font-size: 0.8rem;">ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167 | <b>วันที่ตรวจ:</b> {check_date or "-"}</p>
     </div>
     """
 
@@ -534,21 +533,21 @@ def render_personal_info(person):
     return f"""
     <div class="personal-info-container">
         <hr style="margin-top: 0.5rem; margin-bottom: 0.5rem;">
-        <div style="display: flex; flex-wrap: wrap; justify-content: space-around; gap: 16px; margin-bottom: 0.2rem; text-align: left;">
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin-bottom: 0.2rem; text-align: left;">
             <span><b>ชื่อ-สกุล:</b> {person.get('ชื่อ-สกุล', '-')}</span>
             <span><b>อายุ:</b> {str(int(float(person.get('อายุ')))) if str(person.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')} ปี</span>
             <span><b>เพศ:</b> {person.get('เพศ', '-')}</span>
             <span><b>HN:</b> {str(int(float(person.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person.get('HN', '-')}</span>
             <span><b>หน่วยงาน:</b> {person.get('หน่วยงาน', '-')}</span>
         </div>
-        <div style="display: flex; flex-wrap: wrap; justify-content: space-around; gap: 16px; margin-bottom: 1rem; text-align: left;">
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin-bottom: 0.5rem; text-align: left;">
             <span><b>น้ำหนัก:</b> {person.get("น้ำหนัก", "-")} กก.</span>
             <span><b>ส่วนสูง:</b> {person.get("ส่วนสูง", "-")} ซม.</span>
             <span><b>รอบเอว:</b> {person.get("รอบเอว", "-")} ซม.</span>
             <span><b>ความดันโลหิต:</b> {bp_full}</span>
             <span><b>ชีพจร:</b> {person.get("pulse", "-")} ครั้ง/นาที</span>
         </div>
-        {f"<div style='margin-top: 1rem; text-align: center;'><b>คำแนะนำ:</b> {summary_advice}</div>" if summary_advice else ""}
+        {f"<div style='margin-top: 0.5rem; text-align: center; border: 1px solid #ddd; padding: 5px; border-radius: 5px; background-color: #f8f9fa;'><b>คำแนะนำทั่วไป:</b> {summary_advice}</div>" if summary_advice else ""}
     </div>
     """
 
@@ -562,6 +561,11 @@ def render_lab_section(person, sex):
         ("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None),
         ("ฮีมาโตคริต (Hct)", "HCT", "ชาย > 39%, หญิง > 36%", hct_low, None),
         ("เม็ดเลือดขาว (wbc)", "WBC (cumm)", "4,000 - 10,000 /cu.mm", 4000, 10000),
+        ("นิวโทรฟิล (Neutrophil)", "Ne (%)", "43 - 70%", 43, 70),
+        ("ลิมโฟไซต์ (Lymphocyte)", "Ly (%)", "20 - 44%", 20, 44),
+        ("โมโนไซต์ (Monocyte)", "M", "3 - 9%", 3, 9),
+        ("อีโอซิโนฟิล (Eosinophil)", "Eo", "0 - 9%", 0, 9),
+        ("เบโซฟิล (Basophil)", "BA", "0 - 3%", 0, 3),
         ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150,000 - 500,000 /cu.mm", 150000, 500000),
     ]
     cbc_rows = []
@@ -595,10 +599,10 @@ def render_lab_section(person, sex):
     blood_html = render_lab_table_html("ผลตรวจเลือด", None, ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows, "print-lab-table")
     
     return f"""
-    <table style="width: 100%; border-collapse: collapse;">
+    <table style="width: 100%; border-collapse: collapse; page-break-inside: avoid;">
         <tr>
-            <td style="width: 50%; vertical-align: top; padding-right: 10px;">{cbc_html}</td>
-            <td style="width: 50%; vertical-align: top; padding-left: 10px;">{blood_html}</td>
+            <td style="width: 50%; vertical-align: top; padding-right: 5px;">{cbc_html}</td>
+            <td style="width: 50%; vertical-align: top; padding-left: 5px;">{blood_html}</td>
         </tr>
     </table>
     """
@@ -625,19 +629,15 @@ def render_other_results_html(person, sex):
         urine_rows.append([(label, is_abn), (safe_value(val), is_abn), (norm, is_abn)])
     
     urine_html = render_lab_table_html("ผลการตรวจปัสสาวะ", "Urinalysis", ["การตรวจ", "ผลตรวจ", "ค่าปกติ"], urine_rows, "print-lab-table")
-    urine_summary = advice_urine(sex, alb_raw, sugar_raw, rbc_raw, wbc_raw)
-    if not urine_summary:
-        urine_summary = "ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ"
-    urine_advice_html = f"<div style='padding: 5px; border: 1px solid #ccc; border-radius: 5px; margin-top: 5px; background-color: #f8f9fa;'><b>คำแนะนำ:</b> {urine_summary}</div>"
-
+    
     # Stool
     stool_exam_text = interpret_stool_exam(person.get("Stool exam", ""))
     stool_cs_text = interpret_stool_cs(person.get("Stool C/S", ""))
     stool_html = f"""
-    {render_section_header("ผลตรวจอุจจาระ (Stool Examination)")}
+    {render_section_header("ผลตรวจอุจจาระ")}
     <table class="print-lab-table">
-        <tr><td style="text-align: left; width: 50%;"><b>ผลตรวจอุจจาระทั่วไป</b></td><td style="text-align: left; width: 50%;">{stool_exam_text}</td></tr>
-        <tr><td style="text-align: left; width: 50%;"><b>ผลตรวจอุจจาระเพาะเชื้อ</b></td><td style="text-align: left; width: 50%;">{stool_cs_text}</td></tr>
+        <tr><td style="text-align: left; width: 40%;"><b>ผลตรวจอุจจาระทั่วไป</b></td><td style="text-align: left;">{stool_exam_text}</td></tr>
+        <tr><td style="text-align: left; width: 40%;"><b>ผลตรวจอุจจาระเพาะเชื้อ</b></td><td style="text-align: left;">{stool_cs_text}</td></tr>
     </table>
     """
 
@@ -648,18 +648,23 @@ def render_other_results_html(person, sex):
     other_tests_html = f"""
     {render_section_header("ผลตรวจอื่นๆ")}
     <table class="print-lab-table">
-        <tr><td style="text-align: left; width: 50%;"><b>ผลเอกซเรย์ (Chest X-ray)</b></td><td style="text-align: left; width: 50%;">{cxr_result}</td></tr>
-        <tr><td style="text-align: left; width: 50%;"><b>ผลคลื่นไฟฟ้าหัวใจ (EKG)</b></td><td style="text-align: left; width: 50%;">{ekg_result}</td></tr>
+        <tr><td style="text-align: left; width: 40%;"><b>ผลเอกซเรย์ (Chest X-ray)</b></td><td style="text-align: left;">{cxr_result}</td></tr>
+        <tr><td style="text-align: left; width: 40%;"><b>ผลคลื่นไฟฟ้าหัวใจ (EKG)</b></td><td style="text-align: left;">{ekg_result}</td></tr>
     </table>
     """
 
     return f"""
-    <div style="margin-top: 1rem;">
-        {urine_html}
-        {urine_advice_html}
-        {stool_html}
-        {other_tests_html}
-    </div>
+    <table style="width: 100%; border-collapse: collapse; page-break-inside: avoid;">
+        <tr>
+            <td style="width: 50%; vertical-align: top; padding-right: 5px;">
+                {urine_html}
+                {stool_html}
+            </td>
+            <td style="width: 50%; vertical-align: top; padding-left: 5px;">
+                {other_tests_html}
+            </td>
+        </tr>
+    </table>
     """
 
 
@@ -683,14 +688,15 @@ def generate_printable_report(person):
         liver_advice(summarize_liver(person.get("ALP", ""), person.get("SGOT", ""), person.get("SGPT", ""))),
         uric_acid_advice(person.get("Uric Acid", "")),
         lipids_advice(summarize_lipids(person.get("CHOL", ""), person.get("TGL", ""), person.get("LDL", ""))),
-        cbc_advice(person.get("Hb(%)", ""), person.get("HCT", ""), person.get("WBC (cumm)", ""), person.get("Plt (/mm)", ""), sex=sex)
+        cbc_advice(person.get("Hb(%)", ""), person.get("HCT", ""), person.get("WBC (cumm)", ""), person.get("Plt (/mm)", ""), sex=sex),
+        advice_urine(sex, person.get("Alb", "-"), person.get("sugar", "-"), person.get("RBC1", "-"), person.get("WBC1", "-"))
     ]
     final_advice_html = merge_final_advice_grouped(advice_list)
     has_general_advice = "ไม่พบคำแนะนำเพิ่มเติม" not in final_advice_html
     bg_color_advice = "#fff8e1" if has_general_advice else "#e8f5e9"
     
     advice_box_html = f"""
-    <div style="background-color: {bg_color_advice}; padding: 0.6rem 2.5rem; border-radius: 10px; line-height: 1.6; font-size: 14px; margin-top: 1rem; border: 1px solid #ddd;">
+    <div style="background-color: {bg_color_advice}; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; font-size: 11px; margin-top: 1rem; border: 1px solid #ddd;">
         {final_advice_html}
     </div>
     """
@@ -701,16 +707,16 @@ def generate_printable_report(person):
         doctor_suggestion = "<i>ไม่มีคำแนะนำจากแพทย์</i>"
     
     doctor_suggestion_html = f"""
-    <div style="background-color: #e8f5e9; color: #1b5e20; padding: 0.4rem 2rem; border-radius: 8px; line-height: 1.6; margin-top: 2rem; font-size: 14px; border: 1px solid #a5d6a7;">
+    <div style="background-color: #e8f5e9; color: #1b5e20; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; margin-top: 1rem; font-size: 11px; border: 1px solid #a5d6a7;">
         <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
     </div>
     """
 
     # --- Signature ---
     signature_html = """
-    <div style="margin-top: 5rem; text-align: right; padding-right: 1rem;">
-        <div style="display: inline-block; text-align: center; width: 340px;">
-            <div style="border-bottom: 1px dotted #333; margin-bottom: 0.5rem; width: 100%;"></div>
+    <div style="margin-top: 2rem; text-align: right; padding-right: 1rem; page-break-inside: avoid;">
+        <div style="display: inline-block; text-align: center; width: 280px;">
+            <div style="border-bottom: 1px dotted #333; margin-bottom: 0.4rem; width: 100%;"></div>
             <div style="white-space: nowrap;">นายแพทย์นพรัตน์ รัชฎาพร</div>
             <div style="white-space: nowrap;">เลขที่ใบอนุญาตผู้ประกอบวิชาชีพเวชกรรม ว.26674</div>
         </div>
@@ -728,16 +734,14 @@ def generate_printable_report(person):
             @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
             body {{
                 font-family: 'Sarabun', sans-serif !important;
-                font-size: 12px;
-                margin: 20px;
+                font-size: 10px;
+                margin: 15px;
                 color: #333;
             }}
-            p {{ margin: 0.2rem 0; }}
-            h1 {{ font-size: 1.6rem; margin: 0; }}
-            h2 {{ font-size: 1rem; color: #555; font-weight: bold; margin: 0; }}
+            p {{ margin: 0.1rem 0; }}
             table {{ border-collapse: collapse; width: 100%; }}
             .print-lab-table td, .print-lab-table th {{
-                padding: 3px 5px;
+                padding: 2px 4px;
                 border: 1px solid #ccc;
                 text-align: center;
             }}
@@ -752,8 +756,8 @@ def generate_printable_report(person):
         {header_html}
         {personal_info_html}
         {lab_section_html}
-        {advice_box_html}
         {other_results_html}
+        {advice_box_html}
         {doctor_suggestion_html}
         {signature_html}
     </body>
