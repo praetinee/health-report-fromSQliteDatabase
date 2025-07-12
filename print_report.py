@@ -609,24 +609,20 @@ def render_lab_section(person, sex):
     
 def render_other_results_html(person, sex):
     # Urinalysis
-    alb_raw = person.get("Alb", "-")
-    sugar_raw = person.get("sugar", "-")
-    rbc_raw = person.get("RBC1", "-")
-    wbc_raw = person.get("WBC1", "-")
     urine_data = [
-        ("สี (Colour)", person.get("Color", "-"), "Yellow, Pale Yellow"),
-        ("น้ำตาล (Sugar)", sugar_raw, "Negative"),
-        ("โปรตีน (Albumin)", alb_raw, "Negative, trace"),
-        ("กรด-ด่าง (pH)", person.get("pH", "-"), "5.0 - 8.0"),
-        ("ความถ่วงจำเพาะ (Sp.gr)", person.get("Spgr", "-"), "1.003 - 1.030"),
-        ("เม็ดเลือดแดง (RBC)", rbc_raw, "0 - 2 cell/HPF"),
-        ("เม็ดเลือดขาว (WBC)", wbc_raw, "0 - 5 cell/HPF"),
-        ("เซลล์เยื่อบุผิว (Squam.epit.)", person.get("SQ-epi", "-"), "0 - 10 cell/HPF"),
-        ("อื่นๆ", person.get("ORTER", "-"), "-"),
+        ("สี (Colour)", "Color", "Yellow, Pale Yellow"),
+        ("น้ำตาล (Sugar)", "sugar", "Negative"),
+        ("โปรตีน (Albumin)", "Alb", "Negative, trace"),
+        ("กรด-ด่าง (pH)", "pH", "5.0 - 8.0"),
+        ("ความถ่วงจำเพาะ (Sp.gr)", "Spgr", "1.003 - 1.030"),
+        ("เม็ดเลือดแดง (RBC)", "RBC1", "0 - 2 cell/HPF"),
+        ("เม็ดเลือดขาว (WBC)", "WBC1", "0 - 5 cell/HPF"),
+        ("เซลล์เยื่อบุผิว (Squam.epit.)", "SQ-epi", "0 - 10 cell/HPF"),
+        ("อื่นๆ", "ORTER", "-"),
     ]
     urine_rows = []
-    for label, val_key, norm in urine_data:
-        val = person.get(val_key, "-") if isinstance(val_key, str) else val_key
+    for label, key, norm in urine_data:
+        val = person.get(key, "-")
         is_abn = is_urine_abnormal(label, val, norm)
         urine_rows.append([(label, is_abn), (safe_value(val), is_abn), (norm, is_abn)])
     
