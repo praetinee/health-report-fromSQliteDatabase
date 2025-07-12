@@ -531,9 +531,6 @@ def is_urine_abnormal(test_name, value, normal_range):
     return False
 
 def render_urine_section(person_data, sex, year_selected):
-    """
-    Renders the urinalysis table and returns the summary text for later display.
-    """
     alb_raw = person_data.get("Alb", "-")
     sugar_raw = person_data.get("sugar", "-")
     rbc_raw = person_data.get("RBC1", "-")
@@ -569,13 +566,13 @@ def render_urine_section(person_data, sex, year_selected):
         .urine-table thead th {
             background-color: var(--secondary-background-color);
             color: var(--text-color);
-            padding: 3px 2px;
+            padding: 3px 2px; /* Adjusted padding to make columns closer */
             text-align: center;
             font-weight: bold;
             border: 1px solid transparent;
         }
         .urine-table td {
-            padding: 3px 2px;
+            padding: 3px 2px; /* Adjusted padding to make columns closer */
             border: 1px solid transparent;
             text-align: center;
             color: var(--text-color);
@@ -612,9 +609,37 @@ def render_urine_section(person_data, sex, year_selected):
     st.markdown(html_content, unsafe_allow_html=True)
     
     summary = advice_urine(sex, alb_raw, sugar_raw, rbc_raw, wbc_raw)
+    
     has_any_urine_result = any(not is_empty(val) for _, val, _ in urine_data)
 
-    return summary, has_any_urine_result
+    if not has_any_urine_result:
+        pass
+    elif summary:
+        st.markdown(f"""
+            <div style='
+                background-color: rgba(255, 255, 0, 0.2);
+                color: var(--text-color);
+                padding: 0.4rem;
+                border-radius: 6px;
+                margin-top: 1rem;
+                font-size: 14px;
+            '>
+                {summary}
+            </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown(f"""
+            <div style='
+                background-color: rgba(57, 255, 20, 0.2);
+                color: var(--text-color);
+                padding: 0.4rem;
+                border-radius: 6px;
+                margin-top: 1rem;
+                font-size: 14px;
+            '>
+                ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ
+            </div>
+        """, unsafe_allow_html=True)
 
 
 def interpret_stool_exam(val):
