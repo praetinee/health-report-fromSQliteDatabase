@@ -8,6 +8,11 @@ from collections import OrderedDict
 # หมายเหตุ: ไฟล์นี้มีฟังก์ชันที่จำเป็นสำหรับการสร้างรายงานในรูปแบบ HTML
 # ฟังก์ชันส่วนใหญ่ถูกคัดลอกมาจาก app.py และปรับเปลี่ยนเพื่อสร้างผลลัพธ์เป็นสตริง HTML
 # แทนการแสดงผลบน Streamlit โดยตรง
+#
+# การปรับปรุงล่าสุด:
+# - ปรับขนาดฟอนต์ให้เป็นมาตรฐานเดียวกันโดยใช้หน่วย 'pt' เพื่อความเหมาะสมในการพิมพ์
+# - ลบการกำหนด font-size ที่ซ้ำซ้อนออก เพื่อให้ส่วนต่างๆ รับขนาดมาจาก body style หลัก
+# - คงขนาดฟอนต์ในส่วนหัวหลัก (Header) ให้เป็นแบบลำดับชั้นตามเดิม
 # ==============================================================================
 
 
@@ -255,7 +260,7 @@ def merge_final_advice_grouped(messages):
         elif "พิวรีน" in msg or "ยูริค" in msg: groups["ยูริค"].append(msg)
         elif "ไขมัน" in msg: groups["ไขมัน"].append(msg)
         else: groups["อื่นๆ"].append(msg)
-            
+        
     output = []
     for title, msgs in groups.items():
         if msgs:
@@ -333,7 +338,7 @@ def advice_urine(sex, alb, sugar, rbc, wbc):
     wbc_t = interpret_wbc(wbc)
     
     if all(x in ["-", "ปกติ", "ไม่พบ", "พบโปรตีนในปัสสาวะเล็กน้อย", "พบน้ำตาลในปัสสาวะเล็กน้อย"]
-                     for x in [alb_t, sugar_t, rbc_t, wbc_t]):
+                   for x in [alb_t, sugar_t, rbc_t, wbc_t]):
         return ""
     
     if "พบน้ำตาลในปัสสาวะ" in sugar_t and "เล็กน้อย" not in sugar_t:
@@ -455,7 +460,6 @@ def render_section_header(title, subtitle=None):
         border-radius: 6px;
         margin-top: 1rem;
         margin-bottom: 0.4rem;
-        font-size: 11px;
         border: 1px solid #ddd;
     '>
         {full_title}
@@ -494,6 +498,7 @@ def render_lab_table_html(title, subtitle, headers, rows, table_class="print-lab
 
 def render_html_header(person):
     check_date = person.get("วันที่ตรวจ", "-")
+    # This section retains its hierarchical font sizes as requested.
     return f"""
     <div class="report-header-container" style="text-align: center; margin-bottom: 0.5rem; margin-top: 0.5rem;">
         <h1 style="font-size: 1.2rem; margin:0;">รายงานผลการตรวจสุขภาพ</h1>
@@ -627,7 +632,7 @@ def render_other_results_html(person, sex):
         urine_rows.append([(label, is_abn), (safe_value(val), is_abn), (norm, is_abn)])
     urine_html = render_lab_table_html("ผลการตรวจปัสสาวะ", "Urinalysis", ["การตรวจ", "ผลตรวจ", "ค่าปกติ"], urine_rows, "print-lab-table")
 
-    # Urine Advice Box - SHOW IMMEDIATELY AFTER urine table, in left column
+    # Urine Advice Box
     urine_summary = advice_urine(sex, person.get("Alb", "-"), person.get("sugar", "-"), person.get("RBC1", "-"), person.get("WBC1", "-"))
     urine_advice_box_html = ""
     if urine_summary:
@@ -640,7 +645,6 @@ def render_other_results_html(person, sex):
             border: 1px solid #ddd;
             border-radius: 8px;
             line-height: 1.5;
-            font-size: 11px;
             padding: 0.4rem 1.5rem;
             ">
             <b>คำแนะนำผลตรวจปัสสาวะ:</b> {urine_summary}
@@ -690,12 +694,12 @@ def render_other_results_html(person, sex):
     </table>
     """
 
-    # Doctor Suggestion - SHOW AFTER hepatitis, in right column
+    # Doctor Suggestion
     doctor_suggestion = str(person.get("DOCTER suggest", "")).strip()
     if is_empty(doctor_suggestion):
         doctor_suggestion = "<i>ไม่มีคำแนะนำจากแพทย์</i>"
     doctor_suggestion_html = f"""
-    <div style="background-color: #e8f5e9; color: #1b5e20; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; margin-top: 1rem; font-size: 11px; border: 1px solid #a5d6a7;">
+    <div style="background-color: #e8f5e9; color: #1b5e20; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; margin-top: 1rem; border: 1px solid #a5d6a7;">
         <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
     </div>
     """
@@ -745,7 +749,7 @@ def generate_printable_report(person):
     bg_color_blood_advice = "#fff8e1" if has_blood_advice else "#e8f5e9"
     
     blood_advice_box_html = f"""
-    <div style="background-color: {bg_color_blood_advice}; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; font-size: 11px; margin-top: 0.5rem; border: 1px solid #ddd;">
+    <div style="background-color: {bg_color_blood_advice}; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; margin-top: 0.5rem; border: 1px solid #ddd;">
         {final_blood_advice_html}
     </div>
     """
@@ -772,7 +776,8 @@ def generate_printable_report(person):
             @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
             body {{
                 font-family: 'Sarabun', sans-serif !important;
-                font-size: 9px;
+                /* Set base font size in points (pt) for better print scaling */
+                font-size: 10pt; 
                 margin: 10mm;
                 color: #333;
             }}
