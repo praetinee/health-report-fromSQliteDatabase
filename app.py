@@ -519,11 +519,10 @@ def is_urine_abnormal(test_name, value, normal_range):
         return "พบ" in interpret_wbc(val).lower()
     
     if test_name == "น้ำตาล (Sugar)":
-        return val.lower() not in ["negative"]
+        return interpret_sugar(val).lower() != "ไม่พบ"
     
     if test_name == "โปรตีน (Albumin)":
-        # Corrected logic: Abnormal only if it's not 'negative' and not 'trace'.
-        return val.lower() not in ["negative", "trace"]
+        return interpret_alb(val).lower() != "ไม่พบ"
     
     if test_name == "สี (Colour)":
         return val not in ["yellow", "pale yellow", "colorless", "paleyellow", "light yellow"]
@@ -1397,4 +1396,4 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                 <div style='white-space: nowrap;'>เลขที่ใบอนุญาตผู้ประกอบวิชาชีพเวชกรรม ว.26674</div>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """, unsafe_allow_html=Tr
