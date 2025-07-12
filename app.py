@@ -945,23 +945,27 @@ if not results_df.empty:
                 format_func=lambda y: f"พ.ศ. {y}", key="year_select",
                 label_visibility="collapsed"
             )
+            # If the year changes, we should reset the date to avoid invalid states
+            if selected_year != st.session_state.selected_year:
+                st.session_state.selected_date = None
             st.session_state.selected_year = selected_year
 
         # Filter records for the selected year to find available check-up dates
-        person_year_df = results_df[results_df["Year"] == selected_year].drop_duplicates(subset=["วันที่ตรวจ"]).sort_values(by="วันที่ตรวจ", ascending=False)
-        exam_dates_options = person_year_df["วันที่ตรวจ"].tolist()
+        person_year_df = results_df[results_df["Year"] == selected_year]
+        person_year_df_for_options = person_year_df.drop_duplicates(subset=["วันที่ตรวจ"]).sort_values(by="วันที่ตรวจ", ascending=False)
+        
+        # FIX: Create the list of options for the dropdown, explicitly removing any NA values
+        exam_dates_options = person_year_df_for_options["วันที่ตรวจ"].dropna().tolist()
 
         if exam_dates_options:
-            # This handles cases where a year might have multiple check-ups
-            # Set a default date if none is selected
-            if st.session_state.selected_date not in exam_dates_options:
+            # Set a default date if none is selected or the current one is invalid/NA
+            if pd.isna(st.session_state.get("selected_date")) or st.session_state.selected_date not in exam_dates_options:
                 st.session_state.selected_date = exam_dates_options[0]
 
             date_idx = exam_dates_options.index(st.session_state.selected_date)
             
             with col3:
                 # Dropdown for selecting the specific check-up date
-                # This is disabled if there's only one check-up in that year
                 selected_date = st.selectbox(
                     "วันที่ตรวจ", options=exam_dates_options, index=date_idx,
                     key="date_select", label_visibility="collapsed",
@@ -971,6 +975,7 @@ if not results_df.empty:
 
             # --- Final Row Selection for display ---
             if st.session_state.selected_date:
+                # Select from the full dataframe for the year to get the correct record
                 final_row_df = person_year_df[person_year_df["วันที่ตรวจ"] == st.session_state.selected_date]
                 if not final_row_df.empty:
                     # Store the final selected record to be displayed
@@ -980,7 +985,10 @@ if not results_df.empty:
                     st.session_state.pop("person_row", None)
                     st.session_state.pop("selected_row_found", None)
         else:
-            # Clear data if no dates are found for the selected year
+            # Clear data and report if no valid dates are found for the selected year
+            with col3:
+                 st.empty() # Keep layout consistent
+            st.warning(f"ไม่พบข้อมูลวันที่ตรวจสำหรับปี พ.ศ. {st.session_state.selected_year}")
             st.session_state.pop("person_row", None)
             st.session_state.pop("selected_row_found", None)
 
