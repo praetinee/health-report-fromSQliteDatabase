@@ -385,20 +385,20 @@ def is_urine_abnormal(test_name, value, normal_range):
     return False
 
 def interpret_stool_exam(val):
-    val = str(val or "").strip().lower()
-    if val in ["", "-", "none", "nan"]:
-        return "-"
-    elif val == "normal":
+    if is_empty(val):
+        return "ไม่ได้เข้ารับการตรวจ"
+    val_lower = str(val).strip().lower()
+    if val_lower == "normal":
         return "ไม่พบเม็ดเลือดขาวในอุจจาระ ถือว่าปกติ"
-    elif "wbc" in val or "เม็ดเลือดขาว" in val:
+    elif "wbc" in val_lower or "เม็ดเลือดขาว" in val_lower:
         return "พบเม็ดเลือดขาวในอุจจาระ นัดตรวจซ้ำ"
     return val
 
 def interpret_stool_cs(value):
-    value = str(value or "").strip()
-    if value in ["", "-", "none", "nan"]:
-        return "-"
-    if "ไม่พบ" in value or "ปกติ" in value:
+    if is_empty(value):
+        return "ไม่ได้เข้ารับการตรวจ"
+    val_strip = str(value).strip()
+    if "ไม่พบ" in val_strip or "ปกติ" in val_strip:
         return "ไม่พบการติดเชื้อ"
     return "พบการติดเชื้อในอุจจาระ ให้พบแพทย์เพื่อตรวจรักษาเพิ่มเติม"
 
@@ -629,8 +629,10 @@ def render_other_results_html(person, sex):
     urine_html = render_lab_table_html("ผลการตรวจปัสสาวะ", "Urinalysis", ["การตรวจ", "ผลตรวจ", "ค่าปกติ"], urine_rows, "print-lab-table")
     
     # Stool
-    stool_exam_text = interpret_stool_exam(person.get("Stool exam", ""))
-    stool_cs_text = interpret_stool_cs(person.get("Stool C/S", ""))
+    stool_exam_raw = person.get("Stool exam", "")
+    stool_cs_raw = person.get("Stool C/S", "")
+    stool_exam_text = interpret_stool_exam(stool_exam_raw)
+    stool_cs_text = interpret_stool_cs(stool_cs_raw)
     stool_html = f"""
     {render_section_header("ผลตรวจอุจจาระ")}
     <table class="print-lab-table">
