@@ -632,7 +632,17 @@ def render_other_results_html(person, sex):
     urine_advice_box_html = ""
     if urine_summary:
         urine_advice_box_html = f"""
-        <div style="background-color: #fff8e1; max-width:320px; margin-left:0; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; font-size: 11px; margin-top: 1rem; border: 1px solid #ddd;">
+        <div style="
+            background-color: #fff8e1;
+            width: 100%;
+            box-sizing: border-box;
+            margin-top: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            line-height: 1.5;
+            font-size: 11px;
+            padding: 0.4rem 1.5rem;
+            ">
             <b>คำแนะนำผลตรวจปัสสาวะ:</b> {urine_summary}
         </div>
         """
