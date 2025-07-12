@@ -1186,7 +1186,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         st.markdown(f"""
         <div style="
             background-color: {background_color_general_advice};
-            padding: 0.6rem 2.5rem;
+            padding: 0.4rem 2.5rem;
             border-radius: 10px;
             line-height: 1.5;
             color: var(--text-color);
@@ -1232,7 +1232,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                 background-color: var(--background-color);
                 color: var(--text-color);
                 line-height: 1.6;
-                padding: 0.8rem;
+                padding: 0.4rem;
                 border-radius: 6px;
                 margin-bottom: 1.5rem;
                 font-size: 14px;
@@ -1253,7 +1253,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                 background-color: var(--secondary-background-color);
                 color: var(--text-color);
                 line-height: 1.6;
-                padding: 0.8rem;
+                padding: 0.4rem;
                 border-radius: 6px;
                 margin-bottom: 1.5rem;
                 font-size: 14px;
@@ -1268,7 +1268,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             hep_a_raw = safe_text(person.get("Hepatitis A"))
             st.markdown(f"""
             <div style='
-                padding: 0.8rem;
+                padding: 0.4rem;
                 border-radius: 6px;
                 margin-bottom: 1.5rem;
                 background-color: rgba(255,255,255,0.05);
@@ -1343,7 +1343,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             st.markdown(f"""
             <div style='
                 line-height: 1.6;
-                padding: 0.8rem 1.5rem;
+                padding: 0.4rem 1.5rem;
                 border-radius: 6px;
                 background-color: {bg_color};
                 color: var(--text-color);
@@ -1368,7 +1368,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         <div style='
             background-color: #1b5e20;
             color: white;
-            padding: 0.8rem 2rem;
+            padding: 0.4rem 2rem;
             border-radius: 8px;
             line-height: 1.6;
             margin-top: 2rem;
