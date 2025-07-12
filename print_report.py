@@ -671,6 +671,17 @@ def render_other_results_html(person, sex):
     </table>
     """
 
+    # --- Doctor Suggestion ---
+    doctor_suggestion = str(person.get("DOCTER suggest", "")).strip()
+    if is_empty(doctor_suggestion):
+        doctor_suggestion = "<i>ไม่มีคำแนะนำจากแพทย์</i>"
+    
+    doctor_suggestion_html = f"""
+    <div style="background-color: #e8f5e9; color: #1b5e20; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; margin-top: 1rem; font-size: 11px; border: 1px solid #a5d6a7;">
+        <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
+    </div>
+    """
+
     return f"""
     <table style="width: 100%; border-collapse: collapse; page-break-inside: avoid;">
         <tr>
@@ -681,6 +692,7 @@ def render_other_results_html(person, sex):
             <td style="width: 50%; vertical-align: top; padding-left: 5px;">
                 {other_tests_html}
                 {hepatitis_html}
+                {doctor_suggestion_html}
             </td>
         </tr>
     </table>
@@ -729,17 +741,6 @@ def generate_printable_report(person):
         </div>
         """
 
-    # --- Doctor Suggestion ---
-    doctor_suggestion = str(person.get("DOCTER suggest", "")).strip()
-    if is_empty(doctor_suggestion):
-        doctor_suggestion = "<i>ไม่มีคำแนะนำจากแพทย์</i>"
-    
-    doctor_suggestion_html = f"""
-    <div style="background-color: #e8f5e9; color: #1b5e20; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; margin-top: 1rem; font-size: 11px; border: 1px solid #a5d6a7;">
-        <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
-    </div>
-    """
-
     # --- Signature ---
     signature_html = """
     <div style="margin-top: 2rem; text-align: right; padding-right: 1rem; page-break-inside: avoid;">
@@ -787,7 +788,6 @@ def generate_printable_report(person):
         {blood_advice_box_html}
         {other_results_html}
         {urine_advice_box_html}
-        {doctor_suggestion_html}
         {signature_html}
     </body>
     </html>
