@@ -43,7 +43,7 @@ def normalize_thai_date(date_str):
     
     s = str(date_str).strip().replace("พ.ศ.", "").replace("พศ.", "").strip()
 
-    if s.lower() in ["ไม่ตรวจ", "นัดที่หลัง", "ไม่ได้เข้ารับการตรวจ", ""]:
+    if s.lower() in ["ไม่ตรวจ", "นัดทีหลัง", "ไม่ได้เข้ารับการตรวจ", ""]:
         return s
 
     try:
@@ -906,16 +906,12 @@ with st.container():
         for key in keys_to_delete:
             del st.session_state[key]
 
-        query_df = df.copy()
         search_term = search_query.strip()
-
         if search_term:
             if search_term.isdigit():
                 results_df = df[df["HN"] == search_term].copy()
             else:
-                # Normalize whitespace for more robust name matching
-                normalized_search_term = re.sub(r'\s+', ' ', search_term)
-                results_df = df[df["ชื่อ-สกุล"].str.replace(r'\s+', ' ', regex=True).str.strip() == normalized_search_term].copy()
+                results_df = df[df["ชื่อ-สกุล"].str.contains(search_term, case=False, na=False)].copy()
             
             if results_df.empty:
                 st.error("❌ ไม่พบข้อมูล กรุณาตรวจสอบข้อมูลที่กรอกอีกครั้ง")
