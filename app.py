@@ -478,7 +478,7 @@ def advice_urine(sex, alb, sugar, rbc, wbc):
     wbc_t = interpret_wbc(wbc)
     
     if all(x in ["-", "ปกติ", "ไม่พบ", "พบโปรตีนในปัสสาวะเล็กน้อย", "พบน้ำตาลในปัสสาวะเล็กน้อย"]
-                   for x in [alb_t, sugar_t, rbc_t, wbc_t]):
+                     for x in [alb_t, sugar_t, rbc_t, wbc_t]):
         return ""
     
     if "พบน้ำตาลในปัสสาวะ" in sugar_t and "เล็กน้อย" not in sugar_t:
@@ -799,6 +799,7 @@ def load_sqlite_data():
         df_loaded['เลขบัตรประชาชน'] = df_loaded['เลขบัตรประชาชน'].astype(str).str.strip()
         
         # Convert HN from potentially REAL type to integer string, stripping extra decimals
+        # This ensures that searching for "12345" matches the data which might be stored as 12345.0
         df_loaded['HN'] = df_loaded['HN'].apply(lambda x: str(int(x)) if pd.notna(x) and isinstance(x, (float, int)) else str(x)).str.strip()
 
         df_loaded['ชื่อ-สกุล'] = df_loaded['ชื่อ-สกุล'].astype(str).str.strip()
@@ -869,7 +870,7 @@ st.markdown("""
 # --- Search and Selection Logic ---
 st.markdown("<h3>ค้นหาและเลือกผลตรวจ</h3>", unsafe_allow_html=True)
 
-# Initialize session state variables if they don't exist
+# Initialize session state variables if they don't exist to store user's choices
 if 'search_query' not in st.session_state:
     st.session_state.search_query = ""
 if 'search_result' not in st.session_state:
@@ -879,47 +880,66 @@ if 'selected_year' not in st.session_state:
 if 'selected_date' not in st.session_state:
     st.session_state.selected_date = None
 
-# Layout for the combined controls
+# Layout for the search input, dropdowns, and search button
 col1, col2, col3, col4 = st.columns([2, 1, 1, 0.8])
 
 with col1:
-    search_query = st.text_input("กรอก HN หรือ ชื่อ-สกุล", value=st.session_state.search_query, key="search_input", label_visibility="collapsed", placeholder="HN หรือ ชื่อ-สกุล")
+    # Text input for HN or Full Name
+    search_query = st.text_input(
+        "กรอก HN หรือ ชื่อ-สกุล", 
+        value=st.session_state.search_query, 
+        key="search_input", 
+        label_visibility="collapsed", 
+        placeholder="HN หรือ ชื่อ-สกุล"
+    )
 
 with col4:
+    # Search button
     if st.button("ค้นหา", use_container_width=True):
         st.session_state.search_query = st.session_state.search_input
-        # Reset selections on new search
+        # Reset previous selections on a new search
         st.session_state.selected_year = None
         st.session_state.selected_date = None
+        st.session_state.pop("person_row", None)
+        st.session_state.pop("selected_row_found", None)
+        
         search_term = st.session_state.search_query.strip()
         if search_term:
+            # Check if the search term is numeric (for HN) or text (for Name)
             if search_term.isdigit():
+                # Perform an exact match search on the 'HN' column
                 results_df = df[df["HN"] == search_term].copy()
             else:
+                # Perform an exact match search on the 'ชื่อ-สกุล' column
                 results_df = df[df["ชื่อ-สกุล"] == search_term].copy()
             
             if results_df.empty:
                 st.error("❌ ไม่พบข้อมูล กรุณาตรวจสอบข้อมูลที่กรอกอีกครั้ง")
                 st.session_state.search_result = pd.DataFrame()
             else:
+                # Store successful search results in session state
                 st.session_state.search_result = results_df
         else:
+            # Clear results if the search term is empty
             st.session_state.search_result = pd.DataFrame()
 
-# --- Dropdown Population ---
+# --- Dropdown Population based on search results ---
 results_df = st.session_state.search_result
 if not results_df.empty:
+    # Get a sorted list of unique years for the found person
     available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
+    
     if not available_years:
         st.warning("ไม่พบข้อมูลปีที่ตรวจสำหรับบุคคลนี้")
     else:
-        # Set default year if not set or not in available years
+        # Set a default year if none is selected or the selected one is no longer valid
         if st.session_state.selected_year not in available_years:
             st.session_state.selected_year = available_years[0]
         
         year_idx = available_years.index(st.session_state.selected_year)
         
         with col2:
+            # Dropdown for selecting the year (พ.ศ.)
             selected_year = st.selectbox(
                 "ปี พ.ศ.", options=available_years, index=year_idx,
                 format_func=lambda y: f"พ.ศ. {y}", key="year_select",
@@ -927,18 +947,21 @@ if not results_df.empty:
             )
             st.session_state.selected_year = selected_year
 
-        # Filter by selected year to get dates
+        # Filter records for the selected year to find available check-up dates
         person_year_df = results_df[results_df["Year"] == selected_year].drop_duplicates(subset=["วันที่ตรวจ"]).sort_values(by="วันที่ตรวจ", ascending=False)
         exam_dates_options = person_year_df["วันที่ตรวจ"].tolist()
 
         if exam_dates_options:
-            # Set default date if not set or not in available dates
+            # This handles cases where a year might have multiple check-ups
+            # Set a default date if none is selected
             if st.session_state.selected_date not in exam_dates_options:
                 st.session_state.selected_date = exam_dates_options[0]
 
             date_idx = exam_dates_options.index(st.session_state.selected_date)
             
             with col3:
+                # Dropdown for selecting the specific check-up date
+                # This is disabled if there's only one check-up in that year
                 selected_date = st.selectbox(
                     "วันที่ตรวจ", options=exam_dates_options, index=date_idx,
                     key="date_select", label_visibility="collapsed",
@@ -946,21 +969,24 @@ if not results_df.empty:
                 )
                 st.session_state.selected_date = selected_date
 
-            # --- Final Row Selection ---
+            # --- Final Row Selection for display ---
             if st.session_state.selected_date:
                 final_row_df = person_year_df[person_year_df["วันที่ตรวจ"] == st.session_state.selected_date]
                 if not final_row_df.empty:
+                    # Store the final selected record to be displayed
                     st.session_state.person_row = final_row_df.iloc[0].to_dict()
                     st.session_state.selected_row_found = True
                 else:
                     st.session_state.pop("person_row", None)
                     st.session_state.pop("selected_row_found", None)
         else:
+            # Clear data if no dates are found for the selected year
             st.session_state.pop("person_row", None)
             st.session_state.pop("selected_row_found", None)
 
 
 # ==================== Display Health Report (Main Content) ====================
+# This section only runs if a specific record has been successfully found and selected
 if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
     person = st.session_state["person_row"]
     year_display = person.get("Year", "-")
