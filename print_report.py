@@ -2,6 +2,7 @@ import pandas as pd
 from datetime import datetime
 import re
 import html
+from collections import OrderedDict
 
 # ==============================================================================
 # หมายเหตุ: ไฟล์นี้มีฟังก์ชันที่จำเป็นสำหรับการสร้างรายงานในรูปแบบ HTML
@@ -140,6 +141,59 @@ def merge_final_advice_grouped(messages):
 
 # --- HTML Rendering Functions ---
 
+def render_section_header(title, subtitle=None):
+    if subtitle:
+        full_title = f"{title} <span style='font-weight: normal;'>({subtitle})</span>"
+    else:
+        full_title = title
+
+    return f"""
+    <div style='
+        background-color: #f0f2f6;
+        color: #333;
+        text-align: center;
+        padding: 0.4rem 0.5rem;
+        font-weight: bold;
+        border-radius: 8px;
+        margin-top: 1.5rem;
+        margin-bottom: 0.5rem;
+        font-size: 14px;
+        border: 1px solid #ddd;
+    '>
+        {full_title}
+    </div>
+    """
+
+def render_lab_table_html(title, subtitle, headers, rows, table_class="print-lab-table"):
+    header_html = render_section_header(title, subtitle)
+    
+    html_content = f"{header_html}<table class='{table_class}'>"
+    html_content += """
+        <colgroup>
+            <col style="width: 40%;">
+            <col style="width: 20%;">
+            <col style="width: 40%;">
+        </colgroup>
+    """
+    html_content += "<thead><tr>"
+    for i, h in enumerate(headers):
+        align = "left" if i == 0 or i == 2 else "center"
+        html_content += f"<th style='text-align: {align};'>{h}</th>"
+    html_content += "</tr></thead><tbody>"
+    
+    for row in rows:
+        is_abn = any(flag for _, flag in row)
+        row_class = f"{table_class}-abn" if is_abn else ""
+        
+        html_content += f"<tr class='{row_class}'>"
+        html_content += f"<td style='text-align: left;'>{row[0][0]}</td>"
+        html_content += f"<td>{row[1][0]}</td>"
+        html_content += f"<td style='text-align: left;'>{row[2][0]}</td>"
+        html_content += f"</tr>"
+    html_content += "</tbody></table>"
+    return html_content
+
+
 def render_html_header(person):
     check_date = person.get("วันที่ตรวจ", "-")
     return f"""
@@ -274,10 +328,10 @@ def generate_printable_report(person):
     ]
     final_advice_html = merge_final_advice_grouped(advice_list)
     has_general_advice = "ไม่พบคำแนะนำเพิ่มเติม" not in final_advice_html
-    bg_color_advice = "rgba(255, 255, 0, 0.2)" if has_general_advice else "rgba(57, 255, 20, 0.2)"
+    bg_color_advice = "#fff8e1" if has_general_advice else "#e8f5e9"
     
     advice_box_html = f"""
-    <div style="background-color: {bg_color_advice}; padding: 0.6rem 2.5rem; border-radius: 10px; line-height: 1.6; font-size: 14px; margin-top: 1rem;">
+    <div style="background-color: {bg_color_advice}; padding: 0.6rem 2.5rem; border-radius: 10px; line-height: 1.6; font-size: 14px; margin-top: 1rem; border: 1px solid #ddd;">
         {final_advice_html}
     </div>
     """
@@ -288,7 +342,7 @@ def generate_printable_report(person):
         doctor_suggestion = "<i>ไม่มีคำแนะนำจากแพทย์</i>"
     
     doctor_suggestion_html = f"""
-    <div style="background-color: #1b5e20; color: white; padding: 0.4rem 2rem; border-radius: 8px; line-height: 1.6; margin-top: 2rem; font-size: 14px;">
+    <div style="background-color: #e8f5e9; color: #1b5e20; padding: 0.4rem 2rem; border-radius: 8px; line-height: 1.6; margin-top: 2rem; font-size: 14px; border: 1px solid #a5d6a7;">
         <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
     </div>
     """
@@ -317,18 +371,19 @@ def generate_printable_report(person):
                 font-family: 'Sarabun', sans-serif !important;
                 font-size: 12px;
                 margin: 20px;
+                color: #333;
             }}
             p {{ margin: 0.2rem 0; }}
             h1 {{ font-size: 1.6rem; margin: 0; }}
             h2 {{ font-size: 1rem; color: #555; font-weight: bold; margin: 0; }}
             table {{ border-collapse: collapse; width: 100%; }}
             .print-lab-table td, .print-lab-table th {{
-                padding: 2px 4px;
-                border: 1px solid #ddd;
+                padding: 3px 5px;
+                border: 1px solid #ccc;
                 text-align: center;
             }}
             .print-lab-table th {{ background-color: #f2f2f2; font-weight: bold; }}
-            .print-lab-table-abn {{ background-color: #ffdddd; }}
+            .print-lab-table-abn {{ background-color: #ffdddd !important; }}
             @media print {{
                 body {{ -webkit-print-color-adjust: exact; margin: 0; }}
             }}
