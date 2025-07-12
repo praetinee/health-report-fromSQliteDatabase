@@ -700,25 +700,34 @@ def generate_printable_report(person):
     lab_section_html = render_lab_section(person, sex)
     other_results_html = render_other_results_html(person, sex)
 
-    # --- Final Advice Box ---
-    advice_list = [
+    # --- Blood Advice Box ---
+    blood_advice_list = [
         kidney_advice_from_summary(kidney_summary_gfr_only(person.get("GFR", ""))),
         fbs_advice(person.get("FBS", "")),
         liver_advice(summarize_liver(person.get("ALP", ""), person.get("SGOT", ""), person.get("SGPT", ""))),
         uric_acid_advice(person.get("Uric Acid", "")),
         lipids_advice(summarize_lipids(person.get("CHOL", ""), person.get("TGL", ""), person.get("LDL", ""))),
         cbc_advice(person.get("Hb(%)", ""), person.get("HCT", ""), person.get("WBC (cumm)", ""), person.get("Plt (/mm)", ""), sex=sex),
-        advice_urine(sex, person.get("Alb", "-"), person.get("sugar", "-"), person.get("RBC1", "-"), person.get("WBC1", "-"))
     ]
-    final_advice_html = merge_final_advice_grouped(advice_list)
-    has_general_advice = "ไม่พบคำแนะนำเพิ่มเติม" not in final_advice_html
-    bg_color_advice = "#fff8e1" if has_general_advice else "#e8f5e9"
+    final_blood_advice_html = merge_final_advice_grouped(blood_advice_list)
+    has_blood_advice = "ไม่พบคำแนะนำเพิ่มเติม" not in final_blood_advice_html
+    bg_color_blood_advice = "#fff8e1" if has_blood_advice else "#e8f5e9"
     
-    advice_box_html = f"""
-    <div style="background-color: {bg_color_advice}; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; font-size: 11px; margin-top: 1rem; border: 1px solid #ddd;">
-        {final_advice_html}
+    blood_advice_box_html = f"""
+    <div style="background-color: {bg_color_blood_advice}; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; font-size: 11px; margin-top: 0.5rem; border: 1px solid #ddd;">
+        {final_blood_advice_html}
     </div>
     """
+
+    # --- Urine Advice Box ---
+    urine_summary = advice_urine(sex, person.get("Alb", "-"), person.get("sugar", "-"), person.get("RBC1", "-"), person.get("WBC1", "-"))
+    urine_advice_box_html = ""
+    if urine_summary:
+        urine_advice_box_html = f"""
+        <div style="background-color: #fff8e1; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; font-size: 11px; margin-top: 1rem; border: 1px solid #ddd;">
+            <b>คำแนะนำผลตรวจปัสสาวะ:</b> {urine_summary}
+        </div>
+        """
 
     # --- Doctor Suggestion ---
     doctor_suggestion = str(person.get("DOCTER suggest", "")).strip()
@@ -777,6 +786,7 @@ def generate_printable_report(person):
         {lab_section_html}
         {blood_advice_box_html}
         {other_results_html}
+        {urine_advice_box_html}
         {doctor_suggestion_html}
         {signature_html}
     </body>
