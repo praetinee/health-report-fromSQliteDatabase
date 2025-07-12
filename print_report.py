@@ -606,7 +606,7 @@ def render_lab_section(person, sex):
         </tr>
     </table>
     """
-
+    
 def render_other_results_html(person, sex):
     # Urinalysis
     urine_data = [
@@ -625,18 +625,9 @@ def render_other_results_html(person, sex):
         val = person.get(key, "-")
         is_abn = is_urine_abnormal(label, val, norm)
         urine_rows.append([(label, is_abn), (safe_value(val), is_abn), (norm, is_abn)])
+    
     urine_html = render_lab_table_html("ผลการตรวจปัสสาวะ", "Urinalysis", ["การตรวจ", "ผลตรวจ", "ค่าปกติ"], urine_rows, "print-lab-table")
-
-    # Urine Advice Box - SHOW IMMEDIATELY AFTER urine table, in left column
-    urine_summary = advice_urine(sex, person.get("Alb", "-"), person.get("sugar", "-"), person.get("RBC1", "-"), person.get("WBC1", "-"))
-    urine_advice_box_html = ""
-    if urine_summary:
-        urine_advice_box_html = f"""
-        <div style="background-color: #fff8e1; max-width:320px; margin-left:0; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; font-size: 11px; margin-top: 1rem; border: 1px solid #ddd;">
-            <b>คำแนะนำผลตรวจปัสสาวะ:</b> {urine_summary}
-        </div>
-        """
-
+    
     # Stool
     stool_exam_raw = person.get("Stool exam", "")
     stool_cs_raw = person.get("Stool C/S", "")
@@ -661,14 +652,14 @@ def render_other_results_html(person, sex):
         <tr><td style="text-align: left; width: 40%;"><b>ผลคลื่นไฟฟ้าหัวใจ (EKG)</b></td><td style="text-align: left;">{ekg_result}</td></tr>
     </table>
     """
-
+    
     # Hepatitis
     hep_a_raw = safe_text(person.get("Hepatitis A"))
     hbsag_raw = safe_text(person.get("HbsAg"))
     hbsab_raw = safe_text(person.get("HbsAb"))
     hbcab_raw = safe_text(person.get("HBcAB"))
     hep_b_advice = hepatitis_b_advice(hbsag_raw, hbsab_raw, hbcab_raw)
-
+    
     hepatitis_html = f"""
     {render_section_header("ผลตรวจไวรัสตับอักเสบ")}
     <table class="print-lab-table">
@@ -680,33 +671,21 @@ def render_other_results_html(person, sex):
     </table>
     """
 
-    # Doctor Suggestion - SHOW AFTER hepatitis, in right column
-    doctor_suggestion = str(person.get("DOCTER suggest", "")).strip()
-    if is_empty(doctor_suggestion):
-        doctor_suggestion = "<i>ไม่มีคำแนะนำจากแพทย์</i>"
-    doctor_suggestion_html = f"""
-    <div style="background-color: #e8f5e9; color: #1b5e20; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; margin-top: 1rem; font-size: 11px; border: 1px solid #a5d6a7;">
-        <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
-    </div>
-    """
-
-    # RE-ARRANGE layout
     return f"""
     <table style="width: 100%; border-collapse: collapse; page-break-inside: avoid;">
         <tr>
             <td style="width: 50%; vertical-align: top; padding-right: 5px;">
                 {urine_html}
-                {urine_advice_box_html}
                 {stool_html}
             </td>
             <td style="width: 50%; vertical-align: top; padding-left: 5px;">
                 {other_tests_html}
                 {hepatitis_html}
-                {doctor_suggestion_html}
             </td>
         </tr>
     </table>
     """
+
 
 def generate_printable_report(person):
     """
@@ -737,6 +716,27 @@ def generate_printable_report(person):
     blood_advice_box_html = f"""
     <div style="background-color: {bg_color_blood_advice}; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; font-size: 11px; margin-top: 0.5rem; border: 1px solid #ddd;">
         {final_blood_advice_html}
+    </div>
+    """
+
+    # --- Urine Advice Box ---
+    urine_summary = advice_urine(sex, person.get("Alb", "-"), person.get("sugar", "-"), person.get("RBC1", "-"), person.get("WBC1", "-"))
+    urine_advice_box_html = ""
+    if urine_summary:
+        urine_advice_box_html = f"""
+        <div style="background-color: #fff8e1; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; font-size: 11px; margin-top: 1rem; border: 1px solid #ddd;">
+            <b>คำแนะนำผลตรวจปัสสาวะ:</b> {urine_summary}
+        </div>
+        """
+
+    # --- Doctor Suggestion ---
+    doctor_suggestion = str(person.get("DOCTER suggest", "")).strip()
+    if is_empty(doctor_suggestion):
+        doctor_suggestion = "<i>ไม่มีคำแนะนำจากแพทย์</i>"
+    
+    doctor_suggestion_html = f"""
+    <div style="background-color: #e8f5e9; color: #1b5e20; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; margin-top: 1rem; font-size: 11px; border: 1px solid #a5d6a7;">
+        <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
     </div>
     """
 
@@ -786,6 +786,8 @@ def generate_printable_report(person):
         {lab_section_html}
         {blood_advice_box_html}
         {other_results_html}
+        {urine_advice_box_html}
+        {doctor_suggestion_html}
         {signature_html}
     </body>
     </html>
