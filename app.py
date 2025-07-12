@@ -774,7 +774,8 @@ def merge_final_advice_grouped(messages):
     if not output:
         return "ไม่พบคำแนะนำเพิ่มเติมจากผลตรวจ"
 
-    return "<div style='margin-bottom: 0.75rem;'>" + "</div><div style='margin-bottom: 0.75rem;'>".join(output) + "</div>"
+    # Join with <br> to create line breaks without extra bottom margin on the last item.
+    return "<br>".join(output)
 
 # --- Global Helper Functions: END ---
 
@@ -1180,9 +1181,9 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         st.markdown(f"""
         <div style="
             background-color: {background_color_general_advice};
-            padding: 0.4rem 2.5rem;
+            padding: 0.6rem 2.5rem 0.2rem;
             border-radius: 10px;
-            line-height: 1.5;
+            line-height: 1.6;
             color: var(--text-color);
             font-size: 14px;
         ">
