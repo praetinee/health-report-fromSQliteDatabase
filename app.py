@@ -531,6 +531,9 @@ def is_urine_abnormal(test_name, value, normal_range):
     return False
 
 def render_urine_section(person_data, sex, year_selected):
+    """
+    Renders the urinalysis table and returns the summary text for later display.
+    """
     alb_raw = person_data.get("Alb", "-")
     sugar_raw = person_data.get("sugar", "-")
     rbc_raw = person_data.get("RBC1", "-")
@@ -566,13 +569,13 @@ def render_urine_section(person_data, sex, year_selected):
         .urine-table thead th {
             background-color: var(--secondary-background-color);
             color: var(--text-color);
-            padding: 3px 2px; /* Adjusted padding to make columns closer */
+            padding: 3px 2px;
             text-align: center;
             font-weight: bold;
             border: 1px solid transparent;
         }
         .urine-table td {
-            padding: 3px 2px; /* Adjusted padding to make columns closer */
+            padding: 3px 2px;
             border: 1px solid transparent;
             text-align: center;
             color: var(--text-color);
@@ -609,37 +612,9 @@ def render_urine_section(person_data, sex, year_selected):
     st.markdown(html_content, unsafe_allow_html=True)
     
     summary = advice_urine(sex, alb_raw, sugar_raw, rbc_raw, wbc_raw)
-    
     has_any_urine_result = any(not is_empty(val) for _, val, _ in urine_data)
 
-    if not has_any_urine_result:
-        pass
-    elif summary:
-        st.markdown(f"""
-            <div style='
-                background-color: rgba(255, 255, 0, 0.2);
-                color: var(--text-color);
-                padding: 0.4rem;
-                border-radius: 6px;
-                margin-top: 1rem;
-                font-size: 14px;
-            '>
-                {summary}
-            </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.markdown(f"""
-            <div style='
-                background-color: rgba(57, 255, 20, 0.2);
-                color: var(--text-color);
-                padding: 0.4rem;
-                border-radius: 6px;
-                margin-top: 1rem;
-                font-size: 14px;
-            '>
-                ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ
-            </div>
-        """, unsafe_allow_html=True)
+    return summary, has_any_urine_result
 
 
 def interpret_stool_exam(val):
@@ -1201,107 +1176,70 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         </div>
         """, unsafe_allow_html=True)
 
-    # ==================== Urinalysis Section ====================
+    # ==================== Urinalysis and Other Sections ====================
     selected_year = st.session_state.get("selected_year_from_main", None)
     if selected_year is None:
         selected_year = datetime.now().year + 543
 
+    # This container holds the two-column layout for Urine, Stool, X-ray, etc.
     with st.container():
         left_spacer_ua, col_ua_left, col_ua_right, right_spacer_ua = st.columns([0.5, 3, 3, 0.5])
         
         with col_ua_left:
-            render_urine_section(person, sex, selected_year)
+            # Render the table but capture the summary text to be displayed later
+            urine_summary, has_urine_result = render_urine_section(person, sex, selected_year)
 
-            # ==================== Stool Section ====================
+            # Stool Section
             st.markdown(render_section_header("ผลตรวจอุจจาระ (Stool Examination)"), unsafe_allow_html=True)
-            
             stool_exam_raw = person.get("Stool exam", "")
             stool_cs_raw = person.get("Stool C/S", "")
-            
             exam_text = interpret_stool_exam(stool_exam_raw)
             cs_text = interpret_stool_cs(stool_cs_raw)
-            
             st.markdown(render_stool_html_table(exam_text, cs_text), unsafe_allow_html=True)
 
         with col_ua_right:
-            # ============ X-ray Section ============
+            # X-ray Section
             st.markdown(render_section_header("ผลเอกซเรย์ (Chest X-ray)"), unsafe_allow_html=True)
-            
             selected_year_int = int(selected_year)
             cxr_col = "CXR" if selected_year_int == (datetime.now().year + 543) else f"CXR{str(selected_year_int)[-2:]}"
             cxr_raw = person.get(cxr_col, "")
             cxr_result = interpret_cxr(cxr_raw)
-            
             st.markdown(f"""
-            <div style='
-                background-color: var(--background-color);
-                color: var(--text-color);
-                line-height: 1.6;
-                padding: 0.4rem;
-                border-radius: 6px;
-                margin-bottom: 1.5rem;
-                font-size: 14px;
-            '>
+            <div style='background-color: var(--background-color); color: var(--text-color); line-height: 1.6; padding: 0.4rem; border-radius: 6px; margin-bottom: 1.5rem; font-size: 14px;'>
                 {cxr_result}
             </div>
             """, unsafe_allow_html=True)
 
-            # ==================== EKG Section ====================
+            # EKG Section
             st.markdown(render_section_header("ผลคลื่นไฟฟ้าหัวใจ (EKG)"), unsafe_allow_html=True)
-
             ekg_col = get_ekg_col_name(selected_year_int)
             ekg_raw = person.get(ekg_col, "")
             ekg_result = interpret_ekg(ekg_raw)
-
             st.markdown(f"""
-            <div style='
-                background-color: var(--secondary-background-color);
-                color: var(--text-color);
-                line-height: 1.6;
-                padding: 0.4rem;
-                border-radius: 6px;
-                margin-bottom: 1.5rem;
-                font-size: 14px;
-            '>
+            <div style='background-color: var(--secondary-background-color); color: var(--text-color); line-height: 1.6; padding: 0.4rem; border-radius: 6px; margin-bottom: 1.5rem; font-size: 14px;'>
                 {ekg_result}
             </div>
             """, unsafe_allow_html=True)
 
-            # ==================== Section: Hepatitis A ====================
+            # Hepatitis A Section
             st.markdown(render_section_header("ผลการตรวจไวรัสตับอักเสบเอ (Viral hepatitis A)"), unsafe_allow_html=True)
-            
             hep_a_raw = safe_text(person.get("Hepatitis A"))
             st.markdown(f"""
-            <div style='
-                padding: 0.4rem;
-                border-radius: 6px;
-                margin-bottom: 1.5rem;
-                background-color: rgba(255,255,255,0.05);
-                font-size: 14px;
-            '>
+            <div style='padding: 0.4rem; border-radius: 6px; margin-bottom: 1.5rem; background-color: rgba(255,255,255,0.05); font-size: 14px;'>
                 {hep_a_raw}
             </div>
             """, unsafe_allow_html=True)
             
-            # ================ Section: Hepatitis B =================
+            # Hepatitis B Section
             hep_check_date_raw = person.get("ปีตรวจHEP")
             hep_check_date = normalize_thai_date(hep_check_date_raw)
-            
             st.markdown(render_section_header("ผลการตรวจไวรัสตับอักเสบบี (Viral hepatitis B)"), unsafe_allow_html=True)
-            
             hbsag_raw = safe_text(person.get("HbsAg"))
             hbsab_raw = safe_text(person.get("HbsAb"))
             hbcab_raw = safe_text(person.get("HBcAB"))
-            
             st.markdown(f"""
             <div style="margin-bottom: 1rem;">
-            <table style='
-                width: 100%;
-                text-align: center;
-                border-collapse: collapse;
-                min-width: 300px;
-                font-size: 14px;
-            '>
+            <table style='width: 100%; text-align: center; border-collapse: collapse; min-width: 300px; font-size: 14px;'>
                 <thead>
                     <tr>
                         <th style="padding: 8px; border: 1px solid transparent;">HBsAg</th>
@@ -1322,16 +1260,8 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             
             hep_history = safe_text(person.get("สรุปประวัติ Hepb"))
             hep_vaccine = safe_text(person.get("วัคซีนhep b 67"))
-
             st.markdown(f"""
-            <div style='
-                padding: 0.75rem 1rem;
-                background-color: rgba(255,255,255,0.05);
-                border-radius: 6px;
-                margin-bottom: 1.5rem;
-                line-height: 1.8;
-                font-size: 14px;
-            '>
+            <div style='padding: 0.75rem 1rem; background-color: rgba(255,255,255,0.05); border-radius: 6px; margin-bottom: 1.5rem; line-height: 1.8; font-size: 14px;'>
                 <b>วันที่ตรวจภูมิคุ้มกัน:</b> {hep_check_date}<br>
                 <b>ประวัติโรคไวรัสตับอักเสบบี ปี พ.ศ. {selected_year}:</b> {hep_history}<br>
                 <b>ประวัติการได้รับวัคซีนในปี พ.ศ. {selected_year}:</b> {hep_vaccine}
@@ -1339,29 +1269,43 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             """, unsafe_allow_html=True)
             
             advice = hepatitis_b_advice(hbsag_raw, hbsab_raw, hbcab_raw)
-            
             if advice.strip() == "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี":
                 bg_color = "rgba(57, 255, 20, 0.2)"
             else:
                 bg_color = "rgba(255, 255, 0, 0.2)"
-
             st.markdown(f"""
-            <div style='
-                line-height: 1.6;
-                padding: 0.4rem 1.5rem;
-                border-radius: 6px;
-                background-color: {bg_color};
-                color: var(--text-color);
-                margin-bottom: 1.5rem;
-                font-size: 14px;
-            '>
+            <div style='line-height: 1.6; padding: 0.4rem 1.5rem; border-radius: 6px; background-color: {bg_color}; color: var(--text-color); margin-bottom: 1.5rem; font-size: 14px;'>
                 {advice}
             </div>
             """, unsafe_allow_html=True)
-            
-#=========================== ความเห็นแพทย์ =======================
-if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
-    person = st.session_state["person_row"]
+
+    # Render the urinalysis summary in a new wide container to match the main advice box style
+    with st.container():
+        spacer_l_urine, main_col_urine, spacer_r_urine = st.columns([0.5, 6, 0.5])
+        with main_col_urine:
+            if has_urine_result:
+                if urine_summary:
+                    bg_color = "rgba(255, 255, 0, 0.2)"
+                    advice_text = f"<b>ผลตรวจปัสสาวะ:</b> {urine_summary}"
+                else:
+                    bg_color = "rgba(57, 255, 20, 0.2)"
+                    advice_text = "<b>ผลตรวจปัสสาวะ:</b> อยู่ในเกณฑ์ปกติ"
+
+                st.markdown(f"""
+                <div style="
+                    background-color: {bg_color};
+                    padding: 0.6rem 2.5rem;
+                    border-radius: 10px;
+                    line-height: 1.6;
+                    color: var(--text-color);
+                    font-size: 14px;
+                ">
+                    {advice_text}
+                </div>
+                """, unsafe_allow_html=True)
+
+
+    #=========================== Doctor's Suggestion =======================
     doctor_suggestion = str(person.get("DOCTER suggest", "")).strip()
     if doctor_suggestion.lower() in ["", "-", "none", "nan", "null"]:
         doctor_suggestion = "<i>ไม่มีคำแนะนำจากแพทย์</i>"
