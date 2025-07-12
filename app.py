@@ -126,20 +126,18 @@ def render_section_header(title, subtitle=None):
         full_title = title
 
     return f"""
-    <div style='text-align: center;'>
-        <div style='
-            display: inline-block;
-            background-color: #1b5e20;
-            color: white;
-            padding: 0.4rem 1.5rem;
-            font-weight: bold;
-            border-radius: 8px;
-            margin-top: 2rem;
-            margin-bottom: 1rem;
-            font-size: 16px;
-        '>
-            {full_title}
-        </div>
+    <div style='
+        background-color: #1b5e20;
+        color: white;
+        text-align: center;
+        padding: 0.8rem 0.5rem;
+        font-weight: bold;
+        border-radius: 8px;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        font-size: 16px;
+    '>
+        {full_title}
     </div>
     """
 
@@ -1367,21 +1365,17 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
 
     with doctor_col:
         st.markdown(f"""
-        <div style='text-align: center;'>
-            <div style='
-                display: inline-block;
-                background-color: #1b5e20;
-                color: white;
-                padding: 0.8rem 1.5rem;
-                border-radius: 8px;
-                line-height: 1.6;
-                margin-top: 2rem;
-                margin-bottom: 2rem;
-                font-size: 16px;
-                text-align: left;
-            '>
-                <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
-            </div>
+        <div style='
+            background-color: #1b5e20;
+            color: white;
+            padding: 1.5rem 2rem;
+            border-radius: 8px;
+            line-height: 1.6;
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+            font-size: 16px;
+        '>
+            <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
         </div>
 
         <div style='
