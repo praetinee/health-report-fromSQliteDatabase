@@ -455,7 +455,7 @@ def render_section_header(title, subtitle=None):
         border-radius: 6px;
         margin-top: 1rem;
         margin-bottom: 0.4rem;
-        font-size: 12px;
+        font-size: 11px;
         border: 1px solid #ddd;
     '>
         {full_title}
@@ -495,11 +495,11 @@ def render_lab_table_html(title, subtitle, headers, rows, table_class="print-lab
 def render_html_header(person):
     check_date = person.get("วันที่ตรวจ", "-")
     return f"""
-    <div class="report-header-container" style="text-align: center; margin-bottom: 1rem; margin-top: 0.5rem;">
-        <h1 style="font-size: 1.4rem;">รายงานผลการตรวจสุขภาพ</h1>
-        <h2 style="font-size: 0.9rem;">- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม -</h2>
-        <p style="font-size: 0.8rem;">ชั้น 2 อาคารผู้ป่วยนอก-อุบัติเหตุ โรงพยาบาลสันทราย 201 หมู่ 11 ถ.เชียงใหม่–พร้าว ต.หนองหาร อ.สันทราย จ.เชียงใหม่ 50290</p>
-        <p style="font-size: 0.8rem;">ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167 | <b>วันที่ตรวจ:</b> {check_date or "-"}</p>
+    <div class="report-header-container" style="text-align: center; margin-bottom: 0.5rem; margin-top: 0.5rem;">
+        <h1 style="font-size: 1.2rem; margin:0;">รายงานผลการตรวจสุขภาพ</h1>
+        <h2 style="font-size: 0.8rem; margin:0;">- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม -</h2>
+        <p style="font-size: 0.7rem; margin:0;">ชั้น 2 อาคารผู้ป่วยนอก-อุบัติเหตุ โรงพยาบาลสันทราย 201 หมู่ 11 ถ.เชียงใหม่–พร้าว ต.หนองหาร อ.สันทราย จ.เชียงใหม่ 50290</p>
+        <p style="font-size: 0.7rem; margin:0;">ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167 | <b>วันที่ตรวจ:</b> {check_date or "-"}</p>
     </div>
     """
 
@@ -533,21 +533,21 @@ def render_personal_info(person):
     return f"""
     <div class="personal-info-container">
         <hr style="margin-top: 0.5rem; margin-bottom: 0.5rem;">
-        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin-bottom: 0.2rem; text-align: left;">
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-bottom: 0.2rem; text-align: left;">
             <span><b>ชื่อ-สกุล:</b> {person.get('ชื่อ-สกุล', '-')}</span>
             <span><b>อายุ:</b> {str(int(float(person.get('อายุ')))) if str(person.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')} ปี</span>
             <span><b>เพศ:</b> {person.get('เพศ', '-')}</span>
             <span><b>HN:</b> {str(int(float(person.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person.get('HN', '-')}</span>
             <span><b>หน่วยงาน:</b> {person.get('หน่วยงาน', '-')}</span>
         </div>
-        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin-bottom: 0.5rem; text-align: left;">
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-bottom: 0.5rem; text-align: left;">
             <span><b>น้ำหนัก:</b> {person.get("น้ำหนัก", "-")} กก.</span>
             <span><b>ส่วนสูง:</b> {person.get("ส่วนสูง", "-")} ซม.</span>
             <span><b>รอบเอว:</b> {person.get("รอบเอว", "-")} ซม.</span>
             <span><b>ความดันโลหิต:</b> {bp_full}</span>
             <span><b>ชีพจร:</b> {person.get("pulse", "-")} ครั้ง/นาที</span>
         </div>
-        {f"<div style='margin-top: 0.5rem; text-align: center; border: 1px solid #ddd; padding: 5px; border-radius: 5px; background-color: #f8f9fa;'><b>คำแนะนำทั่วไป:</b> {summary_advice}</div>" if summary_advice else ""}
+        {f"<div style='margin-top: 0.5rem; text-align: center; border: 1px solid #ddd; padding: 3px; border-radius: 5px; background-color: #f8f9fa;'><b>คำแนะนำทั่วไป:</b> {summary_advice}</div>" if summary_advice else ""}
     </div>
     """
 
@@ -627,22 +627,7 @@ def render_other_results_html(person, sex):
         urine_rows.append([(label, is_abn), (safe_value(val), is_abn), (norm, is_abn)])
     
     urine_html = render_lab_table_html("ผลการตรวจปัสสาวะ", "Urinalysis", ["การตรวจ", "ผลตรวจ", "ค่าปกติ"], urine_rows, "print-lab-table")
-    urine_summary = advice_urine(sex, person.get("Alb", "-"), person.get("sugar", "-"), person.get("RBC1", "-"), person.get("WBC1", "-"))
-    urine_advice_html = ""
-    if any(not is_empty(person.get(key)) for label, key, norm in urine_data if key != "-"):
-        if urine_summary:
-            bg_color = "#fff8e1"
-            advice_text = f"<b>คำแนะนำ:</b> {urine_summary}"
-        else:
-            bg_color = "#e8f5e9"
-            advice_text = "<b>คำแนะนำ:</b> ผลตรวจปัสสาวะอยู่ในเกณฑ์ปกติ"
-        
-        urine_advice_html = f"""
-        <div style="background-color: {bg_color}; padding: 0.4rem 1rem; border-radius: 8px; line-height: 1.5; font-size: 11px; margin-top: 0.5rem; border: 1px solid #ddd;">
-            {advice_text}
-        </div>
-        """
-
+    
     # Stool
     stool_exam_raw = person.get("Stool exam", "")
     stool_cs_raw = person.get("Stool C/S", "")
@@ -691,7 +676,6 @@ def render_other_results_html(person, sex):
         <tr>
             <td style="width: 50%; vertical-align: top; padding-right: 5px;">
                 {urine_html}
-                {urine_advice_html}
                 {stool_html}
             </td>
             <td style="width: 50%; vertical-align: top; padding-left: 5px;">
@@ -714,10 +698,9 @@ def generate_printable_report(person):
     header_html = render_html_header(person)
     personal_info_html = render_personal_info(person)
     lab_section_html = render_lab_section(person, sex)
-    other_results_html = render_other_results_html(person, sex)
-
-    # --- Final Advice Box ---
-    advice_list = [
+    
+    # --- Blood Advice Box ---
+    blood_advice_list = [
         kidney_advice_from_summary(kidney_summary_gfr_only(person.get("GFR", ""))),
         fbs_advice(person.get("FBS", "")),
         liver_advice(summarize_liver(person.get("ALP", ""), person.get("SGOT", ""), person.get("SGPT", ""))),
@@ -725,15 +708,17 @@ def generate_printable_report(person):
         lipids_advice(summarize_lipids(person.get("CHOL", ""), person.get("TGL", ""), person.get("LDL", ""))),
         cbc_advice(person.get("Hb(%)", ""), person.get("HCT", ""), person.get("WBC (cumm)", ""), person.get("Plt (/mm)", ""), sex=sex),
     ]
-    final_advice_html = merge_final_advice_grouped(advice_list)
-    has_general_advice = "ไม่พบคำแนะนำเพิ่มเติม" not in final_advice_html
-    bg_color_advice = "#fff8e1" if has_general_advice else "#e8f5e9"
+    final_blood_advice_html = merge_final_advice_grouped(blood_advice_list)
+    has_blood_advice = "ไม่พบคำแนะนำเพิ่มเติม" not in final_blood_advice_html
+    bg_color_blood_advice = "#fff8e1" if has_blood_advice else "#e8f5e9"
     
-    advice_box_html = f"""
-    <div style="background-color: {bg_color_advice}; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; font-size: 11px; margin-top: 1rem; border: 1px solid #ddd;">
-        {final_advice_html}
+    blood_advice_box_html = f"""
+    <div style="background-color: {bg_color_blood_advice}; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; font-size: 11px; margin-top: 0.5rem; border: 1px solid #ddd;">
+        {final_blood_advice_html}
     </div>
     """
+
+    other_results_html = render_other_results_html(person, sex)
 
     # --- Doctor Suggestion ---
     doctor_suggestion = str(person.get("DOCTER suggest", "")).strip()
@@ -790,7 +775,7 @@ def generate_printable_report(person):
         {header_html}
         {personal_info_html}
         {lab_section_html}
-        {advice_box_html}
+        {blood_advice_box_html}
         {other_results_html}
         {doctor_suggestion_html}
         {signature_html}
