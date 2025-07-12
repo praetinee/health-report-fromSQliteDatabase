@@ -606,9 +606,8 @@ def render_lab_section(person, sex):
         </tr>
     </table>
     """
-    
+
 def render_other_results_html(person, sex):
-    # Urinalysis
     urine_data = [
         ("สี (Colour)", "Color", "Yellow, Pale Yellow"),
         ("น้ำตาล (Sugar)", "sugar", "Negative"),
@@ -625,9 +624,18 @@ def render_other_results_html(person, sex):
         val = person.get(key, "-")
         is_abn = is_urine_abnormal(label, val, norm)
         urine_rows.append([(label, is_abn), (safe_value(val), is_abn), (norm, is_abn)])
-    
+
     urine_html = render_lab_table_html("ผลการตรวจปัสสาวะ", "Urinalysis", ["การตรวจ", "ผลตรวจ", "ค่าปกติ"], urine_rows, "print-lab-table")
-    
+    # *** Urine Advice: show immediately after urine table ***
+    urine_summary = advice_urine(sex, person.get("Alb", "-"), person.get("sugar", "-"), person.get("RBC1", "-"), person.get("WBC1", "-"))
+    urine_advice_box_html = ""
+    if urine_summary:
+        urine_advice_box_html = f"""
+        <div style="background-color: #fff8e1; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; font-size: 11px; margin-top: 0.7rem; border: 1px solid #ddd; max-width:330px;">
+            <b>คำแนะนำผลตรวจปัสสาวะ:</b> {urine_summary}
+        </div>
+        """
+
     # Stool
     stool_exam_raw = person.get("Stool exam", "")
     stool_cs_raw = person.get("Stool C/S", "")
@@ -652,14 +660,14 @@ def render_other_results_html(person, sex):
         <tr><td style="text-align: left; width: 40%;"><b>ผลคลื่นไฟฟ้าหัวใจ (EKG)</b></td><td style="text-align: left;">{ekg_result}</td></tr>
     </table>
     """
-    
+
     # Hepatitis
     hep_a_raw = safe_text(person.get("Hepatitis A"))
     hbsag_raw = safe_text(person.get("HbsAg"))
     hbsab_raw = safe_text(person.get("HbsAb"))
     hbcab_raw = safe_text(person.get("HBcAB"))
     hep_b_advice = hepatitis_b_advice(hbsag_raw, hbsab_raw, hbcab_raw)
-    
+
     hepatitis_html = f"""
     {render_section_header("ผลตรวจไวรัสตับอักเสบ")}
     <table class="print-lab-table">
@@ -670,37 +678,48 @@ def render_other_results_html(person, sex):
         <tr><td colspan="2" style="text-align: left; background-color: #f8f9fa;"><b>คำแนะนำ:</b> {hep_b_advice}</td></tr>
     </table>
     """
+    # *** Doctor Suggestion + Signature: show immediately after hepatitis in right column ***
+    doctor_suggestion = str(person.get("DOCTER suggest", "")).strip()
+    if is_empty(doctor_suggestion):
+        doctor_suggestion = "<i>ไม่มีคำแนะนำจากแพทย์</i>"
+    doctor_and_signature_html = f"""
+    <div style="background-color: #e8f5e9; color: #1b5e20; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; margin-top: 1rem; font-size: 11px; border: 1px solid #a5d6a7; max-width:370px;">
+        <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
+        <div style="margin-top: 1.6rem; text-align: right; padding-right: 1rem; page-break-inside: avoid;">
+            <div style="display: inline-block; text-align: center; width: 230px;">
+                <div style="border-bottom: 1px dotted #333; margin-bottom: 0.4rem; width: 100%;"></div>
+                <div style="white-space: nowrap;">นายแพทย์นพรัตน์ รัชฎาพร</div>
+                <div style="white-space: nowrap;">เลขที่ใบอนุญาตผู้ประกอบวิชาชีพเวชกรรม ว.26674</div>
+            </div>
+        </div>
+    </div>
+    """
 
     return f"""
     <table style="width: 100%; border-collapse: collapse; page-break-inside: avoid;">
         <tr>
             <td style="width: 50%; vertical-align: top; padding-right: 5px;">
                 {urine_html}
+                {urine_advice_box_html}
                 {stool_html}
             </td>
             <td style="width: 50%; vertical-align: top; padding-left: 5px;">
                 {other_tests_html}
                 {hepatitis_html}
+                {doctor_and_signature_html}
             </td>
         </tr>
     </table>
     """
 
-
 def generate_printable_report(person):
-    """
-    Generates a full, self-contained HTML string for the health report.
-    """
     sex = str(person.get("เพศ", "")).strip()
     if sex not in ["ชาย", "หญิง"]: sex = "ไม่ระบุ"
-    
-    # --- Generate all HTML parts ---
+
     header_html = render_html_header(person)
     personal_info_html = render_personal_info(person)
     lab_section_html = render_lab_section(person, sex)
-    other_results_html = render_other_results_html(person, sex)
-
-    # --- Blood Advice Box ---
+    # Blood advice: ปกติ (แสดงหลัง blood section)
     blood_advice_list = [
         kidney_advice_from_summary(kidney_summary_gfr_only(person.get("GFR", ""))),
         fbs_advice(person.get("FBS", "")),
@@ -712,46 +731,14 @@ def generate_printable_report(person):
     final_blood_advice_html = merge_final_advice_grouped(blood_advice_list)
     has_blood_advice = "ไม่พบคำแนะนำเพิ่มเติม" not in final_blood_advice_html
     bg_color_blood_advice = "#fff8e1" if has_blood_advice else "#e8f5e9"
-    
     blood_advice_box_html = f"""
     <div style="background-color: {bg_color_blood_advice}; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; font-size: 11px; margin-top: 0.5rem; border: 1px solid #ddd;">
         {final_blood_advice_html}
     </div>
     """
+    # Other + urine/stool/hepatitis/doctor
+    other_results_html = render_other_results_html(person, sex)
 
-    # --- Urine Advice Box ---
-    urine_summary = advice_urine(sex, person.get("Alb", "-"), person.get("sugar", "-"), person.get("RBC1", "-"), person.get("WBC1", "-"))
-    urine_advice_box_html = ""
-    if urine_summary:
-        urine_advice_box_html = f"""
-        <div style="background-color: #fff8e1; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; font-size: 11px; margin-top: 1rem; border: 1px solid #ddd;">
-            <b>คำแนะนำผลตรวจปัสสาวะ:</b> {urine_summary}
-        </div>
-        """
-
-    # --- Doctor Suggestion ---
-    doctor_suggestion = str(person.get("DOCTER suggest", "")).strip()
-    if is_empty(doctor_suggestion):
-        doctor_suggestion = "<i>ไม่มีคำแนะนำจากแพทย์</i>"
-    
-    doctor_suggestion_html = f"""
-    <div style="background-color: #e8f5e9; color: #1b5e20; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; margin-top: 1rem; font-size: 11px; border: 1px solid #a5d6a7;">
-        <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
-    </div>
-    """
-
-    # --- Signature ---
-    signature_html = """
-    <div style="margin-top: 2rem; text-align: right; padding-right: 1rem; page-break-inside: avoid;">
-        <div style="display: inline-block; text-align: center; width: 280px;">
-            <div style="border-bottom: 1px dotted #333; margin-bottom: 0.4rem; width: 100%;"></div>
-            <div style="white-space: nowrap;">นายแพทย์นพรัตน์ รัชฎาพร</div>
-            <div style="white-space: nowrap;">เลขที่ใบอนุญาตผู้ประกอบวิชาชีพเวชกรรม ว.26674</div>
-        </div>
-    </div>
-    """
-
-    # --- Assemble the final HTML page ---
     final_html = f"""
     <!DOCTYPE html>
     <html lang="th">
@@ -786,9 +773,6 @@ def generate_printable_report(person):
         {lab_section_html}
         {blood_advice_box_html}
         {other_results_html}
-        {urine_advice_box_html}
-        {doctor_suggestion_html}
-        {signature_html}
     </body>
     </html>
     """
