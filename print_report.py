@@ -875,7 +875,7 @@ if 'selected_date' not in st.session_state:
 
 # ==================== Menu Bar for Search and Selection ====================
 st.subheader("ค้นหาและเลือกผลตรวจ")
-menu_cols = st.columns([2, 1, 1.5, 1.5, 1.5, 1.5])
+menu_cols = st.columns([3, 1, 2, 2, 2])
 
 with menu_cols[0]:
     # Text input for HN or Full Name
@@ -951,7 +951,7 @@ if not results_df.empty:
                 st.session_state.pop("person_row", None)
                 st.session_state.pop("selected_row_found", None)
 
-# --- Add Print and Download Buttons to Menu Bar ---
+# --- Add Print Button to Menu Bar ---
 if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
     person_for_print = st.session_state["person_row"]
     report_html = print_report.generate_printable_report(person_for_print)
@@ -982,15 +982,6 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
 
     with menu_cols[4]:
         st.markdown(print_button_html, unsafe_allow_html=True)
-
-    with menu_cols[5]:
-        st.download_button(
-            label="📄 ดาวน์โหลด HTML",
-            data=report_html,
-            file_name=f"Health_Report_{person_for_print.get('HN', 'NA')}_{person_for_print.get('Year', 'NA')}.html",
-            mime="text/html",
-            use_container_width=True
-        )
 
 
 st.markdown("<hr>", unsafe_allow_html=True)
