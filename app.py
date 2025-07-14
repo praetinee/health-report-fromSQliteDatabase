@@ -469,7 +469,7 @@ def advice_urine(sex, alb, sugar, rbc, wbc):
     wbc_t = interpret_wbc(wbc)
     
     if all(x in ["-", "ปกติ", "ไม่พบ", "พบโปรตีนในปัสสาวะเล็กน้อย", "พบน้ำตาลในปัสสาวะเล็กน้อย"]
-                    for x in [alb_t, sugar_t, rbc_t, wbc_t]):
+           for x in [alb_t, sugar_t, rbc_t, wbc_t]):
         return ""
     
     if "พบน้ำตาลในปัสสาวะ" in sugar_t and "เล็กน้อย" not in sugar_t:
@@ -777,25 +777,47 @@ df = load_sqlite_data()
 # ==================== UI Setup and Search Form (Main Area) ====================
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
-# Inject custom CSS for font, size control, and hiding the sidebar collapse button
+# Inject custom CSS for font and size control
 st.markdown("""
     <style>
     /* โหลดฟอนต์ Sarabun และ Material Icons */
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
-    
+    @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+
     /* ใช้ Sarabun กับข้อความทั่วไป */
-    body, div, span, p, td, th, li, ul, ol, table, h1, h2, h3, h4, h5, h6 {
+    html, body, div, span, p, td, th, li, ul, ol, table, h1, h2, h3, h4, h5, h6, label, button, input, select, option, .stButton>button, .stTextInput>div>div>input, .stSelectbox>div>div>div {
         font-family: 'Sarabun', sans-serif !important;
     }
 
-    /* --- ✨ โค้ดที่เพิ่มเข้ามาเพื่อซ่อนปุ่ม --- */
-    /* ซ่อนปุ่มย่อ-ขยาย sidebar */
+    /* ยกเว้นเฉพาะ icon: อย่าเปลี่ยนฟอนต์ของไอคอน */
+    i.material-icons, .material-icons {
+        font-family: 'Material Icons' !important;
+        font-style: normal !important;
+        font-weight: normal !important;
+        letter-spacing: normal !important;
+        text-transform: none !important;
+        display: inline-block;
+        white-space: nowrap;
+        direction: ltr;
+        -webkit-font-feature-settings: 'liga';
+        -webkit-font-smoothing: antialiased;
+    }
+    
+    /* ซ่อนแถบ sidebar ที่อาจจะยังคงอยู่ */
+    div[data-testid="stSidebarNav"] {
+        display: none;
+    }
     button[data-testid="stSidebarNavCollapseButton"] {
         display: none;
     }
+    
+    /* จัดการกับปุ่ม download */
+    .stDownloadButton button {
+        width: 100%;
+    }
+
     </style>
 """, unsafe_allow_html=True)
-
 
 # --- Callback Functions for State Management ---
 def perform_search():
@@ -850,27 +872,31 @@ if 'selected_year' not in st.session_state:
 if 'selected_date' not in st.session_state:
     st.session_state.selected_date = None
 
-# ==================== Sidebar for Search and Selection ====================
-st.sidebar.header("ค้นหาและเลือกผลตรวจ")
+# ==================== Menu Bar for Search and Selection ====================
+st.subheader("ค้นหาและเลือกผลตรวจ")
+menu_cols = st.columns([3, 1, 2, 2, 2])
 
-# Text input for HN or Full Name
-st.sidebar.text_input(
-    "กรอก HN หรือ ชื่อ-สกุล",
-    key="search_input",
-    on_change=perform_search,
-    placeholder="HN หรือ ชื่อ-สกุล"
-)
+with menu_cols[0]:
+    # Text input for HN or Full Name
+    st.text_input(
+        "กรอก HN หรือ ชื่อ-สกุล",
+        key="search_input",
+        on_change=perform_search,
+        placeholder="HN หรือ ชื่อ-สกุล",
+        label_visibility="collapsed"
+    )
 
-# Search button
-st.sidebar.button("ค้นหา", use_container_width=True, on_click=perform_search)
+with menu_cols[1]:
+    # Search button
+    st.button("ค้นหา", use_container_width=True, on_click=perform_search)
 
-# --- Dropdown Population in Sidebar ---
+# --- Dropdown Population in Menu Bar ---
 results_df = st.session_state.search_result
 if not results_df.empty:
     available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
     
     if not available_years:
-        st.sidebar.warning("ไม่พบข้อมูลปีที่ตรวจสำหรับบุคคลนี้")
+        st.warning("ไม่พบข้อมูลปีที่ตรวจสำหรับบุคคลนี้")
     else:
         # Determine the selected year for the dropdown
         if st.session_state.selected_year not in available_years:
@@ -878,65 +904,72 @@ if not results_df.empty:
         
         year_idx = available_years.index(st.session_state.selected_year)
 
-        # Year selection dropdown
-        st.sidebar.selectbox(
-            "ปี พ.ศ.", options=available_years, index=year_idx,
-            format_func=lambda y: f"พ.ศ. {y}", 
-            key="year_select",
-            on_change=handle_year_change
-        )
+        with menu_cols[2]:
+            # Year selection dropdown
+            st.selectbox(
+                "ปี พ.ศ.", options=available_years, index=year_idx,
+                format_func=lambda y: f"พ.ศ. {y}", 
+                key="year_select",
+                on_change=handle_year_change,
+                label_visibility="collapsed"
+            )
 
         # Filter by selected year to get dates
         person_year_df = results_df[results_df["Year"] == st.session_state.selected_year]
         person_year_df_for_options = person_year_df.drop_duplicates(subset=["วันที่ตรวจ"]).sort_values(by="วันที่ตรวจ", ascending=False)
         exam_dates_options = person_year_df_for_options["วันที่ตรวจ"].dropna().tolist()
 
-        if exam_dates_options:
-            # Determine the selected date for the dropdown
-            if st.session_state.selected_date not in exam_dates_options:
-                st.session_state.selected_date = exam_dates_options[0]
+        with menu_cols[3]:
+            if exam_dates_options:
+                # Determine the selected date for the dropdown
+                if st.session_state.selected_date not in exam_dates_options:
+                    st.session_state.selected_date = exam_dates_options[0]
 
-            date_idx = exam_dates_options.index(st.session_state.selected_date)
-            
-            # Date selection dropdown
-            selected_date = st.sidebar.selectbox(
-                "วันที่ตรวจ", options=exam_dates_options, index=date_idx,
-                key="date_select",
-                disabled=(len(exam_dates_options) <= 1)
-            )
-            st.session_state.selected_date = selected_date
-            
-            # --- Final Row Selection ---
-            if st.session_state.selected_date:
-                final_row_df = person_year_df[person_year_df["วันที่ตรวจ"] == st.session_state.selected_date]
-                if not final_row_df.empty:
-                    st.session_state.person_row = final_row_df.iloc[0].to_dict()
-                    st.session_state.selected_row_found = True
-                else:
-                    st.session_state.pop("person_row", None)
-                    st.session_state.pop("selected_row_found", None)
-        else:
-            st.sidebar.warning(f"ไม่พบข้อมูลวันที่ตรวจสำหรับปี พ.ศ. {st.session_state.selected_year}")
-            st.session_state.pop("person_row", None)
-            st.session_state.pop("selected_row_found", None)
+                date_idx = exam_dates_options.index(st.session_state.selected_date)
+                
+                # Date selection dropdown
+                selected_date = st.selectbox(
+                    "วันที่ตรวจ", options=exam_dates_options, index=date_idx,
+                    key="date_select",
+                    disabled=(len(exam_dates_options) <= 1),
+                    label_visibility="collapsed"
+                )
+                st.session_state.selected_date = selected_date
+                
+                # --- Final Row Selection ---
+                if st.session_state.selected_date:
+                    final_row_df = person_year_df[person_year_df["วันที่ตรวจ"] == st.session_state.selected_date]
+                    if not final_row_df.empty:
+                        st.session_state.person_row = final_row_df.iloc[0].to_dict()
+                        st.session_state.selected_row_found = True
+                    else:
+                        st.session_state.pop("person_row", None)
+                        st.session_state.pop("selected_row_found", None)
+            else:
+                st.warning(f"ไม่พบวันที่ตรวจสำหรับปี {st.session_state.selected_year}")
+                st.session_state.pop("person_row", None)
+                st.session_state.pop("selected_row_found", None)
 
+# --- Add Print Button to Menu Bar ---
+if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
+    with menu_cols[4]:
+        person_for_print = st.session_state["person_row"]
+        report_html = print_report.generate_printable_report(person_for_print)
+        st.download_button(
+            label="📄 พิมพ์รายงาน",
+            data=report_html,
+            file_name=f"Health_Report_{person_for_print.get('HN', 'NA')}_{person_for_print.get('Year', 'NA')}.html",
+            mime="text/html",
+            use_container_width=True
+        )
+
+st.markdown("<hr>", unsafe_allow_html=True)
 
 # ==================== Display Health Report (Main Content) ====================
 # This section only runs if a specific record has been successfully found and selected
 if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
     person = st.session_state["person_row"]
     year_display = person.get("Year", "-")
-
-    # --- Add Print Button to Sidebar (below search controls) ---
-    st.sidebar.divider()
-    st.sidebar.header("ตัวเลือกรายงาน")
-    report_html = print_report.generate_printable_report(person)
-    st.sidebar.download_button(
-        label="📄 พิมพ์รายงาน",
-        data=report_html,
-        file_name=f"Health_Report_{person.get('HN', 'NA')}_{person.get('Year', 'NA')}.html",
-        mime="text/html",
-    )
 
     sbp = person.get("SBP", "")
     dbp = person.get("DBP", "")
@@ -1355,4 +1388,4 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         """, unsafe_allow_html=True)
 
 else:
-    st.info("กรุณาค้นหาและเลือกผลตรวจจากแถบด้านข้างเพื่อแสดงรายงาน")
+    st.info("กรุณาค้นหาและเลือกผลตรวจจากแถบเมนูด้านบนเพื่อแสดงรายงาน")
