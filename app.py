@@ -1410,6 +1410,3 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             </div>
         </div>
         """, unsafe_allow_html=True)
-
-else:
-    st.info("กรุณาค้นหาและเลือกผลตรวจจากแถบด้านข้างเพื่อแสดงรายงา
