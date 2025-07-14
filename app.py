@@ -804,6 +804,13 @@ st.markdown("""
         display: inline-block !important;
         vertical-align: middle;
         color: var(--text-color);
+
+    /* FIX: รีเซ็ตฟอนต์เฉพาะปุ่มย่อ/ขยาย sidebar ของ Streamlit */
+    [data-testid="stSidebarCollapseControl"] {
+        all: unset;
+        cursor: pointer;
+        padding: 0.25rem;
+        border-radius: 4px;
     }
 </style>
 """, unsafe_allow_html=True)
