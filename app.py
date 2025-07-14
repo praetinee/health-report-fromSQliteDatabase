@@ -789,12 +789,24 @@ st.markdown("""
         font-family: 'Sarabun', sans-serif !important;
     }
     
-    /* * กำหนด CSS เฉพาะสำหรับไอคอนปุ่มย่อ-ขยาย Sidebar
-     * เพื่อแก้ปัญหาที่การกำหนด font-family ของ Sarabun ไปทับการแสดงผลของไอคอน
-     * โดยใช้ selector ที่มีความจำเพาะสูง (high specificity) เพื่อให้แน่ใจว่าจะถูกนำไปใช้
+    /* * กำหนด CSS สำหรับปุ่มย่อ-ขยาย Sidebar โดยเฉพาะ
+     * ใช้กฎ CSS ที่สมบูรณ์ของ Material Icons และ '!important' ทุก property
+     * เพื่อให้แน่ใจว่าจะสามารถ override สไตล์ของ Sarabun ได้
      */
-    section[data-testid="stSidebar"] button[data-testid="stSidebarNavCollapseButton"] * {
+    button[data-testid="stSidebarNavCollapseButton"] * {
         font-family: 'Material Icons' !important;
+        font-weight: normal !important;
+        font-style: normal !important;
+        font-size: 24px !important; /* อาจต้องปรับค่า */
+        line-height: 1 !important;
+        letter-spacing: normal !important;
+        text-transform: none !important;
+        display: inline-block !important;
+        white-space: nowrap !important;
+        word-wrap: normal !important;
+        direction: ltr !important;
+        -webkit-font-feature-settings: 'liga' !important;
+        -webkit-font-smoothing: antialiased !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -1358,4 +1370,4 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
 
 else:
     # --- จุดที่แก้ไข ---
-    st.info("กรุณาค้นหาจากแถบด้านข้างเพื่อแสดงรายงาน")
+    st.info("กรุณาค้นหาและเลือกผลตรวจจากแถบด้านข้างเพื่อแสดงรายงา
