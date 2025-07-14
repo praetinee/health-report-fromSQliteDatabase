@@ -8,6 +8,7 @@ from collections import OrderedDict
 # หมายเหตุ: ไฟล์นี้มีฟังก์ชันที่จำเป็นสำหรับการสร้างรายงานในรูปแบบ HTML
 # ฟังก์ชันส่วนใหญ่ถูกคัดลอกมาจาก app.py และปรับเปลี่ยนเพื่อสร้างผลลัพธ์เป็นสตริง HTML
 # แทนการแสดงผลบน Streamlit โดยตรง
+# เพิ่มเติม: เพิ่มปุ่มสำหรับสั่งพิมพ์โดยตรงจากเบราว์เซอร์
 # ==============================================================================
 
 
@@ -333,7 +334,7 @@ def advice_urine(sex, alb, sugar, rbc, wbc):
     wbc_t = interpret_wbc(wbc)
     
     if all(x in ["-", "ปกติ", "ไม่พบ", "พบโปรตีนในปัสสาวะเล็กน้อย", "พบน้ำตาลในปัสสาวะเล็กน้อย"]
-                     for x in [alb_t, sugar_t, rbc_t, wbc_t]):
+                   for x in [alb_t, sugar_t, rbc_t, wbc_t]):
         return ""
     
     if "พบน้ำตาลในปัสสาวะ" in sugar_t and "เล็กน้อย" not in sugar_t:
@@ -775,6 +776,15 @@ def generate_printable_report(person):
                 font-size: 9px;
                 margin: 10mm;
                 color: #333;
+                background-color: #fff; /* Added for better contrast */
+            }}
+            .report-container {{
+                max-width: 800px;
+                margin: auto;
+                background: white;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 0 10px rgba(0,0,0,0.1);
             }}
             p {{ margin: 0.1rem 0; }}
             table {{ border-collapse: collapse; width: 100%; }}
@@ -785,19 +795,103 @@ def generate_printable_report(person):
             }}
             .print-lab-table th {{ background-color: #f2f2f2; font-weight: bold; }}
             .print-lab-table-abn {{ background-color: #ffdddd !important; }}
+            
+            .print-button {{
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background-color: #007bff;
+                color: white;
+                padding: 10px 20px;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 16px;
+                font-family: 'Sarabun', sans-serif;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                z-index: 1000;
+            }}
+            .print-button:hover {{
+                background-color: #0056b3;
+            }}
+
             @media print {{
-                body {{ -webkit-print-color-adjust: exact; margin: 0; }}
+                body {{ 
+                    -webkit-print-color-adjust: exact; 
+                    margin: 0; 
+                    box-shadow: none;
+                }}
+                .report-container {{
+                    box-shadow: none;
+                    margin: 0;
+                    padding: 0;
+                    border-radius: 0;
+                }}
+                .print-button {{
+                    display: none; /* Hide the print button when printing */
+                }}
             }}
         </style>
     </head>
     <body>
-        {header_html}
-        {personal_info_html}
-        {lab_section_html}
-        {blood_advice_box_html}
-        {other_results_html}
-        {signature_html}
+        <button class="print-button" onclick="window.print()">
+            🖨️ พิมพ์รายงาน
+        </button>
+        <div class="report-container">
+            {header_html}
+            {personal_info_html}
+            {lab_section_html}
+            {blood_advice_box_html}
+            {other_results_html}
+            {signature_html}
+        </div>
     </body>
     </html>
     """
     return final_html
+
+# --- ตัวอย่างการใช้งาน ---
+if __name__ == '__main__':
+    # สร้างข้อมูลตัวอย่าง (ควรแทนที่ด้วยข้อมูลจริงจาก DataFrame ของคุณ)
+    sample_person_data = {
+        "วันที่ตรวจ": "14/07/2567",
+        "ชื่อ-สกุล": "สมชาย ใจดี",
+        "อายุ": 45,
+        "เพศ": "ชาย",
+        "HN": 123456,
+        "หน่วยงาน": "ฝ่ายบุคคล",
+        "น้ำหนัก": "75",
+        "ส่วนสูง": "170",
+        "รอบเอว": "90",
+        "SBP": "135",
+        "DBP": "85",
+        "pulse": "80",
+        "Hb(%)": 14.5,
+        "HCT": 42,
+        "WBC (cumm)": 8500,
+        "Ne (%)": 60, "Ly (%)": 30, "M": 6, "Eo": 3, "BA": 1,
+        "Plt (/mm)": 250000,
+        "FBS": 102,
+        "BUN": 15,
+        "Cr": 1.1,
+        "GFR": 85,
+        "Uric Acid": 7.5,
+        "CHOL": 210, "TGL": 160, "HDL": 45, "LDL": 133,
+        "SGOT": 30, "SGPT": 35, "ALP": 100,
+        "Color": "Yellow", "sugar": "Negative", "Alb": "trace", "pH": 6.5, "Spgr": 1.015,
+        "RBC1": "0-1", "WBC1": "2-3", "SQ-epi": "few", "ORTER": "-",
+        "Stool exam": "Normal", "Stool C/S": "ไม่พบเชื้อ",
+        "CXR": "ปกติ", "EKG": "Normal Sinus Rhythm",
+        "Hepatitis A": "Negative", "HbsAg": "Negative", "HbsAb": "Positive", "HBcAB": "Negative",
+        "DOCTER suggest": "ผลโดยรวมปกติ ควรควบคุมน้ำหนักและออกกำลังกายสม่ำเสมอ"
+    }
+
+    # สร้าง HTML report
+    html_report = generate_printable_report(sample_person_data)
+
+    # บันทึกเป็นไฟล์ HTML เพื่อเปิดดู
+    with open("health_report_printable.html", "w", encoding="utf-8") as f:
+        f.write(html_report)
+
+    print("สร้างไฟล์ 'health_report_printable.html' เรียบร้อยแล้ว")
+    print("สามารถเปิดไฟล์นี้ในเบราว์เซอร์แล้วกดปุ่ม 'พิมพ์รายงาน' ได้เลย")
