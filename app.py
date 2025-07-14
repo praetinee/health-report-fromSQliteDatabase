@@ -778,36 +778,22 @@ df = load_sqlite_data()
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
 # Inject custom CSS for font and size control
+# --- จุดที่แก้ไข ---
 st.markdown("""
     <style>
-    /* โหลดฟอนต์ Sarabun และ Material Icons */
+    /* โหลดฟอนต์ Sarabun */
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
-    @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 
-    /* ใช้ Sarabun กับข้อความทั่วไป */
-    body, div, span, p, td, th, li, ul, ol, table, h1, h2, h3, h4, h5, h6 {
+    /* ใช้ Sarabun กับข้อความทั้งหมดในแอป */
+    html, body, div, span, p, td, th, li, ul, ol, table, h1, h2, h3, h4, h5, h6 {
         font-family: 'Sarabun', sans-serif !important;
     }
-
-    /* ยกเว้นเฉพาะ icon: อย่าเปลี่ยนฟอนต์ของปุ่มย่อ-ขยาย */
-    i.material-icons, .material-icons {
-        font-family: 'Material Icons' !important;
-        font-style: normal !important;
-        font-weight: normal !important;
-        letter-spacing: normal !important;
-        text-transform: none !important;
-        display: inline-block;
-        white-space: nowrap;
-        direction: ltr;
-        -webkit-font-feature-settings: 'liga';
-        -webkit-font-smoothing: antialiased;
-    }
-
-    /* ป้องกันการทับฟอนต์ไอคอนใน sidebar collapse */
-    button[data-testid="stSidebarNavCollapseButton"] * {
-        font-family: 'Material Icons' !important;
-    }
-
+    
+    /* * หมายเหตุ: ไอคอนย่อ-ขยาย sidebar ของ Streamlit ในเวอร์ชันใหม่ๆ จะเป็นรูปภาพแบบ SVG
+     * ซึ่งจะไม่ได้รับผลกระทบจาก 'font-family' ดังนั้นจึงไม่จำเป็นต้องใช้ CSS พิเศษ
+     * ในการกำหนดฟอนต์สำหรับไอคอนนี้อีกต่อไป การลบโค้ดส่วนที่เกี่ยวกับ Material Icons ออก
+     * จะทำให้ไอคอนแสดงผลตามปกติของ Streamlit และส่วนอื่นๆ ยังคงใช้ฟอนต์ Sarabun เหมือนเดิม
+     */
     </style>
 """, unsafe_allow_html=True)
 
