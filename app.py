@@ -12,47 +12,32 @@ from datetime import datetime
 import re
 import print_report 
 
+import streamlit as st
+
+# ✅ โหลดฟอนต์ Sarabun
 st.markdown("""
 <style>
-/* โหลดฟอนต์ Sarabun */
-@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sarabun&display=swap');
 
-/* ใช้ Sarabun ทั่วเว็บ */
 html, body, * {
     font-family: 'Sarabun', sans-serif !important;
 }
-
-/* ปุ่มย่อ-ขยาย: ซ่อนไอคอนเดิม */
-[data-testid="stSidebarCollapseControl"] span,
-[data-testid="stSidebarCollapseControl"] svg {
-    display: none !important;
-}
-
-/* ปุ่มย่อ-ขยาย: ใช้ฟอนต์พิเศษเฉพาะปุ่มนี้เท่านั้น */
-[data-testid="stSidebarCollapseControl"] {
-    all: unset;  /* เคลียร์ค่าทุกอย่างของปุ่มนี้เท่านั้น */
-    font-family: 'Arial', 'Segoe UI Symbol', sans-serif !important;
-    font-size: 22px !important;
-    font-weight: bold;
-    color: var(--text-color);
-    width: 32px !important;
-    height: 32px !important;
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    cursor: pointer;
-}
-
-/* ไอคอนย่อ-ขยาย */
-[data-testid="stSidebarCollapseControl"][aria-label="Expand sidebar"]::before {
-    content: '»';
-}
-
-[data-testid="stSidebarCollapseControl"][aria-label="Collapse sidebar"]::before {
-    content: '«';
-}
 </style>
 """, unsafe_allow_html=True)
+
+# ✅ เก็บสถานะย่อ/ขยายไว้ใน session
+if "sidebar_collapsed" not in st.session_state:
+    st.session_state.sidebar_collapsed = False
+
+# ✅ สร้างปุ่มย่อ/ขยาย
+if st.button("»" if st.session_state.sidebar_collapsed else "«"):
+    st.session_state.sidebar_collapsed = not st.session_state.sidebar_collapsed
+
+# ✅ แสดง sidebar ถ้ายังไม่ย่อ
+if not st.session_state.sidebar_collapsed:
+    with st.sidebar:
+        st.write("📁 เมนูหลัก")
+        st.write("📝 แบบฟอร์ม")
 
 def is_empty(val):
     return str(val).strip().lower() in ["", "-", "none", "nan", "null"]
