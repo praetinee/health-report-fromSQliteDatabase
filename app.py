@@ -780,37 +780,34 @@ st.set_page_config(page_title="ระบบรายงานสุขภาพ"
 # Inject custom CSS for font and size control
 st.markdown("""
     <style>
-    /* โหลดฟอนต์ Sarabun อย่างถูกต้อง */
+    /* โหลดฟอนต์ Sarabun และ Material Icons */
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
+    @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 
-    /* ห้ามใช้กับ html หรือ * เด็ดขาด เพราะจะพังไอคอน */
+    /* ใช้ Sarabun กับข้อความทั่วไป */
     body, div, span, p, td, th, li, ul, ol, table, h1, h2, h3, h4, h5, h6 {
         font-family: 'Sarabun', sans-serif !important;
     }
 
-    /* ยกเว้นไอคอนใน sidebar collapse */
+    /* ยกเว้นเฉพาะ icon: อย่าเปลี่ยนฟอนต์ของปุ่มย่อ-ขยาย */
+    i.material-icons, .material-icons {
+        font-family: 'Material Icons' !important;
+        font-style: normal !important;
+        font-weight: normal !important;
+        letter-spacing: normal !important;
+        text-transform: none !important;
+        display: inline-block;
+        white-space: nowrap;
+        direction: ltr;
+        -webkit-font-feature-settings: 'liga';
+        -webkit-font-smoothing: antialiased;
+    }
+
+    /* ป้องกันการทับฟอนต์ไอคอนใน sidebar collapse */
     button[data-testid="stSidebarNavCollapseButton"] * {
-        font-family: 'streamlit-icons' !important;
+        font-family: 'Material Icons' !important;
     }
 
-    body {
-        font-size: 14px !important;
-    }
-
-    .report-header-container h1 {
-        font-size: 1.8rem !important;
-        font-weight: bold;
-    }
-
-    .report-header-container h2 {
-        font-size: 1rem !important;
-        color: darkgrey;
-        font-weight: bold;
-    }
-
-    h3 {
-        font-size: 14px !important;
-    }
     </style>
 """, unsafe_allow_html=True)
 
