@@ -1,4 +1,5 @@
 import streamlit as st
+from streamlit.components.v1 import html
 import sqlite3
 import requests
 import pandas as pd
@@ -13,6 +14,42 @@ import print_report # <-- เพิ่มการ import โมดูลสำ�
 
 def is_empty(val):
     return str(val).strip().lower() in ["", "-", "none", "nan", "null"]
+
+# 👉 1. CSS: บังคับใช้ฟอนต์ Material Icons กับปุ่มย่อ/ขยาย
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+
+[data-testid="stSidebarCollapseControl"] {
+    font-family: 'Material Icons' !important;
+    font-size: 24px !important;
+    color: var(--text-color);
+}
+</style>
+""", unsafe_allow_html=True)
+
+# 👉 2. JavaScript: แก้ข้อความให้กลายเป็นไอคอนแทน
+html("""
+<script>
+function fixSidebarCollapseIcon() {
+    const btn = document.querySelector('[data-testid="stSidebarCollapseControl"]');
+    if (!btn) return;
+
+    const text = btn.innerText.trim();
+
+    if (text === "keyboard_double_arrow_right") {
+        btn.innerText = "keyboard_double_arrow_right";
+        btn.style.fontFamily = "Material Icons";
+    } else if (text === "keyboard_double_arrow_left") {
+        btn.innerText = "keyboard_double_arrow_left";
+        btn.style.fontFamily = "Material Icons";
+    }
+}
+
+// เรียกทุก 300ms เผื่อ Streamlit render ซ้ำ
+setInterval(fixSidebarCollapseIcon, 300);
+</script>
+""", height=0)
 
 # --- Global Helper Functions: START ---
 
