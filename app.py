@@ -1370,4 +1370,3 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
 
 else:
     st.info("กรุณาค้นหาและเลือกผลตรวจจากแถบด้านข้างเพื่อแสดงรายงาน")
-" from the most up-to-date Canvas "Streamlit App with Corrected Icon Font" document abo
