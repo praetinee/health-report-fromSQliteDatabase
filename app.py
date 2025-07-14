@@ -469,7 +469,7 @@ def advice_urine(sex, alb, sugar, rbc, wbc):
     wbc_t = interpret_wbc(wbc)
     
     if all(x in ["-", "ปกติ", "ไม่พบ", "พบโปรตีนในปัสสาวะเล็กน้อย", "พบน้ำตาลในปัสสาวะเล็กน้อย"]
-                   for x in [alb_t, sugar_t, rbc_t, wbc_t]):
+                    for x in [alb_t, sugar_t, rbc_t, wbc_t]):
         return ""
     
     if "พบน้ำตาลในปัสสาวะ" in sugar_t and "เล็กน้อย" not in sugar_t:
@@ -777,39 +777,25 @@ df = load_sqlite_data()
 # ==================== UI Setup and Search Form (Main Area) ====================
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
-# Inject custom CSS for font and size control
+# Inject custom CSS for font, size control, and hiding the sidebar collapse button
 st.markdown("""
     <style>
     /* โหลดฟอนต์ Sarabun และ Material Icons */
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
-    @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
-
+    
     /* ใช้ Sarabun กับข้อความทั่วไป */
     body, div, span, p, td, th, li, ul, ol, table, h1, h2, h3, h4, h5, h6 {
         font-family: 'Sarabun', sans-serif !important;
     }
 
-    /* ยกเว้นเฉพาะ icon: อย่าเปลี่ยนฟอนต์ของปุ่มย่อ-ขยาย */
-    i.material-icons, .material-icons {
-        font-family: 'Material Icons' !important;
-        font-style: normal !important;
-        font-weight: normal !important;
-        letter-spacing: normal !important;
-        text-transform: none !important;
-        display: inline-block;
-        white-space: nowrap;
-        direction: ltr;
-        -webkit-font-feature-settings: 'liga';
-        -webkit-font-smoothing: antialiased;
+    /* --- ✨ โค้ดที่เพิ่มเข้ามาเพื่อซ่อนปุ่ม --- */
+    /* ซ่อนปุ่มย่อ-ขยาย sidebar */
+    button[data-testid="stSidebarNavCollapseButton"] {
+        display: none;
     }
-
-    /* ป้องกันการทับฟอนต์ไอคอนใน sidebar collapse */
-    button[data-testid="stSidebarNavCollapseButton"] * {
-        font-family: 'Material Icons' !important;
-    }
-
     </style>
 """, unsafe_allow_html=True)
+
 
 # --- Callback Functions for State Management ---
 def perform_search():
