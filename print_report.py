@@ -826,7 +826,7 @@ def perform_search():
     Callback function to handle the search logic.
     Triggered by the search button or pressing Enter in the text input.
     """
-    st.session_state.search_query = st.session_state.search_input
+    st.session_state.search_query = st.session_state.search_input_main
     # Reset selections on a new search to avoid inconsistent state
     st.session_state.selected_year = None
     st.session_state.selected_date = None
@@ -864,8 +864,8 @@ def handle_year_change():
 # --- Initialize session state variables ---
 if 'search_query' not in st.session_state:
     st.session_state.search_query = ""
-if 'search_input' not in st.session_state:
-    st.session_state.search_input = ""
+if 'search_input_main' not in st.session_state:
+    st.session_state.search_input_main = ""
 if 'search_result' not in st.session_state:
     st.session_state.search_result = pd.DataFrame()
 if 'selected_year' not in st.session_state:
@@ -881,7 +881,7 @@ with menu_cols[0]:
     # Text input for HN or Full Name
     st.text_input(
         "กรอก HN หรือ ชื่อ-สกุล",
-        key="search_input",
+        key="search_input_main",
         on_change=perform_search,
         placeholder="HN หรือ ชื่อ-สกุล",
         label_visibility="collapsed"
