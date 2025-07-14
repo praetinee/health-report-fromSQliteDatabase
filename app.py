@@ -789,25 +789,20 @@ st.markdown("""
         font-family: 'Sarabun', sans-serif !important;
     }
     
-    /* ซ่อมปุ่มย่อ-ขยาย Sidebar */
-    button[kind="icon"] > svg {
+    /* ซ่อมปุ่มย่อ-ขยาย Sidebar ให้แสดง Material Icon */
+    [data-testid="stSidebarCollapseControl"] svg {
         display: none !important;
     }
-
-    button[kind="icon"]::before {
+    
+    [data-testid="stSidebarCollapseControl"]::before {
         content: "keyboard_double_arrow_right";
         font-family: 'Material Icons' !important;
         font-size: 24px !important;
         font-style: normal !important;
         font-weight: normal !important;
-        letter-spacing: normal !important;
-        text-transform: none !important;
         line-height: 1 !important;
         display: inline-block !important;
-        white-space: nowrap !important;
-        direction: ltr !important;
-        -webkit-font-feature-settings: 'liga' !important;
-        -webkit-font-smoothing: antialiased !important;
+        vertical-align: middle;
         color: var(--text-color);
     }
 </style>
