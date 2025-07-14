@@ -780,42 +780,37 @@ st.set_page_config(page_title="ระบบรายงานสุขภาพ"
 # Inject custom CSS for font and size control
 st.markdown("""
     <style>
-    /* Import Sarabun font from Google Fonts */
+    /* โหลดฟอนต์ Sarabun อย่างถูกต้อง */
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
 
-    /* Apply Sarabun font to the entire app */
-    html, body, [class*="st-"] {
+    /* ห้ามใช้กับ html หรือ * เด็ดขาด เพราะจะพังไอคอน */
+    body, div, span, p, td, th, li, ul, ol, table, h1, h2, h3, h4, h5, h6 {
         font-family: 'Sarabun', sans-serif !important;
     }
 
-    /* Reset font for the sidebar collapse button to prevent icon breakage */
+    /* ยกเว้นไอคอนใน sidebar collapse */
     button[data-testid="stSidebarNavCollapseButton"] * {
-        font-family: initial !important;
+        font-family: 'streamlit-icons' !important;
     }
-    
-    /* Set a base font size for the body */
+
     body {
         font-size: 14px !important;
     }
-    
-    /* Set specific size for main report title (h1) */
+
     .report-header-container h1 {
         font-size: 1.8rem !important;
         font-weight: bold;
     }
 
-    /* Style for the clinic subtitle (h2) */
     .report-header-container h2 {
-        font-size: 1rem !important; /* Changed to 16px */
+        font-size: 1rem !important;
         color: darkgrey;
         font-weight: bold;
     }
 
-    /* Set specific size for section titles (h3) */
     h3 {
-        font-size: 14px !important; /* Changed to 14px */
+        font-size: 14px !important;
     }
-
     </style>
 """, unsafe_allow_html=True)
 
