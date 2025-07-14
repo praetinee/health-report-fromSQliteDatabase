@@ -12,6 +12,55 @@ from datetime import datetime
 import re
 import print_report 
 
+st.markdown("""
+<style>
+/* โหลดฟอนต์ Sarabun */
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
+
+/* ใช้ฟอนต์ Sarabun ทั่วทั้งแอป */
+html, body, div, span, p, td, th, li, ul, ol, table,
+h1, h2, h3, h4, h5, h6, input, select, textarea, button {
+    font-family: 'Sarabun', sans-serif !important;
+}
+
+/* ปุ่มย่อ/ขยาย Sidebar: ซ่อน icon เดิม */
+[data-testid="stSidebarCollapseControl"] span,
+[data-testid="stSidebarCollapseControl"] svg {
+    display: none !important;
+}
+
+/* สไตล์ของปุ่มย่อ/ขยาย */
+[data-testid="stSidebarCollapseControl"] {
+    background: none;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
+
+    font-family: 'Sarabun', sans-serif !important;
+    font-size: 24px !important;
+    font-weight: bold;
+    color: var(--text-color);
+
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 32px !important;
+    height: 32px !important;
+}
+
+/* แสดงไอคอน “ย่อ” และ “ขยาย” ด้วยสัญลักษณ์ */
+[data-testid="stSidebarCollapseControl"][aria-label="Expand sidebar"]::before {
+    content: '»';
+}
+[data-testid="stSidebarCollapseControl"][aria-label="Collapse sidebar"]::before {
+    content: '«';
+}
+</style>
+""", unsafe_allow_html=True)
+
+
 def is_empty(val):
     return str(val).strip().lower() in ["", "-", "none", "nan", "null"]
 
