@@ -15,32 +15,29 @@ import print_report
 def is_empty(val):
     return str(val).strip().lower() in ["", "-", "none", "nan", "null"]
 
-# 👉 1. CSS: แก้ไขปุ่มย่อ/ขยาย Sidebar โดยใช้ CSS เท่านั้น
+# 👉 1. CSS: แก้ไขปุ่มย่อ/ขยาย Sidebar โดยใช้ SVG ที่ฝังใน CSS โดยตรง
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
-
 /* ซ่อนข้อความและ SVG เดิมของปุ่ม */
 [data-testid="stSidebarCollapseControl"] span, [data-testid="stSidebarCollapseControl"] svg {
     display: none !important;
 }
 
-/* เตรียมพื้นที่สำหรับไอคอนใหม่โดยใช้ pseudo-element */
-[data-testid="stSidebarCollapseControl"]::before {
-    font-family: 'Material Icons' !important;
-    font-size: 24px !important;
-    color: var(--text-color);
-    display: block;
+/* เตรียมพื้นที่สำหรับไอคอนใหม่ */
+[data-testid="stSidebarCollapseControl"] {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
 }
 
-/* ตั้งค่าไอคอนสำหรับสถานะ "ขยาย" (sidebar ถูกซ่อน) */
+/* ตั้งค่าไอคอนสำหรับสถานะ "ขยาย" (sidebar ถูกซ่อน) โดยใช้ SVG */
 [data-testid="stSidebarCollapseControl"][aria-label="Expand sidebar"]::before {
-    content: 'keyboard_double_arrow_right';
+    content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor' width='24px' height='24px'%3E%3Cpath d='M6.41 6L5 7.41 9.58 12 5 16.59 6.41 18l6-6-6-6z'/%3E%3Cpath d='M13 6l-1.41 1.41L16.17 12l-4.58 4.59L13 18l6-6-6-6z'/%3E%3C/svg%3E");
 }
 
-/* ตั้งค่าไอคอนสำหรับสถานะ "ย่อ" (sidebar กำลังแสดง) */
+/* ตั้งค่าไอคอนสำหรับสถานะ "ย่อ" (sidebar กำลังแสดง) โดยใช้ SVG */
 [data-testid="stSidebarCollapseControl"][aria-label="Collapse sidebar"]::before {
-    content: 'keyboard_double_arrow_left';
+    content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor' width='24px' height='24px'%3E%3Cpath d='M17.59 18L19 16.59 14.42 12 19 7.41 17.59 6l-6 6 6 6z'/%3E%3Cpath d='M11 18l1.41-1.41L7.83 12l4.58-4.59L11 6l-6 6 6 6z'/%3E%3C/svg%3E");
 }
 </style>
 """, unsafe_allow_html=True)
