@@ -817,41 +817,37 @@ st.set_page_config(page_title="ระบบรายงานสุขภาพ"
 
 # Inject custom CSS for font and size control
 st.markdown("""
-    <style>
-    /* โหลดฟอนต์ Sarabun และ Material Icons */
-    @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
-    @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+<style>
+/* ซ่อนข้อความและ SVG เดิมของปุ่ม */
+[data-testid="stSidebarCollapseControl"] span, [data-testid="stSidebarCollapseControl"] svg {
+    display: none !important;
+}
 
-    /* ใช้ Sarabun กับข้อความทั้งหมดในแอป */
-    html, body, div, span, p, td, th, li, ul, ol, table, h1, h2, h3, h4, h5, h6, input, select, textarea {
-        font-family: 'Sarabun', sans-serif !important;
-    }
-    
-    /* ซ่อมปุ่มย่อ-ขยาย Sidebar ให้แสดง Material Icon */
-    [data-testid="stSidebarCollapseControl"] svg {
-        display: none !important;
-    }
-    
-    [data-testid="stSidebarCollapseControl"]::before {
-        content: "keyboard_double_arrow_right";
-        font-family: 'Material Icons' !important;
-        font-size: 24px !important;
-        font-style: normal !important;
-        font-weight: normal !important;
-        line-height: 1 !important;
-        display: inline-block !important;
-        vertical-align: middle;
-        color: var(--text-color);
+/* ปรับขนาดปุ่ม */
+[data-testid="stSidebarCollapseControl"] {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 24px !important;
+    font-weight: bold;
+    color: var(--text-color);
+    cursor: pointer;
+}
 
-    /* FIX: รีเซ็ตฟอนต์เฉพาะปุ่มย่อ/ขยาย sidebar ของ Streamlit */
-    [data-testid="stSidebarCollapseControl"] {
-        all: unset;
-        cursor: pointer;
-        padding: 0.25rem;
-        border-radius: 4px;
-    }
+/* เมื่อ sidebar ถูกย่อ (แสดงสถานะ "Expand") */
+[data-testid="stSidebarCollapseControl"][aria-label="Expand sidebar"]::before {
+    content: '»';
+}
+
+/* เมื่อ sidebar แสดงอยู่ (แสดงสถานะ "Collapse") */
+[data-testid="stSidebarCollapseControl"][aria-label="Collapse sidebar"]::before {
+    content: '«';
+}
 </style>
 """, unsafe_allow_html=True)
+
 
 # --- Callback Functions for State Management ---
 def perform_search():
