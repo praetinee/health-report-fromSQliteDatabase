@@ -1,83 +1,18 @@
 import streamlit as st
-from streamlit.components.v1 import html
 import sqlite3
 import requests
 import pandas as pd
 import io
 import tempfile
-import html as html_utils
+import html  # Used for html.escape()
 import numpy as np
 from collections import OrderedDict
 from datetime import datetime
 import re
-import print_report 
-
-import streamlit as st
-
-# ✅ โหลดฟอนต์ Sarabun
-st.markdown("""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Sarabun&display=swap');
-
-html, body, * {
-    font-family: 'Sarabun', sans-serif !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# ✅ เก็บสถานะย่อ/ขยายไว้ใน session
-if "sidebar_collapsed" not in st.session_state:
-    st.session_state.sidebar_collapsed = False
-
-# ✅ สร้างปุ่มย่อ/ขยาย
-if st.button("»" if st.session_state.sidebar_collapsed else "«"):
-    st.session_state.sidebar_collapsed = not st.session_state.sidebar_collapsed
-
-# ✅ แสดง sidebar ถ้ายังไม่ย่อ
-if not st.session_state.sidebar_collapsed:
-    with st.sidebar:
-        st.write("📁 เมนูหลัก")
-        st.write("📝 แบบฟอร์ม")
+import print_report # <-- เพิ่มการ import โมดูลสำหรับพิมพ์
 
 def is_empty(val):
     return str(val).strip().lower() in ["", "-", "none", "nan", "null"]
-
-# 👉 1. CSS: แก้ไขปุ่มย่อ/ขยาย Sidebar โดยใช้อีโมติคอน
-st.markdown("""
-<style>
-/* ซ่อนข้อความและ SVG เดิมของปุ่ม */
-[data-testid="stSidebarCollapseControl"] span, [data-testid="stSidebarCollapseControl"] svg {
-    display: none !important;
-}
-
-/* เตรียมพื้นที่สำหรับไอคอนใหม่ และจัดให้อยู่กึ่งกลาง */
-[data-testid="stSidebarCollapseControl"] {
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    width: 28px !important;
-    height: 28px !important;
-}
-
-/* ตั้งค่าไอคอนสำหรับสถานะ "ขยาย" (sidebar ถูกซ่อน) โดยใช้อีโมติคอน */
-[data-testid="stSidebarCollapseControl"][aria-label="Expand sidebar"]::before {
-    content: '»';
-    font-size: 28px;
-    line-height: 1;
-    color: var(--text-color);
-}
-
-/* ตั้งค่าไอคอนสำหรับสถานะ "ย่อ" (sidebar กำลังแสดง) โดยใช้อีโมติคอน */
-[data-testid="stSidebarCollapseControl"][aria-label="Collapse sidebar"]::before {
-    content: '«';
-    font-size: 28px;
-    line-height: 1;
-    color: var(--text-color);
-}
-</style>
-""", unsafe_allow_html=True)
-
-# 👉 2. JavaScript: ไม่จำเป็นต้องใช้แล้ว จึงลบออก
 
 # --- Global Helper Functions: START ---
 
@@ -844,37 +779,37 @@ st.set_page_config(page_title="ระบบรายงานสุขภาพ"
 
 # Inject custom CSS for font and size control
 st.markdown("""
-<style>
-/* ซ่อนข้อความและ SVG เดิมของปุ่ม */
-[data-testid="stSidebarCollapseControl"] span, [data-testid="stSidebarCollapseControl"] svg {
-    display: none !important;
-}
+    <style>
+    /* โหลดฟอนต์ Sarabun และ Material Icons */
+    @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
+    @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 
-/* ปรับขนาดปุ่ม */
-[data-testid="stSidebarCollapseControl"] {
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    width: 32px !important;
-    height: 32px !important;
-    font-size: 24px !important;
-    font-weight: bold;
-    color: var(--text-color);
-    cursor: pointer;
-}
+    /* ใช้ Sarabun กับข้อความทั่วไป */
+    body, div, span, p, td, th, li, ul, ol, table, h1, h2, h3, h4, h5, h6 {
+        font-family: 'Sarabun', sans-serif !important;
+    }
 
-/* เมื่อ sidebar ถูกย่อ (แสดงสถานะ "Expand") */
-[data-testid="stSidebarCollapseControl"][aria-label="Expand sidebar"]::before {
-    content: '»';
-}
+    /* ยกเว้นเฉพาะ icon: อย่าเปลี่ยนฟอนต์ของปุ่มย่อ-ขยาย */
+    i.material-icons, .material-icons {
+        font-family: 'Material Icons' !important;
+        font-style: normal !important;
+        font-weight: normal !important;
+        letter-spacing: normal !important;
+        text-transform: none !important;
+        display: inline-block;
+        white-space: nowrap;
+        direction: ltr;
+        -webkit-font-feature-settings: 'liga';
+        -webkit-font-smoothing: antialiased;
+    }
 
-/* เมื่อ sidebar แสดงอยู่ (แสดงสถานะ "Collapse") */
-[data-testid="stSidebarCollapseControl"][aria-label="Collapse sidebar"]::before {
-    content: '«';
-}
-</style>
+    /* ป้องกันการทับฟอนต์ไอคอนใน sidebar collapse */
+    button[data-testid="stSidebarNavCollapseButton"] * {
+        font-family: 'Material Icons' !important;
+    }
+
+    </style>
 """, unsafe_allow_html=True)
-
 
 # --- Callback Functions for State Management ---
 def perform_search():
@@ -1071,8 +1006,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     waist_display = f"{waist_raw} ซม." if not is_empty(waist_raw) else "-"
 
     advice_text = combined_health_advice(bmi_val, sbp, dbp)
-    # --- แก้ไข: ใช้ html_utils.escape() ---
-    summary_advice = html_utils.escape(advice_text) if advice_text else ""
+    summary_advice = html.escape(advice_text) if advice_text else ""
     
     # This block now only contains personal info, not the header.
     st.markdown(f"""
@@ -1433,3 +1367,6 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             </div>
         </div>
         """, unsafe_allow_html=True)
+
+else:
+    st.info("กรุณาค้นหาและเลือกผลตรวจจากแถบด้านข้างเพื่อแสดงรายงาน")
