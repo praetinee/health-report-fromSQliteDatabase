@@ -5,12 +5,12 @@ import requests
 import pandas as pd
 import io
 import tempfile
-import html  # Used for html.escape()
+import html as html_utils # <-- แก้ไข: เปลี่ยนชื่อการ import เพื่อหลีกเลี่ยงการชนกัน
 import numpy as np
 from collections import OrderedDict
 from datetime import datetime
 import re
-import print_report # <-- เพิ่มการ import โมดูลสำหรับพิมพ์
+import print_report 
 
 def is_empty(val):
     return str(val).strip().lower() in ["", "-", "none", "nan", "null"]
@@ -1047,7 +1047,8 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     waist_display = f"{waist_raw} ซม." if not is_empty(waist_raw) else "-"
 
     advice_text = combined_health_advice(bmi_val, sbp, dbp)
-    summary_advice = html.escape(advice_text) if advice_text else ""
+    # --- แก้ไข: ใช้ html_utils.escape() ---
+    summary_advice = html_utils.escape(advice_text) if advice_text else ""
     
     # This block now only contains personal info, not the header.
     st.markdown(f"""
