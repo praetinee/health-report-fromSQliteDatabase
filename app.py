@@ -778,7 +778,6 @@ df = load_sqlite_data()
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
 # Inject custom CSS for font and size control
-# --- จุดที่แก้ไข ---
 st.markdown("""
     <style>
     /* โหลดฟอนต์ Sarabun และ Material Icons */
@@ -1358,4 +1357,5 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         """, unsafe_allow_html=True)
 
 else:
-    st.info("กรุณาค้นหาและเลือกผลตรวจจากแถบด้านข้างเพื่อแสดงรายงา
+    # --- จุดที่แก้ไข ---
+    st.info("กรุณาค้นหาและเลือกผลตรวจจากแถบด้านข้างเพื่อแสดงรายงาน")
