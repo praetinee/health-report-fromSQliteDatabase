@@ -17,42 +17,33 @@ st.markdown("""
 /* โหลดฟอนต์ Sarabun */
 @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
 
-/* ใช้ Sarabun ทั่วทั้งแอป */
-html, body, div, span, p, td, th, li, ul, ol, table,
-h1, h2, h3, h4, h5, h6, input, select, textarea, button {
+/* ใช้ Sarabun ทั่วเว็บ */
+html, body, * {
     font-family: 'Sarabun', sans-serif !important;
 }
 
-/* ซ่อนข้อความและไอคอนเดิมในปุ่ม */
+/* ปุ่มย่อ-ขยาย: ซ่อนไอคอนเดิม */
 [data-testid="stSidebarCollapseControl"] span,
 [data-testid="stSidebarCollapseControl"] svg {
     display: none !important;
 }
 
-/* ปรับปุ่มย่อ-ขยาย: ใช้ฟอนต์ fallback เฉพาะในไอคอน */
+/* ปุ่มย่อ-ขยาย: ใช้ฟอนต์พิเศษเฉพาะปุ่มนี้เท่านั้น */
 [data-testid="stSidebarCollapseControl"] {
-    background: none;
-    border: none;
-    outline: none;
-    cursor: pointer;
-    padding: 0.25rem;
-    border-radius: 4px;
-
-    /* ✅ สำคัญ: ใช้ฟอนต์ที่แสดงสัญลักษณ์ได้ดี */
+    all: unset;  /* เคลียร์ค่าทุกอย่างของปุ่มนี้เท่านั้น */
     font-family: 'Arial', 'Segoe UI Symbol', sans-serif !important;
-
-    font-size: 24px !important;
+    font-size: 22px !important;
     font-weight: bold;
     color: var(--text-color);
-
+    width: 32px !important;
+    height: 32px !important;
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
-    width: 32px !important;
-    height: 32px !important;
+    cursor: pointer;
 }
 
-/* แสดงไอคอนแบบ Unicode */
+/* ไอคอนย่อ-ขยาย */
 [data-testid="stSidebarCollapseControl"][aria-label="Expand sidebar"]::before {
     content: '»';
 }
