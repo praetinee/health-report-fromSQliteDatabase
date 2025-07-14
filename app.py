@@ -791,9 +791,9 @@ st.markdown("""
     
     /* * กำหนด CSS เฉพาะสำหรับไอคอนปุ่มย่อ-ขยาย Sidebar
      * เพื่อแก้ปัญหาที่การกำหนด font-family ของ Sarabun ไปทับการแสดงผลของไอคอน
-     * โดยใช้ selector ที่เจาะจงและครอบคลุมทุก element ภายในปุ่ม
+     * โดยใช้ selector ที่มีความจำเพาะสูง (high specificity) เพื่อให้แน่ใจว่าจะถูกนำไปใช้
      */
-    button[data-testid="stSidebarNavCollapseButton"] * {
+    section[data-testid="stSidebar"] button[data-testid="stSidebarNavCollapseButton"] * {
         font-family: 'Material Icons' !important;
     }
     </style>
@@ -1358,4 +1358,4 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
 
 else:
     # --- จุดที่แก้ไข ---
-    st.info("กรุณาค้นหาและเลือกผลตรวจจากแถบด้านข้างเพื่อแสดงรายงาน")
+    st.info("กรุณาค้นหาจากแถบด้านข้างเพื่อแสดงรายงาน")
