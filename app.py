@@ -5,7 +5,7 @@ import requests
 import pandas as pd
 import io
 import tempfile
-import html as html_utils # <-- แก้ไข: เปลี่ยนชื่อการ import เพื่อหลีกเลี่ยงการชนกัน
+import html as html_utils
 import numpy as np
 from collections import OrderedDict
 from datetime import datetime
@@ -15,7 +15,7 @@ import print_report
 def is_empty(val):
     return str(val).strip().lower() in ["", "-", "none", "nan", "null"]
 
-# 👉 1. CSS: แก้ไขปุ่มย่อ/ขยาย Sidebar โดยใช้ SVG ที่ฝังใน CSS โดยตรง
+# 👉 1. CSS: แก้ไขปุ่มย่อ/ขยาย Sidebar โดยใช้อีโมติคอน
 st.markdown("""
 <style>
 /* ซ่อนข้อความและ SVG เดิมของปุ่ม */
@@ -23,21 +23,29 @@ st.markdown("""
     display: none !important;
 }
 
-/* เตรียมพื้นที่สำหรับไอคอนใหม่ */
+/* เตรียมพื้นที่สำหรับไอคอนใหม่ และจัดให้อยู่กึ่งกลาง */
 [data-testid="stSidebarCollapseControl"] {
-    display: inline-block;
-    width: 24px;
-    height: 24px;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 28px !important;
+    height: 28px !important;
 }
 
-/* ตั้งค่าไอคอนสำหรับสถานะ "ขยาย" (sidebar ถูกซ่อน) โดยใช้ SVG */
+/* ตั้งค่าไอคอนสำหรับสถานะ "ขยาย" (sidebar ถูกซ่อน) โดยใช้อีโมติคอน */
 [data-testid="stSidebarCollapseControl"][aria-label="Expand sidebar"]::before {
-    content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor' width='24px' height='24px'%3E%3Cpath d='M6.41 6L5 7.41 9.58 12 5 16.59 6.41 18l6-6-6-6z'/%3E%3Cpath d='M13 6l-1.41 1.41L16.17 12l-4.58 4.59L13 18l6-6-6-6z'/%3E%3C/svg%3E");
+    content: '»';
+    font-size: 28px;
+    line-height: 1;
+    color: var(--text-color);
 }
 
-/* ตั้งค่าไอคอนสำหรับสถานะ "ย่อ" (sidebar กำลังแสดง) โดยใช้ SVG */
+/* ตั้งค่าไอคอนสำหรับสถานะ "ย่อ" (sidebar กำลังแสดง) โดยใช้อีโมติคอน */
 [data-testid="stSidebarCollapseControl"][aria-label="Collapse sidebar"]::before {
-    content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor' width='24px' height='24px'%3E%3Cpath d='M17.59 18L19 16.59 14.42 12 19 7.41 17.59 6l-6 6 6 6z'/%3E%3Cpath d='M11 18l1.41-1.41L7.83 12l4.58-4.59L11 6l-6 6 6 6z'/%3E%3C/svg%3E");
+    content: '«';
+    font-size: 28px;
+    line-height: 1;
+    color: var(--text-color);
 }
 </style>
 """, unsafe_allow_html=True)
@@ -1404,4 +1412,4 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         """, unsafe_allow_html=True)
 
 else:
-    st.info("กรุณาค้นหาและเลือกผลตรวจจากแถบด้านข้างเพื่อแสดงรายงาน")
+    st.info("กรุณาค้นหาและเลือกผลตรวจจากแถบด้านข้างเพื่อแสดงรายงา
