@@ -781,19 +781,22 @@ st.set_page_config(page_title="ระบบรายงานสุขภาพ"
 # --- จุดที่แก้ไข ---
 st.markdown("""
     <style>
-    /* โหลดฟอนต์ Sarabun */
+    /* โหลดฟอนต์ Sarabun และ Material Icons */
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
+    @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 
     /* ใช้ Sarabun กับข้อความทั้งหมดในแอป */
     html, body, div, span, p, td, th, li, ul, ol, table, h1, h2, h3, h4, h5, h6 {
         font-family: 'Sarabun', sans-serif !important;
     }
     
-    /* * หมายเหตุ: ไอคอนย่อ-ขยาย sidebar ของ Streamlit ในเวอร์ชันใหม่ๆ จะเป็นรูปภาพแบบ SVG
-     * ซึ่งจะไม่ได้รับผลกระทบจาก 'font-family' ดังนั้นจึงไม่จำเป็นต้องใช้ CSS พิเศษ
-     * ในการกำหนดฟอนต์สำหรับไอคอนนี้อีกต่อไป การลบโค้ดส่วนที่เกี่ยวกับ Material Icons ออก
-     * จะทำให้ไอคอนแสดงผลตามปกติของ Streamlit และส่วนอื่นๆ ยังคงใช้ฟอนต์ Sarabun เหมือนเดิม
+    /* * กำหนด CSS เฉพาะสำหรับไอคอนปุ่มย่อ-ขยาย Sidebar
+     * เพื่อแก้ปัญหาที่การกำหนด font-family ของ Sarabun ไปทับการแสดงผลของไอคอน
+     * โดยใช้ selector ที่เจาะจงไปที่ปุ่มนั้นโดยตรง
      */
+    button[data-testid="stSidebarNavCollapseButton"] span {
+        font-family: 'Material Icons' !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
