@@ -783,8 +783,8 @@ st.markdown("""
     /* Import Sarabun font from Google Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
 
-    /* Apply Sarabun font to the main app area, not the entire page */
-    .stApp {
+    /* Apply Sarabun font only to the main content area, not the sidebar */
+    section.main {
         font-family: 'Sarabun', sans-serif !important;
     }
     
@@ -810,8 +810,6 @@ st.markdown("""
     h3 {
         font-size: 14px !important; /* Changed to 14px */
     }
-
-    /* REMOVED custom spacing rules to use Streamlit defaults */
 
     </style>
 """, unsafe_allow_html=True)
