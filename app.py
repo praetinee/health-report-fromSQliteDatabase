@@ -15,41 +15,37 @@ import print_report
 def is_empty(val):
     return str(val).strip().lower() in ["", "-", "none", "nan", "null"]
 
-# 👉 1. CSS: บังคับใช้ฟอนต์ Material Icons กับปุ่มย่อ/ขยาย
+# 👉 1. CSS: แก้ไขปุ่มย่อ/ขยาย Sidebar โดยใช้ CSS เท่านั้น
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 
-[data-testid="stSidebarCollapseControl"] {
+/* ซ่อนข้อความและ SVG เดิมของปุ่ม */
+[data-testid="stSidebarCollapseControl"] span, [data-testid="stSidebarCollapseControl"] svg {
+    display: none !important;
+}
+
+/* เตรียมพื้นที่สำหรับไอคอนใหม่โดยใช้ pseudo-element */
+[data-testid="stSidebarCollapseControl"]::before {
     font-family: 'Material Icons' !important;
     font-size: 24px !important;
     color: var(--text-color);
+    display: block;
+}
+
+/* ตั้งค่าไอคอนสำหรับสถานะ "ขยาย" (sidebar ถูกซ่อน) */
+[data-testid="stSidebarCollapseControl"][aria-label="Expand sidebar"]::before {
+    content: 'keyboard_double_arrow_right';
+}
+
+/* ตั้งค่าไอคอนสำหรับสถานะ "ย่อ" (sidebar กำลังแสดง) */
+[data-testid="stSidebarCollapseControl"][aria-label="Collapse sidebar"]::before {
+    content: 'keyboard_double_arrow_left';
 }
 </style>
 """, unsafe_allow_html=True)
 
-# 👉 2. JavaScript: แก้ข้อความให้กลายเป็นไอคอนแทน
-html("""
-<script>
-function fixSidebarCollapseIcon() {
-    const btn = document.querySelector('[data-testid="stSidebarCollapseControl"]');
-    if (!btn) return;
-
-    const text = btn.innerText.trim();
-
-    if (text === "keyboard_double_arrow_right") {
-        btn.innerText = "keyboard_double_arrow_right";
-        btn.style.fontFamily = "Material Icons";
-    } else if (text === "keyboard_double_arrow_left") {
-        btn.innerText = "keyboard_double_arrow_left";
-        btn.style.fontFamily = "Material Icons";
-    }
-}
-
-// เรียกทุก 300ms เผื่อ Streamlit render ซ้ำ
-setInterval(fixSidebarCollapseIcon, 300);
-</script>
-""", height=0)
+# 👉 2. JavaScript: ไม่จำเป็นต้องใช้แล้ว จึงลบออก
 
 # --- Global Helper Functions: START ---
 
@@ -1411,4 +1407,4 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         """, unsafe_allow_html=True)
 
 else:
-    st.info("กรุณาค้นหาและเลือกผลตรวจจากแถบด้านข้างเพื่อแสดงรายงาน")
+    st.info("กรุณาค้นหาและเลือกผลตรวจจากแถบด้านข้างเพื่อแสดงรายงา
