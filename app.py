@@ -783,9 +783,14 @@ st.markdown("""
     /* Import Sarabun font from Google Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
 
-    /* Apply Sarabun font only to the main content area, not the sidebar */
-    section.main {
+    /* Apply Sarabun font to the entire app */
+    .stApp {
         font-family: 'Sarabun', sans-serif !important;
+    }
+
+    /* Reset font for the sidebar collapse button to prevent icon breakage */
+    button[data-testid="stSidebarNavCollapseButton"] {
+        font-family: initial !important;
     }
     
     /* Set a base font size for the body */
@@ -1372,4 +1377,4 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         """, unsafe_allow_html=True)
 
 else:
-    st.info("กรุณาค้นหาและเลือกผลตรวจจากแถบด้านข้างเพื่อแสดงรายงาน")
+    st.info("กรุณาค้นหาและเลือกผลตรวจจากแถบด้านข้างเพื่อแสดงรายงา
