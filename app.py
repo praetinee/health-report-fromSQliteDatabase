@@ -789,7 +789,7 @@ st.markdown("""
     }
 
     /* Reset font for the sidebar collapse button to prevent icon breakage */
-    button[data-testid="stSidebarNavCollapseButton"] p {
+    button[data-testid="stSidebarNavCollapseButton"] * {
         font-family: initial !important;
     }
     
