@@ -785,7 +785,7 @@ st.markdown("""
     @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 
     /* ใช้ Sarabun กับข้อความทั้งหมดในแอป */
-    html, body, div, span, p, td, th, li, ul, ol, table, h1, h2, h3, h4, h5, h6, button, input, select, textarea {
+    html, body, div, span, p, td, th, li, ul, ol, table, h1, h2, h3, h4, h5, h6, input, select, textarea {
         font-family: 'Sarabun', sans-serif !important;
     }
     
