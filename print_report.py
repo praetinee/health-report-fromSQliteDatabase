@@ -856,30 +856,25 @@ def get_print_component_html(report_html_string):
 
         <script type="text/javascript">
             function printReport() {{
-                // 1. สร้าง iframe ขึ้นมาใหม่แบบซ่อนไว้
-                const iframe = document.createElement('iframe');
-                iframe.style.display = 'none';
-                document.body.appendChild(iframe);
-
-                // 2. เข้าถึง document ของ iframe
-                const iframeDoc = iframe.contentWindow.document;
-
-                // 3. ถอดรหัส HTML จาก Base64
-                // ฟังก์ชัน atob() ใช้สำหรับถอดรหัสสตริง Base64
+                // 1. ถอดรหัส HTML จาก Base64
                 const decodedHtml = atob('{encoded_html}');
 
-                // 4. เขียนเนื้อหา HTML ลงใน iframe
-                iframeDoc.open();
-                iframeDoc.write(decodedHtml);
-                iframeDoc.close();
+                // 2. เปิดหน้าต่างใหม่เพื่อแสดงเนื้อหาที่จะพิมพ์
+                const printWindow = window.open('', '_blank');
+                
+                // 3. เขียนเนื้อหา HTML ลงในหน้าต่างใหม่
+                printWindow.document.open();
+                printWindow.document.write(decodedHtml);
+                printWindow.document.close();
 
-                // 5. รอสักครู่เพื่อให้ iframe โหลดเนื้อหาจนเสร็จสมบูรณ์
-                // จากนั้นจึงสั่งพิมพ์และลบ iframe ทิ้ง
-                setTimeout(function() {{
-                    iframe.contentWindow.focus(); // ให้ focus ไปที่ iframe
-                    iframe.contentWindow.print(); // เรียกใช้หน้าต่างพิมพ์ของเบราว์เซอร์
-                    document.body.removeChild(iframe); // ลบ iframe ออกจากหน้าเว็บ
-                }}, 500); // รอ 0.5 วินาที
+                // 4. รอให้หน้าต่างใหม่โหลดเสร็จสมบูรณ์ แล้วจึงสั่งพิมพ์
+                // ใช้ onload เพื่อความแน่นอนว่าเนื้อหาทั้งหมดถูก render แล้ว
+                printWindow.onload = function() {{
+                    printWindow.focus(); // ให้ focus ไปที่หน้าต่างใหม่
+                    printWindow.print(); // เรียกใช้หน้าต่างพิมพ์ของเบราว์เซอร์
+                    // เราจะไม่ปิดหน้าต่างโดยอัตโนมัติ เพื่อให้ผู้ใช้สามารถบันทึกเป็น PDF หรือตรวจสอบก่อนได้
+                    // printWindow.close(); 
+                }};
             }}
         </script>
     </body>
