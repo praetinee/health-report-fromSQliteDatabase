@@ -789,26 +789,28 @@ st.markdown("""
         font-family: 'Sarabun', sans-serif !important;
     }
     
-    /* * กำหนด CSS สำหรับปุ่มย่อ-ขยาย Sidebar โดยเฉพาะ
-     * ใช้กฎ CSS ที่สมบูรณ์ของ Material Icons และ '!important' ทุก property
-     * เพื่อให้แน่ใจว่าจะสามารถ override สไตล์ของ Sarabun ได้
-     */
-    button[data-testid="stSidebarNavCollapseButton"] * {
+    /* ซ่อมปุ่มย่อ-ขยาย Sidebar */
+    button[kind="icon"] > svg {
+        display: none !important;
+    }
+
+    button[kind="icon"]::before {
+        content: "keyboard_double_arrow_right";
         font-family: 'Material Icons' !important;
-        font-weight: normal !important;
+        font-size: 24px !important;
         font-style: normal !important;
-        font-size: 24px !important; /* อาจต้องปรับค่า */
-        line-height: 1 !important;
+        font-weight: normal !important;
         letter-spacing: normal !important;
         text-transform: none !important;
+        line-height: 1 !important;
         display: inline-block !important;
         white-space: nowrap !important;
-        word-wrap: normal !important;
         direction: ltr !important;
         -webkit-font-feature-settings: 'liga' !important;
         -webkit-font-smoothing: antialiased !important;
+        color: var(--text-color);
     }
-    </style>
+</style>
 """, unsafe_allow_html=True)
 
 # --- Callback Functions for State Management ---
