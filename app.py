@@ -956,7 +956,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         person_for_print = st.session_state["person_row"]
         report_html = print_report.generate_printable_report(person_for_print)
         st.download_button(
-            label="📄 พิมพ์รายงาน",
+            label="📄 ดาว์นโหลดรายงาน",
             data=report_html,
             file_name=f"Health_Report_{person_for_print.get('HN', 'NA')}_{person_for_print.get('Year', 'NA')}.html",
             mime="text/html",
