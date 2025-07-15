@@ -438,19 +438,25 @@ def interpret_ekg(val):
     return val
 
 def hepatitis_b_advice(hbsag, hbsab, hbcab):
+    """
+    ให้คำแนะนำเกี่ยวกับไวรัสตับอักเสบบี และคืนค่าสถานะเพื่อใช้ในการไฮไลต์
+    Returns: (advice_string, status_flag)
+    status_flag: 'infection', 'no_immunity', 'normal'
+    """
     hbsag = hbsag.lower()
     hbsab = hbsab.lower()
     hbcab = hbcab.lower()
     
     if "positive" in hbsag:
-        return "ติดเชื้อไวรัสตับอักเสบบี"
-    elif "positive" in hbsab and "positive" not in hbsag:
-        return "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี"
-    elif "positive" in hbcab and "positive" not in hbsab:
-        return "เคยติดเชื้อแต่ไม่มีภูมิคุ้มกันในปัจจุบัน"
+        return "ติดเชื้อไวรัสตับอักเสบบี", "infection"
     elif all(x == "negative" for x in [hbsag, hbsab, hbcab]):
-        return "ไม่มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี ควรปรึกษาแพทย์เพื่อรับวัคซีน"
-    return "ไม่สามารถสรุปผลชัดเจน แนะนำให้พบแพทย์เพื่อประเมินซ้ำ"
+        return "ไม่มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี ควรปรึกษาแพทย์เพื่อรับวัคซีน", "no_immunity"
+    elif "positive" in hbsab and "positive" not in hbsag:
+        return "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี", "normal"
+    elif "positive" in hbcab and "positive" not in hbsab:
+        return "เคยติดเชื้อแต่ไม่มีภูมิคุ้มกันในปัจจุบัน", "normal"
+    
+    return "ไม่สามารถสรุปผลชัดเจน แนะนำให้พบแพทย์เพื่อประเมินซ้ำ", "normal"
 
 # --- HTML Rendering Functions ---
 
@@ -702,7 +708,13 @@ def render_other_results_html(person, sex):
     hbsag_raw = safe_text(person.get("HbsAg"))
     hbsab_raw = safe_text(person.get("HbsAb"))
     hbcab_raw = safe_text(person.get("HBcAB"))
-    hep_b_advice = hepatitis_b_advice(hbsag_raw, hbsab_raw, hbcab_raw)
+    hep_b_advice, hep_b_status = hepatitis_b_advice(hbsag_raw, hbsab_raw, hbcab_raw)
+
+    advice_bg_color = "#f8f9fa"  # default gray
+    if hep_b_status == 'infection':
+        advice_bg_color = '#ffdddd'  # red highlight
+    elif hep_b_status == 'no_immunity':
+        advice_bg_color = '#fff8e1'  # yellow highlight
 
     hepatitis_html = f"""
     {render_section_header("ผลตรวจไวรัสตับอักเสบ")}
@@ -711,7 +723,7 @@ def render_other_results_html(person, sex):
         <tr><td style="text-align: left; width: 40%;"><b>ไวรัสตับอักเสบ บี (HBsAg)</b></td><td style="text-align: left;">{hbsag_raw}</td></tr>
         <tr><td style="text-align: left; width: 40%;"><b>ภูมิคุ้มกัน (HBsAb)</b></td><td style="text-align: left;">{hbsab_raw}</td></tr>
         <tr><td style="text-align: left; width: 40%;"><b>การติดเชื้อ (HBcAb)</b></td><td style="text-align: left;">{hbcab_raw}</td></tr>
-        <tr><td colspan="2" style="text-align: left; background-color: #f8f9fa;"><b>คำแนะนำ:</b> {hep_b_advice}</td></tr>
+        <tr><td colspan="2" style="text-align: left; background-color: {advice_bg_color};"><b>คำแนะนำ:</b> {hep_b_advice}</td></tr>
     </table>
     """
 
