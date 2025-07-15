@@ -3,7 +3,6 @@ from datetime import datetime
 import re
 import html
 from collections import OrderedDict
-import base64
 
 # ==============================================================================
 # หมายเหตุ: ไฟล์นี้มีฟังก์ชันที่จำเป็นสำหรับการสร้างรายงานในรูปแบบ HTML
@@ -256,7 +255,7 @@ def merge_final_advice_grouped(messages):
         elif "พิวรีน" in msg or "ยูริค" in msg: groups["ยูริค"].append(msg)
         elif "ไขมัน" in msg: groups["ไขมัน"].append(msg)
         else: groups["อื่นๆ"].append(msg)
-        
+            
     output = []
     for title, msgs in groups.items():
         if msgs:
@@ -284,7 +283,7 @@ def interpret_sugar(value):
     elif val == "trace":
         return "พบน้ำตาลในปัสสาวะเล็กน้อย"
     elif val in ["1+", "2+", "3+", "4+", "5+", "6+"]:
-        return "พบน้ำตาลในปัสาวะ"
+        return "พบน้ำตาลในปัสสาวะ"
     return "-"
     
 def parse_range_or_number(val):
@@ -334,7 +333,7 @@ def advice_urine(sex, alb, sugar, rbc, wbc):
     wbc_t = interpret_wbc(wbc)
     
     if all(x in ["-", "ปกติ", "ไม่พบ", "พบโปรตีนในปัสสาวะเล็กน้อย", "พบน้ำตาลในปัสสาวะเล็กน้อย"]
-                   for x in [alb_t, sugar_t, rbc_t, wbc_t]):
+                     for x in [alb_t, sugar_t, rbc_t, wbc_t]):
         return ""
     
     if "พบน้ำตาลในปัสสาวะ" in sugar_t and "เล็กน้อย" not in sugar_t:
@@ -802,96 +801,3 @@ def generate_printable_report(person):
     </html>
     """
     return final_html
-
-# --- ฟังก์ชันใหม่สำหรับสร้างปุ่มพิมพ์ ---
-def get_print_component_html(report_html_string):
-    """
-    รับสตริง HTML ของรายงานและส่งคืนคอมโพเนนต์ HTML ของ Streamlit
-    ซึ่งมีปุ่ม "พิมพ์" และ JavaScript ที่จำเป็นในการพิมพ์เนื้อหารายงาน
-
-    Args:
-        report_html_string (str): เนื้อหา HTML ฉบับเต็มของรายงานที่จะพิมพ์
-
-    Returns:
-        str: สตริง HTML สำหรับใช้กับ st.components.v1.html()
-    """
-    # เข้ารหัส HTML ของรายงานเป็น Base64 เพื่อให้สามารถฝังใน JavaScript ได้อย่างปลอดภัย
-    # วิธีนี้ช่วยจัดการกับอักขระพิเศษ เช่น เครื่องหมายคำพูดหรือการขึ้นบรรทัดใหม่
-    encoded_html = base64.b64encode(report_html_string.encode()).decode()
-
-    # คอมโพเนนต์ HTML ประกอบด้วยปุ่มและฟังก์ชัน JavaScript
-    # JavaScript จะสร้าง iframe ที่ซ่อนอยู่ เขียน HTML ที่ถอดรหัสแล้วลงไป
-    # จากนั้นเรียกใช้หน้าต่างโต้ตอบการพิมพ์บน iframe นั้น
-    component_html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <style>
-            /* จัดสไตล์ปุ่มพิมพ์ */
-            @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
-            .print-button {{
-                font-family: 'Sarabun', sans-serif;
-                font-size: 14px;
-                font-weight: bold;
-                padding: 10px 20px;
-                border-radius: 8px;
-                border: none;
-                background-color: #007bff;
-                color: white;
-                cursor: pointer;
-                transition: background-color 0.2s;
-                display: inline-flex;
-                align-items: center;
-                gap: 8px; /* ระยะห่างระหว่างไอคอนกับข้อความ */
-            }}
-            .print-button:hover {{
-                background-color: #0056b3;
-            }}
-        </style>
-    </head>
-    <body>
-        <button class="print-button" onclick="printReport()">
-            🖨️ พิมพ์รายงาน
-        </button>
-
-        <script type="text/javascript">
-            function printReport() {{
-                // 1. ถอดรหัส HTML จาก Base64
-                const decodedHtml = atob('{encoded_html}');
-
-                // 2. ค้นหาและลบ iframe เก่า (ถ้ามี) เพื่อป้องกันการซ้ำซ้อน
-                const oldIframe = document.getElementById('print-iframe');
-                if (oldIframe) {{
-                    oldIframe.remove();
-                }}
-
-                // 3. สร้าง iframe ใหม่
-                const iframe = document.createElement('iframe');
-                iframe.id = 'print-iframe';
-                iframe.style.display = 'none'; // ซ่อน iframe ไม่ให้แสดงบนหน้าจอ
-                document.body.appendChild(iframe); // เพิ่ม iframe เข้าไปใน DOM
-
-                // 4. เขียนเนื้อหา HTML ที่ถอดรหัสแล้วลงใน iframe
-                iframe.contentDocument.open();
-                iframe.contentDocument.write(decodedHtml);
-                iframe.contentDocument.close();
-
-                // 5. ตั้งค่า event listener 'onload' บน contentWindow ของ iframe
-                // เพื่อให้แน่ใจว่าทรัพยากรทั้งหมด (เช่น ฟอนต์) โหลดเสร็จแล้ว
-                iframe.contentWindow.onload = function() {{
-                    // 6. เมื่อโหลดเสร็จ ให้เรียกใช้ฟังก์ชันพิมพ์
-                    iframe.contentWindow.focus(); // Focus ที่ iframe (สำคัญสำหรับบางเบราว์เซอร์)
-                    iframe.contentWindow.print(); // เรียกหน้าต่างพิมพ์
-                    
-                    // 7. ลบ iframe ออกหลังจากที่ผู้ใช้ปิดหน้าต่างพิมพ์แล้ว
-                    // ใช้ setTimeout เพื่อให้มีเวลาเล็กน้อยก่อนที่จะลบ
-                    setTimeout(() => {{
-                        document.body.removeChild(iframe);
-                    }}, 1000);
-                }};
-            }}
-        </script>
-    </body>
-    </html>
-    """
-    return component_html
