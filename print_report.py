@@ -32,18 +32,33 @@ def get_float(col, person_data):
         return None
 
 def flag(val, low=None, high=None, higher_is_better=False):
+    """
+    ตรวจสอบค่าและจัดรูปแบบตัวเลขสำหรับตารางผลตรวจ
+    - ตัวเลขจำนวนเต็มจะใส่ comma แต่ไม่มีทศนิยม
+    - ตัวเลขทศนิยมจะใส่ comma และมีทศนิยม 1 ตำแหน่ง
+    """
     try:
-        val = float(str(val).replace(",", "").strip())
-    except:
+        val_float = float(str(val).replace(",", "").strip())
+    except (ValueError, TypeError):
         return "-", False
 
+    # Smart formatting
+    if val_float == int(val_float):
+        # เป็นจำนวนเต็ม, จัดรูปแบบด้วย comma
+        formatted_val = f"{int(val_float):,}"
+    else:
+        # เป็นทศนิยม, จัดรูปแบบด้วย comma และทศนิยม 1 ตำแหน่ง
+        formatted_val = f"{val_float:,.1f}"
+
+    is_abn = False
     if higher_is_better and low is not None:
-        return f"{val:.1f}", val < low
-    if low is not None and val < low:
-        return f"{val:.1f}", True
-    if high is not None and val > high:
-        return f"{val:.1f}", True
-    return f"{val:.1f}", False
+        is_abn = val_float < low
+    elif low is not None and val_float < low:
+        is_abn = True
+    elif high is not None and val_float > high:
+        is_abn = True
+
+    return formatted_val, is_abn
 
 def safe_text(val):
     return "-" if str(val).strip().lower() in ["", "none", "nan", "-"] else str(val).strip()
@@ -255,7 +270,7 @@ def merge_final_advice_grouped(messages):
         elif "พิวรีน" in msg or "ยูริค" in msg: groups["ยูริค"].append(msg)
         elif "ไขมัน" in msg: groups["ไขมัน"].append(msg)
         else: groups["อื่นๆ"].append(msg)
-            
+        
     output = []
     for title, msgs in groups.items():
         if msgs:
@@ -333,7 +348,7 @@ def advice_urine(sex, alb, sugar, rbc, wbc):
     wbc_t = interpret_wbc(wbc)
     
     if all(x in ["-", "ปกติ", "ไม่พบ", "พบโปรตีนในปัสสาวะเล็กน้อย", "พบน้ำตาลในปัสสาวะเล็กน้อย"]
-                     for x in [alb_t, sugar_t, rbc_t, wbc_t]):
+                       for x in [alb_t, sugar_t, rbc_t, wbc_t]):
         return ""
     
     if "พบน้ำตาลในปัสสาวะ" in sugar_t and "เล็กน้อย" not in sugar_t:
@@ -524,6 +539,16 @@ def render_personal_info(person):
         sbp_int = dbp_int = None
         bp_val = "-"
     
+    # จัดการค่าชีพจร (Pulse) ให้เป็นเลขจำนวนเต็ม
+    pulse_raw = person.get("pulse", "-")
+    pulse_val = "-"
+    if not is_empty(pulse_raw):
+        try:
+            # แปลงเป็น float ก่อนเพื่อรองรับค่าเช่น "75.0" แล้วจึงแปลงเป็น int
+            pulse_val = str(int(float(pulse_raw)))
+        except (ValueError, TypeError):
+            pulse_val = safe_text(pulse_raw) # ใช้ค่าเดิมหากแปลงไม่ได้
+
     bp_desc = interpret_bp(sbp, dbp)
     bp_full = f"{bp_val} - {bp_desc}" if bp_desc != "-" else bp_val
     
@@ -545,7 +570,7 @@ def render_personal_info(person):
             <span><b>ส่วนสูง:</b> {person.get("ส่วนสูง", "-")} ซม.</span>
             <span><b>รอบเอว:</b> {person.get("รอบเอว", "-")} ซม.</span>
             <span><b>ความดันโลหิต:</b> {bp_full}</span>
-            <span><b>ชีพจร:</b> {person.get("pulse", "-")} ครั้ง/นาที</span>
+            <span><b>ชีพจร:</b> {pulse_val} ครั้ง/นาที</span>
         </div>
         {f"<div style='margin-top: 0.5rem; text-align: center; border: 1px solid #ddd; padding: 3px; border-radius: 5px; background-color: #f8f9fa;'><b>คำแนะนำทั่วไป:</b> {summary_advice}</div>" if summary_advice else ""}
     </div>
