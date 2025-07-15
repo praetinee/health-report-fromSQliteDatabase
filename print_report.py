@@ -284,7 +284,7 @@ def interpret_sugar(value):
     elif val == "trace":
         return "พบน้ำตาลในปัสสาวะเล็กน้อย"
     elif val in ["1+", "2+", "3+", "4+", "5+", "6+"]:
-        return "พบน้ำตาลในปัสสาวะ"
+        return "พบน้ำตาลในปัสาวะ"
     return "-"
     
 def parse_range_or_number(val):
@@ -859,21 +859,35 @@ def get_print_component_html(report_html_string):
                 // 1. ถอดรหัส HTML จาก Base64
                 const decodedHtml = atob('{encoded_html}');
 
-                // 2. เปิดหน้าต่างใหม่เพื่อแสดงเนื้อหาที่จะพิมพ์
-                const printWindow = window.open('', '_blank');
-                
-                // 3. เขียนเนื้อหา HTML ลงในหน้าต่างใหม่
-                printWindow.document.open();
-                printWindow.document.write(decodedHtml);
-                printWindow.document.close();
+                // 2. ค้นหาและลบ iframe เก่า (ถ้ามี) เพื่อป้องกันการซ้ำซ้อน
+                const oldIframe = document.getElementById('print-iframe');
+                if (oldIframe) {{
+                    oldIframe.remove();
+                }}
 
-                // 4. รอให้หน้าต่างใหม่โหลดเสร็จสมบูรณ์ แล้วจึงสั่งพิมพ์
-                // ใช้ onload เพื่อความแน่นอนว่าเนื้อหาทั้งหมดถูก render แล้ว
-                printWindow.onload = function() {{
-                    printWindow.focus(); // ให้ focus ไปที่หน้าต่างใหม่
-                    printWindow.print(); // เรียกใช้หน้าต่างพิมพ์ของเบราว์เซอร์
-                    // เราจะไม่ปิดหน้าต่างโดยอัตโนมัติ เพื่อให้ผู้ใช้สามารถบันทึกเป็น PDF หรือตรวจสอบก่อนได้
-                    // printWindow.close(); 
+                // 3. สร้าง iframe ใหม่
+                const iframe = document.createElement('iframe');
+                iframe.id = 'print-iframe';
+                iframe.style.display = 'none'; // ซ่อน iframe ไม่ให้แสดงบนหน้าจอ
+                document.body.appendChild(iframe); // เพิ่ม iframe เข้าไปใน DOM
+
+                // 4. เขียนเนื้อหา HTML ที่ถอดรหัสแล้วลงใน iframe
+                iframe.contentDocument.open();
+                iframe.contentDocument.write(decodedHtml);
+                iframe.contentDocument.close();
+
+                // 5. ตั้งค่า event listener 'onload' บน contentWindow ของ iframe
+                // เพื่อให้แน่ใจว่าทรัพยากรทั้งหมด (เช่น ฟอนต์) โหลดเสร็จแล้ว
+                iframe.contentWindow.onload = function() {{
+                    // 6. เมื่อโหลดเสร็จ ให้เรียกใช้ฟังก์ชันพิมพ์
+                    iframe.contentWindow.focus(); // Focus ที่ iframe (สำคัญสำหรับบางเบราว์เซอร์)
+                    iframe.contentWindow.print(); // เรียกหน้าต่างพิมพ์
+                    
+                    // 7. ลบ iframe ออกหลังจากที่ผู้ใช้ปิดหน้าต่างพิมพ์แล้ว
+                    // ใช้ setTimeout เพื่อให้มีเวลาเล็กน้อยก่อนที่จะลบ
+                    setTimeout(() => {{
+                        document.body.removeChild(iframe);
+                    }}, 1000);
                 }};
             }}
         </script>
