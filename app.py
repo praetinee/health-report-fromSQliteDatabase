@@ -764,17 +764,25 @@ def load_sqlite_data():
         df_loaded = pd.read_sql("SELECT * FROM health_data", conn)
         conn.close()
 
-        # --- Data Cleaning Section (CRITICAL FIX) ---
+        # --- Data Cleaning Section (CRITICAL FIX v2) ---
         df_loaded.columns = df_loaded.columns.str.strip()
-        df_loaded['เลขบัตรประชาชน'] = df_loaded['เลขบัตรประชาชน'].astype(str).str.strip()
         
-        # FIX: Robustly clean the 'HN' column for consistent searching.
-        # Convert to string, strip whitespace, and remove trailing '.0'
-        df_loaded['HN'] = df_loaded['HN'].astype(str).str.strip().str.replace(r'\.0$', '', regex=True)
+        # FIX for HN column with REAL data type:
+        # The database stores HN as REAL (float in pandas), e.g., 12345.0.
+        # To ensure reliable string-based search, we must convert it correctly.
+        
+        # 1. Convert to a numeric type, turning non-numeric values into NaN (Not a Number).
+        df_loaded['HN'] = pd.to_numeric(df_loaded['HN'], errors='coerce')
+        
+        # 2. Remove any rows where HN is NaN, as they are invalid for searching.
+        df_loaded.dropna(subset=['HN'], inplace=True)
+        
+        # 3. Convert the float to an integer (which removes the .0) and then to a string.
+        df_loaded['HN'] = df_loaded['HN'].astype(np.int64).astype(str).str.strip()
 
-        # FIX: Clean the 'ชื่อ-สกุล' column to remove leading/trailing spaces.
+        # Clean 'ชื่อ-สกุล' and other columns as before.
         df_loaded['ชื่อ-สกุล'] = df_loaded['ชื่อ-สกุล'].astype(str).str.strip()
-        
+        df_loaded['เลขบัตรประชาชน'] = df_loaded['เลขบัตรประชาชน'].astype(str).str.strip()
         df_loaded['Year'] = df_loaded['Year'].astype(int)
         df_loaded['วันที่ตรวจ'] = df_loaded['วันที่ตรวจ'].apply(normalize_thai_date)
         df_loaded.replace(["-", "None", None], pd.NA, inplace=True)
