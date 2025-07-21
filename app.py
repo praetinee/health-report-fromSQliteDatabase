@@ -739,7 +739,7 @@ def merge_final_advice_grouped(messages):
 @st.cache_data(ttl=600)
 def load_sqlite_data():
     """
-    Loads data from SQLite DB, cleans HN and creates a normalized name column for searching.
+    Loads data from SQLite DB and performs strict cleaning for reliable searching.
     """
     try:
         file_id = "1HruO9AMrUfniC8hBWtumVdxLJayEc1Xr"
@@ -758,24 +758,24 @@ def load_sqlite_data():
 
         df_loaded.columns = df_loaded.columns.str.strip()
         
-        # --- HN Cleaning ---
-        df_loaded['HN'] = df_loaded['HN'].apply(
-            lambda x: str(int(x)) if pd.notna(x) and isinstance(x, (float, int)) else str(x)
-        ).str.strip()
+        # --- Robust HN Cleaning ---
+        # This handles HNs stored as numbers (e.g., 12345.0) and text.
+        # It standardizes them to a simple string of digits (e.g., "12345").
+        def clean_hn(hn_val):
+            if pd.isna(hn_val):
+                return ""
+            try:
+                # Convert to float, then int, then string to handle cases like "12345.0" or 12345.0
+                return str(int(float(hn_val)))
+            except (ValueError, TypeError):
+                # If conversion fails, it's likely already a non-numeric string.
+                return str(hn_val).strip()
 
-        # --- Name Cleaning for Robust Search ---
-        # 1. Keep original 'ชื่อ-สกุล' for display.
-        # 2. Create a new 'search_name' column for searching.
+        df_loaded['HN'] = df_loaded['HN'].apply(clean_hn)
+        
+        # --- Strict Name Cleaning ---
+        # Convert to string and strip leading/trailing whitespace.
         df_loaded['ชื่อ-สกุล'] = df_loaded['ชื่อ-สกุล'].astype(str).str.strip()
-        
-        # Define prefixes to remove for cleaner searching
-        prefixes_to_remove = ['นาย', 'นาง', 'น.ส.', 'นางสาว', 'ด.ช.', 'ด.ญ.', 'คุณ']
-        # Build a regex pattern to find and remove prefixes
-        pattern = r'\b(' + '|'.join(re.escape(p) for p in prefixes_to_remove) + r')\b\s*'
-        
-        df_loaded['search_name'] = df_loaded['ชื่อ-สกุล'].str.replace(pattern, '', regex=True) \
-                                                    .str.replace(r'\s+', ' ', regex=True) \
-                                                    .str.strip()
 
         # --- Other Column Cleaning ---
         df_loaded['เลขบัตรประชาชน'] = df_loaded['เลขบัตรประชาชน'].astype(str).str.strip()
@@ -839,11 +839,11 @@ st.markdown("""
 # --- Callback Functions for State Management ---
 def perform_search():
     """
-    Callback function for search. Cleans user input to match the normalized
-    'search_name' column for more reliable results.
+    Callback function for search. Performs a strict, 100% exact match
+    for both HN and Name, as requested.
     """
     st.session_state.search_query = st.session_state.search_input
-    # Reset selections on a new search to avoid inconsistent state
+    # Reset selections on a new search
     st.session_state.selected_year = None
     st.session_state.selected_date = None
     st.session_state.pop("person_row", None)
@@ -852,25 +852,14 @@ def perform_search():
     search_term = st.session_state.search_query.strip()
     if search_term:
         if search_term.isdigit():
-            # HN search is an exact match on the already cleaned 'HN' column
+            # Strict search for HN
             results_df = df[df["HN"] == search_term].copy()
         else:
-            # --- Robust Name Search ---
-            # 1. Clean the user's search term using the same logic as the data
-            prefixes_to_remove = ['นาย', 'นาง', 'น.ส.', 'นางสาว', 'ด.ช.', 'ด.ญ.', 'คุณ']
-            pattern = r'\b(' + '|'.join(re.escape(p) for p in prefixes_to_remove) + r')\b\s*'
-            
-            cleaned_search_term = re.sub(pattern, '', search_term)
-            cleaned_search_term = re.sub(r'\s+', ' ', cleaned_search_term).strip()
-
-            # 2. Search the cleaned term in the pre-cleaned 'search_name' column
-            if cleaned_search_term: # Ensure the term is not empty after cleaning
-                results_df = df[df["search_name"].str.contains(cleaned_search_term, case=False, na=False, regex=False)].copy()
-            else:
-                results_df = pd.DataFrame() # Return empty if search term is only a prefix
+            # Strict search for Name
+            results_df = df[df["ชื่อ-สกุล"] == search_term].copy()
         
         if results_df.empty:
-            st.error("❌ ไม่พบข้อมูล กรุณาตรวจสอบข้อมูลที่กรอกอีกครั้ง")
+            st.error("❌ ไม่พบข้อมูล กรุณาตรวจสอบให้แน่ใจว่าข้อมูลที่กรอกตรงกับฐานข้อมูล 100%")
             st.session_state.search_result = pd.DataFrame()
         else:
             st.session_state.search_result = results_df
@@ -1421,3 +1410,15 @@ else:
     if not df.empty:
         st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
 
+" code between  and  in the most up-to-date Canvas "โค้ด Streamlit ที่แก้ไขแล้ว (ปรับปรุงการค้นหา)" document above and am asking a query about/based on this code below.
+Instructions to follow:
+  * Don't output/edit the document if the query is Direct/Simple. For example, if the query asks for a simple explanation, output a direct answer.
+  * Make sure to **edit** the document if the query shows the intent of editing the document, in which case output the entire edited document, **not just that section or the edits**.
+    * Don't output the same document/empty document and say that you have edited it.
+    * Don't change unrelated code in the document.
+  * Don't output  and  in your final response.
+  * Any references like "this" or "selected code" refers to the code between  and  tags.
+  * Just acknowledge my request in the introduction.
+  * Make sure to refer to the document as "Canvas" in your response.
+
+รบกวนช่วยเติมโค้ดที่ขาดหายไปให้สมบูรณ์หน่อยค
