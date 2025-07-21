@@ -450,39 +450,8 @@ if not results_df.empty:
 
 st.markdown("<hr>", unsafe_allow_html=True)
 
-def display_performance_report(person_data, report_type):
-    st.header("รายงานผลการตรวจสมรรถภาพ")
-    if report_type == 'lung':
-        st.subheader("สมรรถภาพปอด (Lung Capacity)")
-        fvc_p, fev1_p, ratio = person_data.get('FVC เปอร์เซ็นต์'), person_data.get('FEV1เปอร์เซ็นต์'), person_data.get('FEV1/FVC%')
-        lung_summary, lung_advice, lung_raw_values = performance_tests.interpret_lung_capacity(fvc_p, fev1_p, ratio)
-        p_col1, p_col2 = st.columns(2)
-        p_col1.metric("สรุปผล", lung_summary)
-        if lung_advice: p_col2.info(f"**คำแนะนำ:** {lung_advice}")
-        with st.expander("ดูข้อมูลดิบ (Raw Data)"): st.json(lung_raw_values)
-    elif report_type == 'vision':
-        st.subheader("สมรรถภาพการมองเห็น (Vision)")
-        vision_raw, color_raw = person_data.get('สายตา'), person_data.get('ตาบอดสี')
-        vision_summary, color_summary, vision_advice = performance_tests.interpret_vision(vision_raw, color_raw)
-        with st.expander("ดูข้อมูลดิบ (Raw Data)"):
-            st.write(f"ผลตรวจสายตา (ดิบ): {vision_raw or '-'}")
-            st.write(f"ผลตรวจตาบอดสี (ดิบ): {color_raw or '-'}")
-        v_col1, v_col2 = st.columns(2)
-        v_col1.metric("ผลตรวจสายตา", vision_summary)
-        v_col2.metric("ผลตรวจตาบอดสี", color_summary)
-        if vision_advice: st.info(f"**คำแนะนำ:** {vision_advice}")
-    elif report_type == 'hearing':
-        st.subheader("สมรรถภาพการได้ยิน (Hearing)")
-        hearing_raw = person_data.get('การได้ยิน')
-        hearing_summary, hearing_advice = performance_tests.interpret_hearing(hearing_raw)
-        with st.expander("ดูข้อมูลดิบ (Raw Data)"): st.write(f"ผลตรวจการได้ยิน (ดิบ): {hearing_raw or '-'}")
-        h_col1, h_col2 = st.columns(2)
-        h_col1.metric("สรุปผล", hearing_summary)
-        if hearing_advice: h_col2.info(f"**คำแนะนำ:** {hearing_advice}")
-
-def display_main_report(person_data):
-    person = person_data
-    check_date = person.get("วันที่ตรวจ", "ไม่มีข้อมูล")
+def display_common_header(person_data):
+    check_date = person_data.get("วันที่ตรวจ", "ไม่มีข้อมูล")
     st.markdown(f"""<div class="report-header-container" style="text-align: center; margin-bottom: 2rem; margin-top: 2rem;">
         <h1>รายงานผลการตรวจสุขภาพ</h1>
         <h2>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม -</h2>
@@ -492,32 +461,32 @@ def display_main_report(person_data):
     </div>""", unsafe_allow_html=True)
     
     try:
-        weight_val = float(str(person.get("น้ำหนัก", "-")).replace("กก.", "").strip())
-        height_val = float(str(person.get("ส่วนสูง", "-")).replace("ซม.", "").strip())
+        weight_val = float(str(person_data.get("น้ำหนัก", "-")).replace("กก.", "").strip())
+        height_val = float(str(person_data.get("ส่วนสูง", "-")).replace("ซม.", "").strip())
         bmi_val = weight_val / ((height_val / 100) ** 2) if height_val > 0 else None
     except: bmi_val = None
     try:
-        sbp_int, dbp_int = int(float(person.get("SBP", ""))), int(float(person.get("DBP", "")))
+        sbp_int, dbp_int = int(float(person_data.get("SBP", ""))), int(float(person_data.get("DBP", "")))
         bp_val = f"{sbp_int}/{dbp_int} ม.ม.ปรอท"
     except: sbp_int = dbp_int = None; bp_val = "-"
     bp_desc = interpret_bp(sbp_int, dbp_int) if sbp_int is not None else "-"
     bp_full = f"{bp_val} - {bp_desc}" if bp_desc != "-" else bp_val
-    try: pulse_val = int(float(person.get("pulse", "-")))
+    try: pulse_val = int(float(person_data.get("pulse", "-")))
     except: pulse_val = None
     pulse = f"{pulse_val} ครั้ง/นาที" if pulse_val is not None else "-"
-    weight_display = f"{person.get('น้ำหนัก', '-')} กก." if not is_empty(person.get('น้ำหนัก', '-')) else "-"
-    height_display = f"{person.get('ส่วนสูง', '-')} ซม." if not is_empty(person.get('ส่วนสูง', '-')) else "-"
-    waist_display = f"{person.get('รอบเอว', '-')} ซม." if not is_empty(person.get('รอบเอว', '-')) else "-"
-    summary_advice = html.escape(combined_health_advice(bmi_val, person.get("SBP", ""), person.get("DBP", "")))
+    weight_display = f"{person_data.get('น้ำหนัก', '-')} กก." if not is_empty(person_data.get('น้ำหนัก', '-')) else "-"
+    height_display = f"{person_data.get('ส่วนสูง', '-')} ซม." if not is_empty(person_data.get('ส่วนสูง', '-')) else "-"
+    waist_display = f"{person_data.get('รอบเอว', '-')} ซม." if not is_empty(person_data.get('รอบเอว', '-')) else "-"
+    summary_advice = html.escape(combined_health_advice(bmi_val, person_data.get("SBP", ""), person_data.get("DBP", "")))
     
     st.markdown(f"""<div class="personal-info-container">
         <hr style="margin-top: 0.5rem; margin-bottom: 1.5rem;">
         <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; margin-bottom: 1rem; text-align: center; line-height: 1.8;">
-            <div><b>ชื่อ-สกุล:</b> {person.get('ชื่อ-สกุล', '-')}</div>
-            <div><b>อายุ:</b> {str(int(float(person.get('อายุ')))) if str(person.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')} ปี</div>
-            <div><b>เพศ:</b> {person.get('เพศ', '-')}</div>
-            <div><b>HN:</b> {str(int(float(person.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person.get('HN', '-')}</div>
-            <div><b>หน่วยงาน:</b> {person.get('หน่วยงาน', '-')}</div>
+            <div><b>ชื่อ-สกุล:</b> {person_data.get('ชื่อ-สกุล', '-')}</div>
+            <div><b>อายุ:</b> {str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person_data.get('อายุ', '-')} ปี</div>
+            <div><b>เพศ:</b> {person_data.get('เพศ', '-')}</div>
+            <div><b>HN:</b> {str(int(float(person_data.get('HN')))) if str(person_data.get('HN')).replace('.', '', 1).isdigit() else person_data.get('HN', '-')}</div>
+            <div><b>หน่วยงาน:</b> {person_data.get('หน่วยงาน', '-')}</div>
         </div>
         <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; margin-bottom: 1.5rem; text-align: center; line-height: 1.8;">
             <div><b>น้ำหนัก:</b> {weight_display}</div>
@@ -529,20 +498,47 @@ def display_main_report(person_data):
         {f"<div style='margin-top: 1rem; text-align: center;'><b>คำแนะนำ:</b> {summary_advice}</div>" if summary_advice else ""}
     </div>""", unsafe_allow_html=True)
 
+def display_performance_report(person_data, report_type):
+    if report_type == 'lung':
+        st.header("รายงานผลการตรวจสมรรถภาพปอด (Lung Capacity)")
+        fvc_p, fev1_p, ratio = person_data.get('FVC เปอร์เซ็นต์'), person_data.get('FEV1เปอร์เซ็นต์'), person_data.get('FEV1/FVC%')
+        lung_summary, lung_advice, lung_raw_values = performance_tests.interpret_lung_capacity(fvc_p, fev1_p, ratio)
+        p_col1, p_col2 = st.columns(2)
+        p_col1.metric("สรุปผล", lung_summary)
+        if lung_advice: p_col2.info(f"**คำแนะนำ:** {lung_advice}")
+        with st.expander("ดูข้อมูลดิบ (Raw Data)"): st.json(lung_raw_values)
+    elif report_type == 'vision':
+        st.header("รายงานผลการตรวจสมรรถภาพการมองเห็น (Vision)")
+        vision_raw, color_raw = person_data.get('สายตา'), person_data.get('ตาบอดสี')
+        vision_summary, color_summary, vision_advice = performance_tests.interpret_vision(vision_raw, color_raw)
+        with st.expander("ดูข้อมูลดิบ (Raw Data)"):
+            st.write(f"ผลตรวจสายตา (ดิบ): {vision_raw or '-'}")
+            st.write(f"ผลตรวจตาบอดสี (ดิบ): {color_raw or '-'}")
+        v_col1, v_col2 = st.columns(2)
+        v_col1.metric("ผลตรวจสายตา", vision_summary)
+        v_col2.metric("ผลตรวจตาบอดสี", color_summary)
+        if vision_advice: st.info(f"**คำแนะนำ:** {vision_advice}")
+    elif report_type == 'hearing':
+        st.header("รายงานผลการตรวจสมรรถภาพการได้ยิน (Hearing)")
+        hearing_raw = person_data.get('การได้ยิน')
+        hearing_summary, hearing_advice = performance_tests.interpret_hearing(hearing_raw)
+        with st.expander("ดูข้อมูลดิบ (Raw Data)"): st.write(f"ผลตรวจการได้ยิน (ดิบ): {hearing_raw or '-'}")
+        h_col1, h_col2 = st.columns(2)
+        h_col1.metric("สรุปผล", hearing_summary)
+        if hearing_advice: h_col2.info(f"**คำแนะนำ:** {hearing_advice}")
+
+def display_main_report(person_data):
+    person = person_data
     sex = str(person.get("เพศ", "")).strip()
     if sex not in ["ชาย", "หญิง"]: sex = "ไม่ระบุ"
     hb_low, hct_low = (12, 36) if sex == "หญิง" else (13, 39)
-
     cbc_config = [("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None), ("ฮีมาโตคริต (Hct)", "HCT", "ชาย > 39%, หญิง > 36%", hct_low, None), ("เม็ดเลือดขาว (wbc)", "WBC (cumm)", "4,000 - 10,000 /cu.mm", 4000, 10000), ("นิวโทรฟิล (Neutrophil)", "Ne (%)", "43 - 70%", 43, 70), ("ลิมโฟไซต์ (Lymphocyte)", "Ly (%)", "20 - 44%", 20, 44), ("โมโนไซต์ (Monocyte)", "M", "3 - 9%", 3, 9), ("อีโอซิโนฟิล (Eosinophil)", "Eo", "0 - 9%", 0, 9), ("เบโซฟิล (Basophil)", "BA", "0 - 3%", 0, 3), ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150,000 - 500,000 /cu.mm", 150000, 500000)]
     cbc_rows = [([(label, is_abn), (result, is_abn), (norm, is_abn)]) for label, col, norm, low, high in cbc_config for val in [get_float(col, person)] for result, is_abn in [flag(val, low, high)]]
-
     blood_config = [("น้ำตาลในเลือด (FBS)", "FBS", "74 - 106 mg/dl", 74, 106), ("กรดยูริก (Uric Acid)", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2), ("การทำงานของเอนไซม์ตับ (ALK)", "ALP", "30 - 120 U/L", 30, 120), ("การทำงานของเอนไซม์ตับ (SGOT)", "SGOT", "< 37 U/L", None, 37), ("การทำงานของเอนไซม์ตับ (SGPT)", "SGPT", "< 41 U/L", None, 41), ("คลอเรสเตอรอล (CHOL)", "CHOL", "150 - 200 mg/dl", 150, 200), ("ไตรกลีเซอไรด์ (TGL)", "TGL", "35 - 150 mg/dl", 35, 150), ("ไขมันดี (HDL)", "HDL", "> 40 mg/dl", 40, None, True), ("ไขมันเลว (LDL)", "LDL", "0 - 160 mg/dl", 0, 160), ("การทำงานของไต (BUN)", "BUN", "7.9 - 20 mg/dl", 7.9, 20), ("การทำงานของไต (Cr)", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17), ("ประสิทธิภาพการกรองของไต (GFR)", "GFR", "> 60 mL/min", 60, None, True)]
     blood_rows = [([(label, is_abn), (result, is_abn), (norm, is_abn)]) for label, col, norm, low, high, *opt in blood_config for higher in [opt[0] if opt else False] for val in [get_float(col, person)] for result, is_abn in [flag(val, low, high, higher)]]
-
     left_spacer, col1, col2, right_spacer = st.columns([0.5, 3, 3, 0.5])
     with col1: st.markdown(render_lab_table_html("ผลตรวจ CBC (Complete Blood Count)", None, ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows), unsafe_allow_html=True)
     with col2: st.markdown(render_lab_table_html("ผลตรวจเลือด (Blood Chemistry)", None, ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows), unsafe_allow_html=True)
-
     advice_list = [kidney_advice_from_summary(kidney_summary_gfr_only(person.get("GFR", ""))), fbs_advice(person.get("FBS", "")), liver_advice(summarize_liver(person.get("ALP", ""), person.get("SGOT", ""), person.get("SGPT", ""))), uric_acid_advice(person.get("Uric Acid", "")), lipids_advice(summarize_lipids(person.get("CHOL", ""), person.get("TGL", ""), person.get("LDL", ""))), cbc_advice(person.get("Hb(%)", ""), person.get("HCT", ""), person.get("WBC (cumm)", ""), person.get("Plt (/mm)", ""), sex=sex)]
     spacer_l, main_col, spacer_r = st.columns([0.5, 6, 0.5])
     with main_col:
@@ -550,7 +546,6 @@ def display_main_report(person_data):
         has_general_advice = "ไม่พบคำแนะนำเพิ่มเติม" not in final_advice_html
         background_color_general_advice = "rgba(255, 255, 0, 0.2)" if has_general_advice else "rgba(57, 255, 20, 0.2)"
         st.markdown(f'<div style="background-color: {background_color_general_advice}; padding: 0.6rem 2.5rem; border-radius: 10px; line-height: 1.6; color: var(--text-color); font-size: 14px;">{final_advice_html}</div>', unsafe_allow_html=True)
-
     selected_year = person.get("Year", datetime.now().year + 543)
     with st.container():
         left_spacer_ua, col_ua_left, col_ua_right, right_spacer_ua = st.columns([0.5, 3, 3, 0.5])
@@ -633,15 +628,3 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         display_main_report(st.session_state.person_row)
 else:
     st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
-" code between  and  in the most up-to-date Canvas "app.py (เพิ่มหน้าแสดงผลสมรรถภาพ)" document above and am asking a query about/based on this code below.
-Instructions to follow:
-  * Don't output/edit the document if the query is Direct/Simple. For example, if the query asks for a simple explanation, output a direct answer.
-  * Make sure to **edit** the document if the query shows the intent of editing the document, in which case output the entire edited document, **not just that section or the edits**.
-    * Don't output the same document/empty document and say that you have edited it.
-    * Don't change unrelated code in the document.
-  * Don't output  and  in your final response.
-  * Any references like "this" or "selected code" refers to the code between  and  tags.
-  * Just acknowledge my request in the introduction.
-  * Make sure to refer to the document as "Canvas" in your response.
-
-อยากให้คงส่วนนี้ไว้ทุกหน้า ไม่ว่าจะกดดูผลปุ่มไหนก็
