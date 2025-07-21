@@ -4,7 +4,6 @@ def is_empty(val):
     """
     ตรวจสอบว่าค่าที่รับเข้ามาเป็นค่าว่างหรือไม่
     """
-    # Handles None, nan, empty strings, and strings with only hyphens
     return pd.isna(val) or str(val).strip().lower() in ["", "-", "none", "nan", "null"]
 
 def interpret_vision(vision_raw, color_blindness_raw):
@@ -26,7 +25,7 @@ def interpret_vision(vision_raw, color_blindness_raw):
         if "ปกติ" in vision_lower:
             vision_summary = "ปกติ"
         elif "ผิดปกติ" in vision_lower or "สั้น" in vision_lower or "ยาว" in vision_lower or "เอียง" in vision_lower:
-            vision_summary = f"ผิดปกติ ({vision_raw})"
+            vision_summary = f"ผิดปกติ"
             advice_parts.append("สายตาผิดปกติ ควรปรึกษาจักษุแพทย์เพื่อตรวจวัดสายตาและพิจารณาตัดแว่น")
         else:
             vision_summary = vision_raw
@@ -60,7 +59,7 @@ def interpret_hearing(hearing_raw):
         if "ปกติ" in hearing_lower:
             summary = "ปกติ"
         elif "ผิดปกติ" in hearing_lower or "เสื่อม" in hearing_lower:
-            summary = f"ผิดปกติ ({hearing_raw})"
+            summary = f"ผิดปกติ"
             advice = "การได้ยินผิดปกติ ควรพบแพทย์เพื่อตรวจประเมินและหาสาเหตุ"
         else:
             summary = hearing_raw
@@ -69,64 +68,64 @@ def interpret_hearing(hearing_raw):
 
 def interpret_lung_capacity(fvc_percent_raw, fev1_percent_raw, ratio_raw):
     """
-    แปลผลตรวจสมรรถภาพความจุปอดตามหลักเกณฑ์และผลลัพธ์ที่ต้องการ
+    แปลผลตรวจสมรรถภาพความจุปอด
     Args:
-        fvc_percent_raw: ค่า FVC เปอร์เซ็นต์ จากคอลัมน์ 'FVC เปอร์เซ็นต์'
-        fev1_percent_raw: ค่า FEV1 เปอร์เซ็นต์ จากคอลัมน์ 'FEV1เปอร์เซ็นต์'
-        ratio_raw: ค่า FEV1/FVC% จากคอลัมน์ 'FEV1/FVC%'
+        fvc_percent_raw: ค่า FVC เปอร์เซ็นต์
+        fev1_percent_raw: ค่า FEV1 เปอร์เซ็นต์
+        ratio_raw: ค่า FEV1/FVC%
     Returns:
-        tuple: (สรุปผล, คำแนะนำ)
+        tuple: (สรุปผล, คำแนะนำ, dictionary ข้อมูลดิบ)
     """
-    # --- Data Cleaning and Validation ---
+    summary = "ไม่ได้เข้ารับการตรวจ"
+    advice = ""
+    raw_values = {
+        'FVC %': '-',
+        'FEV1 %': '-',
+        'FEV1/FVC %': '-'
+    }
+    
     try:
-        # แปลงค่าเป็นตัวเลข ถ้าเป็นค่าว่างหรือแปลงไม่ได้จะกลายเป็น None
         fvc_p = float(fvc_percent_raw) if not is_empty(fvc_percent_raw) else None
         fev1_p = float(fev1_percent_raw) if not is_empty(fev1_percent_raw) else None
         ratio = float(ratio_raw) if not is_empty(ratio_raw) else None
-    except (ValueError, TypeError):
-        # กรณีข้อมูลที่รับมาไม่ใช่ตัวเลข
-        return "ข้อมูลผลตรวจไม่ถูกต้อง", "กรุณาตรวจสอบข้อมูลนำเข้า"
-
-    # ถ้าไม่มีข้อมูลสำคัญเลย ให้ถือว่าไม่ได้ตรวจ
-    if fvc_p is None and fev1_p is None and ratio is None:
-        return "ไม่ได้เข้ารับการตรวจ", ""
         
-    # ถ้าขาดค่าใดค่าหนึ่งที่จำเป็นในการแปลผล
+        # Update raw_values with actual numbers if they exist
+        if fvc_p is not None: raw_values['FVC %'] = fvc_p
+        if fev1_p is not None: raw_values['FEV1 %'] = fev1_p
+        if ratio is not None: raw_values['FEV1/FVC %'] = ratio
+
+    except (ValueError, TypeError):
+        return "ข้อมูลผลตรวจไม่ถูกต้อง", "กรุณาตรวจสอบข้อมูลนำเข้า", raw_values
+
+    if fvc_p is None and fev1_p is None and ratio is None:
+        return summary, advice, raw_values
+        
     if fvc_p is None or ratio is None:
-        return "สมรรถภาพปอดสรุปผลไม่ได้เนื่องจากข้อมูลไม่เพียงพอ", "ให้พบแพทย์เพื่อตรวจวินิจฉัย รักษาเพิ่มเติม"
+        return "สรุปผลไม่ได้ (ข้อมูลไม่เพียงพอ)", "ให้พบแพทย์เพื่อตรวจวินิจฉัย รักษาเพิ่มเติม", raw_values
 
-    # --- Interpretation Logic ---
-    summary = ""
-    advice = ""
-
-    # 1. Check for Obstructive Pattern (based on ratio)
     if ratio < 70:
         if fvc_p < 80:
-            summary = "สมรรถภาพปอดพบความผิดปกติแบบผสม (Mixed)"
-        else: # Obstructive only
+            summary = "ความผิดปกติแบบผสม (Mixed)"
+        else:
             if fev1_p is not None and fev1_p >= 60:
-                 summary = "สมรรถภาพปอดพบความผิดปกติแบบหลอดลมอุดกั้นเล็กน้อย"
+                 summary = "ความผิดปกติแบบหลอดลมอุดกั้นเล็กน้อย"
             else:
-                 summary = "สมรรถภาพปอดพบความผิดปกติแบบหลอดลมอุดกั้น"
-    
-    # 2. Check for Restrictive Pattern (must have normal ratio)
+                 summary = "ความผิดปกติแบบหลอดลมอุดกั้น"
     elif ratio >= 70:
         if fvc_p < 80:
             if fvc_p >= 60:
-                summary = "สมรรถภาพปอดพบความผิดปกติแบบปอดจำกัดการขยายตัวเล็กน้อย"
+                summary = "ความผิดปกติแบบปอดจำกัดการขยายตัวเล็กน้อย"
             else:
-                summary = "สมรรถภาพปอดพบความผิดปกติแบบปอดจำกัดการขยายตัว"
+                summary = "ความผิดปกติแบบปอดจำกัดการขยายตัว"
         else:
-            # All values are within normal limits
             summary = "สมรรถภาพปอดปกติ"
 
-    # 3. Determine Advice based on Summary
     if "ปกติ" in summary:
         advice = "เพิ่มสมรรถภาพปอดด้วยการออกกำลังกาย หลีกเลี่ยงการสัมผัสสารเคมี ฝุ่น และควัน"
     elif "ผิดปกติ" in summary:
         advice = "ให้พบแพทย์เพื่อตรวจวินิจฉัย รักษาเพิ่มเติม"
-    elif not summary: # If logic somehow fails to assign a summary
-        summary = "สมรรถภาพปอดสรุปผลไม่ได้เนื่องจากมีความคลาดเคลื่อนในการทดสอบ"
+    elif not summary:
+        summary = "สรุปผลไม่ได้ (มีความคลาดเคลื่อนในการทดสอบ)"
         advice = "ให้พบแพทย์เพื่อตรวจวินิจฉัย รักษาเพิ่มเติม"
         
-    return summary, advice
+    return summary, advice, raw_values
