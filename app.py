@@ -945,6 +945,7 @@ if not results_df.empty:
                 label_visibility="collapsed"
             )
 
+        # --- START OF CHANGES ---
         # Filter by selected year to get dates
         person_year_df = results_df[results_df["Year"] == st.session_state.selected_year]
         person_year_df_for_options = person_year_df.drop_duplicates(subset=["วันที่ตรวจ"]).sort_values(by="วันที่ตรวจ", ascending=False)
@@ -952,8 +953,8 @@ if not results_df.empty:
 
         with menu_cols[3]:
             if exam_dates_options:
-                # Determine the selected date for the dropdown
-                if st.session_state.selected_date not in exam_dates_options:
+                # If no date is selected yet for this year, or if the selected date is invalid, default to the first one.
+                if st.session_state.get("selected_date") not in exam_dates_options:
                     st.session_state.selected_date = exam_dates_options[0]
 
                 date_idx = exam_dates_options.index(st.session_state.selected_date)
@@ -961,8 +962,7 @@ if not results_df.empty:
                 # Date selection dropdown
                 selected_date = st.selectbox(
                     "วันที่ตรวจ", options=exam_dates_options, index=date_idx,
-                    key="date_select",
-                    disabled=(len(exam_dates_options) <= 1),
+                    key=f"date_select_{st.session_state.selected_year}", # Use a dynamic key
                     label_visibility="collapsed"
                 )
                 st.session_state.selected_date = selected_date
@@ -978,8 +978,11 @@ if not results_df.empty:
                         st.session_state.pop("selected_row_found", None)
             else:
                 st.warning(f"ไม่พบวันที่ตรวจสำหรับปี {st.session_state.selected_year}")
+                # Explicitly clear person data if no dates are found
                 st.session_state.pop("person_row", None)
                 st.session_state.pop("selected_row_found", None)
+                st.session_state.pop("selected_date", None)
+        # --- END OF CHANGES ---
 
 # --- Add Print Button to Menu Bar ---
 if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
