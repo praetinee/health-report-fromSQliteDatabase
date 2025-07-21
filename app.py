@@ -66,8 +66,11 @@ def normalize_thai_date(date_str):
             dt = datetime(year, month, day)
             return f"{dt.day} {THAI_MONTHS_GLOBAL[dt.month]} {dt.year + 543}".replace('.', '')
 
-        # Format: DD MonthNameYYYY (e.g., 8 เมษายน 2565) or DD-DD MonthNameYYYY (e.g., 15-16 กรกฎาคม 2564)
-        match_thai_text_date = re.match(r'^(?P<day1>\d{1,2})(?:-\d{1,2})?\s*(?P<month_str>[ก-ฮ]+\.?)\s*(?P<year>\d{4})$', s)
+        # --- START OF CHANGES ---
+        # Format: DD MonthNameYYYY (e.g., 8 เมษายน 2565) or DD.MonthName YYYY (e.g., 5.กุมภาพันธ์ 2568)
+        # เพิ่ม \.? เพื่อรองรับจุดหลังวันที่
+        match_thai_text_date = re.match(r'^(?P<day1>\d{1,2})\.?\s*(?P<month_str>[ก-ฮ]+\.?)\s*(?P<year>\d{4})$', s)
+        # --- END OF CHANGES ---
         if match_thai_text_date:
             day = int(match_thai_text_date.group('day1'))
             month_str = match_thai_text_date.group('month_str').strip().replace('.', '')
@@ -113,7 +116,6 @@ def flag(val, low=None, high=None, higher_is_better=False):
     except:
         return "-", False
 
-    # --- START OF CHANGES ---
     # เปลี่ยน f-string format ให้มี comma (,) เพื่อคั่นหลักพัน
     formatted_val = f"{val:,.1f}" if val % 1 != 0 else f"{int(val):,}"
 
@@ -126,7 +128,6 @@ def flag(val, low=None, high=None, higher_is_better=False):
         return formatted_val, True
 
     return formatted_val, False
-    # --- END OF CHANGES ---
 
 def render_section_header(title, subtitle=None):
     if subtitle:
