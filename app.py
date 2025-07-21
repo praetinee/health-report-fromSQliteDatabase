@@ -1409,16 +1409,3 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
 else:
     if not df.empty:
         st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
-
-" code between  and  in the most up-to-date Canvas "โค้ด Streamlit ที่แก้ไขแล้ว (ปรับปรุงการค้นหา)" document above and am asking a query about/based on this code below.
-Instructions to follow:
-  * Don't output/edit the document if the query is Direct/Simple. For example, if the query asks for a simple explanation, output a direct answer.
-  * Make sure to **edit** the document if the query shows the intent of editing the document, in which case output the entire edited document, **not just that section or the edits**.
-    * Don't output the same document/empty document and say that you have edited it.
-    * Don't change unrelated code in the document.
-  * Don't output  and  in your final response.
-  * Any references like "this" or "selected code" refers to the code between  and  tags.
-  * Just acknowledge my request in the introduction.
-  * Make sure to refer to the document as "Canvas" in your response.
-
-รบกวนช่วยเติมโค้ดที่ขาดหายไปให้สมบูรณ์หน่อยค
