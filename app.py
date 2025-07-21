@@ -738,47 +738,51 @@ def merge_final_advice_grouped(messages):
 
 @st.cache_data(ttl=600)
 def load_sqlite_data():
-    """
-    Loads data from SQLite DB and performs strict cleaning for reliable searching.
-    """
     try:
         file_id = "1HruO9AMrUfniC8hBWtumVdxLJayEc1Xr"
         download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
         response = requests.get(download_url)
         response.raise_for_status()
 
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as tmp:
-            tmp.write(response.content)
-            tmp.flush()
-            db_path = tmp.name
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".db")
+        tmp.write(response.content)
+        tmp.flush()
+        tmp.close()
 
-        conn = sqlite3.connect(db_path)
+        conn = sqlite3.connect(tmp.name)
         df_loaded = pd.read_sql("SELECT * FROM health_data", conn)
         conn.close()
 
         df_loaded.columns = df_loaded.columns.str.strip()
         
-        # --- Robust HN Cleaning ---
-        # This handles HNs stored as numbers (e.g., 12345.0) and text.
-        # It standardizes them to a simple string of digits (e.g., "12345").
+        # --- START OF CHANGES ---
+
+        # แก้ไขการจัดการคอลัมน์ HN:
+        # เนื่องจาก HN ในฐานข้อมูลเป็นชนิด REAL (float), pandas จะอ่านค่าเป็น float (เช่น 12345.0)
+        # เราต้องแปลงให้เป็น string ที่ตรงกับที่ผู้ใช้ป้อนเข้ามา (เช่น "12345")
+        # การแปลงนี้จะลบ ".0" ที่ไม่จำเป็นออก แต่ยังคงทศนิยมอื่นๆ ไว้หากมี และจัดการกับค่าว่าง
         def clean_hn(hn_val):
             if pd.isna(hn_val):
                 return ""
-            try:
-                # Convert to float, then int, then string to handle cases like "12345.0" or 12345.0
-                return str(int(float(hn_val)))
-            except (ValueError, TypeError):
-                # If conversion fails, it's likely already a non-numeric string.
-                return str(hn_val).strip()
+            s_val = str(hn_val).strip()
+            if s_val.endswith('.0'):
+                return s_val[:-2]
+            return s_val
 
         df_loaded['HN'] = df_loaded['HN'].apply(clean_hn)
-        
-        # --- Strict Name Cleaning ---
-        # Convert to string and strip leading/trailing whitespace.
-        df_loaded['ชื่อ-สกุล'] = df_loaded['ชื่อ-สกุล'].astype(str).str.strip()
 
-        # --- Other Column Cleaning ---
+        # แก้ไขการจัดการคอลัมน์ ชื่อ-สกุล:
+        # ทำความสะอาดและทำให้ "ชื่อ-สกุล" เป็นมาตรฐานเดียวกัน
+        # 1. แปลงเป็น string
+        # 2. .str.strip() - ลบช่องว่างหน้า-หลัง
+        # 3. .str.replace(r'\s+', ' ', regex=True) - ทำให้ช่องว่างระหว่างชื่อ-นามสกุลมีเพียง 1 เคาะ
+        df_loaded['ชื่อ-สกุล'] = df_loaded['ชื่อ-สกุล'].astype(str).str.strip().str.replace(r'\s+', ' ', regex=True)
+        
+        # ไม่ใช้ 'เลขบัตรประชาชน' ในการค้นหาแล้ว แต่ยังคงไว้ใน DataFrame หากส่วนอื่นยังใช้
         df_loaded['เลขบัตรประชาชน'] = df_loaded['เลขบัตรประชาชน'].astype(str).str.strip()
+
+        # --- END OF CHANGES ---
+
         df_loaded['Year'] = df_loaded['Year'].astype(int)
         df_loaded['วันที่ตรวจ'] = df_loaded['วันที่ตรวจ'].apply(normalize_thai_date)
         df_loaded.replace(["-", "None", None], pd.NA, inplace=True)
@@ -786,7 +790,7 @@ def load_sqlite_data():
         return df_loaded
     except Exception as e:
         st.error(f"❌ โหลดฐานข้อมูลไม่สำเร็จ: {e}")
-        return pd.DataFrame() # Return empty dataframe on error
+        st.stop()
 
 # --- Load data when the app starts. This line MUST be here and not inside any function or if block ---
 df = load_sqlite_data()
@@ -839,34 +843,42 @@ st.markdown("""
 # --- Callback Functions for State Management ---
 def perform_search():
     """
-    Callback function for search. Performs a strict, 100% exact match
-    for both HN and Name, as requested.
+    Callback function to handle the search logic.
+    Triggered by the search button or pressing Enter in the text input.
     """
     st.session_state.search_query = st.session_state.search_input
-    # Reset selections on a new search
+    # Reset selections on a new search to avoid inconsistent state
     st.session_state.selected_year = None
     st.session_state.selected_date = None
     st.session_state.pop("person_row", None)
     st.session_state.pop("selected_row_found", None)
     
-    search_term = st.session_state.search_query.strip()
+    # --- START OF CHANGES ---
+    # ทำความสะอาด Input จากผู้ใช้ให้เป็นมาตรฐานเดียวกับข้อมูลใน DataFrame
+    # 1. .strip() - ลบช่องว่างหน้า-หลัง
+    # 2. re.sub(...) - ทำให้ช่องว่างภายในมีเพียง 1 เคาะ
+    raw_search_term = st.session_state.search_query.strip()
+    search_term = re.sub(r'\s+', ' ', raw_search_term)
+    # --- END OF CHANGES ---
+    
     if search_term:
+        # การตรวจสอบว่าเป็น HN หรือไม่ ยังคงเดิม
+        # แต่ตอนนี้ search_term และข้อมูลใน df['HN'], df['ชื่อ-สกุล'] อยู่ในรูปแบบมาตรฐานเดียวกัน
         if search_term.isdigit():
-            # Strict search for HN
+            # ค้นหา HN เป็น string ที่ผ่านการ clean แล้ว
             results_df = df[df["HN"] == search_term].copy()
         else:
-            # Strict search for Name
+            # ค้นหา ชื่อ-สกุล เป็น string ที่ผ่านการ clean และ normalize แล้ว
             results_df = df[df["ชื่อ-สกุล"] == search_term].copy()
         
         if results_df.empty:
-            st.error("❌ ไม่พบข้อมูล กรุณาตรวจสอบให้แน่ใจว่าข้อมูลที่กรอกตรงกับฐานข้อมูล 100%")
+            st.error("❌ ไม่พบข้อมูล กรุณาตรวจสอบข้อมูลที่กรอกอีกครั้ง")
             st.session_state.search_result = pd.DataFrame()
         else:
             st.session_state.search_result = results_df
     else:
         # Clear results if the search term is empty
         st.session_state.search_result = pd.DataFrame()
-
 
 def handle_year_change():
     """
@@ -1407,5 +1419,4 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         """, unsafe_allow_html=True)
 
 else:
-    if not df.empty:
-        st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
+    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
