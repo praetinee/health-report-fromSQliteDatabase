@@ -39,8 +39,11 @@ THAI_MONTH_ABBR_TO_NUM_GLOBAL = {
 
 # Function to normalize and convert Thai dates
 def normalize_thai_date(date_str):
+    # --- START OF CHANGES ---
+    # หากวันที่ว่าง ให้คืนค่าเป็น pd.NA (Not Available) เพื่อให้ pandas จัดการได้อย่างถูกต้อง
     if is_empty(date_str):
-        return "-"
+        return pd.NA
+    # --- END OF CHANGES ---
     
     s = str(date_str).strip().replace("พ.ศ.", "").replace("พศ.", "").strip()
 
@@ -1422,4 +1425,4 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         """, unsafe_allow_html=True)
 
 else:
-    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
+    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภา
