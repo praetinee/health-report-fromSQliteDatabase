@@ -964,7 +964,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     # --- START OF CHANGES ---
     # ย้ายปุ่มมาไว้ที่นี่
     with menu_cols[5]:
-        if st.button("ผลตรวจสมรรถภาพการมองเห็น การได้ยิน และความจุปอด", use_container_width=True):
+        if st.button("ผลตรวจสมรรถภาพ", use_container_width=True):
             st.session_state.page = 'performance_report'
             st.rerun()
     # --- END OF CHANGES ---
@@ -989,8 +989,13 @@ def display_performance_report(person_data):
     fvc_p = person_data.get('FVC เปอร์เซ็นต์')
     fev1_p = person_data.get('FEV1เปอร์เซ็นต์')
     ratio = person_data.get('FEV1/FVC%')
-    lung_summary, lung_advice = performance_tests.interpret_lung_capacity(fvc_p, fev1_p, ratio)
+    lung_summary, lung_advice, lung_raw_values = performance_tests.interpret_lung_capacity(fvc_p, fev1_p, ratio)
     
+    with st.expander("ดูข้อมูลดิบ (Raw Data)"):
+        st.write(f"FVC %: {lung_raw_values.get('FVC %', '-')}")
+        st.write(f"FEV1 %: {lung_raw_values.get('FEV1 %', '-')}")
+        st.write(f"FEV1/FVC %: {lung_raw_values.get('FEV1/FVC %', '-')}")
+
     p_col1, p_col2 = st.columns(2)
     p_col1.metric("สรุปผล", lung_summary)
     if lung_advice:
@@ -999,10 +1004,14 @@ def display_performance_report(person_data):
 
     # --- ส่วนแสดงผลสมรรถภาพการมองเห็น ---
     st.subheader("สมรรถภาพการมองเห็น (Vision)")
-    vision_raw = person_data.get('สายตา') # **หมายเหตุ:** ต้องแน่ใจว่าชื่อคอลัมน์ถูกต้อง
-    color_raw = person_data.get('ตาบอดสี') # **หมายเหตุ:** ต้องแน่ใจว่าชื่อคอลัมน์ถูกต้อง
+    vision_raw = person_data.get('สายตา') 
+    color_raw = person_data.get('ตาบอดสี')
     vision_summary, color_summary, vision_advice = performance_tests.interpret_vision(vision_raw, color_raw)
     
+    with st.expander("ดูข้อมูลดิบ (Raw Data)"):
+        st.write(f"ผลตรวจสายตา (ดิบ): {vision_raw or '-'}")
+        st.write(f"ผลตรวจตาบอดสี (ดิบ): {color_raw or '-'}")
+
     v_col1, v_col2 = st.columns(2)
     v_col1.metric("ผลตรวจสายตา", vision_summary)
     v_col2.metric("ผลตรวจตาบอดสี", color_summary)
@@ -1012,9 +1021,12 @@ def display_performance_report(person_data):
     
     # --- ส่วนแสดงผลสมรรถภาพการได้ยิน ---
     st.subheader("สมรรถภาพการได้ยิน (Hearing)")
-    hearing_raw = person_data.get('การได้ยิน') # **หมายเหตุ:** ต้องแน่ใจว่าชื่อคอลัมน์ถูกต้อง
+    hearing_raw = person_data.get('การได้ยิน') 
     hearing_summary, hearing_advice = performance_tests.interpret_hearing(hearing_raw)
     
+    with st.expander("ดูข้อมูลดิบ (Raw Data)"):
+        st.write(f"ผลตรวจการได้ยิน (ดิบ): {hearing_raw or '-'}")
+
     h_col1, h_col2 = st.columns(2)
     h_col1.metric("สรุปผล", hearing_summary)
     if hearing_advice:
