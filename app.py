@@ -738,6 +738,9 @@ def merge_final_advice_grouped(messages):
 
 @st.cache_data(ttl=600)
 def load_sqlite_data():
+    """
+    Loads data from SQLite DB, cleans HN and creates a normalized name column for searching.
+    """
     try:
         file_id = "1HruO9AMrUfniC8hBWtumVdxLJayEc1Xr"
         download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
@@ -754,15 +757,29 @@ def load_sqlite_data():
         conn.close()
 
         df_loaded.columns = df_loaded.columns.str.strip()
-        df_loaded['เลขบัตรประชาชน'] = df_loaded['เลขบัตรประชาชน'].astype(str).str.strip()
         
-        # Convert HN from potentially REAL type to integer string, stripping extra decimals
-        # This ensures that searching for "12345" matches the data which might be stored as 12345.0
-        df_loaded['HN'] = df_loaded['HN'].apply(lambda x: str(int(x)) if pd.notna(x) and isinstance(x, (float, int)) else str(x)).str.strip()
+        # --- HN Cleaning ---
+        df_loaded['HN'] = df_loaded['HN'].apply(
+            lambda x: str(int(x)) if pd.notna(x) and isinstance(x, (float, int)) else str(x)
+        ).str.strip()
 
+        # --- Name Cleaning for Robust Search ---
+        # 1. Keep original 'ชื่อ-สกุล' for display.
+        # 2. Create a new 'search_name' column for searching.
         df_loaded['ชื่อ-สกุล'] = df_loaded['ชื่อ-สกุล'].astype(str).str.strip()
-        df_loaded['Year'] = df_loaded['Year'].astype(int)
+        
+        # Define prefixes to remove for cleaner searching
+        prefixes_to_remove = ['นาย', 'นาง', 'น.ส.', 'นางสาว', 'ด.ช.', 'ด.ญ.', 'คุณ']
+        # Build a regex pattern to find and remove prefixes
+        pattern = r'\b(' + '|'.join(re.escape(p) for p in prefixes_to_remove) + r')\b\s*'
+        
+        df_loaded['search_name'] = df_loaded['ชื่อ-สกุล'].str.replace(pattern, '', regex=True) \
+                                                    .str.replace(r'\s+', ' ', regex=True) \
+                                                    .str.strip()
 
+        # --- Other Column Cleaning ---
+        df_loaded['เลขบัตรประชาชน'] = df_loaded['เลขบัตรประชาชน'].astype(str).str.strip()
+        df_loaded['Year'] = df_loaded['Year'].astype(int)
         df_loaded['วันที่ตรวจ'] = df_loaded['วันที่ตรวจ'].apply(normalize_thai_date)
         df_loaded.replace(["-", "None", None], pd.NA, inplace=True)
 
@@ -822,9 +839,8 @@ st.markdown("""
 # --- Callback Functions for State Management ---
 def perform_search():
     """
-    Callback function to handle the search logic.
-    Triggered by the search button or pressing Enter in the text input.
-    This version uses a more flexible search for names.
+    Callback function for search. Cleans user input to match the normalized
+    'search_name' column for more reliable results.
     """
     st.session_state.search_query = st.session_state.search_input
     # Reset selections on a new search to avoid inconsistent state
@@ -835,15 +851,23 @@ def perform_search():
     
     search_term = st.session_state.search_query.strip()
     if search_term:
-        # Determine if search is by HN (numeric) or Name (text)
         if search_term.isdigit():
-            # For HN, an exact match is expected after cleaning.
+            # HN search is an exact match on the already cleaned 'HN' column
             results_df = df[df["HN"] == search_term].copy()
         else:
-            # For names, use a more flexible search to handle variations in spacing or partial inputs.
-            # .str.contains is case-insensitive and finds the search term anywhere in the name.
-            # This is more robust than an exact match (==).
-            results_df = df[df["ชื่อ-สกุล"].str.contains(search_term, case=False, na=False, regex=False)].copy()
+            # --- Robust Name Search ---
+            # 1. Clean the user's search term using the same logic as the data
+            prefixes_to_remove = ['นาย', 'นาง', 'น.ส.', 'นางสาว', 'ด.ช.', 'ด.ญ.', 'คุณ']
+            pattern = r'\b(' + '|'.join(re.escape(p) for p in prefixes_to_remove) + r')\b\s*'
+            
+            cleaned_search_term = re.sub(pattern, '', search_term)
+            cleaned_search_term = re.sub(r'\s+', ' ', cleaned_search_term).strip()
+
+            # 2. Search the cleaned term in the pre-cleaned 'search_name' column
+            if cleaned_search_term: # Ensure the term is not empty after cleaning
+                results_df = df[df["search_name"].str.contains(cleaned_search_term, case=False, na=False, regex=False)].copy()
+            else:
+                results_df = pd.DataFrame() # Return empty if search term is only a prefix
         
         if results_df.empty:
             st.error("❌ ไม่พบข้อมูล กรุณาตรวจสอบข้อมูลที่กรอกอีกครั้ง")
