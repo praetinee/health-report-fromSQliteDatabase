@@ -265,7 +265,7 @@ def uric_acid_advice(value_raw):
             return "ควรลดอาหารที่มีพิวรีนสูง เช่น เครื่องในสัตว์ อาหารทะเล และพบแพทย์หากมีอาการปวดข้อ"
         return ""
     except:
-        return "-"
+        return ""
 
 def summarize_lipids(chol_raw, tgl_raw, ldl_raw):
     try:
@@ -954,58 +954,60 @@ st.markdown("<hr>", unsafe_allow_html=True)
 
 # --- START OF CHANGES ---
 # 3. สร้างฟังก์ชันสำหรับแสดงผลหน้าสมรรถภาพ
-def display_performance_report(person_data):
+def display_performance_report(person_data, report_type):
+    
     st.header("รายงานผลการตรวจสมรรถภาพ")
     
     # แสดงข้อมูลบุคคลคร่าวๆ
     st.write(f"**HN:** {person_data.get('HN', '-')}", f"**ชื่อ-สกุล:** {person_data.get('ชื่อ-สกุล', '-')}")
     st.markdown("---")
 
-    # --- ส่วนแสดงผลสมรรถภาพปอด ---
-    st.subheader("สมรรถภาพปอด (Lung Capacity)")
-    fvc_p = person_data.get('FVC เปอร์เซ็นต์')
-    fev1_p = person_data.get('FEV1เปอร์เซ็นต์')
-    ratio = person_data.get('FEV1/FVC%')
-    lung_summary, lung_advice, lung_raw_values = performance_tests.interpret_lung_capacity(fvc_p, fev1_p, ratio)
-    
-    p_col1, p_col2 = st.columns(2)
-    p_col1.metric("สรุปผล", lung_summary)
-    if lung_advice:
-        p_col2.info(f"**คำแนะนำ:** {lung_advice}")
-    
-    with st.expander("ดูข้อมูลดิบ (Raw Data)"):
-        st.json(lung_raw_values)
-    st.markdown("---")
+    if report_type == 'lung':
+        # --- ส่วนแสดงผลสมรรถภาพปอด ---
+        st.subheader("สมรรถภาพปอด (Lung Capacity)")
+        fvc_p = person_data.get('FVC เปอร์เซ็นต์')
+        fev1_p = person_data.get('FEV1เปอร์เซ็นต์')
+        ratio = person_data.get('FEV1/FVC%')
+        lung_summary, lung_advice, lung_raw_values = performance_tests.interpret_lung_capacity(fvc_p, fev1_p, ratio)
+        
+        p_col1, p_col2 = st.columns(2)
+        p_col1.metric("สรุปผล", lung_summary)
+        if lung_advice:
+            p_col2.info(f"**คำแนะนำ:** {lung_advice}")
+        
+        with st.expander("ดูข้อมูลดิบ (Raw Data)"):
+            st.json(lung_raw_values)
 
-    # --- ส่วนแสดงผลสมรรถภาพการมองเห็น ---
-    st.subheader("สมรรถภาพการมองเห็น (Vision)")
-    vision_raw = person_data.get('สายตา') 
-    color_raw = person_data.get('ตาบอดสี')
-    vision_summary, color_summary, vision_advice = performance_tests.interpret_vision(vision_raw, color_raw)
-    
-    with st.expander("ดูข้อมูลดิบ (Raw Data)"):
-        st.write(f"ผลตรวจสายตา (ดิบ): {vision_raw or '-'}")
-        st.write(f"ผลตรวจตาบอดสี (ดิบ): {color_raw or '-'}")
+    elif report_type == 'vision':
+        # --- ส่วนแสดงผลสมรรถภาพการมองเห็น ---
+        st.subheader("สมรรถภาพการมองเห็น (Vision)")
+        vision_raw = person_data.get('สายตา') 
+        color_raw = person_data.get('ตาบอดสี')
+        vision_summary, color_summary, vision_advice = performance_tests.interpret_vision(vision_raw, color_raw)
+        
+        with st.expander("ดูข้อมูลดิบ (Raw Data)"):
+            st.write(f"ผลตรวจสายตา (ดิบ): {vision_raw or '-'}")
+            st.write(f"ผลตรวจตาบอดสี (ดิบ): {color_raw or '-'}")
 
-    v_col1, v_col2 = st.columns(2)
-    v_col1.metric("ผลตรวจสายตา", vision_summary)
-    v_col2.metric("ผลตรวจตาบอดสี", color_summary)
-    if vision_advice:
-        st.info(f"**คำแนะนำ:** {vision_advice}")
-    st.markdown("---")
+        v_col1, v_col2 = st.columns(2)
+        v_col1.metric("ผลตรวจสายตา", vision_summary)
+        v_col2.metric("ผลตรวจตาบอดสี", color_summary)
+        if vision_advice:
+            st.info(f"**คำแนะนำ:** {vision_advice}")
     
-    # --- ส่วนแสดงผลสมรรถภาพการได้ยิน ---
-    st.subheader("สมรรถภาพการได้ยิน (Hearing)")
-    hearing_raw = person_data.get('การได้ยิน') 
-    hearing_summary, hearing_advice = performance_tests.interpret_hearing(hearing_raw)
-    
-    with st.expander("ดูข้อมูลดิบ (Raw Data)"):
-        st.write(f"ผลตรวจการได้ยิน (ดิบ): {hearing_raw or '-'}")
+    elif report_type == 'hearing':
+        # --- ส่วนแสดงผลสมรรถภาพการได้ยิน ---
+        st.subheader("สมรรถภาพการได้ยิน (Hearing)")
+        hearing_raw = person_data.get('การได้ยิน') 
+        hearing_summary, hearing_advice = performance_tests.interpret_hearing(hearing_raw)
+        
+        with st.expander("ดูข้อมูลดิบ (Raw Data)"):
+            st.write(f"ผลตรวจการได้ยิน (ดิบ): {hearing_raw or '-'}")
 
-    h_col1, h_col2 = st.columns(2)
-    h_col1.metric("สรุปผล", hearing_summary)
-    if hearing_advice:
-        h_col2.info(f"**คำแนะนำ:** {hearing_advice}")
+        h_col1, h_col2 = st.columns(2)
+        h_col1.metric("สรุปผล", hearing_summary)
+        if hearing_advice:
+            h_col2.info(f"**คำแนะนำ:** {hearing_advice}")
 
 # 4. สร้างฟังก์ชันสำหรับแสดงผลหน้ารายงานหลัก
 def display_main_report(person_data):
@@ -1260,27 +1262,31 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     # This block now controls the entire display area after a successful search
     
     # --- Persistent Button Bar ---
-    btn_cols = st.columns([2, 2, 2, 4]) 
-    with btn_cols[0]:
-        if st.button("ผลการตรวจสุขภาพทั่วไป", use_container_width=True):
+    btn_cols = st.columns([1, 2, 2, 2, 2, 1]) 
+    with btn_cols[1]:
+        if st.button("สุขภาพพื้นฐาน", use_container_width=True):
             st.session_state.page = 'main_report'
             st.rerun()
-    with btn_cols[1]:
-        if st.button("ผลการตรวจสมรรถภาพร่างกาย", use_container_width=True):
-            st.session_state.page = 'performance_report'
-            st.rerun()
     with btn_cols[2]:
-        st.download_button(
-            label="ดาวน์โหลดรายงาน",
-            data=print_report.generate_printable_report(st.session_state["person_row"]),
-            file_name=f"Health_Report_{st.session_state['person_row'].get('HN', 'NA')}_{st.session_state['person_row'].get('Year', 'NA')}.html",
-            mime="text/html",
-            use_container_width=True
-        )
+        if st.button("สมรรถภาพการมองเห็น", use_container_width=True):
+            st.session_state.page = 'vision_report'
+            st.rerun()
+    with btn_cols[3]:
+        if st.button("สมรรถภาพการได้ยิน", use_container_width=True):
+            st.session_state.page = 'hearing_report'
+            st.rerun()
+    with btn_cols[4]:
+        if st.button("ความจุปอด", use_container_width=True):
+            st.session_state.page = 'lung_report'
+            st.rerun()
 
     # --- Page Content ---
-    if st.session_state.page == 'performance_report':
-        display_performance_report(st.session_state.person_row)
+    if st.session_state.page == 'vision_report':
+        display_performance_report(st.session_state.person_row, 'vision')
+    elif st.session_state.page == 'hearing_report':
+        display_performance_report(st.session_state.person_row, 'hearing')
+    elif st.session_state.page == 'lung_report':
+        display_performance_report(st.session_state.person_row, 'lung')
     else: # Default to main report
         display_main_report(st.session_state.person_row)
 else:
