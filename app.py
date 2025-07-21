@@ -113,15 +113,20 @@ def flag(val, low=None, high=None, higher_is_better=False):
     except:
         return "-", False
 
+    # --- START OF CHANGES ---
+    # เปลี่ยน f-string format ให้มี comma (,) เพื่อคั่นหลักพัน
+    formatted_val = f"{val:,.1f}" if val % 1 != 0 else f"{int(val):,}"
+
     if higher_is_better and low is not None:
-        return f"{val:.1f}", val < low
+        return formatted_val, val < low
 
     if low is not None and val < low:
-        return f"{val:.1f}", True
+        return formatted_val, True
     if high is not None and val > high:
-        return f"{val:.1f}", True
+        return formatted_val, True
 
-    return f"{val:.1f}", False
+    return formatted_val, False
+    # --- END OF CHANGES ---
 
 def render_section_header(title, subtitle=None):
     if subtitle:
