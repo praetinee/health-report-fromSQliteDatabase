@@ -952,7 +952,6 @@ if not results_df.empty:
 
 st.markdown("<hr>", unsafe_allow_html=True)
 
-# --- START OF CHANGES ---
 # 3. สร้างฟังก์ชันสำหรับแสดงผลหน้าสมรรถภาพ
 def display_performance_report(person_data):
     st.header("รายงานผลการตรวจสมรรถภาพ")
@@ -1203,85 +1202,4 @@ def display_main_report(person_data):
             ekg_result = interpret_ekg(person.get(ekg_col, ""))
             st.markdown(f"<div style='background-color: var(--secondary-background-color); color: var(--text-color); line-height: 1.6; padding: 0.4rem; border-radius: 6px; margin-bottom: 1.5rem; font-size: 14px;'>{ekg_result}</div>", unsafe_allow_html=True)
 
-            st.markdown(render_section_header("ผลการตรวจไวรัสตับอักเสบเอ (Viral hepatitis A)"), unsafe_allow_html=True)
-            hep_a_raw = safe_text(person.get("Hepatitis A"))
-            st.markdown(f"<div style='padding: 0.4rem; border-radius: 6px; margin-bottom: 1.5rem; background-color: rgba(255,255,255,0.05); font-size: 14px;'>{hep_a_raw}</div>", unsafe_allow_html=True)
-            
-            st.markdown(render_section_header("ผลการตรวจไวรัสตับอักเสบบี (Viral hepatitis B)"), unsafe_allow_html=True)
-            hbsag_raw = safe_text(person.get("HbsAg"))
-            hbsab_raw = safe_text(person.get("HbsAb"))
-            hbcab_raw = safe_text(person.get("HBcAB"))
-            st.markdown(f"""
-            <div style="margin-bottom: 1rem;">
-            <table style='width: 100%; text-align: center; border-collapse: collapse; min-width: 300px; font-size: 14px;'>
-                <thead><tr><th style="padding: 8px; border: 1px solid transparent;">HBsAg</th><th style="padding: 8px; border: 1px solid transparent;">HBsAb</th><th style="padding: 8px; border: 1px solid transparent;">HBcAb</th></tr></thead>
-                <tbody><tr><td style="padding: 8px; border: 1px solid transparent;">{hbsag_raw}</td><td style="padding: 8px; border: 1px solid transparent;">{hbsab_raw}</td><td style="padding: 8px; border: 1px solid transparent;">{hbcab_raw}</td></tr></tbody>
-            </table></div>""", unsafe_allow_html=True)
-            
-            hep_check_date = safe_text(normalize_thai_date(person.get("ปีตรวจHEP")))
-            hep_history = safe_text(person.get("สรุปประวัติ Hepb"))
-            hep_vaccine = safe_text(person.get("วัคซีนhep b 67"))
-            st.markdown(f"""
-            <div style='padding: 0.75rem 1rem; background-color: rgba(255,255,255,0.05); border-radius: 6px; margin-bottom: 1.5rem; line-height: 1.8; font-size: 14px;'>
-                <b>วันที่ตรวจภูมิคุ้มกัน:</b> {hep_check_date}<br>
-                <b>ประวัติโรคไวรัสตับอักเสบบี ปี พ.ศ. {selected_year}:</b> {hep_history}<br>
-                <b>ประวัติการได้รับวัคซีนในปี พ.ศ. {selected_year}:</b> {hep_vaccine}
-            </div>""", unsafe_allow_html=True)
-            
-            advice = hepatitis_b_advice(hbsag_raw, hbsab_raw, hbcab_raw)
-            bg_color = "rgba(57, 255, 20, 0.2)" if advice.strip() == "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี" else "rgba(255, 255, 0, 0.2)"
-            st.markdown(f"<div style='line-height: 1.6; padding: 0.4rem 1.5rem; border-radius: 6px; background-color: {bg_color}; color: var(--text-color); margin-bottom: 1.5rem; font-size: 14px;'>{advice}</div>", unsafe_allow_html=True)
-            
-    doctor_suggestion = str(person.get("DOCTER suggest", "")).strip()
-    if doctor_suggestion.lower() in ["", "-", "none", "nan", "null"]:
-        doctor_suggestion = "<i>ไม่มีคำแนะนำจากแพทย์</i>"
-
-    left_spacer3, doctor_col, right_spacer3 = st.columns([0.5, 6, 0.5])
-
-    with doctor_col:
-        st.markdown(f"""
-        <div style='background-color: #1b5e20; color: white; padding: 0.4rem 2rem; border-radius: 8px; line-height: 1.6; margin-top: 2rem; margin-bottom: 2rem; font-size: 14px;'>
-            <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown(f"""
-    <div style='margin-top: 7rem; text-align: right; padding-right: 1rem;'>
-        <div style='display: inline-block; text-align: center; width: 340px;'>
-            <div style='border-bottom: 1px dotted #ccc; margin-bottom: 0.5rem; width: 100%;'></div>
-            <div style='white-space: nowrap;'>นายแพทย์นพรัตน์ รัชฎาพร</div>
-            <div style='white-space: nowrap;'>เลขที่ใบอนุญาตผู้ประกอบวิชาชีพเวชกรรม ว.26674</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-# Main logic to switch between pages
-if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
-    # This block now controls the entire display area after a successful search
-    
-    # --- Persistent Button Bar ---
-    btn_cols = st.columns([2, 2, 2, 4]) 
-    with btn_cols[0]:
-        if st.button("ผลการตรวจสุขภาพทั่วไป", use_container_width=True):
-            st.session_state.page = 'main_report'
-            st.rerun()
-    with btn_cols[1]:
-        if st.button("ผลการตรวจสมรรถภาพร่างกาย", use_container_width=True):
-            st.session_state.page = 'performance_report'
-            st.rerun()
-    with btn_cols[2]:
-        st.download_button(
-            label="ดาวน์โหลดรายงาน",
-            data=print_report.generate_printable_report(st.session_state["person_row"]),
-            file_name=f"Health_Report_{st.session_state['person_row'].get('HN', 'NA')}_{st.session_state['person_row'].get('Year', 'NA')}.html",
-            mime="text/html",
-            use_container_width=True
-        )
-
-    # --- Page Content ---
-    if st.session_state.page == 'performance_report':
-        display_performance_report(st.session_state.person_row)
-    else: # Default to main report
-        display_main_report(st.session_state.person_row)
-else:
-    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
+            st.markdown(render_section_header("ผลการตรวจไวรัสตับอักเสบเอ (Viral hepatitis A)"), unsafe_allow_html=Tr
