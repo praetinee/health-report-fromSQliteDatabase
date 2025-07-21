@@ -10,7 +10,7 @@ from collections import OrderedDict
 from datetime import datetime
 import re
 import print_report # <-- เพิ่มการ import โมดูลสำหรับพิมพ์
-import performance_tests
+import performance_tests # <-- เพิ่มการ import โมดูลสำหรับสมรรถภาพ
 
 def is_empty(val):
     return str(val).strip().lower() in ["", "-", "none", "nan", "null"]
@@ -45,60 +45,44 @@ def normalize_thai_date(date_str):
     
     s = str(date_str).strip().replace("พ.ศ.", "").replace("พศ.", "").strip()
 
-    # หากเป็นข้อความสถานะ ให้ถือว่าเป็นค่าว่าง (pd.NA) เพื่อไม่ให้นำไปแสดงใน Dropdown
     if s.lower() in ["ไม่ตรวจ", "นัดทีหลัง", "ไม่ได้เข้ารับการตรวจ", ""]:
         return pd.NA
 
     try:
-        # Format: DD/MM/YYYY (e.g., 29/04/2565)
         if re.match(r'^\d{1,2}/\d{1,2}/\d{4}$', s):
             day, month, year = map(int, s.split('/'))
-            if year > 2500: # Assume Thai Buddhist year if year > 2500
-                year -= 543
+            if year > 2500: year -= 543
             dt = datetime(year, month, day)
-            return f"{dt.day} {THAI_MONTHS_GLOBAL[dt.month]} {dt.year + 543}".replace('.', '')
+            return f"{dt.day} {THAI_MONTHS_GLOBAL[dt.month]} {dt.year + 543}"
 
-        # Format: DD-MM-YYYY (e.g., 29-04-2565)
-        if re.match(r'^\d{1,2}-\d{1,2}/\d{4}$', s):
+        if re.match(r'^\d{1,2}-\d{1,2}-\d{4}$', s):
             day, month, year = map(int, s.split('-'))
-            if year > 2500: # Assume Thai Buddhist year if year > 2500
-                year -= 543
+            if year > 2500: year -= 543
             dt = datetime(year, month, day)
-            return f"{dt.day} {THAI_MONTHS_GLOBAL[dt.month]} {dt.year + 543}".replace('.', '')
+            return f"{dt.day} {THAI_MONTHS_GLOBAL[dt.month]} {dt.year + 543}"
 
-        # --- START OF CHANGES ---
-        # Format: DD MonthNameYYYY (e.g., 8 เมษายน 2565) or DD.MonthName YYYY (e.g., 5.กุมภาพันธ์ 2568)
-        # เพิ่ม \.? เพื่อรองรับจุดหลังวันที่
         match_thai_text_date = re.match(r'^(?P<day1>\d{1,2})\.?\s*(?P<month_str>[ก-ฮ]+\.?)\s*(?P<year>\d{4})$', s)
-        # --- END OF CHANGES ---
         if match_thai_text_date:
             day = int(match_thai_text_date.group('day1'))
             month_str = match_thai_text_date.group('month_str').strip().replace('.', '')
             year = int(match_thai_text_date.group('year'))
-            
             month_num = THAI_MONTH_ABBR_TO_NUM_GLOBAL.get(month_str)
             if month_num:
-                try:
-                    dt = datetime(year - 543, month_num, day)
-                    return f"{day} {THAI_MONTHS_GLOBAL[dt.month]} {year}".replace('.', '')
-                except ValueError:
-                    pass
+                dt = datetime(year - 543, month_num, day)
+                return f"{day} {THAI_MONTHS_GLOBAL[dt.month]} {year}"
 
     except Exception:
         pass
 
-    # Fallback to pandas for robust parsing if other specific regex fail
     try:
         parsed_dt = pd.to_datetime(s, dayfirst=True, errors='coerce')
         if pd.notna(parsed_dt):
-            current_ce_year = datetime.now().year
-            if parsed_dt.year > current_ce_year + 50 and parsed_dt.year - 543 > 1900:
+            if parsed_dt.year > datetime.now().year + 50:
                 parsed_dt = parsed_dt.replace(year=parsed_dt.year - 543)
-            return f"{parsed_dt.day} {THAI_MONTHS_GLOBAL[parsed_dt.month]} {parsed_dt.year + 543}".replace('.', '')
+            return f"{parsed_dt.day} {THAI_MONTHS_GLOBAL[parsed_dt.month]} {parsed_dt.year + 543}"
     except Exception:
         pass
 
-    # หากไม่สามารถแปลงเป็นวันที่ได้เลย ให้คืนค่าเป็น NA
     return pd.NA
 
 def get_float(col, person_data):
@@ -116,18 +100,20 @@ def flag(val, low=None, high=None, higher_is_better=False):
     except:
         return "-", False
 
-    # เปลี่ยน f-string format ให้มี comma (,) เพื่อคั่นหลักพัน
-    formatted_val = f"{val:,.1f}" if val % 1 != 0 else f"{int(val):,}"
+    # Format number with comma for thousands and appropriate decimal places
+    if val == int(val): # It's a whole number
+        formatted_val = f"{int(val):,}"
+    else:
+        formatted_val = f"{val:,.1f}"
 
-    if higher_is_better and low is not None:
-        return formatted_val, val < low
+    is_abnormal = False
+    if higher_is_better:
+        if low is not None and val < low: is_abnormal = True
+    else:
+        if low is not None and val < low: is_abnormal = True
+        if high is not None and val > high: is_abnormal = True
 
-    if low is not None and val < low:
-        return formatted_val, True
-    if high is not None and val > high:
-        return formatted_val, True
-
-    return formatted_val, False
+    return formatted_val, is_abnormal
 
 def render_section_header(title, subtitle=None):
     if subtitle:
@@ -764,37 +750,20 @@ def load_sqlite_data():
 
         df_loaded.columns = df_loaded.columns.str.strip()
         
-        # --- START OF CHANGES ---
-
-        # แก้ไขการจัดการคอลัมน์ HN:
-        # เนื่องจาก HN ในฐานข้อมูลเป็นชนิด REAL (float), pandas จะอ่านค่าเป็น float (เช่น 12345.0)
-        # เราต้องแปลงให้เป็น string ที่ตรงกับที่ผู้ใช้ป้อนเข้ามา (เช่น "12345")
-        # การแปลงนี้จะลบ ".0" ที่ไม่จำเป็นออก แต่ยังคงทศนิยมอื่นๆ ไว้หากมี และจัดการกับค่าว่าง
         def clean_hn(hn_val):
-            if pd.isna(hn_val):
-                return ""
+            if pd.isna(hn_val): return ""
             s_val = str(hn_val).strip()
-            if s_val.endswith('.0'):
-                return s_val[:-2]
-            return s_val
+            return s_val[:-2] if s_val.endswith('.0') else s_val
 
         df_loaded['HN'] = df_loaded['HN'].apply(clean_hn)
-
-        # แก้ไขการจัดการคอลัมน์ ชื่อ-สกุล:
-        # ทำความสะอาดและทำให้ "ชื่อ-สกุล" เป็นมาตรฐานเดียวกัน
-        # 1. แปลงเป็น string
-        # 2. .str.strip() - ลบช่องว่างหน้า-หลัง
-        # 3. .str.replace(r'\s+', ' ', regex=True) - ทำให้ช่องว่างระหว่างชื่อ-นามสกุลมีเพียง 1 เคาะ
         df_loaded['ชื่อ-สกุล'] = df_loaded['ชื่อ-สกุล'].astype(str).str.strip().str.replace(r'\s+', ' ', regex=True)
-        
-        # ไม่ใช้ 'เลขบัตรประชาชน' ในการค้นหาแล้ว แต่ยังคงไว้ใน DataFrame หากส่วนอื่นยังใช้
         df_loaded['เลขบัตรประชาชน'] = df_loaded['เลขบัตรประชาชน'].astype(str).str.strip()
-
-        # --- END OF CHANGES ---
-
         df_loaded['Year'] = df_loaded['Year'].astype(int)
-        df_loaded['วันที่ตรวจ'] = df_loaded['วันที่ตรวจ'].apply(normalize_thai_date)
-        df_loaded.replace(["-", "None", None], pd.NA, inplace=True)
+        
+        # --- START OF CHANGES ---
+        # Keep original date strings for display, handle 'nan' string from conversion
+        df_loaded['วันที่ตรวจ'] = df_loaded['วันที่ตรวจ'].astype(str).str.strip().replace('nan', '')
+        # --- END OF CHANGES ---
 
         return df_loaded
     except Exception as e:
@@ -862,22 +831,13 @@ def perform_search():
     st.session_state.pop("person_row", None)
     st.session_state.pop("selected_row_found", None)
     
-    # --- START OF CHANGES ---
-    # ทำความสะอาด Input จากผู้ใช้ให้เป็นมาตรฐานเดียวกับข้อมูลใน DataFrame
-    # 1. .strip() - ลบช่องว่างหน้า-หลัง
-    # 2. re.sub(...) - ทำให้ช่องว่างภายในมีเพียง 1 เคาะ
     raw_search_term = st.session_state.search_query.strip()
     search_term = re.sub(r'\s+', ' ', raw_search_term)
-    # --- END OF CHANGES ---
     
     if search_term:
-        # การตรวจสอบว่าเป็น HN หรือไม่ ยังคงเดิม
-        # แต่ตอนนี้ search_term และข้อมูลใน df['HN'], df['ชื่อ-สกุล'] อยู่ในรูปแบบมาตรฐานเดียวกัน
         if search_term.isdigit():
-            # ค้นหา HN เป็น string ที่ผ่านการ clean แล้ว
             results_df = df[df["HN"] == search_term].copy()
         else:
-            # ค้นหา ชื่อ-สกุล เป็น string ที่ผ่านการ clean และ normalize แล้ว
             results_df = df[df["ชื่อ-สกุล"] == search_term].copy()
         
         if results_df.empty:
@@ -886,7 +846,6 @@ def perform_search():
         else:
             st.session_state.search_result = results_df
     else:
-        # Clear results if the search term is empty
         st.session_state.search_result = pd.DataFrame()
 
 def handle_year_change():
@@ -895,7 +854,6 @@ def handle_year_change():
     Resets the date to ensure the UI updates correctly in one go.
     """
     st.session_state.selected_year = st.session_state.year_select
-    # Reset date selection to default to the first available date for the new year
     st.session_state.selected_date = None 
     st.session_state.pop("person_row", None)
     st.session_state.pop("selected_row_found", None)
@@ -917,7 +875,6 @@ st.subheader("ค้นหาและเลือกผลตรวจ")
 menu_cols = st.columns([3, 1, 2, 2, 2])
 
 with menu_cols[0]:
-    # Text input for HN or Full Name
     st.text_input(
         "กรอก HN หรือ ชื่อ-สกุล",
         key="search_input",
@@ -927,10 +884,8 @@ with menu_cols[0]:
     )
 
 with menu_cols[1]:
-    # Search button
     st.button("ค้นหา", use_container_width=True, on_click=perform_search)
 
-# --- Dropdown Population in Menu Bar ---
 results_df = st.session_state.search_result
 if not results_df.empty:
     available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
@@ -938,14 +893,12 @@ if not results_df.empty:
     if not available_years:
         st.warning("ไม่พบข้อมูลปีที่ตรวจสำหรับบุคคลนี้")
     else:
-        # Determine the selected year for the dropdown
         if st.session_state.selected_year not in available_years:
             st.session_state.selected_year = available_years[0]
         
         year_idx = available_years.index(st.session_state.selected_year)
 
         with menu_cols[2]:
-            # Year selection dropdown
             st.selectbox(
                 "ปี พ.ศ.", options=available_years, index=year_idx,
                 format_func=lambda y: f"พ.ศ. {y}", 
@@ -954,60 +907,59 @@ if not results_df.empty:
                 label_visibility="collapsed"
             )
 
-        # --- REVISED LOGIC FOR DATE SELECTION AND FINAL ROW ---
-        
-        # 1. Filter data for the selected year
         person_year_df = results_df[results_df["Year"] == st.session_state.selected_year]
         
-        # 2. Get a list of valid, unique dates. .dropna() is crucial here.
-        valid_exam_dates = sorted(person_year_df["วันที่ตรวจ"].dropna().unique().tolist(), reverse=True)
+        # --- START OF REVISED LOGIC ---
+        # Create a mapping between original date strings and normalized ones for selection
+        date_map_df = pd.DataFrame({
+            'original_date': person_year_df['วันที่ตรวจ'],
+            'normalized_date': person_year_df['วันที่ตรวจ'].apply(normalize_thai_date)
+        }).drop_duplicates().dropna(subset=['normalized_date'])
+        
+        valid_exam_dates_normalized = sorted(date_map_df['normalized_date'].unique().tolist(), reverse=True)
 
         with menu_cols[3]:
-            if valid_exam_dates:
-                # --- Case 1: There are valid dates to choose from ---
-                
-                # Set default date if needed
-                if st.session_state.get("selected_date") not in valid_exam_dates:
-                    st.session_state.selected_date = valid_exam_dates[0]
-
-                date_idx = valid_exam_dates.index(st.session_state.selected_date)
-                
-                # Show date selection dropdown
-                selected_date = st.selectbox(
-                    "วันที่ตรวจ", options=valid_exam_dates, index=date_idx,
-                    key=f"date_select_{st.session_state.selected_year}",
-                    label_visibility="collapsed"
-                )
-                st.session_state.selected_date = selected_date
-                
-                # Find the final row based on the selected valid date
-                final_row_df = person_year_df[person_year_df["วันที่ตรวจ"] == st.session_state.selected_date]
-                if not final_row_df.empty:
-                    st.session_state.person_row = final_row_df.iloc[0].to_dict()
-                    st.session_state.selected_row_found = True
-                else: # Should not happen if logic is correct
-                    st.session_state.pop("person_row", None)
-                    st.session_state.pop("selected_row_found", None)
-
-            else:
-                # --- Case 2: There are NO valid dates for this year ---
-                
-                # Check if there's only one, unambiguous record for this year
+            if not valid_exam_dates_normalized:
+                # Case: No valid, parsable dates found for the year
                 if len(person_year_df) == 1:
-                    # If so, select that single record to display, and show a warning.
-                    st.warning(f"ไม่พบวันที่ตรวจที่ถูกต้องสำหรับปี {st.session_state.selected_year} (กำลังแสดงข้อมูลเท่าที่มี)")
+                    # If there's only one record, select it automatically
+                    st.warning(f"ไม่พบวันที่ตรวจที่ถูกต้องสำหรับปี {st.session_state.selected_year}")
                     st.session_state.person_row = person_year_df.iloc[0].to_dict()
                     st.session_state.selected_row_found = True
-                    st.session_state.selected_date = None # No valid date is selected
+                    st.session_state.selected_date = None
                 else:
-                    # If there are multiple rows with no valid dates, it's ambiguous. Clear selection.
-                    st.warning(f"ไม่พบวันที่ตรวจที่ถูกต้องสำหรับปี {st.session_state.selected_year}")
+                    # If multiple records with no valid date, it's ambiguous
+                    st.warning(f"ไม่พบวันที่ตรวจสำหรับปี {st.session_state.selected_year}")
                     st.session_state.pop("person_row", None)
                     st.session_state.pop("selected_row_found", None)
                     st.session_state.pop("selected_date", None)
-        
+            else:
+                # Case: Valid dates exist, show the dropdown
+                if st.session_state.get("selected_date") not in valid_exam_dates_normalized:
+                    st.session_state.selected_date = valid_exam_dates_normalized[0]
+                
+                date_idx = valid_exam_dates_normalized.index(st.session_state.selected_date)
+                
+                selected_normalized_date = st.selectbox(
+                    "วันที่ตรวจ", options=valid_exam_dates_normalized, index=date_idx,
+                    key=f"date_select_{st.session_state.selected_year}",
+                    label_visibility="collapsed"
+                )
+                st.session_state.selected_date = selected_normalized_date
+                
+                # Find the original date that corresponds to the selected normalized date
+                original_date_to_find = date_map_df[date_map_df['normalized_date'] == selected_normalized_date]['original_date'].iloc[0]
+                
+                # Select the final row using the original date string
+                final_row_df = person_year_df[person_year_df["วันที่ตรวจ"] == original_date_to_find]
+                if not final_row_df.empty:
+                    st.session_state.person_row = final_row_df.iloc[0].to_dict()
+                    st.session_state.selected_row_found = True
+                else:
+                    st.session_state.pop("person_row", None)
+                    st.session_state.pop("selected_row_found", None)
+        # --- END OF REVISED LOGIC ---
 
-# --- Add Print Button to Menu Bar ---
 if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
     with menu_cols[4]:
         person_for_print = st.session_state["person_row"]
@@ -1023,7 +975,6 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
 st.markdown("<hr>", unsafe_allow_html=True)
 
 # ==================== Display Health Report (Main Content) ====================
-# This section only runs if a specific record has been successfully found and selected
 if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
     person = st.session_state["person_row"]
     year_display = person.get("Year", "-")
@@ -1034,9 +985,8 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     weight_raw = person.get("น้ำหนัก", "-")
     height_raw = person.get("ส่วนสูง", "-")
     waist_raw = person.get("รอบเอว", "-")
-    check_date = person.get("วันที่ตรวจ", "-")
+    check_date = person.get("วันที่ตรวจ", "ไม่มีข้อมูล") # Use original string
 
-    # --- NEW: Unified Header Block (MODIFIED) ---
     report_header_html = f"""
     <div class="report-header-container" style="text-align: center; margin-bottom: 2rem; margin-top: 2rem;">
         <h1>รายงานผลการตรวจสุขภาพ</h1>
@@ -1048,7 +998,6 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     """
     st.markdown(report_header_html, unsafe_allow_html=True)
     
-    # --- The rest of the report starts here ---
     try:
         weight_val = float(str(weight_raw).replace("กก.", "").strip())
         height_val = float(str(height_raw).replace("ซม.", "").strip())
@@ -1084,7 +1033,6 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     advice_text = combined_health_advice(bmi_val, sbp, dbp)
     summary_advice = html.escape(advice_text) if advice_text else ""
     
-    # This block now only contains personal info, not the header.
     st.markdown(f"""
     <div class="personal-info-container">
         <hr style="margin-top: 0.5rem; margin-bottom: 1.5rem;">
@@ -1113,14 +1061,9 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         sex = "ไม่ระบุ"
 
     if sex == "หญิง":
-        hb_low = 12
-        hct_low = 36
-    elif sex == "ชาย":
-        hb_low = 13
-        hct_low = 39
-    else: # Default for "ไม่ระบุ" or invalid sex
-        hb_low = 12
-        hct_low = 36
+        hb_low, hct_low = 12, 36
+    else: # ชาย หรือ ไม่ระบุ
+        hb_low, hct_low = 13, 39
 
     cbc_config = [
         ("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None),
@@ -1170,59 +1113,29 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     with col2:
         st.markdown(render_lab_table_html("ผลตรวจเลือด (Blood Chemistry)", None, ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows), unsafe_allow_html=True)
 
-    # ==================== Combined Recommendations ====================
-    gfr_raw = person.get("GFR", "")
-    fbs_raw = person.get("FBS", "")
-    alp_raw = person.get("ALP", "")
-    sgot_raw = person.get("SGOT", "")
-    sgpt_raw = person.get("SGPT", "")
-    uric_raw = person.get("Uric Acid", "")
-    chol_raw = person.get("CHOL", "")
-    tgl_raw = person.get("TGL", "")
-    ldl_raw = person.get("LDL", "")
-
     advice_list = []
-    kidney_summary = kidney_summary_gfr_only(gfr_raw)
+    kidney_summary = kidney_summary_gfr_only(person.get("GFR", ""))
     advice_list.append(kidney_advice_from_summary(kidney_summary))
-    advice_list.append(fbs_advice(fbs_raw))
-    advice_list.append(liver_advice(summarize_liver(alp_raw, sgot_raw, sgpt_raw)))
-    advice_list.append(uric_acid_advice(uric_raw))
-    advice_list.append(lipids_advice(summarize_lipids(chol_raw, tgl_raw, ldl_raw)))
-    advice_list.append(cbc_advice(
-        person.get("Hb(%)", ""), 
-        person.get("HCT", ""), 
-        person.get("WBC (cumm)", ""), 
-        person.get("Plt (/mm)", ""),
-        sex=sex
-    ))
+    advice_list.append(fbs_advice(person.get("FBS", "")))
+    advice_list.append(liver_advice(summarize_liver(person.get("ALP", ""), person.get("SGOT", ""), person.get("SGPT", ""))))
+    advice_list.append(uric_acid_advice(person.get("Uric Acid", "")))
+    advice_list.append(lipids_advice(summarize_lipids(person.get("CHOL", ""), person.get("TGL", ""), person.get("LDL", ""))))
+    advice_list.append(cbc_advice(person.get("Hb(%)", ""), person.get("HCT", ""), person.get("WBC (cumm)", ""), person.get("Plt (/mm)", ""), sex=sex))
 
     spacer_l, main_col, spacer_r = st.columns([0.5, 6, 0.5])
 
     with main_col:
         final_advice_html = merge_final_advice_grouped(advice_list)
         has_general_advice = "ไม่พบคำแนะนำเพิ่มเติม" not in final_advice_html
-        
-        background_color_general_advice = (
-            "rgba(255, 255, 0, 0.2)" if has_general_advice else "rgba(57, 255, 20, 0.2)"
-        )
+        background_color_general_advice = "rgba(255, 255, 0, 0.2)" if has_general_advice else "rgba(57, 255, 20, 0.2)"
 
         st.markdown(f"""
-        <div style="
-            background-color: {background_color_general_advice};
-            padding: 0.6rem 2.5rem;
-            border-radius: 10px;
-            line-height: 1.6;
-            color: var(--text-color);
-            font-size: 14px;
-        ">
+        <div style="background-color: {background_color_general_advice}; padding: 0.6rem 2.5rem; border-radius: 10px; line-height: 1.6; color: var(--text-color); font-size: 14px;">
             {final_advice_html}
         </div>
         """, unsafe_allow_html=True)
 
-    # ==================== Urinalysis Section ====================
-    selected_year = st.session_state.get("selected_year_from_main", None)
-    if selected_year is None:
-        selected_year = datetime.now().year + 543
+    selected_year = person.get("Year", datetime.now().year + 543)
 
     with st.container():
         left_spacer_ua, col_ua_left, col_ua_right, right_spacer_ua = st.columns([0.5, 3, 3, 0.5])
@@ -1231,175 +1144,61 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             urine_summary, has_urine_result = render_urine_section(person, sex, selected_year)
             if has_urine_result:
                 if urine_summary:
-                    bg_color = "rgba(255, 255, 0, 0.2)"
-                    advice_text = f"<b>&emsp;ผลตรวจปัสสาวะ:</b> {urine_summary}"
+                    bg_color, advice_text = "rgba(255, 255, 0, 0.2)", f"<b>&emsp;ผลตรวจปัสสาวะ:</b> {urine_summary}"
                 else:
-                    bg_color = "rgba(57, 255, 20, 0.2)"
-                    advice_text = "<b>&emsp;ผลตรวจปัสสาวะ:</b> อยู่ในเกณฑ์ปกติ"
+                    bg_color, advice_text = "rgba(57, 255, 20, 0.2)", "<b>&emsp;ผลตรวจปัสสาวะ:</b> อยู่ในเกณฑ์ปกติ"
 
                 st.markdown(f"""
-                <div style="
-                    background-color: {bg_color};
-                    padding: 0.6rem 1.5rem;
-                    border-radius: 10px;
-                    line-height: 1.6;
-                    color: var(--text-color);
-                    font-size: 14px;
-                    margin-top: 1rem;
-                ">
+                <div style="background-color: {bg_color}; padding: 0.6rem 1.5rem; border-radius: 10px; line-height: 1.6; color: var(--text-color); font-size: 14px; margin-top: 1rem;">
                     {advice_text}
                 </div>
                 """, unsafe_allow_html=True)
 
-
-            # ==================== Stool Section ====================
             st.markdown(render_section_header("ผลตรวจอุจจาระ (Stool Examination)"), unsafe_allow_html=True)
-            
-            stool_exam_raw = person.get("Stool exam", "")
-            stool_cs_raw = person.get("Stool C/S", "")
-            
-            exam_text = interpret_stool_exam(stool_exam_raw)
-            cs_text = interpret_stool_cs(stool_cs_raw)
-            
+            exam_text = interpret_stool_exam(person.get("Stool exam", ""))
+            cs_text = interpret_stool_cs(person.get("Stool C/S", ""))
             st.markdown(render_stool_html_table(exam_text, cs_text), unsafe_allow_html=True)
 
         with col_ua_right:
-            # ============ X-ray Section ============
             st.markdown(render_section_header("ผลเอกซเรย์ (Chest X-ray)"), unsafe_allow_html=True)
-            
-            selected_year_int = int(selected_year)
-            cxr_col = "CXR" if selected_year_int == (datetime.now().year + 543) else f"CXR{str(selected_year_int)[-2:]}"
-            cxr_raw = person.get(cxr_col, "")
-            cxr_result = interpret_cxr(cxr_raw)
-            
-            st.markdown(f"""
-            <div style='
-                background-color: var(--background-color);
-                color: var(--text-color);
-                line-height: 1.6;
-                padding: 0.4rem;
-                border-radius: 6px;
-                margin-bottom: 1.5rem;
-                font-size: 14px;
-            '>
-                {cxr_result}
-            </div>
-            """, unsafe_allow_html=True)
+            cxr_col = f"CXR{str(selected_year)[-2:]}" if selected_year != (datetime.now().year + 543) else "CXR"
+            cxr_result = interpret_cxr(person.get(cxr_col, ""))
+            st.markdown(f"<div style='background-color: var(--background-color); color: var(--text-color); line-height: 1.6; padding: 0.4rem; border-radius: 6px; margin-bottom: 1.5rem; font-size: 14px;'>{cxr_result}</div>", unsafe_allow_html=True)
 
-            # ==================== EKG Section ====================
             st.markdown(render_section_header("ผลคลื่นไฟฟ้าหัวใจ (EKG)"), unsafe_allow_html=True)
+            ekg_col = get_ekg_col_name(selected_year)
+            ekg_result = interpret_ekg(person.get(ekg_col, ""))
+            st.markdown(f"<div style='background-color: var(--secondary-background-color); color: var(--text-color); line-height: 1.6; padding: 0.4rem; border-radius: 6px; margin-bottom: 1.5rem; font-size: 14px;'>{ekg_result}</div>", unsafe_allow_html=True)
 
-            ekg_col = get_ekg_col_name(selected_year_int)
-            ekg_raw = person.get(ekg_col, "")
-            ekg_result = interpret_ekg(ekg_raw)
-
-            st.markdown(f"""
-            <div style='
-                background-color: var(--secondary-background-color);
-                color: var(--text-color);
-                line-height: 1.6;
-                padding: 0.4rem;
-                border-radius: 6px;
-                margin-bottom: 1.5rem;
-                font-size: 14px;
-            '>
-                {ekg_result}
-            </div>
-            """, unsafe_allow_html=True)
-
-            # ==================== Section: Hepatitis A ====================
             st.markdown(render_section_header("ผลการตรวจไวรัสตับอักเสบเอ (Viral hepatitis A)"), unsafe_allow_html=True)
-            
             hep_a_raw = safe_text(person.get("Hepatitis A"))
-            st.markdown(f"""
-            <div style='
-                padding: 0.4rem;
-                border-radius: 6px;
-                margin-bottom: 1.5rem;
-                background-color: rgba(255,255,255,0.05);
-                font-size: 14px;
-            '>
-                {hep_a_raw}
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # ================ Section: Hepatitis B =================
-            hep_check_date_raw = person.get("ปีตรวจHEP")
-            hep_check_date = normalize_thai_date(hep_check_date_raw)
+            st.markdown(f"<div style='padding: 0.4rem; border-radius: 6px; margin-bottom: 1.5rem; background-color: rgba(255,255,255,0.05); font-size: 14px;'>{hep_a_raw}</div>", unsafe_allow_html=True)
             
             st.markdown(render_section_header("ผลการตรวจไวรัสตับอักเสบบี (Viral hepatitis B)"), unsafe_allow_html=True)
-            
             hbsag_raw = safe_text(person.get("HbsAg"))
             hbsab_raw = safe_text(person.get("HbsAb"))
             hbcab_raw = safe_text(person.get("HBcAB"))
-            
             st.markdown(f"""
             <div style="margin-bottom: 1rem;">
-            <table style='
-                width: 100%;
-                text-align: center;
-                border-collapse: collapse;
-                min-width: 300px;
-                font-size: 14px;
-            '>
-                <thead>
-                    <tr>
-                        <th style="padding: 8px; border: 1px solid transparent;">HBsAg</th>
-                        <th style="padding: 8px; border: 1px solid transparent;">HBsAb</th>
-                        <th style="padding: 8px; border: 1px solid transparent;">HBcAb</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td style="padding: 8px; border: 1px solid transparent;">{hbsag_raw}</td>
-                        <td style="padding: 8px; border: 1px solid transparent;">{hbsab_raw}</td>
-                        <td style="padding: 8px; border: 1px solid transparent;">{hbcab_raw}</td>
-                    </tr>
-                </tbody>
-            </table>
-            </div>
-            """, unsafe_allow_html=True)
+            <table style='width: 100%; text-align: center; border-collapse: collapse; min-width: 300px; font-size: 14px;'>
+                <thead><tr><th style="padding: 8px; border: 1px solid transparent;">HBsAg</th><th style="padding: 8px; border: 1px solid transparent;">HBsAb</th><th style="padding: 8px; border: 1px solid transparent;">HBcAb</th></tr></thead>
+                <tbody><tr><td style="padding: 8px; border: 1px solid transparent;">{hbsag_raw}</td><td style="padding: 8px; border: 1px solid transparent;">{hbsab_raw}</td><td style="padding: 8px; border: 1px solid transparent;">{hbcab_raw}</td></tr></tbody>
+            </table></div>""", unsafe_allow_html=True)
             
+            hep_check_date = safe_text(normalize_thai_date(person.get("ปีตรวจHEP")))
             hep_history = safe_text(person.get("สรุปประวัติ Hepb"))
             hep_vaccine = safe_text(person.get("วัคซีนhep b 67"))
-
             st.markdown(f"""
-            <div style='
-                padding: 0.75rem 1rem;
-                background-color: rgba(255,255,255,0.05);
-                border-radius: 6px;
-                margin-bottom: 1.5rem;
-                line-height: 1.8;
-                font-size: 14px;
-            '>
+            <div style='padding: 0.75rem 1rem; background-color: rgba(255,255,255,0.05); border-radius: 6px; margin-bottom: 1.5rem; line-height: 1.8; font-size: 14px;'>
                 <b>วันที่ตรวจภูมิคุ้มกัน:</b> {hep_check_date}<br>
                 <b>ประวัติโรคไวรัสตับอักเสบบี ปี พ.ศ. {selected_year}:</b> {hep_history}<br>
                 <b>ประวัติการได้รับวัคซีนในปี พ.ศ. {selected_year}:</b> {hep_vaccine}
-            </div>
-            """, unsafe_allow_html=True)
+            </div>""", unsafe_allow_html=True)
             
             advice = hepatitis_b_advice(hbsag_raw, hbsab_raw, hbcab_raw)
+            bg_color = "rgba(57, 255, 20, 0.2)" if advice.strip() == "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี" else "rgba(255, 255, 0, 0.2)"
+            st.markdown(f"<div style='line-height: 1.6; padding: 0.4rem 1.5rem; border-radius: 6px; background-color: {bg_color}; color: var(--text-color); margin-bottom: 1.5rem; font-size: 14px;'>{advice}</div>", unsafe_allow_html=True)
             
-            if advice.strip() == "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี":
-                bg_color = "rgba(57, 255, 20, 0.2)"
-            else:
-                bg_color = "rgba(255, 255, 0, 0.2)"
-
-            st.markdown(f"""
-            <div style='
-                line-height: 1.6;
-                padding: 0.4rem 1.5rem;
-                border-radius: 6px;
-                background-color: {bg_color};
-                color: var(--text-color);
-                margin-bottom: 1.5rem;
-                font-size: 14px;
-            '>
-                {advice}
-            </div>
-            """, unsafe_allow_html=True)
-            
-#=========================== ความเห็นแพทย์ =======================
 if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
     person = st.session_state["person_row"]
     doctor_suggestion = str(person.get("DOCTER suggest", "")).strip()
@@ -1410,34 +1209,12 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
 
     with doctor_col:
         st.markdown(f"""
-        <div style='
-            background-color: #1b5e20;
-            color: white;
-            padding: 0.4rem 2rem;
-            border-radius: 8px;
-            line-height: 1.6;
-            margin-top: 2rem;
-            margin-bottom: 2rem;
-            font-size: 14px;
-        '>
+        <div style='background-color: #1b5e20; color: white; padding: 0.4rem 2rem; border-radius: 8px; line-height: 1.6; margin-top: 2rem; margin-bottom: 2rem; font-size: 14px;'>
             <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
         </div>
-
-        <div style='
-            margin-top: 7rem;
-            text-align: right;
-            padding-right: 1rem;
-        '>
-            <div style='
-                display: inline-block;
-                text-align: center;
-                width: 340px;
-            '>
-                <div style='
-                    border-bottom: 1px dotted #ccc;
-                    margin-bottom: 0.5rem;
-                    width: 100%;
-                '></div>
+        <div style='margin-top: 7rem; text-align: right; padding-right: 1rem;'>
+            <div style='display: inline-block; text-align: center; width: 340px;'>
+                <div style='border-bottom: 1px dotted #ccc; margin-bottom: 0.5rem; width: 100%;'></div>
                 <div style='white-space: nowrap;'>นายแพทย์นพรัตน์ รัชฎาพร</div>
                 <div style='white-space: nowrap;'>เลขที่ใบอนุญาตผู้ประกอบวิชาชีพเวชกรรม ว.26674</div>
             </div>
