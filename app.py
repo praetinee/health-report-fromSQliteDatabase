@@ -44,11 +44,9 @@ def normalize_thai_date(date_str):
     
     s = str(date_str).strip().replace("พ.ศ.", "").replace("พศ.", "").strip()
 
-    # --- START OF CHANGES ---
     # หากเป็นข้อความสถานะ ให้ถือว่าเป็นค่าว่าง (pd.NA) เพื่อไม่ให้นำไปแสดงใน Dropdown
     if s.lower() in ["ไม่ตรวจ", "นัดทีหลัง", "ไม่ได้เข้ารับการตรวจ", ""]:
         return pd.NA
-    # --- END OF CHANGES ---
 
     try:
         # Format: DD/MM/YYYY (e.g., 29/04/2565)
@@ -949,44 +947,58 @@ if not results_df.empty:
                 label_visibility="collapsed"
             )
 
-        # --- START OF CHANGES ---
-        # Filter by selected year to get dates
+        # --- REVISED LOGIC FOR DATE SELECTION AND FINAL ROW ---
+        
+        # 1. Filter data for the selected year
         person_year_df = results_df[results_df["Year"] == st.session_state.selected_year]
-        person_year_df_for_options = person_year_df.drop_duplicates(subset=["วันที่ตรวจ"]).sort_values(by="วันที่ตรวจ", ascending=False)
-        exam_dates_options = person_year_df_for_options["วันที่ตรวจ"].dropna().tolist()
+        
+        # 2. Get a list of valid, unique dates. .dropna() is crucial here.
+        valid_exam_dates = sorted(person_year_df["วันที่ตรวจ"].dropna().unique().tolist(), reverse=True)
 
         with menu_cols[3]:
-            if exam_dates_options:
-                # If no date is selected yet for this year, or if the selected date is invalid, default to the first one.
-                if st.session_state.get("selected_date") not in exam_dates_options:
-                    st.session_state.selected_date = exam_dates_options[0]
-
-                date_idx = exam_dates_options.index(st.session_state.selected_date)
+            if valid_exam_dates:
+                # --- Case 1: There are valid dates to choose from ---
                 
-                # Date selection dropdown
+                # Set default date if needed
+                if st.session_state.get("selected_date") not in valid_exam_dates:
+                    st.session_state.selected_date = valid_exam_dates[0]
+
+                date_idx = valid_exam_dates.index(st.session_state.selected_date)
+                
+                # Show date selection dropdown
                 selected_date = st.selectbox(
-                    "วันที่ตรวจ", options=exam_dates_options, index=date_idx,
-                    key=f"date_select_{st.session_state.selected_year}", # Use a dynamic key
+                    "วันที่ตรวจ", options=valid_exam_dates, index=date_idx,
+                    key=f"date_select_{st.session_state.selected_year}",
                     label_visibility="collapsed"
                 )
                 st.session_state.selected_date = selected_date
                 
-                # --- Final Row Selection ---
-                if st.session_state.selected_date:
-                    final_row_df = person_year_df[person_year_df["วันที่ตรวจ"] == st.session_state.selected_date]
-                    if not final_row_df.empty:
-                        st.session_state.person_row = final_row_df.iloc[0].to_dict()
-                        st.session_state.selected_row_found = True
-                    else:
-                        st.session_state.pop("person_row", None)
-                        st.session_state.pop("selected_row_found", None)
+                # Find the final row based on the selected valid date
+                final_row_df = person_year_df[person_year_df["วันที่ตรวจ"] == st.session_state.selected_date]
+                if not final_row_df.empty:
+                    st.session_state.person_row = final_row_df.iloc[0].to_dict()
+                    st.session_state.selected_row_found = True
+                else: # Should not happen if logic is correct
+                    st.session_state.pop("person_row", None)
+                    st.session_state.pop("selected_row_found", None)
+
             else:
-                st.warning(f"ไม่พบวันที่ตรวจสำหรับปี {st.session_state.selected_year}")
-                # Explicitly clear person data if no dates are found
-                st.session_state.pop("person_row", None)
-                st.session_state.pop("selected_row_found", None)
-                st.session_state.pop("selected_date", None)
-        # --- END OF CHANGES ---
+                # --- Case 2: There are NO valid dates for this year ---
+                
+                # Check if there's only one, unambiguous record for this year
+                if len(person_year_df) == 1:
+                    # If so, select that single record to display, and show a warning.
+                    st.warning(f"ไม่พบวันที่ตรวจที่ถูกต้องสำหรับปี {st.session_state.selected_year} (กำลังแสดงข้อมูลเท่าที่มี)")
+                    st.session_state.person_row = person_year_df.iloc[0].to_dict()
+                    st.session_state.selected_row_found = True
+                    st.session_state.selected_date = None # No valid date is selected
+                else:
+                    # If there are multiple rows with no valid dates, it's ambiguous. Clear selection.
+                    st.warning(f"ไม่พบวันที่ตรวจที่ถูกต้องสำหรับปี {st.session_state.selected_year}")
+                    st.session_state.pop("person_row", None)
+                    st.session_state.pop("selected_row_found", None)
+                    st.session_state.pop("selected_date", None)
+        
 
 # --- Add Print Button to Menu Bar ---
 if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
