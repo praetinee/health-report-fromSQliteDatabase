@@ -1268,16 +1268,6 @@ else: # st.session_state.page == 'main_report'
             </div>
             """, unsafe_allow_html=True)
 
-        # --- START OF CHANGES ---
-        # 5. เพิ่มปุ่มสลับหน้า
-        st.markdown("---")
-        _, btn_col, _ = st.columns([2, 2, 2])
-        with btn_col:
-            if st.button("แสดงผลตรวจสมรรถภาพ (หู ตา ปอด)", use_container_width=True):
-                st.session_state.page = 'performance_report'
-                st.experimental_rerun()
-        # --- END OF CHANGES ---
-
         st.markdown(f"""
         <div style='margin-top: 7rem; text-align: right; padding-right: 1rem;'>
             <div style='display: inline-block; text-align: center; width: 340px;'>
@@ -1290,5 +1280,3 @@ else: # st.session_state.page == 'main_report'
 
     else:
         st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
-# --- END OF CHANGES ---
-" in the document. How can I improve th
