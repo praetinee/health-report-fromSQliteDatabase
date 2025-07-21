@@ -10,6 +10,7 @@ from collections import OrderedDict
 from datetime import datetime
 import re
 import print_report # <-- เพิ่มการ import โมดูลสำหรับพิมพ์
+import performance_tests
 
 def is_empty(val):
     return str(val).strip().lower() in ["", "-", "none", "nan", "null"]
