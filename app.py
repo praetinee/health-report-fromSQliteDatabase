@@ -867,15 +867,16 @@ if 'selected_year' not in st.session_state:
     st.session_state.selected_year = None
 if 'selected_date' not in st.session_state:
     st.session_state.selected_date = None
-# --- START OF CHANGES ---
 # 2. เพิ่ม State สำหรับจัดการหน้า
 if 'page' not in st.session_state:
     st.session_state.page = 'main_report'
-# --- END OF CHANGES ---
 
 # ==================== Menu Bar for Search and Selection ====================
 st.subheader("ค้นหาและเลือกผลตรวจ")
-menu_cols = st.columns([3, 1, 2, 2, 2])
+# --- START OF CHANGES ---
+# เปลี่ยน Layout ของ Columns เพื่อเพิ่มปุ่ม
+menu_cols = st.columns([3, 1, 2, 2, 2, 2])
+# --- END OF CHANGES ---
 
 with menu_cols[0]:
     st.text_input(
@@ -960,10 +961,16 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             mime="text/html",
             use_container_width=True
         )
+    # --- START OF CHANGES ---
+    # ย้ายปุ่มมาไว้ที่นี่
+    with menu_cols[5]:
+        if st.button("ผลตรวจสมรรถภาพ", use_container_width=True):
+            st.session_state.page = 'performance_report'
+            st.experimental_rerun()
+    # --- END OF CHANGES ---
 
 st.markdown("<hr>", unsafe_allow_html=True)
 
-# --- START OF CHANGES ---
 # 3. สร้างฟังก์ชันสำหรับแสดงผลหน้าสมรรถภาพ
 def display_performance_report(person_data):
     st.title("รายงานผลการตรวจสมรรถภาพ")
@@ -1284,3 +1291,4 @@ else: # st.session_state.page == 'main_report'
     else:
         st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
 # --- END OF CHANGES ---
+" in the document. How can I improve th
