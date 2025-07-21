@@ -964,9 +964,9 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     # --- START OF CHANGES ---
     # ย้ายปุ่มมาไว้ที่นี่
     with menu_cols[5]:
-        if st.button("ผลตรวจสมรรถภาพ", use_container_width=True):
+        if st.button("ผลตรวจสมรรถภาพการมองเห็น การได้ยิน และความจุปอด", use_container_width=True):
             st.session_state.page = 'performance_report'
-            st.experimental_rerun()
+            st.rerun()
     # --- END OF CHANGES ---
 
 st.markdown("<hr>", unsafe_allow_html=True)
@@ -978,7 +978,7 @@ def display_performance_report(person_data):
     # ปุ่มย้อนกลับ
     if st.button("ย้อนกลับไปหน้ารายงานหลัก"):
         st.session_state.page = 'main_report'
-        st.experimental_rerun()
+        st.rerun()
 
     # แสดงข้อมูลบุคคลคร่าวๆ
     st.write(f"**HN:** {person_data.get('HN', '-')}", f"**ชื่อ-สกุล:** {person_data.get('ชื่อ-สกุล', '-')}")
@@ -1028,7 +1028,7 @@ if st.session_state.page == 'performance_report':
         st.warning("กรุณาค้นหาและเลือกรายงานสุขภาพก่อน")
         if st.button("กลับไปหน้าค้นหา"):
             st.session_state.page = 'main_report'
-            st.experimental_rerun()
+            st.rerun()
 else: # st.session_state.page == 'main_report'
     # ==================== Display Health Report (Main Content) ====================
     if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
