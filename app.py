@@ -39,16 +39,16 @@ THAI_MONTH_ABBR_TO_NUM_GLOBAL = {
 
 # Function to normalize and convert Thai dates
 def normalize_thai_date(date_str):
-    # --- START OF CHANGES ---
-    # หากวันที่ว่าง ให้คืนค่าเป็น pd.NA (Not Available) เพื่อให้ pandas จัดการได้อย่างถูกต้อง
     if is_empty(date_str):
         return pd.NA
-    # --- END OF CHANGES ---
     
     s = str(date_str).strip().replace("พ.ศ.", "").replace("พศ.", "").strip()
 
+    # --- START OF CHANGES ---
+    # หากเป็นข้อความสถานะ ให้ถือว่าเป็นค่าว่าง (pd.NA) เพื่อไม่ให้นำไปแสดงใน Dropdown
     if s.lower() in ["ไม่ตรวจ", "นัดทีหลัง", "ไม่ได้เข้ารับการตรวจ", ""]:
-        return s
+        return pd.NA
+    # --- END OF CHANGES ---
 
     try:
         # Format: DD/MM/YYYY (e.g., 29/04/2565)
@@ -96,7 +96,8 @@ def normalize_thai_date(date_str):
     except Exception:
         pass
 
-    return s
+    # หากไม่สามารถแปลงเป็นวันที่ได้เลย ให้คืนค่าเป็น NA
+    return pd.NA
 
 def get_float(col, person_data):
     try:
@@ -1425,4 +1426,4 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         """, unsafe_allow_html=True)
 
 else:
-    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
+    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ"
