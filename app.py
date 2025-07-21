@@ -9,8 +9,8 @@ import numpy as np
 from collections import OrderedDict
 from datetime import datetime
 import re
-import print_report # <-- เพิ่มการ import โมดูลสำหรับพิมพ์
-import performance_tests # <-- เพิ่มการ import โมดูลสำหรับสมรรถภาพ
+import print_report 
+import performance_tests # <-- 1. Import โมดูลใหม่
 
 def is_empty(val):
     return str(val).strip().lower() in ["", "-", "none", "nan", "null"]
@@ -760,11 +760,9 @@ def load_sqlite_data():
         df_loaded['เลขบัตรประชาชน'] = df_loaded['เลขบัตรประชาชน'].astype(str).str.strip()
         df_loaded['Year'] = df_loaded['Year'].astype(int)
         
-        # --- START OF CHANGES ---
         # Keep original date strings for display, handle 'nan' string from conversion
         df_loaded['วันที่ตรวจ'] = df_loaded['วันที่ตรวจ'].astype(str).str.strip().replace('nan', '')
-        # --- END OF CHANGES ---
-
+        
         return df_loaded
     except Exception as e:
         st.error(f"❌ โหลดฐานข้อมูลไม่สำเร็จ: {e}")
@@ -869,6 +867,11 @@ if 'selected_year' not in st.session_state:
     st.session_state.selected_year = None
 if 'selected_date' not in st.session_state:
     st.session_state.selected_date = None
+# --- START OF CHANGES ---
+# 2. เพิ่ม State สำหรับจัดการหน้า
+if 'page' not in st.session_state:
+    st.session_state.page = 'main_report'
+# --- END OF CHANGES ---
 
 # ==================== Menu Bar for Search and Selection ====================
 st.subheader("ค้นหาและเลือกผลตรวจ")
@@ -909,8 +912,6 @@ if not results_df.empty:
 
         person_year_df = results_df[results_df["Year"] == st.session_state.selected_year]
         
-        # --- START OF REVISED LOGIC ---
-        # Create a mapping between original date strings and normalized ones for selection
         date_map_df = pd.DataFrame({
             'original_date': person_year_df['วันที่ตรวจ'],
             'normalized_date': person_year_df['วันที่ตรวจ'].apply(normalize_thai_date)
@@ -920,21 +921,17 @@ if not results_df.empty:
 
         with menu_cols[3]:
             if not valid_exam_dates_normalized:
-                # Case: No valid, parsable dates found for the year
                 if len(person_year_df) == 1:
-                    # If there's only one record, select it automatically
                     st.warning(f"ไม่พบวันที่ตรวจที่ถูกต้องสำหรับปี {st.session_state.selected_year}")
                     st.session_state.person_row = person_year_df.iloc[0].to_dict()
                     st.session_state.selected_row_found = True
-                    st.session_state.selected_date = None
+                    st.session_state.selected_date = person_year_df.iloc[0]['วันที่ตรวจ']
                 else:
-                    # If multiple records with no valid date, it's ambiguous
                     st.warning(f"ไม่พบวันที่ตรวจสำหรับปี {st.session_state.selected_year}")
                     st.session_state.pop("person_row", None)
                     st.session_state.pop("selected_row_found", None)
                     st.session_state.pop("selected_date", None)
             else:
-                # Case: Valid dates exist, show the dropdown
                 if st.session_state.get("selected_date") not in valid_exam_dates_normalized:
                     st.session_state.selected_date = valid_exam_dates_normalized[0]
                 
@@ -947,271 +944,334 @@ if not results_df.empty:
                 )
                 st.session_state.selected_date = selected_normalized_date
                 
-                # Find the original date that corresponds to the selected normalized date
                 original_date_to_find = date_map_df[date_map_df['normalized_date'] == selected_normalized_date]['original_date'].iloc[0]
                 
-                # Select the final row using the original date string
                 final_row_df = person_year_df[person_year_df["วันที่ตรวจ"] == original_date_to_find]
                 if not final_row_df.empty:
                     st.session_state.person_row = final_row_df.iloc[0].to_dict()
                     st.session_state.selected_row_found = True
-                else:
-                    st.session_state.pop("person_row", None)
-                    st.session_state.pop("selected_row_found", None)
-        # --- END OF REVISED LOGIC ---
 
 if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
     with menu_cols[4]:
-        person_for_print = st.session_state["person_row"]
-        report_html = print_report.generate_printable_report(person_for_print)
         st.download_button(
             label="📄 ดาว์นโหลดรายงาน",
-            data=report_html,
-            file_name=f"Health_Report_{person_for_print.get('HN', 'NA')}_{person_for_print.get('Year', 'NA')}.html",
+            data=print_report.generate_printable_report(st.session_state["person_row"]),
+            file_name=f"Health_Report_{st.session_state['person_row'].get('HN', 'NA')}_{st.session_state['person_row'].get('Year', 'NA')}.html",
             mime="text/html",
             use_container_width=True
         )
 
 st.markdown("<hr>", unsafe_allow_html=True)
 
-# ==================== Display Health Report (Main Content) ====================
-if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
-    person = st.session_state["person_row"]
-    year_display = person.get("Year", "-")
-
-    sbp = person.get("SBP", "")
-    dbp = person.get("DBP", "")
-    pulse_raw = person.get("pulse", "-")
-    weight_raw = person.get("น้ำหนัก", "-")
-    height_raw = person.get("ส่วนสูง", "-")
-    waist_raw = person.get("รอบเอว", "-")
-    check_date = person.get("วันที่ตรวจ", "ไม่มีข้อมูล") # Use original string
-
-    report_header_html = f"""
-    <div class="report-header-container" style="text-align: center; margin-bottom: 2rem; margin-top: 2rem;">
-        <h1>รายงานผลการตรวจสุขภาพ</h1>
-        <h2>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม -</h2>
-        <p>ชั้น 2 อาคารผู้ป่วยนอก-อุบัติเหตุ โรงพยาบาลสันทราย 201 หมู่ 11 ถ.เชียงใหม่–พร้าว ต.หนองหาร อ.สันทราย จ.เชียงใหม่ 50290</p>
-        <p>ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167</p>
-        <p><b>วันที่ตรวจ:</b> {check_date or "-"}</p>
-    </div>
-    """
-    st.markdown(report_header_html, unsafe_allow_html=True)
+# --- START OF CHANGES ---
+# 3. สร้างฟังก์ชันสำหรับแสดงผลหน้าสมรรถภาพ
+def display_performance_report(person_data):
+    st.title("รายงานผลการตรวจสมรรถภาพ")
     
-    try:
-        weight_val = float(str(weight_raw).replace("กก.", "").strip())
-        height_val = float(str(height_raw).replace("ซม.", "").strip())
-        bmi_val = weight_val / ((height_val / 100) ** 2) if height_val > 0 else None
-    except:
-        bmi_val = None
+    # ปุ่มย้อนกลับ
+    if st.button("ย้อนกลับไปหน้ารายงานหลัก"):
+        st.session_state.page = 'main_report'
+        st.experimental_rerun()
 
-    try:
-        sbp_int = int(float(sbp))
-        dbp_int = int(float(dbp))
-        bp_val = f"{sbp_int}/{dbp_int} ม.ม.ปรอท"
-    except:
-        sbp_int = dbp_int = None
-        bp_val = "-"
+    # แสดงข้อมูลบุคคลคร่าวๆ
+    st.write(f"**HN:** {person_data.get('HN', '-')}", f"**ชื่อ-สกุล:** {person_data.get('ชื่อ-สกุล', '-')}")
+    st.markdown("---")
+
+    # --- ส่วนแสดงผลสมรรถภาพปอด ---
+    st.subheader("สมรรถภาพปอด (Lung Capacity)")
+    fvc_p = person_data.get('FVC เปอร์เซ็นต์')
+    fev1_p = person_data.get('FEV1เปอร์เซ็นต์')
+    ratio = person_data.get('FEV1/FVC%')
+    lung_summary, lung_advice = performance_tests.interpret_lung_capacity(fvc_p, fev1_p, ratio)
     
-    if sbp_int is None or dbp_int is None:
-        bp_desc = "-"
-        bp_full = "-"
+    p_col1, p_col2 = st.columns(2)
+    p_col1.metric("สรุปผล", lung_summary)
+    if lung_advice:
+        p_col2.info(f"**คำแนะนำ:** {lung_advice}")
+    st.markdown("---")
+
+    # --- ส่วนแสดงผลสมรรถภาพการมองเห็น ---
+    st.subheader("สมรรถภาพการมองเห็น (Vision)")
+    vision_raw = person_data.get('สายตา') # **หมายเหตุ:** ต้องแน่ใจว่าชื่อคอลัมน์ถูกต้อง
+    color_raw = person_data.get('ตาบอดสี') # **หมายเหตุ:** ต้องแน่ใจว่าชื่อคอลัมน์ถูกต้อง
+    vision_summary, color_summary, vision_advice = performance_tests.interpret_vision(vision_raw, color_raw)
+    
+    v_col1, v_col2 = st.columns(2)
+    v_col1.metric("ผลตรวจสายตา", vision_summary)
+    v_col2.metric("ผลตรวจตาบอดสี", color_summary)
+    if vision_advice:
+        st.info(f"**คำแนะนำ:** {vision_advice}")
+    st.markdown("---")
+    
+    # --- ส่วนแสดงผลสมรรถภาพการได้ยิน ---
+    st.subheader("สมรรถภาพการได้ยิน (Hearing)")
+    hearing_raw = person_data.get('การได้ยิน') # **หมายเหตุ:** ต้องแน่ใจว่าชื่อคอลัมน์ถูกต้อง
+    hearing_summary, hearing_advice = performance_tests.interpret_hearing(hearing_raw)
+    
+    h_col1, h_col2 = st.columns(2)
+    h_col1.metric("สรุปผล", hearing_summary)
+    if hearing_advice:
+        h_col2.info(f"**คำแนะนำ:** {hearing_advice}")
+
+# 4. ใช้ if/else เพื่อสลับหน้าแสดงผล
+if st.session_state.page == 'performance_report':
+    if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
+        display_performance_report(st.session_state.person_row)
     else:
-        bp_desc = interpret_bp(sbp, dbp)
-        bp_full = f"{bp_val} - {bp_desc}" if bp_desc != "-" else bp_val
+        st.warning("กรุณาค้นหาและเลือกรายงานสุขภาพก่อน")
+        if st.button("กลับไปหน้าค้นหา"):
+            st.session_state.page = 'main_report'
+            st.experimental_rerun()
+else: # st.session_state.page == 'main_report'
+    # ==================== Display Health Report (Main Content) ====================
+    if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
+        person = st.session_state["person_row"]
+        year_display = person.get("Year", "-")
 
-    try:
-        pulse_val = int(float(pulse_raw))
-    except:
-        pulse_val = None
+        sbp = person.get("SBP", "")
+        dbp = person.get("DBP", "")
+        pulse_raw = person.get("pulse", "-")
+        weight_raw = person.get("น้ำหนัก", "-")
+        height_raw = person.get("ส่วนสูง", "-")
+        waist_raw = person.get("รอบเอว", "-")
+        check_date = person.get("วันที่ตรวจ", "ไม่มีข้อมูล")
 
-    pulse = f"{pulse_val} ครั้ง/นาที" if pulse_val is not None else "-"
-    weight_display = f"{weight_raw} กก." if not is_empty(weight_raw) else "-"
-    height_display = f"{height_raw} ซม." if not is_empty(height_raw) else "-"
-    waist_display = f"{waist_raw} ซม." if not is_empty(waist_raw) else "-"
-
-    advice_text = combined_health_advice(bmi_val, sbp, dbp)
-    summary_advice = html.escape(advice_text) if advice_text else ""
-    
-    st.markdown(f"""
-    <div class="personal-info-container">
-        <hr style="margin-top: 0.5rem; margin-bottom: 1.5rem;">
-        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; margin-bottom: 1rem; text-align: center; line-height: 1.8;">
-            <div><b>ชื่อ-สกุล:</b> {person.get('ชื่อ-สกุล', '-')}</div>
-            <div><b>อายุ:</b> {str(int(float(person.get('อายุ')))) if str(person.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')} ปี</div>
-            <div><b>เพศ:</b> {person.get('เพศ', '-')}</div>
-            <div><b>HN:</b> {str(int(float(person.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person.get('HN', '-')}</div>
-            <div><b>หน่วยงาน:</b> {person.get('หน่วยงาน', '-')}</div>
+        report_header_html = f"""
+        <div class="report-header-container" style="text-align: center; margin-bottom: 2rem; margin-top: 2rem;">
+            <h1>รายงานผลการตรวจสุขภาพ</h1>
+            <h2>- คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม -</h2>
+            <p>ชั้น 2 อาคารผู้ป่วยนอก-อุบัติเหตุ โรงพยาบาลสันทราย 201 หมู่ 11 ถ.เชียงใหม่–พร้าว ต.หนองหาร อ.สันทราย จ.เชียงใหม่ 50290</p>
+            <p>ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167</p>
+            <p><b>วันที่ตรวจ:</b> {check_date or "-"}</p>
         </div>
-        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; margin-bottom: 1.5rem; text-align: center; line-height: 1.8;">
-            <div><b>น้ำหนัก:</b> {weight_display}</div>
-            <div><b>ส่วนสูง:</b> {height_display}</div>
-            <div><b>รอบเอว:</b> {waist_display}</div>
-            <div><b>ความดันโลหิต:</b> {bp_full}</div>
-            <div><b>ชีพจร:</b> {pulse}</div>
-        </div>
-        {f"<div style='margin-top: 1rem; text-align: center;'><b>คำแนะนำ:</b> {summary_advice}</div>" if summary_advice else ""}
-    </div>
-    """, unsafe_allow_html=True)
+        """
+        st.markdown(report_header_html, unsafe_allow_html=True)
+        
+        try:
+            weight_val = float(str(weight_raw).replace("กก.", "").strip())
+            height_val = float(str(height_raw).replace("ซม.", "").strip())
+            bmi_val = weight_val / ((height_val / 100) ** 2) if height_val > 0 else None
+        except:
+            bmi_val = None
 
-    sex = str(person.get("เพศ", "")).strip()
+        try:
+            sbp_int = int(float(sbp))
+            dbp_int = int(float(dbp))
+            bp_val = f"{sbp_int}/{dbp_int} ม.ม.ปรอท"
+        except:
+            sbp_int = dbp_int = None
+            bp_val = "-"
+        
+        if sbp_int is None or dbp_int is None:
+            bp_desc = "-"
+            bp_full = "-"
+        else:
+            bp_desc = interpret_bp(sbp, dbp)
+            bp_full = f"{bp_val} - {bp_desc}" if bp_desc != "-" else bp_val
 
-    if sex not in ["ชาย", "หญิง"]:
-        st.warning("⚠️ เพศไม่ถูกต้องหรือไม่มีข้อมูล กำลังใช้ค่าอ้างอิงเริ่มต้น")
-        sex = "ไม่ระบุ"
+        try:
+            pulse_val = int(float(pulse_raw))
+        except:
+            pulse_val = None
 
-    if sex == "หญิง":
-        hb_low, hct_low = 12, 36
-    else: # ชาย หรือ ไม่ระบุ
-        hb_low, hct_low = 13, 39
+        pulse = f"{pulse_val} ครั้ง/นาที" if pulse_val is not None else "-"
+        weight_display = f"{weight_raw} กก." if not is_empty(weight_raw) else "-"
+        height_display = f"{height_raw} ซม." if not is_empty(height_raw) else "-"
+        waist_display = f"{waist_raw} ซม." if not is_empty(waist_raw) else "-"
 
-    cbc_config = [
-        ("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None),
-        ("ฮีมาโตคริต (Hct)", "HCT", "ชาย > 39%, หญิง > 36%", hct_low, None),
-        ("เม็ดเลือดขาว (wbc)", "WBC (cumm)", "4,000 - 10,000 /cu.mm", 4000, 10000),
-        ("นิวโทรฟิล (Neutrophil)", "Ne (%)", "43 - 70%", 43, 70),
-        ("ลิมโฟไซต์ (Lymphocyte)", "Ly (%)", "20 - 44%", 20, 44),
-        ("โมโนไซต์ (Monocyte)", "M", "3 - 9%", 3, 9),
-        ("อีโอซิโนฟิล (Eosinophil)", "Eo", "0 - 9%", 0, 9),
-        ("เบโซฟิล (Basophil)", "BA", "0 - 3%", 0, 3),
-        ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150,000 - 500,000 /cu.mm", 150000, 500000),
-    ]
-
-    cbc_rows = []
-    for label, col, norm, low, high in cbc_config:
-        val = get_float(col, person)
-        result, is_abn = flag(val, low, high)
-        cbc_rows.append([(label, is_abn), (result, is_abn), (norm, is_abn)])
-
-    blood_config = [
-        ("น้ำตาลในเลือด (FBS)", "FBS", "74 - 106 mg/dl", 74, 106),
-        ("กรดยูริก (Uric Acid)", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2),
-        ("การทำงานของเอนไซม์ตับ (ALK)", "ALP", "30 - 120 U/L", 30, 120),
-        ("การทำงานของเอนไซม์ตับ (SGOT)", "SGOT", "< 37 U/L", None, 37),
-        ("การทำงานของเอนไซม์ตับ (SGPT)", "SGPT", "< 41 U/L", None, 41),
-        ("คลอเรสเตอรอล (CHOL)", "CHOL", "150 - 200 mg/dl", 150, 200),
-        ("ไตรกลีเซอไรด์ (TGL)", "TGL", "35 - 150 mg/dl", 35, 150),
-        ("ไขมันดี (HDL)", "HDL", "> 40 mg/dl", 40, None, True),
-        ("ไขมันเลว (LDL)", "LDL", "0 - 160 mg/dl", 0, 160),
-        ("การทำงานของไต (BUN)", "BUN", "7.9 - 20 mg/dl", 7.9, 20),
-        ("การทำงานของไต (Cr)", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17),
-        ("ประสิทธิภาพการกรองของไต (GFR)", "GFR", "> 60 mL/min", 60, None, True),
-    ]
-
-    blood_rows = []
-    for label, col, norm, low, high, *opt in blood_config:
-        higher = opt[0] if opt else False
-        val = get_float(col, person)
-        result, is_abn = flag(val, low, high, higher)
-        blood_rows.append([(label, is_abn), (result, is_abn), (norm, is_abn)])
-
-    left_spacer, col1, col2, right_spacer = st.columns([0.5, 3, 3, 0.5])
-
-    with col1:
-        st.markdown(render_lab_table_html("ผลตรวจ CBC (Complete Blood Count)", None, ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows), unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown(render_lab_table_html("ผลตรวจเลือด (Blood Chemistry)", None, ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows), unsafe_allow_html=True)
-
-    advice_list = []
-    kidney_summary = kidney_summary_gfr_only(person.get("GFR", ""))
-    advice_list.append(kidney_advice_from_summary(kidney_summary))
-    advice_list.append(fbs_advice(person.get("FBS", "")))
-    advice_list.append(liver_advice(summarize_liver(person.get("ALP", ""), person.get("SGOT", ""), person.get("SGPT", ""))))
-    advice_list.append(uric_acid_advice(person.get("Uric Acid", "")))
-    advice_list.append(lipids_advice(summarize_lipids(person.get("CHOL", ""), person.get("TGL", ""), person.get("LDL", ""))))
-    advice_list.append(cbc_advice(person.get("Hb(%)", ""), person.get("HCT", ""), person.get("WBC (cumm)", ""), person.get("Plt (/mm)", ""), sex=sex))
-
-    spacer_l, main_col, spacer_r = st.columns([0.5, 6, 0.5])
-
-    with main_col:
-        final_advice_html = merge_final_advice_grouped(advice_list)
-        has_general_advice = "ไม่พบคำแนะนำเพิ่มเติม" not in final_advice_html
-        background_color_general_advice = "rgba(255, 255, 0, 0.2)" if has_general_advice else "rgba(57, 255, 20, 0.2)"
-
+        advice_text = combined_health_advice(bmi_val, sbp, dbp)
+        summary_advice = html.escape(advice_text) if advice_text else ""
+        
         st.markdown(f"""
-        <div style="background-color: {background_color_general_advice}; padding: 0.6rem 2.5rem; border-radius: 10px; line-height: 1.6; color: var(--text-color); font-size: 14px;">
-            {final_advice_html}
+        <div class="personal-info-container">
+            <hr style="margin-top: 0.5rem; margin-bottom: 1.5rem;">
+            <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; margin-bottom: 1rem; text-align: center; line-height: 1.8;">
+                <div><b>ชื่อ-สกุล:</b> {person.get('ชื่อ-สกุล', '-')}</div>
+                <div><b>อายุ:</b> {str(int(float(person.get('อายุ')))) if str(person.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')} ปี</div>
+                <div><b>เพศ:</b> {person.get('เพศ', '-')}</div>
+                <div><b>HN:</b> {str(int(float(person.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person.get('HN', '-')}</div>
+                <div><b>หน่วยงาน:</b> {person.get('หน่วยงาน', '-')}</div>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; margin-bottom: 1.5rem; text-align: center; line-height: 1.8;">
+                <div><b>น้ำหนัก:</b> {weight_display}</div>
+                <div><b>ส่วนสูง:</b> {height_display}</div>
+                <div><b>รอบเอว:</b> {waist_display}</div>
+                <div><b>ความดันโลหิต:</b> {bp_full}</div>
+                <div><b>ชีพจร:</b> {pulse}</div>
+            </div>
+            {f"<div style='margin-top: 1rem; text-align: center;'><b>คำแนะนำ:</b> {summary_advice}</div>" if summary_advice else ""}
         </div>
         """, unsafe_allow_html=True)
 
-    selected_year = person.get("Year", datetime.now().year + 543)
+        sex = str(person.get("เพศ", "")).strip()
 
-    with st.container():
-        left_spacer_ua, col_ua_left, col_ua_right, right_spacer_ua = st.columns([0.5, 3, 3, 0.5])
+        if sex not in ["ชาย", "หญิง"]:
+            st.warning("⚠️ เพศไม่ถูกต้องหรือไม่มีข้อมูล กำลังใช้ค่าอ้างอิงเริ่มต้น")
+            sex = "ไม่ระบุ"
+
+        if sex == "หญิง":
+            hb_low, hct_low = 12, 36
+        else: # ชาย หรือ ไม่ระบุ
+            hb_low, hct_low = 13, 39
+
+        cbc_config = [
+            ("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None),
+            ("ฮีมาโตคริต (Hct)", "HCT", "ชาย > 39%, หญิง > 36%", hct_low, None),
+            ("เม็ดเลือดขาว (wbc)", "WBC (cumm)", "4,000 - 10,000 /cu.mm", 4000, 10000),
+            ("นิวโทรฟิล (Neutrophil)", "Ne (%)", "43 - 70%", 43, 70),
+            ("ลิมโฟไซต์ (Lymphocyte)", "Ly (%)", "20 - 44%", 20, 44),
+            ("โมโนไซต์ (Monocyte)", "M", "3 - 9%", 3, 9),
+            ("อีโอซิโนฟิล (Eosinophil)", "Eo", "0 - 9%", 0, 9),
+            ("เบโซฟิล (Basophil)", "BA", "0 - 3%", 0, 3),
+            ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150,000 - 500,000 /cu.mm", 150000, 500000),
+        ]
+
+        cbc_rows = []
+        for label, col, norm, low, high in cbc_config:
+            val = get_float(col, person)
+            result, is_abn = flag(val, low, high)
+            cbc_rows.append([(label, is_abn), (result, is_abn), (norm, is_abn)])
+
+        blood_config = [
+            ("น้ำตาลในเลือด (FBS)", "FBS", "74 - 106 mg/dl", 74, 106),
+            ("กรดยูริก (Uric Acid)", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2),
+            ("การทำงานของเอนไซม์ตับ (ALK)", "ALP", "30 - 120 U/L", 30, 120),
+            ("การทำงานของเอนไซม์ตับ (SGOT)", "SGOT", "< 37 U/L", None, 37),
+            ("การทำงานของเอนไซม์ตับ (SGPT)", "SGPT", "< 41 U/L", None, 41),
+            ("คลอเรสเตอรอล (CHOL)", "CHOL", "150 - 200 mg/dl", 150, 200),
+            ("ไตรกลีเซอไรด์ (TGL)", "TGL", "35 - 150 mg/dl", 35, 150),
+            ("ไขมันดี (HDL)", "HDL", "> 40 mg/dl", 40, None, True),
+            ("ไขมันเลว (LDL)", "LDL", "0 - 160 mg/dl", 0, 160),
+            ("การทำงานของไต (BUN)", "BUN", "7.9 - 20 mg/dl", 7.9, 20),
+            ("การทำงานของไต (Cr)", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17),
+            ("ประสิทธิภาพการกรองของไต (GFR)", "GFR", "> 60 mL/min", 60, None, True),
+        ]
+
+        blood_rows = []
+        for label, col, norm, low, high, *opt in blood_config:
+            higher = opt[0] if opt else False
+            val = get_float(col, person)
+            result, is_abn = flag(val, low, high, higher)
+            blood_rows.append([(label, is_abn), (result, is_abn), (norm, is_abn)])
+
+        left_spacer, col1, col2, right_spacer = st.columns([0.5, 3, 3, 0.5])
+
+        with col1:
+            st.markdown(render_lab_table_html("ผลตรวจ CBC (Complete Blood Count)", None, ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows), unsafe_allow_html=True)
         
-        with col_ua_left:
-            urine_summary, has_urine_result = render_urine_section(person, sex, selected_year)
-            if has_urine_result:
-                if urine_summary:
-                    bg_color, advice_text = "rgba(255, 255, 0, 0.2)", f"<b>&emsp;ผลตรวจปัสสาวะ:</b> {urine_summary}"
-                else:
-                    bg_color, advice_text = "rgba(57, 255, 20, 0.2)", "<b>&emsp;ผลตรวจปัสสาวะ:</b> อยู่ในเกณฑ์ปกติ"
+        with col2:
+            st.markdown(render_lab_table_html("ผลตรวจเลือด (Blood Chemistry)", None, ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows), unsafe_allow_html=True)
 
+        advice_list = []
+        kidney_summary = kidney_summary_gfr_only(person.get("GFR", ""))
+        advice_list.append(kidney_advice_from_summary(kidney_summary))
+        advice_list.append(fbs_advice(person.get("FBS", "")))
+        advice_list.append(liver_advice(summarize_liver(person.get("ALP", ""), person.get("SGOT", ""), person.get("SGPT", ""))))
+        advice_list.append(uric_acid_advice(person.get("Uric Acid", "")))
+        advice_list.append(lipids_advice(summarize_lipids(person.get("CHOL", ""), person.get("TGL", ""), person.get("LDL", ""))))
+        advice_list.append(cbc_advice(person.get("Hb(%)", ""), person.get("HCT", ""), person.get("WBC (cumm)", ""), person.get("Plt (/mm)", ""), sex=sex))
+
+        spacer_l, main_col, spacer_r = st.columns([0.5, 6, 0.5])
+
+        with main_col:
+            final_advice_html = merge_final_advice_grouped(advice_list)
+            has_general_advice = "ไม่พบคำแนะนำเพิ่มเติม" not in final_advice_html
+            background_color_general_advice = "rgba(255, 255, 0, 0.2)" if has_general_advice else "rgba(57, 255, 20, 0.2)"
+
+            st.markdown(f"""
+            <div style="background-color: {background_color_general_advice}; padding: 0.6rem 2.5rem; border-radius: 10px; line-height: 1.6; color: var(--text-color); font-size: 14px;">
+                {final_advice_html}
+            </div>
+            """, unsafe_allow_html=True)
+
+        selected_year = person.get("Year", datetime.now().year + 543)
+
+        with st.container():
+            left_spacer_ua, col_ua_left, col_ua_right, right_spacer_ua = st.columns([0.5, 3, 3, 0.5])
+            
+            with col_ua_left:
+                urine_summary, has_urine_result = render_urine_section(person, sex, selected_year)
+                if has_urine_result:
+                    if urine_summary:
+                        bg_color, advice_text = "rgba(255, 255, 0, 0.2)", f"<b>&emsp;ผลตรวจปัสสาวะ:</b> {urine_summary}"
+                    else:
+                        bg_color, advice_text = "rgba(57, 255, 20, 0.2)", "<b>&emsp;ผลตรวจปัสสาวะ:</b> อยู่ในเกณฑ์ปกติ"
+
+                    st.markdown(f"""
+                    <div style="background-color: {bg_color}; padding: 0.6rem 1.5rem; border-radius: 10px; line-height: 1.6; color: var(--text-color); font-size: 14px; margin-top: 1rem;">
+                        {advice_text}
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                st.markdown(render_section_header("ผลตรวจอุจจาระ (Stool Examination)"), unsafe_allow_html=True)
+                exam_text = interpret_stool_exam(person.get("Stool exam", ""))
+                cs_text = interpret_stool_cs(person.get("Stool C/S", ""))
+                st.markdown(render_stool_html_table(exam_text, cs_text), unsafe_allow_html=True)
+
+            with col_ua_right:
+                st.markdown(render_section_header("ผลเอกซเรย์ (Chest X-ray)"), unsafe_allow_html=True)
+                cxr_col = f"CXR{str(selected_year)[-2:]}" if selected_year != (datetime.now().year + 543) else "CXR"
+                cxr_result = interpret_cxr(person.get(cxr_col, ""))
+                st.markdown(f"<div style='background-color: var(--background-color); color: var(--text-color); line-height: 1.6; padding: 0.4rem; border-radius: 6px; margin-bottom: 1.5rem; font-size: 14px;'>{cxr_result}</div>", unsafe_allow_html=True)
+
+                st.markdown(render_section_header("ผลคลื่นไฟฟ้าหัวใจ (EKG)"), unsafe_allow_html=True)
+                ekg_col = get_ekg_col_name(selected_year)
+                ekg_result = interpret_ekg(person.get(ekg_col, ""))
+                st.markdown(f"<div style='background-color: var(--secondary-background-color); color: var(--text-color); line-height: 1.6; padding: 0.4rem; border-radius: 6px; margin-bottom: 1.5rem; font-size: 14px;'>{ekg_result}</div>", unsafe_allow_html=True)
+
+                st.markdown(render_section_header("ผลการตรวจไวรัสตับอักเสบเอ (Viral hepatitis A)"), unsafe_allow_html=True)
+                hep_a_raw = safe_text(person.get("Hepatitis A"))
+                st.markdown(f"<div style='padding: 0.4rem; border-radius: 6px; margin-bottom: 1.5rem; background-color: rgba(255,255,255,0.05); font-size: 14px;'>{hep_a_raw}</div>", unsafe_allow_html=True)
+                
+                st.markdown(render_section_header("ผลการตรวจไวรัสตับอักเสบบี (Viral hepatitis B)"), unsafe_allow_html=True)
+                hbsag_raw = safe_text(person.get("HbsAg"))
+                hbsab_raw = safe_text(person.get("HbsAb"))
+                hbcab_raw = safe_text(person.get("HBcAB"))
                 st.markdown(f"""
-                <div style="background-color: {bg_color}; padding: 0.6rem 1.5rem; border-radius: 10px; line-height: 1.6; color: var(--text-color); font-size: 14px; margin-top: 1rem;">
-                    {advice_text}
-                </div>
-                """, unsafe_allow_html=True)
+                <div style="margin-bottom: 1rem;">
+                <table style='width: 100%; text-align: center; border-collapse: collapse; min-width: 300px; font-size: 14px;'>
+                    <thead><tr><th style="padding: 8px; border: 1px solid transparent;">HBsAg</th><th style="padding: 8px; border: 1px solid transparent;">HBsAb</th><th style="padding: 8px; border: 1px solid transparent;">HBcAb</th></tr></thead>
+                    <tbody><tr><td style="padding: 8px; border: 1px solid transparent;">{hbsag_raw}</td><td style="padding: 8px; border: 1px solid transparent;">{hbsab_raw}</td><td style="padding: 8px; border: 1px solid transparent;">{hbcab_raw}</td></tr></tbody>
+                </table></div>""", unsafe_allow_html=True)
+                
+                hep_check_date = safe_text(normalize_thai_date(person.get("ปีตรวจHEP")))
+                hep_history = safe_text(person.get("สรุปประวัติ Hepb"))
+                hep_vaccine = safe_text(person.get("วัคซีนhep b 67"))
+                st.markdown(f"""
+                <div style='padding: 0.75rem 1rem; background-color: rgba(255,255,255,0.05); border-radius: 6px; margin-bottom: 1.5rem; line-height: 1.8; font-size: 14px;'>
+                    <b>วันที่ตรวจภูมิคุ้มกัน:</b> {hep_check_date}<br>
+                    <b>ประวัติโรคไวรัสตับอักเสบบี ปี พ.ศ. {selected_year}:</b> {hep_history}<br>
+                    <b>ประวัติการได้รับวัคซีนในปี พ.ศ. {selected_year}:</b> {hep_vaccine}
+                </div>""", unsafe_allow_html=True)
+                
+                advice = hepatitis_b_advice(hbsag_raw, hbsab_raw, hbcab_raw)
+                bg_color = "rgba(57, 255, 20, 0.2)" if advice.strip() == "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี" else "rgba(255, 255, 0, 0.2)"
+                st.markdown(f"<div style='line-height: 1.6; padding: 0.4rem 1.5rem; border-radius: 6px; background-color: {bg_color}; color: var(--text-color); margin-bottom: 1.5rem; font-size: 14px;'>{advice}</div>", unsafe_allow_html=True)
+                
+        doctor_suggestion = str(person.get("DOCTER suggest", "")).strip()
+        if doctor_suggestion.lower() in ["", "-", "none", "nan", "null"]:
+            doctor_suggestion = "<i>ไม่มีคำแนะนำจากแพทย์</i>"
 
-            st.markdown(render_section_header("ผลตรวจอุจจาระ (Stool Examination)"), unsafe_allow_html=True)
-            exam_text = interpret_stool_exam(person.get("Stool exam", ""))
-            cs_text = interpret_stool_cs(person.get("Stool C/S", ""))
-            st.markdown(render_stool_html_table(exam_text, cs_text), unsafe_allow_html=True)
+        left_spacer3, doctor_col, right_spacer3 = st.columns([0.5, 6, 0.5])
 
-        with col_ua_right:
-            st.markdown(render_section_header("ผลเอกซเรย์ (Chest X-ray)"), unsafe_allow_html=True)
-            cxr_col = f"CXR{str(selected_year)[-2:]}" if selected_year != (datetime.now().year + 543) else "CXR"
-            cxr_result = interpret_cxr(person.get(cxr_col, ""))
-            st.markdown(f"<div style='background-color: var(--background-color); color: var(--text-color); line-height: 1.6; padding: 0.4rem; border-radius: 6px; margin-bottom: 1.5rem; font-size: 14px;'>{cxr_result}</div>", unsafe_allow_html=True)
-
-            st.markdown(render_section_header("ผลคลื่นไฟฟ้าหัวใจ (EKG)"), unsafe_allow_html=True)
-            ekg_col = get_ekg_col_name(selected_year)
-            ekg_result = interpret_ekg(person.get(ekg_col, ""))
-            st.markdown(f"<div style='background-color: var(--secondary-background-color); color: var(--text-color); line-height: 1.6; padding: 0.4rem; border-radius: 6px; margin-bottom: 1.5rem; font-size: 14px;'>{ekg_result}</div>", unsafe_allow_html=True)
-
-            st.markdown(render_section_header("ผลการตรวจไวรัสตับอักเสบเอ (Viral hepatitis A)"), unsafe_allow_html=True)
-            hep_a_raw = safe_text(person.get("Hepatitis A"))
-            st.markdown(f"<div style='padding: 0.4rem; border-radius: 6px; margin-bottom: 1.5rem; background-color: rgba(255,255,255,0.05); font-size: 14px;'>{hep_a_raw}</div>", unsafe_allow_html=True)
-            
-            st.markdown(render_section_header("ผลการตรวจไวรัสตับอักเสบบี (Viral hepatitis B)"), unsafe_allow_html=True)
-            hbsag_raw = safe_text(person.get("HbsAg"))
-            hbsab_raw = safe_text(person.get("HbsAb"))
-            hbcab_raw = safe_text(person.get("HBcAB"))
+        with doctor_col:
             st.markdown(f"""
-            <div style="margin-bottom: 1rem;">
-            <table style='width: 100%; text-align: center; border-collapse: collapse; min-width: 300px; font-size: 14px;'>
-                <thead><tr><th style="padding: 8px; border: 1px solid transparent;">HBsAg</th><th style="padding: 8px; border: 1px solid transparent;">HBsAb</th><th style="padding: 8px; border: 1px solid transparent;">HBcAb</th></tr></thead>
-                <tbody><tr><td style="padding: 8px; border: 1px solid transparent;">{hbsag_raw}</td><td style="padding: 8px; border: 1px solid transparent;">{hbsab_raw}</td><td style="padding: 8px; border: 1px solid transparent;">{hbcab_raw}</td></tr></tbody>
-            </table></div>""", unsafe_allow_html=True)
-            
-            hep_check_date = safe_text(normalize_thai_date(person.get("ปีตรวจHEP")))
-            hep_history = safe_text(person.get("สรุปประวัติ Hepb"))
-            hep_vaccine = safe_text(person.get("วัคซีนhep b 67"))
-            st.markdown(f"""
-            <div style='padding: 0.75rem 1rem; background-color: rgba(255,255,255,0.05); border-radius: 6px; margin-bottom: 1.5rem; line-height: 1.8; font-size: 14px;'>
-                <b>วันที่ตรวจภูมิคุ้มกัน:</b> {hep_check_date}<br>
-                <b>ประวัติโรคไวรัสตับอักเสบบี ปี พ.ศ. {selected_year}:</b> {hep_history}<br>
-                <b>ประวัติการได้รับวัคซีนในปี พ.ศ. {selected_year}:</b> {hep_vaccine}
-            </div>""", unsafe_allow_html=True)
-            
-            advice = hepatitis_b_advice(hbsag_raw, hbsab_raw, hbcab_raw)
-            bg_color = "rgba(57, 255, 20, 0.2)" if advice.strip() == "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี" else "rgba(255, 255, 0, 0.2)"
-            st.markdown(f"<div style='line-height: 1.6; padding: 0.4rem 1.5rem; border-radius: 6px; background-color: {bg_color}; color: var(--text-color); margin-bottom: 1.5rem; font-size: 14px;'>{advice}</div>", unsafe_allow_html=True)
-            
-if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
-    person = st.session_state["person_row"]
-    doctor_suggestion = str(person.get("DOCTER suggest", "")).strip()
-    if doctor_suggestion.lower() in ["", "-", "none", "nan", "null"]:
-        doctor_suggestion = "<i>ไม่มีคำแนะนำจากแพทย์</i>"
+            <div style='background-color: #1b5e20; color: white; padding: 0.4rem 2rem; border-radius: 8px; line-height: 1.6; margin-top: 2rem; margin-bottom: 2rem; font-size: 14px;'>
+                <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
+            </div>
+            """, unsafe_allow_html=True)
 
-    left_spacer3, doctor_col, right_spacer3 = st.columns([0.5, 6, 0.5])
+        # --- START OF CHANGES ---
+        # 5. เพิ่มปุ่มสลับหน้า
+        st.markdown("---")
+        _, btn_col, _ = st.columns([2, 2, 2])
+        with btn_col:
+            if st.button("แสดงผลตรวจสมรรถภาพ (หู ตา ปอด)", use_container_width=True):
+                st.session_state.page = 'performance_report'
+                st.experimental_rerun()
+        # --- END OF CHANGES ---
 
-    with doctor_col:
         st.markdown(f"""
-        <div style='background-color: #1b5e20; color: white; padding: 0.4rem 2rem; border-radius: 8px; line-height: 1.6; margin-top: 2rem; margin-bottom: 2rem; font-size: 14px;'>
-            <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
-        </div>
         <div style='margin-top: 7rem; text-align: right; padding-right: 1rem;'>
             <div style='display: inline-block; text-align: center; width: 340px;'>
                 <div style='border-bottom: 1px dotted #ccc; margin-bottom: 0.5rem; width: 100%;'></div>
@@ -1221,5 +1281,6 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         </div>
         """, unsafe_allow_html=True)
 
-else:
-    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
+    else:
+        st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
+# --- END OF CHANGES ---
