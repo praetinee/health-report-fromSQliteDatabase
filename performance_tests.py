@@ -66,51 +66,64 @@ def interpret_hearing(hearing_raw):
 
     return summary, advice
 
-def interpret_lung_capacity(fvc_percent_raw, fev1_percent_raw, ratio_raw):
+def interpret_lung_capacity(fvc_raw, fvc_predic_raw, fvc_percent_raw, 
+                            fev1_raw, fev1_predic_raw, fev1_percent_raw, 
+                            ratio_raw, ratio_predic_raw,
+                            pef_raw, fef2575_raw, fef2575_percent_raw):
     """
     แปลผลตรวจสมรรถภาพความจุปอด
     Args:
-        fvc_percent_raw: ค่า FVC เปอร์เซ็นต์
-        fev1_percent_raw: ค่า FEV1 เปอร์เซ็นต์
-        ratio_raw: ค่า FEV1/FVC%
+        All raw values from the database for lung capacity.
     Returns:
-        tuple: (สรุปผล, คำแนะนำ, dictionary ข้อมูลดิบ)
+        tuple: (สรุปผล, คำแนะนำ, dictionary ข้อมูลดิบทั้งหมด)
     """
     summary = "ไม่ได้เข้ารับการตรวจ"
     advice = ""
-    raw_values = {
-        'FVC %': '-',
-        'FEV1 %': '-',
-        'FEV1/FVC %': '-'
-    }
     
-    try:
-        fvc_p = float(fvc_percent_raw) if not is_empty(fvc_percent_raw) else None
-        fev1_p = float(fev1_percent_raw) if not is_empty(fev1_percent_raw) else None
-        ratio = float(ratio_raw) if not is_empty(ratio_raw) else None
-        
-        # Update raw_values with actual numbers if they exist
-        if fvc_p is not None: raw_values['FVC %'] = fvc_p
-        if fev1_p is not None: raw_values['FEV1 %'] = fev1_p
-        if ratio is not None: raw_values['FEV1/FVC %'] = ratio
+    # Helper to safely convert to float
+    def to_float(val):
+        if is_empty(val):
+            return None
+        try:
+            return float(val)
+        except (ValueError, TypeError):
+            return None
 
-    except (ValueError, TypeError):
-        return "ข้อมูลผลตรวจไม่ถูกต้อง", "กรุณาตรวจสอบข้อมูลนำเข้า", raw_values
+    # Populate raw_values with all provided data, converting to numbers where possible
+    raw_values = {
+        'FVC': to_float(fvc_raw),
+        'FVC predic': to_float(fvc_predic_raw),
+        'FVC %': to_float(fvc_percent_raw),
+        'FEV1': to_float(fev1_raw),
+        'FEV1 predic': to_float(fev1_predic_raw),
+        'FEV1 %': to_float(fev1_percent_raw),
+        'FEV1/FVC %': to_float(ratio_raw),
+        'FEV1/FVC % pre': to_float(ratio_predic_raw),
+        'PEF': to_float(pef_raw),
+        'FEF25-75': to_float(fef2575_raw),
+        'FEF25-75 %': to_float(fef2575_percent_raw),
+    }
 
+    fvc_p = raw_values['FVC %']
+    fev1_p = raw_values['FEV1 %']
+    ratio = raw_values['FEV1/FVC %']
+    
+    # Check if essential data for interpretation is missing
     if fvc_p is None and fev1_p is None and ratio is None:
         return summary, advice, raw_values
         
     if fvc_p is None or ratio is None:
         return "สรุปผลไม่ได้ (ข้อมูลไม่เพียงพอ)", "ให้พบแพทย์เพื่อตรวจวินิจฉัย รักษาเพิ่มเติม", raw_values
 
+    # Interpretation Logic
     if ratio < 70:
         if fvc_p < 80:
             summary = "ความผิดปกติแบบผสม (Mixed)"
         else:
             if fev1_p is not None and fev1_p >= 60:
-                 summary = "ความผิดปกติแบบหลอดลมอุดกั้นเล็กน้อย"
+                summary = "ความผิดปกติแบบหลอดลมอุดกั้นเล็กน้อย"
             else:
-                 summary = "ความผิดปกติแบบหลอดลมอุดกั้น"
+                summary = "ความผิดปกติแบบหลอดลมอุดกั้น"
     elif ratio >= 70:
         if fvc_p < 80:
             if fvc_p >= 60:
@@ -120,6 +133,7 @@ def interpret_lung_capacity(fvc_percent_raw, fev1_percent_raw, ratio_raw):
         else:
             summary = "สมรรถภาพปอดปกติ"
 
+    # Set advice based on summary
     if "ปกติ" in summary:
         advice = "เพิ่มสมรรถภาพปอดด้วยการออกกำลังกาย หลีกเลี่ยงการสัมผัสสารเคมี ฝุ่น และควัน"
     elif "ผิดปกติ" in summary:
