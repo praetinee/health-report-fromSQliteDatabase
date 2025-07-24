@@ -684,23 +684,35 @@ if not results_df.empty:
         year_idx = available_years.index(st.session_state.selected_year)
         with menu_cols[2]:
             st.selectbox("ปี พ.ศ.", options=available_years, index=year_idx, format_func=lambda y: f"พ.ศ. {y}", key="year_select", on_change=handle_year_change, label_visibility="collapsed")
+        
         person_year_df = results_df[results_df["Year"] == st.session_state.selected_year]
         date_map_df = pd.DataFrame({'original_date': person_year_df['วันที่ตรวจ'], 'normalized_date': person_year_df['วันที่ตรวจ'].apply(normalize_thai_date)}).drop_duplicates().dropna(subset=['normalized_date'])
         valid_exam_dates_normalized = sorted(date_map_df['normalized_date'].unique().tolist(), reverse=True)
+        
         with menu_cols[3]:
-            if valid_exam_dates_normalized:
+            if not valid_exam_dates_normalized:
+                if len(person_year_df) == 1:
+                    st.warning(f"ไม่สามารถระบุวันที่ตรวจได้ จะแสดงผลจากข้อมูลที่มีเพียงรายการเดียวสำหรับปี {st.session_state.selected_year}")
+                    st.session_state.person_row = person_year_df.iloc[0].to_dict()
+                    st.session_state.selected_row_found = True
+                    st.session_state.selected_date = person_year_df.iloc[0]['วันที่ตรวจ']
+                else:
+                    st.warning(f"ไม่พบวันที่ตรวจที่ถูกต้องสำหรับปี {st.session_state.selected_year}")
+                    st.session_state.pop("person_row", None)
+                    st.session_state.pop("selected_row_found", None)
+                    st.session_state.pop("selected_date", None)
+            else:
                 if st.session_state.get("selected_date") not in valid_exam_dates_normalized:
                     st.session_state.selected_date = valid_exam_dates_normalized[0]
                 date_idx = valid_exam_dates_normalized.index(st.session_state.selected_date)
                 selected_normalized_date = st.selectbox("วันที่ตรวจ", options=valid_exam_dates_normalized, index=date_idx, key=f"date_select_{st.session_state.selected_year}", label_visibility="collapsed")
                 st.session_state.selected_date = selected_normalized_date
+                
                 original_date_to_find = date_map_df[date_map_df['normalized_date'] == selected_normalized_date]['original_date'].iloc[0]
                 final_row_df = person_year_df[person_year_df["วันที่ตรวจ"] == original_date_to_find]
                 if not final_row_df.empty:
                     st.session_state.person_row = final_row_df.iloc[0].to_dict()
                     st.session_state.selected_row_found = True
-            else:
-                 st.session_state.pop("person_row", None); st.session_state.pop("selected_row_found", None); st.session_state.pop("selected_date", None)
 
 
 st.markdown("<hr>", unsafe_allow_html=True)
