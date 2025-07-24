@@ -9,7 +9,6 @@ def is_empty(val):
 def interpret_vision(vision_raw, color_blindness_raw):
     """
     แปลผลตรวจสมรรถภาพการมองเห็นและตาบอดสี
-    (โค้ดส่วนนี้ยังคงเดิม ไม่มีการเปลี่ยนแปลง)
     """
     vision_summary = "ไม่ได้เข้ารับการตรวจ"
     color_blindness_summary = "ไม่ได้เข้ารับการตรวจ"
@@ -21,7 +20,7 @@ def interpret_vision(vision_raw, color_blindness_raw):
         if "ปกติ" in vision_lower:
             vision_summary = "ปกติ"
         elif "ผิดปกติ" in vision_lower or "สั้น" in vision_lower or "ยาว" in vision_lower or "เอียง" in vision_lower:
-            vision_summary = f"ผิดปกติ"
+            vision_summary = "ผิดปกติ"
             advice_parts.append("สายตาผิดปกติ ควรปรึกษาจักษุแพทย์เพื่อตรวจวัดสายตาและพิจารณาตัดแว่น")
         else:
             vision_summary = vision_raw
@@ -42,7 +41,6 @@ def interpret_vision(vision_raw, color_blindness_raw):
 def interpret_hearing(hearing_raw):
     """
     แปลผลตรวจสมรรถภาพการได้ยิน
-    (โค้ดส่วนนี้ยังคงเดิม ไม่มีการเปลี่ยนแปลง)
     """
     summary = "ไม่ได้เข้ารับการตรวจ"
     advice = ""
@@ -52,7 +50,7 @@ def interpret_hearing(hearing_raw):
         if "ปกติ" in hearing_lower:
             summary = "ปกติ"
         elif "ผิดปกติ" in hearing_lower or "เสื่อม" in hearing_lower:
-            summary = f"ผิดปกติ"
+            summary = "ผิดปกติ"
             advice = "การได้ยินผิดปกติ ควรพบแพทย์เพื่อตรวจประเมินและหาสาเหตุ"
         else:
             summary = hearing_raw
@@ -61,59 +59,75 @@ def interpret_hearing(hearing_raw):
 
 def interpret_lung_capacity(person_data):
     """
-    แปลผลตรวจสมรรถภาพความจุปอดจาก dictionary ข้อมูลของบุคคล (ฉบับปรับปรุง)
-    Args:
-        person_data (dict): Dictionary ที่มีข้อมูลผลตรวจปอดทั้งหมด
-    Returns:
-        tuple: (สรุปผล, คำแนะนำ, dictionary ข้อมูลดิบทั้งหมด)
+    แปลผลตรวจสมรรถภาพความจุปอดตามมาตรฐานเดิม
     """
-    summary = "ไม่ได้เข้ารับการตรวจ"
+    summary = ""
     advice = ""
 
+    # --- Helper Functions ---
     def to_float(val):
         if is_empty(val): return None
-        try: return float(str(val).strip())
-        except (ValueError, TypeError): return None
+        try:
+            # Handle cases like '97.46' or '97.46 (High)'
+            cleaned_val = str(val).split(' ')[0]
+            return float(cleaned_val)
+        except (ValueError, TypeError):
+            return None
 
-    # ดึงข้อมูลจาก person_data โดยใช้ .get() เพื่อความปลอดภัย
+    # --- 1. ดึงข้อมูลและแปลงเป็นตัวเลข ---
     raw_values = {
+        # ข้อมูลดิบ
         'FVC': to_float(person_data.get('FVC')),
-        'FVC predic': to_float(person_data.get('FVC predic')),
-        'FVC %': to_float(person_data.get('FVC เปอร์เซ็นต์')),
         'FEV1': to_float(person_data.get('FEV1')),
-        'FEV1 predic': to_float(person_data.get('FEV1 predic')),
-        'FEV1 %': to_float(person_data.get('FEV1เปอร์เซ็นต์')),
-        'FEV1/FVC %': to_float(person_data.get('FEV1/FVC%')),
-        'FEV1/FVC % pre': to_float(person_data.get('FEV1/FVC % pre')),
         'PEF': to_float(person_data.get('PEF')),
         'FEF25-75': to_float(person_data.get('FEF25-75')),
-        'FEF25-75 %': to_float(person_data.get('FEF25-75 %')),
+        # ค่ามาตรฐาน
+        'FVC predic': to_float(person_data.get('FVC predic')),
+        'FEV1 predic': to_float(person_data.get('FEV1 predic')),
+        'FEV1/FVC % pre': to_float(person_data.get('FEV1/FVC % pre')),
+        # เปอร์เซ็นต์เทียบค่ามาตรฐาน
+        'FVC %': to_float(person_data.get('FVC เปอร์เซ็นต์')),
+        'FEV1 %': to_float(person_data.get('FEV1เปอร์เซ็นต์')),
+        'FEV1/FVC %': to_float(person_data.get('FEV1/FVC%')),
+        'FEF25-75 %': to_float(person_data.get('FEF25-75%'))
     }
 
     fvc_p = raw_values.get('FVC %')
+    fev1_p = raw_values.get('FEV1 %')
     ratio = raw_values.get('FEV1/FVC %')
 
-    # ตรวจสอบว่ามีข้อมูลสำคัญเพียงพอสำหรับการแปลผลหรือไม่
-    if fvc_p is None or ratio is None:
-        if any(v is not None for v in raw_values.values()):
-            return "ข้อมูลไม่สมบูรณ์", "ข้อมูลบางส่วนขาดหายไป ทำให้ไม่สามารถสรุปผลได้อย่างชัดเจน", raw_values
+    # --- 2. ตรวจสอบข้อมูลเบื้องต้น ---
+    if any(v is None for v in [fvc_p, fev1_p, ratio]):
+        summary = "สมรรถภาพปอดสรุปผลไม่ได้เนื่องจากมีความคลาดเคลื่อนในการทดสอบ"
+        advice = "ให้พบแพทย์เพื่อตรวจวินิจฉัย รักษาเพิ่มเติม"
         return summary, advice, raw_values
 
-    # ตรรกะการแปลผล (ตามแนวทางมาตรฐาน)
+    # --- 3. ตรรกะการแปลผลตามมาตรฐานเดิม ---
     if ratio < 70:
-        # Obstructive Pattern
         if fvc_p < 80:
-            summary = "ความผิดปกติแบบผสม (Mixed)"
-            advice = "พบความผิดปกติทั้งแบบหลอดลมอุดกั้นและปอดขยายตัวจำกัด ควรพบแพทย์เพื่อประเมินและรักษาเพิ่มเติม"
-        else:
-            summary = "ความผิดปกติแบบหลอดลมอุดกั้น (Obstructive)"
-            advice = "มีภาวะหลอดลมอุดกั้น ซึ่งอาจพบในโรคหอบหืดหรือถุงลมโป่งพอง ควรพบแพทย์เพื่อวินิจฉัยและรักษา"
-    elif fvc_p < 80:
-        # Restrictive Pattern
-        summary = "ความผิดปกติแบบปอดขยายตัวจำกัด (Restrictive)"
-        advice = "ปอดขยายตัวได้น้อยกว่าปกติ ซึ่งอาจเกิดจากหลายสาเหตุ ควรพบแพทย์เพื่อตรวจหาสาเหตุเพิ่มเติม"
+            summary = "ความผิดปกติแบบผสม (Mixed)" # แม้ไม่มีในลิสต์ แต่จำเป็นตามหลักการ
+        else: # Obstructive
+            if fev1_p >= 60:
+                summary = "สมรรถภาพปอดพบความผิดปกติแบบหลอดลมอุดกั้นเล็กน้อย"
+            else:
+                summary = "สมรรถภาพปอดพบความผิดปกติแบบหลอดลมอุดกั้น"
+    else: # ratio >= 70
+        if fvc_p < 80: # Restrictive
+            if fvc_p >= 60:
+                summary = "สมรรถภาพปอดพบความผิดปกติแบบปอดจำกัดการขยายตัวเล็กน้อย"
+            else:
+                summary = "สมรรถภาพปอดพบความผิดปกติแบบปอดจำกัดการขยายตัว"
+        else: # Normal
+            summary = "สมรรถภาพปอดปกติ"
+
+    # --- 4. กำหนดคำแนะนำ ---
+    if "ปกติ" in summary:
+        advice = "เพิ่มสมรรถภาพปอดด้วยการออกกำลังกาย หลีกเลี่ยงการสัมผัสสารเคมี ฝุ่น และควัน"
     else:
-        summary = "สมรรถภาพปอดปกติ (Normal)"
-        advice = "สมรรถภาพปอดอยู่ในเกณฑ์ปกติ ควรรักษาสุขภาพปอดโดยการออกกำลังกายและหลีกเลี่ยงมลภาวะ"
+        advice = "ให้พบแพทย์เพื่อตรวจวินิจฉัย รักษาเพิ่มเติม"
         
+    # จัดการกรณีที่ผลไม่เข้าเงื่อนไขใดๆ
+    if not summary:
+        summary = "สมรรถภาพปอดสรุปผลไม่ได้เนื่องจากมีความคลาดเคลื่อนในการทดสอบ"
+
     return summary, advice, raw_values
