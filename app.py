@@ -616,7 +616,6 @@ def display_main_report(person_data):
                 st.markdown(f'<div style="background-color: {bg_color}; padding: 0.6rem 1.5rem; border-radius: 10px; line-height: 1.6; color: var(--text-color); font-size: 14px; margin-top: 1rem;">{advice_text}</div>', unsafe_allow_html=True)
             
             st.markdown(render_section_header("ผลตรวจอุจจาระ (Stool Examination)"), unsafe_allow_html=True)
-            # --- FIX 1: Ensure unsafe_allow_html=True is present for rendering the stool table ---
             st.markdown(render_stool_html_table(interpret_stool_exam(person.get("Stool exam", "")), interpret_stool_cs(person.get("Stool C/S", ""))), unsafe_allow_html=True)
 
         with col_ua_right:
@@ -689,7 +688,6 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     if st.session_state.page == 'vision_report':
         display_performance_report(st.session_state.person_row, 'vision')
     elif st.session_state.page == 'hearing_report':
-        # --- FIX 2: Pass the correct person_data to the function ---
         display_performance_report(st.session_state.person_row, 'hearing')
     elif st.session_state.page == 'lung_report':
         display_performance_report(st.session_state.person_row, 'lung')
