@@ -617,6 +617,7 @@ def display_performance_report_lung(person_data):
         selected_year = person_data.get("Year")
         cxr_result_interpreted = "ไม่มีข้อมูล"
         if selected_year:
+            # สมมติว่าฟังก์ชัน interpret_cxr มีอยู่ในไฟล์แล้ว
             cxr_col_name = f"CXR{str(selected_year)[-2:]}" if selected_year != (datetime.now().year + 543) else "CXR"
             cxr_result_raw = person_data.get(cxr_col_name, '')
             cxr_result_interpreted = interpret_cxr(cxr_result_raw)
@@ -626,11 +627,32 @@ def display_performance_report_lung(person_data):
     with res_col2:
         st.markdown("<h5><b>ตารางแสดงผลโดยละเอียด</b></h5>", unsafe_allow_html=True)
         
+        # --- (จุดที่แก้ไข) ---
+        # สร้างฟังก์ชันย่อยเพื่อจัดการการจัดรูปแบบอย่างปลอดภัย
+        def format_detail_val(key, format_spec, unit=""):
+            val = lung_raw_values.get(key)
+            # ตรวจสอบว่าเป็นตัวเลขหรือไม่ก่อนจัดรูปแบบ
+            if val is not None and isinstance(val, (int, float)):
+                return f"{val:{format_spec}}{unit}"
+            return "-" # คืนค่าเป็นขีด หากไม่ใช่ตัวเลข
+
         detail_data = {
             "การทดสอบ (Test)": ["FVC", "FEV1", "FEV1/FVC"],
-            "ค่าที่วัดได้ (Actual)": [f"{lung_raw_values.get('FVC', '-'):.2f} L", f"{lung_raw_values.get('FEV1', '-'):.2f} L", f"{lung_raw_values.get('FEV1/FVC %', '-'):.1f} %"],
-            "ค่ามาตรฐาน (Predicted)": [f"{lung_raw_values.get('FVC predic', '-'):.2f} L", f"{lung_raw_values.get('FEV1 predic', '-'):.2f} L", f"{lung_raw_values.get('FEV1/FVC % pre', '-'):.1f} %"],
-            "% เทียบค่ามาตรฐาน (% Pred)": [f"{lung_raw_values.get('FVC %', '-'):.1f} %", f"{lung_raw_values.get('FEV1 %', '-'):.1f} %", "-"],
+            "ค่าที่วัดได้ (Actual)": [
+                format_detail_val('FVC', '.2f', ' L'),
+                format_detail_val('FEV1', '.2f', ' L'),
+                format_detail_val('FEV1/FVC %', '.1f', ' %')
+            ],
+            "ค่ามาตรฐาน (Predicted)": [
+                format_detail_val('FVC predic', '.2f', ' L'),
+                format_detail_val('FEV1 predic', '.2f', ' L'),
+                format_detail_val('FEV1/FVC % pre', '.1f', ' %')
+            ],
+            "% เทียบค่ามาตรฐาน (% Pred)": [
+                format_detail_val('FVC %', '.1f', ' %'),
+                format_detail_val('FEV1 %', '.1f', ' %'),
+                "-"
+            ],
         }
         df_details = pd.DataFrame(detail_data)
         st.dataframe(df_details, use_container_width=True, hide_index=True)
