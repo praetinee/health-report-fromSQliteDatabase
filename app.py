@@ -661,139 +661,37 @@ def display_main_report(person_data):
         </div>
     </div>""", unsafe_allow_html=True)
 
-def display_lung_report(person_data):
-    """
-    Displays the lung capacity (Spirometry) report page with a formal layout.
-    """
-    st.header("รายงานผลการตรวจสมรรถภาพปอด (Spirometry Report)")
-
-    # Extract all necessary lung capacity data from the person_data dictionary
-    lung_data_keys = {
-        'fvc_raw': 'FVC', 'fvc_predic_raw': 'FVC predic', 'fvc_percent_raw': 'FVC เปอร์เซ็นต์',
-        'fev1_raw': 'FEV1', 'fev1_predic_raw': 'FEV1 predic', 'fev1_percent_raw': 'FEV1เปอร์เซ็นต์',
-        'ratio_raw': 'FEV1/FVC%', 'ratio_predic_raw': 'FEV1/FVC%pre',
-        'pef_raw': 'PEF', 'fef2575_raw': 'FEF25-75', 'fef2575_percent_raw': 'FEF25-75เปอร์เซ็นต์'
-    }
-    
-    # Pass all data to the interpretation function
-    lung_summary, lung_advice, raw_values = performance_tests.interpret_lung_capacity(
-        **{key: person_data.get(db_col) for key, db_col in lung_data_keys.items()}
-    )
-
-    # --- Summary and Advice Section ---
-    p_col1, p_col2 = st.columns([2, 3])
-    with p_col1:
-        st.metric("สรุปผลการตรวจ", lung_summary)
-    
-    with p_col2:
-        if lung_advice:
-            # Determine color based on summary
-            if "ปกติ" in lung_summary:
-                st.success(f"**คำแนะนำ:** {lung_advice}")
-            elif "สรุปผลไม่ได้" in lung_summary or "ข้อมูลไม่ถูกต้อง" in lung_summary:
-                st.warning(f"**คำแนะนำ:** {lung_advice}")
-            else: # Abnormal results
-                st.error(f"**คำแนะนำ:** {lung_advice}")
-
-    st.markdown("---")
-    
-    # --- Detailed Results Table Section ---
-    st.subheader("ผลการตรวจโดยละเอียด (Detailed Results)")
-
-    # Helper function to format values for the table
-    def format_val(val):
-        if val is None:
-            return "-"
-        if isinstance(val, float):
-            return f"{val:.2f}"
-        return str(val)
-
-    # Create a clean HTML table for the detailed report
-    table_html = f"""
-    <style>
-        .lung-table {{
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-        }}
-        .lung-table th, .lung-table td {{
-            border: 1px solid #333;
-            padding: 8px;
-            text-align: center;
-        }}
-        .lung-table th {{
-            background-color: #1b5e20;
-            color: white;
-            font-weight: bold;
-        }}
-        .lung-table td.label {{
-            text-align: left;
-            font-weight: bold;
-        }}
-    </style>
-    <table class="lung-table">
-        <thead>
-            <tr>
-                <th>การทดสอบ (Test)</th>
-                <th>ค่าที่วัดได้ (Measured)</th>
-                <th>ค่าที่ควรจะเป็น (Predicted)</th>
-                <th>% ค่าที่ควรจะเป็น (% Pred)</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td class="label">FVC (L)</td>
-                <td>{format_val(raw_values.get('FVC'))}</td>
-                <td>{format_val(raw_values.get('FVC predic'))}</td>
-                <td>{format_val(raw_values.get('FVC %'))}</td>
-            </tr>
-            <tr>
-                <td class="label">FEV1 (L)</td>
-                <td>{format_val(raw_values.get('FEV1'))}</td>
-                <td>{format_val(raw_values.get('FEV1 predic'))}</td>
-                <td>{format_val(raw_values.get('FEV1 %'))}</td>
-            </tr>
-            <tr>
-                <td class="label">FEV1/FVC (%)</td>
-                <td>{format_val(raw_values.get('FEV1/FVC %'))}</td>
-                <td>{format_val(raw_values.get('FEV1/FVC % pre'))}</td>
-                <td>-</td>
-            </tr>
-            <tr>
-                <td class="label">PEF (L/s)</td>
-                <td>{format_val(raw_values.get('PEF'))}</td>
-                <td colspan="2">-</td>
-            </tr>
-            <tr>
-                <td class="label">FEF25-75 (L/s)</td>
-                <td>{format_val(raw_values.get('FEF25-75'))}</td>
-                <td>-</td>
-                <td>{format_val(raw_values.get('FEF25-75 %'))}</td>
-            </tr>
-        </tbody>
-    </table>
-    """
-    st.markdown(table_html, unsafe_allow_html=True)
-
 # Main logic to switch between pages
 if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
     btn_cols = st.columns(6)
-    # ... (โค้ดปุ่มอื่นๆ) ...
+    with btn_cols[1]:
+        if st.button("สุขภาพพื้นฐาน", use_container_width=True):
+            st.session_state.page = 'main_report'
+            st.rerun()
+    with btn_cols[2]:
+        if st.button("สมรรถภาพการมองเห็น", use_container_width=True):
+            st.session_state.page = 'vision_report'
+            st.rerun()
+    with btn_cols[3]:
+        if st.button("สมรรถภาพการได้ยิน", use_container_width=True):
+            st.session_state.page = 'hearing_report'
+            st.rerun()
     with btn_cols[4]:
         if st.button("ความจุปอด", use_container_width=True):
             st.session_state.page = 'lung_report'
             st.rerun()
     
+    # Display the common header first
     display_common_header(st.session_state.person_row)
     
+    # Then display the specific page content
     if st.session_state.page == 'vision_report':
         display_performance_report(st.session_state.person_row, 'vision')
     elif st.session_state.page == 'hearing_report':
         display_performance_report(st.session_state.person_row, 'hearing')
     elif st.session_state.page == 'lung_report':
-        # --- เปลี่ยนไปเรียกใช้ฟังก์ชันใหม่ ---
-        display_lung_report(st.session_state.person_row)
-    else:
+        display_performance_report(st.session_state.person_row, 'lung')
+    else: # Default to main report
         display_main_report(st.session_state.person_row)
 else:
     st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
