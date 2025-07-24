@@ -9,11 +9,7 @@ def is_empty(val):
 def interpret_vision(vision_raw, color_blindness_raw):
     """
     แปลผลตรวจสมรรถภาพการมองเห็นและตาบอดสี
-    Args:
-        vision_raw (str): ผลตรวจสายตาจากฐานข้อมูล
-        color_blindness_raw (str): ผลตรวจตาบอดสีจากฐานข้อมูล
-    Returns:
-        tuple: (สรุปผลสายตา, สรุปผลตาบอดสี, คำแนะนำ)
+    (โค้ดส่วนนี้ยังคงเดิม ไม่มีการเปลี่ยนแปลง)
     """
     vision_summary = "ไม่ได้เข้ารับการตรวจ"
     color_blindness_summary = "ไม่ได้เข้ารับการตรวจ"
@@ -46,10 +42,7 @@ def interpret_vision(vision_raw, color_blindness_raw):
 def interpret_hearing(hearing_raw):
     """
     แปลผลตรวจสมรรถภาพการได้ยิน
-    Args:
-        hearing_raw (str): ผลตรวจการได้ยินจากฐานข้อมูล
-    Returns:
-        tuple: (สรุปผล, คำแนะนำ)
+    (โค้ดส่วนนี้ยังคงเดิม ไม่มีการเปลี่ยนแปลง)
     """
     summary = "ไม่ได้เข้ารับการตรวจ"
     advice = ""
@@ -66,80 +59,61 @@ def interpret_hearing(hearing_raw):
 
     return summary, advice
 
-def interpret_lung_capacity(fvc_raw, fvc_predic_raw, fvc_percent_raw, 
-                            fev1_raw, fev1_predic_raw, fev1_percent_raw, 
-                            ratio_raw, ratio_predic_raw,
-                            pef_raw, fef2575_raw, fef2575_percent_raw):
+def interpret_lung_capacity(person_data):
     """
-    แปลผลตรวจสมรรถภาพความจุปอด
+    แปลผลตรวจสมรรถภาพความจุปอดจาก dictionary ข้อมูลของบุคคล (ฉบับปรับปรุง)
     Args:
-        All raw values from the database for lung capacity.
+        person_data (dict): Dictionary ที่มีข้อมูลผลตรวจปอดทั้งหมด
     Returns:
         tuple: (สรุปผล, คำแนะนำ, dictionary ข้อมูลดิบทั้งหมด)
     """
     summary = "ไม่ได้เข้ารับการตรวจ"
     advice = ""
-    
-    # Helper to safely convert to float
-    def to_float(val):
-        if is_empty(val):
-            return None
-        try:
-            return float(val)
-        except (ValueError, TypeError):
-            return None
 
-    # Populate raw_values with all provided data, converting to numbers where possible
+    def to_float(val):
+        if is_empty(val): return None
+        try: return float(str(val).strip())
+        except (ValueError, TypeError): return None
+
+    # ดึงข้อมูลจาก person_data โดยใช้ .get() เพื่อความปลอดภัย
     raw_values = {
-        'FVC': to_float(fvc_raw),
-        'FVC predic': to_float(fvc_predic_raw),
-        'FVC %': to_float(fvc_percent_raw),
-        'FEV1': to_float(fev1_raw),
-        'FEV1 predic': to_float(fev1_predic_raw),
-        'FEV1 %': to_float(fev1_percent_raw),
-        'FEV1/FVC %': to_float(ratio_raw),
-        'FEV1/FVC % pre': to_float(ratio_predic_raw),
-        'PEF': to_float(pef_raw),
-        'FEF25-75': to_float(fef2575_raw),
-        'FEF25-75 %': to_float(fef2575_percent_raw),
+        'FVC': to_float(person_data.get('FVC')),
+        'FVC predic': to_float(person_data.get('FVC predic')),
+        'FVC %': to_float(person_data.get('FVC เปอร์เซ็นต์')),
+        'FEV1': to_float(person_data.get('FEV1')),
+        'FEV1 predic': to_float(person_data.get('FEV1 predic')),
+        'FEV1 %': to_float(person_data.get('FEV1เปอร์เซ็นต์')),
+        'FEV1/FVC %': to_float(person_data.get('FEV1/FVC%')),
+        'FEV1/FVC % pre': to_float(person_data.get('FEV1/FVC % pre')),
+        'PEF': to_float(person_data.get('PEF')),
+        'FEF25-75': to_float(person_data.get('FEF25-75')),
+        'FEF25-75 %': to_float(person_data.get('FEF25-75 %')),
     }
 
-    fvc_p = raw_values['FVC %']
-    fev1_p = raw_values['FEV1 %']
-    ratio = raw_values['FEV1/FVC %']
-    
-    # Check if essential data for interpretation is missing
-    if fvc_p is None and fev1_p is None and ratio is None:
-        return summary, advice, raw_values
-        
-    if fvc_p is None or ratio is None:
-        return "สรุปผลไม่ได้ (ข้อมูลไม่เพียงพอ)", "ให้พบแพทย์เพื่อตรวจวินิจฉัย รักษาเพิ่มเติม", raw_values
+    fvc_p = raw_values.get('FVC %')
+    ratio = raw_values.get('FEV1/FVC %')
 
-    # Interpretation Logic
+    # ตรวจสอบว่ามีข้อมูลสำคัญเพียงพอสำหรับการแปลผลหรือไม่
+    if fvc_p is None or ratio is None:
+        if any(v is not None for v in raw_values.values()):
+            return "ข้อมูลไม่สมบูรณ์", "ข้อมูลบางส่วนขาดหายไป ทำให้ไม่สามารถสรุปผลได้อย่างชัดเจน", raw_values
+        return summary, advice, raw_values
+
+    # ตรรกะการแปลผล (ตามแนวทางมาตรฐาน)
     if ratio < 70:
+        # Obstructive Pattern
         if fvc_p < 80:
             summary = "ความผิดปกติแบบผสม (Mixed)"
+            advice = "พบความผิดปกติทั้งแบบหลอดลมอุดกั้นและปอดขยายตัวจำกัด ควรพบแพทย์เพื่อประเมินและรักษาเพิ่มเติม"
         else:
-            if fev1_p is not None and fev1_p >= 60:
-                summary = "ความผิดปกติแบบหลอดลมอุดกั้นเล็กน้อย"
-            else:
-                summary = "ความผิดปกติแบบหลอดลมอุดกั้น"
-    elif ratio >= 70:
-        if fvc_p < 80:
-            if fvc_p >= 60:
-                summary = "ความผิดปกติแบบปอดจำกัดการขยายตัวเล็กน้อย"
-            else:
-                summary = "ความผิดปกติแบบปอดจำกัดการขยายตัว"
-        else:
-            summary = "สมรรถภาพปอดปกติ"
-
-    # Set advice based on summary
-    if "ปกติ" in summary:
-        advice = "เพิ่มสมรรถภาพปอดด้วยการออกกำลังกาย หลีกเลี่ยงการสัมผัสสารเคมี ฝุ่น และควัน"
-    elif "ผิดปกติ" in summary:
-        advice = "ให้พบแพทย์เพื่อตรวจวินิจฉัย รักษาเพิ่มเติม"
-    elif not summary:
-        summary = "สรุปผลไม่ได้ (มีความคลาดเคลื่อนในการทดสอบ)"
-        advice = "ให้พบแพทย์เพื่อตรวจวินิจฉัย รักษาเพิ่มเติม"
+            summary = "ความผิดปกติแบบหลอดลมอุดกั้น (Obstructive)"
+            advice = "มีภาวะหลอดลมอุดกั้น ซึ่งอาจพบในโรคหอบหืดหรือถุงลมโป่งพอง ควรพบแพทย์เพื่อวินิจฉัยและรักษา"
+    elif fvc_p < 80:
+        # Restrictive Pattern
+        summary = "ความผิดปกติแบบปอดขยายตัวจำกัด (Restrictive)"
+        advice = "ปอดขยายตัวได้น้อยกว่าปกติ ซึ่งอาจเกิดจากหลายสาเหตุ ควรพบแพทย์เพื่อตรวจหาสาเหตุเพิ่มเติม"
+    else:
+        summary = "สมรรถภาพปอดปกติ (Normal)"
+        advice = "สมรรถภาพปอดอยู่ในเกณฑ์ปกติ ควรรักษาสุขภาพปอดโดยการออกกำลังกายและหลีกเลี่ยงมลภาวะ"
         
     return summary, advice, raw_values
