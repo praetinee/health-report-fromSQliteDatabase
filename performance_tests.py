@@ -61,14 +61,18 @@ def interpret_lung_capacity(person_data):
     """
     แปลผลตรวจสมรรถภาพความจุปอดตามมาตรฐานเดิม
     """
-    summary = ""
-    advice = ""
+    # --- ตรวจสอบว่ามีการตรวจจริงหรือไม่ ---
+    fvc_p_raw = person_data.get('FVC เปอร์เซ็นต์')
+    fev1_p_raw = person_data.get('FEV1เปอร์เซ็นต์')
+    ratio_raw = person_data.get('FEV1/FVC%')
 
+    if is_empty(fvc_p_raw) and is_empty(fev1_p_raw) and is_empty(ratio_raw):
+        return "ไม่ได้เข้ารับการตรวจ", "", {} # summary, advice, raw_values
+    
     # --- Helper Functions ---
     def to_float(val):
         if is_empty(val): return None
         try:
-            # Handle cases like '97.46' or '97.46 (High)'
             cleaned_val = str(val).split(' ')[0]
             return float(cleaned_val)
         except (ValueError, TypeError):
@@ -76,20 +80,12 @@ def interpret_lung_capacity(person_data):
 
     # --- 1. ดึงข้อมูลและแปลงเป็นตัวเลข ---
     raw_values = {
-        # ข้อมูลดิบ
-        'FVC': to_float(person_data.get('FVC')),
-        'FEV1': to_float(person_data.get('FEV1')),
-        'PEF': to_float(person_data.get('PEF')),
-        'FEF25-75': to_float(person_data.get('FEF25-75')),
-        # ค่ามาตรฐาน
-        'FVC predic': to_float(person_data.get('FVC predic')),
-        'FEV1 predic': to_float(person_data.get('FEV1 predic')),
+        'FVC': to_float(person_data.get('FVC')), 'FEV1': to_float(person_data.get('FEV1')),
+        'PEF': to_float(person_data.get('PEF')), 'FEF25-75': to_float(person_data.get('FEF25-75')),
+        'FVC predic': to_float(person_data.get('FVC predic')), 'FEV1 predic': to_float(person_data.get('FEV1 predic')),
         'FEV1/FVC % pre': to_float(person_data.get('FEV1/FVC % pre')),
-        # เปอร์เซ็นต์เทียบค่ามาตรฐาน
-        'FVC %': to_float(person_data.get('FVC เปอร์เซ็นต์')),
-        'FEV1 %': to_float(person_data.get('FEV1เปอร์เซ็นต์')),
-        'FEV1/FVC %': to_float(person_data.get('FEV1/FVC%')),
-        'FEF25-75 %': to_float(person_data.get('FEF25-75%'))
+        'FVC %': to_float(fvc_p_raw), 'FEV1 %': to_float(fev1_p_raw),
+        'FEV1/FVC %': to_float(ratio_raw), 'FEF25-75 %': to_float(person_data.get('FEF25-75%'))
     }
 
     fvc_p = raw_values.get('FVC %')
@@ -103,31 +99,31 @@ def interpret_lung_capacity(person_data):
         return summary, advice, raw_values
 
     # --- 3. ตรรกะการแปลผลตามมาตรฐานเดิม ---
+    summary = ""
     if ratio < 70:
         if fvc_p < 80:
-            summary = "ความผิดปกติแบบผสม (Mixed)" # แม้ไม่มีในลิสต์ แต่จำเป็นตามหลักการ
-        else: # Obstructive
+            summary = "สมรรถภาพปอดสรุปผลไม่ได้เนื่องจากมีความคลาดเคลื่อนในการทดสอบ"
+        else:
             if fev1_p >= 60:
                 summary = "สมรรถภาพปอดพบความผิดปกติแบบหลอดลมอุดกั้นเล็กน้อย"
             else:
                 summary = "สมรรถภาพปอดพบความผิดปกติแบบหลอดลมอุดกั้น"
-    else: # ratio >= 70
-        if fvc_p < 80: # Restrictive
+    else:
+        if fvc_p < 80:
             if fvc_p >= 60:
                 summary = "สมรรถภาพปอดพบความผิดปกติแบบปอดจำกัดการขยายตัวเล็กน้อย"
             else:
                 summary = "สมรรถภาพปอดพบความผิดปกติแบบปอดจำกัดการขยายตัว"
-        else: # Normal
+        else:
             summary = "สมรรถภาพปอดปกติ"
+    
+    if not summary:
+        summary = "สมรรถภาพปอดสรุปผลไม่ได้เนื่องจากมีความคลาดเคลื่อนในการทดสอบ"
 
     # --- 4. กำหนดคำแนะนำ ---
     if "ปกติ" in summary:
         advice = "เพิ่มสมรรถภาพปอดด้วยการออกกำลังกาย หลีกเลี่ยงการสัมผัสสารเคมี ฝุ่น และควัน"
     else:
         advice = "ให้พบแพทย์เพื่อตรวจวินิจฉัย รักษาเพิ่มเติม"
-        
-    # จัดการกรณีที่ผลไม่เข้าเงื่อนไขใดๆ
-    if not summary:
-        summary = "สมรรถภาพปอดสรุปผลไม่ได้เนื่องจากมีความคลาดเคลื่อนในการทดสอบ"
 
     return summary, advice, raw_values
