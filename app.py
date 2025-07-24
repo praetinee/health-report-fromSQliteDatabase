@@ -308,18 +308,31 @@ def interpret_stool_cs(value):
     val_strip = str(value).strip()
     if "ไม่พบ" in val_strip or "ปกติ" in val_strip: return "ไม่พบการติดเชื้อ"
     return "พบการติดเชื้อในอุจจาระ ให้พบแพทย์เพื่อตรวจรักษาเพิ่มเติม"
+
 def render_stool_html_table(exam, cs):
-    """Renders an HTML table for stool examination results."""
-    style = """<style>
-        .stool-container { margin-top: 1rem; }
-        .stool-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 14px; }
-        .stool-table th { background-color: var(--secondary-background-color); padding: 3px 2px; text-align: left; width: 50%; font-weight: bold; border: 1px solid transparent; }
-        .stool-table td { padding: 3px 2px; border: 1px solid transparent; width: 50%; }
-    </style>"""
-    html_content = f"""{style}<div class='stool-container'><table class='stool-table'><colgroup><col style="width: 50%;"><col style="width: 50%;"></colgroup>
-        <tr><th>ผลตรวจอุจจาระทั่วไป</th><td style='text-align: left;'>{exam}</td></tr>
-        <tr><th>ผลตรวจอุจจาระเพาะเชื้อ</th><td style='text-align: left;'>{cs}</td></tr>
-    </table></div>"""
+    """Renders a self-contained HTML table for stool examination results."""
+    # Using inline styles to avoid potential conflicts with global styles or issues with <style> tags in markdown.
+    # Also ensuring the HTML is well-formed with closing tags.
+    html_content = f"""
+    <div style="margin-top: 1rem;">
+        <table style="width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 14px;">
+            <colgroup>
+                <col style="width: 50%;">
+                <col style="width: 50%;">
+            </colgroup>
+            <tbody>
+                <tr>
+                    <th style="background-color: var(--secondary-background-color); padding: 3px 2px; text-align: left; font-weight: bold; border: 1px solid transparent;">ผลตรวจอุจจาระทั่วไป</th>
+                    <td style="padding: 3px 2px; border: 1px solid transparent; text-align: left;">{exam}</td>
+                </tr>
+                <tr>
+                    <th style="background-color: var(--secondary-background-color); padding: 3px 2px; text-align: left; font-weight: bold; border: 1px solid transparent;">ผลตรวจอุจจาระเพาะเชื้อ</th>
+                    <td style="padding: 3px 2px; border: 1px solid transparent; text-align: left;">{cs}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    """
     return html_content
 
 def interpret_cxr(val):
@@ -683,4 +696,4 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     else: # Default to main report
         display_main_report(st.session_state.person_row)
 else:
-    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
+    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ"
