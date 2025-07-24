@@ -627,14 +627,11 @@ def display_performance_report_lung(person_data):
     with res_col2:
         st.markdown("<h5><b>ตารางแสดงผลโดยละเอียด</b></h5>", unsafe_allow_html=True)
         
-        # --- (จุดที่แก้ไข) ---
-        # สร้างฟังก์ชันย่อยเพื่อจัดการการจัดรูปแบบอย่างปลอดภัย
         def format_detail_val(key, format_spec, unit=""):
             val = lung_raw_values.get(key)
-            # ตรวจสอบว่าเป็นตัวเลขหรือไม่ก่อนจัดรูปแบบ
             if val is not None and isinstance(val, (int, float)):
                 return f"{val:{format_spec}}{unit}"
-            return "-" # คืนค่าเป็นขีด หากไม่ใช่ตัวเลข
+            return "-"
 
         detail_data = {
             "การทดสอบ (Test)": ["FVC", "FEV1", "FEV1/FVC"],
@@ -657,12 +654,6 @@ def display_performance_report_lung(person_data):
         df_details = pd.DataFrame(detail_data)
         st.dataframe(df_details, use_container_width=True, hide_index=True)
 
-    # --- ส่วนที่ 3: ข้อมูลดิบ ---
-    with st.expander("ดูข้อมูลดิบทั้งหมด (View All Raw Data)"):
-        # แปลง None เป็น "N/A" เพื่อให้อ่านง่าย
-        display_raw = {k: (v if v is not None else "N/A") for k, v in lung_raw_values.items()}
-        st.json(display_raw)
-
 # แก้ไขฟังก์ชัน display_performance_report ของเดิม ให้เป็นดังนี้
 def display_performance_report(person_data, report_type):
     """Displays various performance test reports (lung, vision, hearing)."""
@@ -671,19 +662,24 @@ def display_performance_report(person_data, report_type):
         display_performance_report_lung(person_data)
     elif report_type == 'vision':
         st.header("รายงานผลการตรวจสมรรถภาพการมองเห็น (Vision)")
-        vision_raw, color_raw = person_data.get('สายตา'), person_data.get('ตาบอดสี')
-        vision_summary, color_summary, vision_advice = performance_tests.interpret_vision(vision_raw, color_raw)
+        vision_summary, color_summary, vision_advice = performance_tests.interpret_vision(
+            person_data.get('สายตา'), 
+            person_data.get('ตาบอดสี')
+        )
         v_col1, v_col2 = st.columns(2)
         v_col1.metric("ผลตรวจสายตา", vision_summary)
         v_col2.metric("ผลตรวจตาบอดสี", color_summary)
-        if vision_advice: st.info(f"**คำแนะนำ:** {vision_advice}")
+        if vision_advice: 
+            st.info(f"**คำแนะนำ:** {vision_advice}")
     elif report_type == 'hearing':
         st.header("รายงานผลการตรวจสมรรถภาพการได้ยิน (Hearing)")
-        hearing_raw = person_data.get('การได้ยิน')
-        hearing_summary, hearing_advice = performance_tests.interpret_hearing(hearing_raw)
+        hearing_summary, hearing_advice = performance_tests.interpret_hearing(
+            person_data.get('การได้ยิน')
+        )
         h_col1, h_col2 = st.columns(2)
         h_col1.metric("สรุปผล", hearing_summary)
-        if hearing_advice: h_col2.info(f"**คำแนะนำ:** {hearing_advice}")
+        if hearing_advice: 
+            h_col2.info(f"**คำแนะนำ:** {hearing_advice}")
 
 def display_main_report(person_data):
     """Displays the main health report with all lab sections."""
