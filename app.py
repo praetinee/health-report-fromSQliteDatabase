@@ -694,4 +694,4 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     else: # Default to main report
         display_main_report(st.session_state.person_row)
 else:
-    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ"
+    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
