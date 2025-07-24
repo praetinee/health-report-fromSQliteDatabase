@@ -11,6 +11,7 @@ from datetime import datetime
 import re
 import print_report
 import performance_tests
+import os
 
 def is_empty(val):
     """Check if a value is empty, null, or whitespace."""
@@ -362,17 +363,21 @@ def merge_final_advice_grouped(messages):
 @st.cache_data(ttl=600)
 def load_sqlite_data():
     """Loads health data from a SQLite database file hosted on Google Drive."""
+    tmp_path = None
     try:
         file_id = "1HruO9AMrUfniC8hBWtumVdxLJayEc1Xr"
         download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
         response = requests.get(download_url)
         response.raise_for_status()
+        
         with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as tmp:
             tmp.write(response.content)
             tmp_path = tmp.name
+            
         conn = sqlite3.connect(tmp_path)
         df_loaded = pd.read_sql("SELECT * FROM health_data", conn)
         conn.close()
+        
         df_loaded.columns = df_loaded.columns.str.strip()
         def clean_hn(hn_val):
             if pd.isna(hn_val): return ""
@@ -386,9 +391,14 @@ def load_sqlite_data():
         return df_loaded
     except Exception as e:
         st.error(f"❌ โหลดฐานข้อมูลไม่สำเร็จ: {e}")
-        st.stop()
+        return None
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            os.remove(tmp_path)
 
 df = load_sqlite_data()
+if df is None:
+    st.stop()
 
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 st.markdown("""<style>
@@ -593,7 +603,7 @@ def display_main_report(person_data):
                 st.markdown(f'<div style="background-color: {bg_color}; padding: 0.6rem 1.5rem; border-radius: 10px; line-height: 1.6; color: var(--text-color); font-size: 14px; margin-top: 1rem;">{advice_text}</div>', unsafe_allow_html=True)
             
             st.markdown(render_section_header("ผลตรวจอุจจาระ (Stool Examination)"), unsafe_allow_html=True)
-            # --- FIX: Added unsafe_allow_html=True to the line below ---
+            # --- FIX 1: Ensure unsafe_allow_html=True is present for rendering the stool table ---
             st.markdown(render_stool_html_table(interpret_stool_exam(person.get("Stool exam", "")), interpret_stool_cs(person.get("Stool C/S", ""))), unsafe_allow_html=True)
 
         with col_ua_right:
@@ -666,7 +676,8 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     if st.session_state.page == 'vision_report':
         display_performance_report(st.session_state.person_row, 'vision')
     elif st.session_state.page == 'hearing_report':
-        display_performance_report(st.session_state.page, 'hearing')
+        # --- FIX 2: Pass the correct person_data to the function ---
+        display_performance_report(st.session_state.person_row, 'hearing')
     elif st.session_state.page == 'lung_report':
         display_performance_report(st.session_state.person_row, 'lung')
     else: # Default to main report
