@@ -87,16 +87,33 @@ def render_lab_table_html(title, subtitle, headers, rows, table_class="lab-table
         .{table_class}-row {{ background-color: rgba(255,255,255,0.02); }}
     </style>"""
     header_html = render_section_header(title, subtitle)
-    html_content = f"{style}{header_html}<div class='{table_class}-container'><table class='{table_class}'><colgroup><col style='width:33.33%;'><col style='width:33.33%;'><col style='width:33.33%;'></colgroup><thead><tr>"
-    for i, h in enumerate(headers):
-        align = "left" if i in [0, 2] else "center"
-        html_content += f"<th style='text-align: {align};'>{h}</th>"
-    html_content += "</tr></thead><tbody>"
+    table_body = ""
     for row in rows:
         is_abn = any(flag for _, flag in row)
         row_class = f"{table_class}-abn" if is_abn else f"{table_class}-row"
-        html_content += f"<tr><td class='{row_class}' style='text-align: left;'>{row[0][0]}</td><td class='{row_class}'>{row[1][0]}</td><td class='{row_class}' style='text-align: left;'>{row[2][0]}</td></tr>"
-    html_content += "</tbody></table></div>"
+        table_body += f"<tr><td class='{row_class}' style='text-align: left;'>{row[0][0]}</td><td class='{row_class}'>{row[1][0]}</td><td class='{row_class}' style='text-align: left;'>{row[2][0]}</td></tr>"
+    
+    table_head = "<thead><tr>"
+    for i, h in enumerate(headers):
+        align = "left" if i in [0, 2] else "center"
+        table_head += f"<th style='text-align: {align};'>{h}</th>"
+    table_head += "</tr></thead>"
+
+    html_content = f"""
+        {style}
+        {header_html}
+        <div class='{table_class}-container'>
+            <table class='{table_class}'>
+                <colgroup>
+                    <col style='width:33.33%;'>
+                    <col style='width:33.33%;'>
+                    <col style='width:33.33%;'>
+                </colgroup>
+                {table_head}
+                <tbody>{table_body}</tbody>
+            </table>
+        </div>
+    """
     return html_content
 
 def kidney_summary_gfr_only(gfr_raw):
@@ -294,11 +311,11 @@ def render_stool_html_table(exam, cs):
         .stool-table th { background-color: var(--secondary-background-color); padding: 3px 2px; text-align: left; width: 50%; font-weight: bold; border: 1px solid transparent; }
         .stool-table td { padding: 3px 2px; border: 1px solid transparent; width: 50%; }
     </style>"""
-    html_content = f"""{style}<div class='stool-container'><table class='stool-table'><colgroup><col style="width: 50%;"><col style="width: 50%;"></colgroup>
+    table_html = f"""<div class='stool-container'><table class='stool-table'><colgroup><col style="width: 50%;"><col style="width: 50%;"></colgroup>
         <tr><th>ผลตรวจอุจจาระทั่วไป</th><td style='text-align: left;'>{exam}</td></tr>
         <tr><th>ผลตรวจอุจจาระเพาะเชื้อ</th><td style='text-align: left;'>{cs}</td></tr>
     </table></div>"""
-    return html_content
+    return style + table_html
 
 def interpret_cxr(val):
     val = str(val or "").strip()
