@@ -555,16 +555,98 @@ def display_common_header(person_data):
         {f"<div style='margin-top: 1rem; text-align: center;'><b>คำแนะนำ:</b> {summary_advice}</div>" if summary_advice else ""}
     </div>""", unsafe_allow_html=True)
 
+def display_performance_report_lung(person_data):
+    """
+    แสดงผลรายงานสมรรถภาพปอดในรูปแบบที่ปรับปรุงใหม่
+    """
+    st.header("รายงานผลการตรวจสมรรถภาพปอด (Spirometry Report)")
+
+    # เรียกใช้ฟังก์ชันแปลผลที่อัปเดตแล้ว
+    lung_summary, lung_advice, lung_raw_values = performance_tests.interpret_lung_capacity(person_data)
+
+    # --- ส่วนที่ 1: การ์ดสรุปผล ---
+    st.markdown("<h5><b>สรุปผลการตรวจที่สำคัญ</b></h5>", unsafe_allow_html=True)
+    
+    def format_val(key):
+        val = lung_raw_values.get(key)
+        return f"{val:.1f}" if val is not None else "-"
+
+    col1, col2, col3 = st.columns(3)
+    col1.metric(
+        label="FVC (% เทียบค่ามาตรฐาน)",
+        value=format_val('FVC %'),
+        help="ความจุของปอดเมื่อหายใจออกเต็มที่ (ควร > 80%)"
+    )
+    col2.metric(
+        label="FEV1 (% เทียบค่ามาตรฐาน)",
+        value=format_val('FEV1 %'),
+        help="ปริมาตรอากาศที่หายใจออกในวินาทีแรก (ควร > 80%)"
+    )
+    col3.metric(
+        label="FEV1/FVC Ratio (%)",
+        value=format_val('FEV1/FVC %'),
+        help="สัดส่วนของ FEV1 ต่อ FVC (ควร > 70%)"
+    )
+        
+    st.markdown("<hr>", unsafe_allow_html=True)
+
+    res_col1, res_col2 = st.columns([2, 3])
+
+    with res_col1:
+        st.markdown("<h5><b>ผลการแปลความหมาย</b></h5>", unsafe_allow_html=True)
+        
+        # กำหนดสีพื้นหลังตามผลลัพธ์
+        if "ปกติ" in lung_summary:
+            bg_color = "background-color: #2e7d32; color: white;" # เขียว
+        elif "ไม่ได้" in lung_summary or "ไม่สมบูรณ์" in lung_summary:
+            bg_color = "background-color: #616161; color: white;" # เทา
+        else:
+            bg_color = "background-color: #c62828; color: white;" # แดง
+
+        st.markdown(f"""
+            <div style="padding: 1rem; border-radius: 8px; {bg_color} text-align: center;">
+                <h4 style="color: white; margin: 0; font-weight: bold;">{lung_summary}</h4>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown("<br><h5><b>คำแนะนำ</b></h5>", unsafe_allow_html=True)
+        st.info(lung_advice or "ไม่มีคำแนะนำเพิ่มเติม")
+        
+        # --- แสดงผลเอกซเรย์ทรวงอก ---
+        st.markdown("<h5><b>ผลเอกซเรย์ทรวงอก</b></h5>", unsafe_allow_html=True)
+        selected_year = person_data.get("Year")
+        cxr_result_interpreted = "ไม่มีข้อมูล"
+        if selected_year:
+            cxr_col_name = f"CXR{str(selected_year)[-2:]}" if selected_year != (datetime.now().year + 543) else "CXR"
+            cxr_result_raw = person_data.get(cxr_col_name, '')
+            cxr_result_interpreted = interpret_cxr(cxr_result_raw)
+
+        st.markdown(f'<div style="font-size: 14px; padding: 0.5rem; background-color: rgba(255,255,255,0.05); border-radius: 4px;">{cxr_result_interpreted}</div>', unsafe_allow_html=True)
+
+    with res_col2:
+        st.markdown("<h5><b>ตารางแสดงผลโดยละเอียด</b></h5>", unsafe_allow_html=True)
+        
+        detail_data = {
+            "การทดสอบ (Test)": ["FVC", "FEV1", "FEV1/FVC"],
+            "ค่าที่วัดได้ (Actual)": [f"{lung_raw_values.get('FVC', '-'):.2f} L", f"{lung_raw_values.get('FEV1', '-'):.2f} L", f"{lung_raw_values.get('FEV1/FVC %', '-'):.1f} %"],
+            "ค่ามาตรฐาน (Predicted)": [f"{lung_raw_values.get('FVC predic', '-'):.2f} L", f"{lung_raw_values.get('FEV1 predic', '-'):.2f} L", f"{lung_raw_values.get('FEV1/FVC % pre', '-'):.1f} %"],
+            "% เทียบค่ามาตรฐาน (% Pred)": [f"{lung_raw_values.get('FVC %', '-'):.1f} %", f"{lung_raw_values.get('FEV1 %', '-'):.1f} %", "-"],
+        }
+        df_details = pd.DataFrame(detail_data)
+        st.dataframe(df_details, use_container_width=True, hide_index=True)
+
+    # --- ส่วนที่ 3: ข้อมูลดิบ ---
+    with st.expander("ดูข้อมูลดิบทั้งหมด (View All Raw Data)"):
+        # แปลง None เป็น "N/A" เพื่อให้อ่านง่าย
+        display_raw = {k: (v if v is not None else "N/A") for k, v in lung_raw_values.items()}
+        st.json(display_raw)
+
+# แก้ไขฟังก์ชัน display_performance_report ของเดิม ให้เป็นดังนี้
 def display_performance_report(person_data, report_type):
     """Displays various performance test reports (lung, vision, hearing)."""
     if report_type == 'lung':
-        st.header("รายงานผลการตรวจสมรรถภาพปอด (Lung Capacity)")
-        fvc_p, fev1_p, ratio = person_data.get('FVC เปอร์เซ็นต์'), person_data.get('FEV1เปอร์เซ็นต์'), person_data.get('FEV1/FVC%')
-        lung_summary, lung_advice, lung_raw_values = performance_tests.interpret_lung_capacity(fvc_p, fev1_p, ratio)
-        p_col1, p_col2 = st.columns(2)
-        p_col1.metric("สรุปผล", lung_summary)
-        if lung_advice: p_col2.info(f"**คำแนะนำ:** {lung_advice}")
-        with st.expander("ดูข้อมูลดิบ (Raw Data)"): st.json(lung_raw_values)
+        # เรียกใช้ฟังก์ชันแสดงผลสำหรับปอดที่สร้างขึ้นใหม่
+        display_performance_report_lung(person_data)
     elif report_type == 'vision':
         st.header("รายงานผลการตรวจสมรรถภาพการมองเห็น (Vision)")
         vision_raw, color_raw = person_data.get('สายตา'), person_data.get('ตาบอดสี')
