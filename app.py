@@ -663,12 +663,11 @@ def display_main_report(person_data):
 
 def display_lung_report(person_data):
     """
-    Displays the lung capacity report with a hybrid layout, combining the familiar
-    old format with the detailed new table for clarity and formality.
+    Displays the lung capacity (Spirometry) report page with a formal layout.
     """
     st.header("รายงานผลการตรวจสมรรถภาพปอด (Spirometry Report)")
 
-    # --- Data Extraction and Interpretation ---
+    # Extract all necessary lung capacity data from the person_data dictionary
     lung_data_keys = {
         'fvc_raw': 'FVC', 'fvc_predic_raw': 'FVC predic', 'fvc_percent_raw': 'FVC เปอร์เซ็นต์',
         'fev1_raw': 'FEV1', 'fev1_predic_raw': 'FEV1 predic', 'fev1_percent_raw': 'FEV1เปอร์เซ็นต์',
@@ -676,56 +675,61 @@ def display_lung_report(person_data):
         'pef_raw': 'PEF', 'fef2575_raw': 'FEF25-75', 'fef2575_percent_raw': 'FEF25-75เปอร์เซ็นต์'
     }
     
-    # Use the existing interpretation function from the performance_tests module
+    # Pass all data to the interpretation function
     lung_summary, lung_advice, raw_values = performance_tests.interpret_lung_capacity(
         **{key: person_data.get(db_col) for key, db_col in lung_data_keys.items()}
     )
 
-    # --- Familiar "Old" Layout Section ---
-    st.subheader("ผลการตรวจเบื้องต้น (Quick View)")
-
-    def format_val(val, precision=2):
-        if val is None: return "-"
-        try:
-            return f"{float(val):.{precision}f}"
-        except (ValueError, TypeError):
-            return str(val)
-
-    # Display key metrics in a familiar 2x2 grid layout
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("FVC", format_val(raw_values.get('FVC')))
-    col2.metric("% FEV1", format_val(raw_values.get('FEV1 %')))
-    col3.metric("FEV1", format_val(raw_values.get('FEV1')))
-    col4.metric("% FVC", format_val(raw_values.get('FVC %')))
-    
-    st.metric("% FEV1/FVC", format_val(raw_values.get('FEV1/FVC %')))
-
-    st.markdown("---")
-
     # --- Summary and Advice Section ---
-    st.subheader("สรุปผลและคำแนะนำ")
-    p_col1, p_col2 = st.columns([1, 2])
+    p_col1, p_col2 = st.columns([2, 3])
     with p_col1:
         st.metric("สรุปผลการตรวจ", lung_summary)
+    
     with p_col2:
         if lung_advice:
+            # Determine color based on summary
             if "ปกติ" in lung_summary:
                 st.success(f"**คำแนะนำ:** {lung_advice}")
             elif "สรุปผลไม่ได้" in lung_summary or "ข้อมูลไม่ถูกต้อง" in lung_summary:
                 st.warning(f"**คำแนะนำ:** {lung_advice}")
-            else:
+            else: # Abnormal results
                 st.error(f"**คำแนะนำ:** {lung_advice}")
-    
+
     st.markdown("---")
     
-    # --- Detailed New Layout Table ---
+    # --- Detailed Results Table Section ---
     st.subheader("ผลการตรวจโดยละเอียด (Detailed Results)")
+
+    # Helper function to format values for the table
+    def format_val(val):
+        if val is None:
+            return "-"
+        if isinstance(val, float):
+            return f"{val:.2f}"
+        return str(val)
+
+    # Create a clean HTML table for the detailed report
     table_html = f"""
     <style>
-        .lung-table {{ width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 1rem; }}
-        .lung-table th, .lung-table td {{ border: 1px solid #333; padding: 8px; text-align: center; }}
-        .lung-table th {{ background-color: #1b5e20; color: white; font-weight: bold; }}
-        .lung-table td.label {{ text-align: left; font-weight: bold; }}
+        .lung-table {{
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }}
+        .lung-table th, .lung-table td {{
+            border: 1px solid #333;
+            padding: 8px;
+            text-align: center;
+        }}
+        .lung-table th {{
+            background-color: #1b5e20;
+            color: white;
+            font-weight: bold;
+        }}
+        .lung-table td.label {{
+            text-align: left;
+            font-weight: bold;
+        }}
     </style>
     <table class="lung-table">
         <thead>
