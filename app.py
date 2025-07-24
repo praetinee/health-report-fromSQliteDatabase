@@ -673,9 +673,6 @@ def display_performance_report(person_data, report_type):
         st.header("รายงานผลการตรวจสมรรถภาพการมองเห็น (Vision)")
         vision_raw, color_raw = person_data.get('สายตา'), person_data.get('ตาบอดสี')
         vision_summary, color_summary, vision_advice = performance_tests.interpret_vision(vision_raw, color_raw)
-        with st.expander("ดูข้อมูลดิบ (Raw Data)"):
-            st.write(f"ผลตรวจสายตา (ดิบ): {vision_raw or '-'}")
-            st.write(f"ผลตรวจตาบอดสี (ดิบ): {color_raw or '-'}")
         v_col1, v_col2 = st.columns(2)
         v_col1.metric("ผลตรวจสายตา", vision_summary)
         v_col2.metric("ผลตรวจตาบอดสี", color_summary)
@@ -684,7 +681,6 @@ def display_performance_report(person_data, report_type):
         st.header("รายงานผลการตรวจสมรรถภาพการได้ยิน (Hearing)")
         hearing_raw = person_data.get('การได้ยิน')
         hearing_summary, hearing_advice = performance_tests.interpret_hearing(hearing_raw)
-        with st.expander("ดูข้อมูลดิบ (Raw Data)"): st.write(f"ผลตรวจการได้ยิน (ดิบ): {hearing_raw or '-'}")
         h_col1, h_col2 = st.columns(2)
         h_col1.metric("สรุปผล", hearing_summary)
         if hearing_advice: h_col2.info(f"**คำแนะนำ:** {hearing_advice}")
