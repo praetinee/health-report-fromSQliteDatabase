@@ -346,13 +346,13 @@ def load_sqlite_data():
         conn.close()
         
         df_loaded.columns = df_loaded.columns.str.strip()
-        def clean_hn(hn_val):
-            if pd.isna(hn_val): return ""
-            s_val = str(hn_val).strip()
-            return s_val[:-2] if s_val.endswith('.0') else s_val
         
-        # --- FIX: Ensure HN is always a string for consistent searching ---
-        df_loaded['HN'] = df_loaded['HN'].apply(clean_hn).astype(str)
+        # --- NEW, more robust HN cleaning for REAL data type ---
+        # Coerce to numeric, making non-numbers NaN. Then drop rows with invalid HNs.
+        df_loaded['HN'] = pd.to_numeric(df_loaded['HN'], errors='coerce')
+        df_loaded.dropna(subset=['HN'], inplace=True)
+        # Convert the numeric HN (float) to a 64-bit integer to remove decimals, then to string for searching.
+        df_loaded['HN'] = df_loaded['HN'].astype(np.int64).astype(str)
         # --------------------------------------------------------------------
 
         df_loaded['ชื่อ-สกุล'] = df_loaded['ชื่อ-สกุล'].astype(str).str.strip().str.replace(r'\s+', ' ', regex=True)
@@ -774,4 +774,4 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             display_main_report(person_data)
 
 else:
-    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
+    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภา
