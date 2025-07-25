@@ -113,22 +113,30 @@ def interpret_lung_capacity(person_data):
         if fvc_p < 80:
             summary = "สมรรถภาพปอดสรุปผลไม่ได้เนื่องจากมีความคลาดเคลื่อนในการทดสอบ" # Mixed -> Inconclusive as per list
         else: # Obstructive
-            if fev1_p is not None and fev1_p >= 60:
-                summary = "สมรรถภาพปอดพบความผิดปกติแบบหลอดลมอุดกั้นเล็กน้อย"
-            else:
+            if fev1_p is not None:
+                if fev1_p >= 66: # Mild (66-80 from image, but logic implies >=66)
+                     summary = "สมรรถภาพปอดพบความผิดปกติแบบหลอดลมอุดกั้นเล็กน้อย"
+                elif fev1_p >= 50: # Moderate
+                     summary = "สมรรถภาพปอดพบความผิดปกติแบบหลอดลมอุดกั้นปานกลาง"
+                else: # Severe
+                     summary = "สมรรถภาพปอดพบความผิดปกติแบบหลอดลมอุดกั้นรุนแรง"
+            else: # fev1_p is None
                 summary = "สมรรถภาพปอดพบความผิดปกติแบบหลอดลมอุดกั้น"
+
     elif ratio >= 70:
         if fvc_p < 80: # Restrictive
-            if fvc_p >= 60:
+            if fvc_p >= 66: # Mild
                 summary = "สมรรถภาพปอดพบความผิดปกติแบบปอดจำกัดการขยายตัวเล็กน้อย"
-            else:
-                summary = "สมรรถภาพปอดพบความผิดปกติแบบปอดจำกัดการขยายตัว"
+            elif fvc_p >= 50: # Moderate
+                summary = "สมรรถภาพปอดพบความผิดปกติแบบปอดจำกัดการขยายตัวปานกลาง"
+            else: # Severe
+                summary = "สมรรถภาพปอดพบความผิดปกติแบบปอดจำกัดการขยายตัวรุนแรง"
         else: # Normal
             summary = "สมรรถภาพปอดปกติ"
 
-    # --- THIS IS THE FIX ---
-    # Set advice based on the EXACT summary text for "Normal"
-    if summary == "สมรรถภาพปอดปกติ":
+    # --- NEW ADVICE LOGIC ---
+    # Set advice based on severity
+    if summary == "สมรรถภาพปอดปกติ" or "เล็กน้อย" in summary:
         advice = "เพิ่มสมรรถภาพปอดด้วยการออกกำลังกาย หลีกเลี่ยงการสัมผัสสารเคมี ฝุ่น และควัน"
     else:
         advice = "ให้พบแพทย์เพื่อตรวจวินิจฉัย รักษาเพิ่มเติม"
