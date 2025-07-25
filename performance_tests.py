@@ -15,23 +15,30 @@ def interpret_vision(person_data):
         dict: Dictionary ที่มีผลการตรวจแต่ละรายการ, สรุป และคำแนะนำ
     """
     
-    # กำหนดรายการตรวจและชื่อคอลัมน์ในฐานข้อมูล
-    vision_tests = {
-        "ความชัดของภาพระยะไกล": ("ป.ความชัดของภาพระยะไกล", "ผ.ความชัดของภาพระยะไกล"),
-        "ความชัดของภาพระยะใกล้": ("ป.ความชัดของภาพระยะใกล้", "ผ.ความชัดของภาพระยะใกล้"),
+    # รายการตรวจแบบ ปกติ/ผิดปกติ
+    binary_vision_tests = {
         "การมองเห็นภาพสามมิติ": ("ป.การกะระยะและมองความชัดลึกของภาพ", "ผ.การกะระยะและมองความชัดลึกของภาพ"),
         "การจำแนกสี": ("ป.การจำแนกสี", "ผ.การจำแนกสี"),
         "การรวมภาพ": ("ป.การรวมภาพ", "ผ.การรวมภาพ"),
         "ความสมดุลกล้ามเนื้อตา (แนวนอน)": ("ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน", "ผิดปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน"),
         "ความสมดุลกล้ามเนื้อตา (แนวตั้ง)": ("ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง", "ผิดปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง"),
-        "สายตาเขซ่อนเร้น": (None, "ผ.สายตาเขซ่อนเร้น"), # มีแต่คอลัมน์ผิดปกติ
-        "ลานสายตา": ("ป.ลานสายตา", None), # มีแต่คอลัมน์ปกติ
+        "สายตาเขซ่อนเร้น": (None, "ผ.สายตาเขซ่อนเร้น"),
+        "ลานสายตา": ("ป.ลานสายตา", None),
+    }
+
+    # รายการตรวจแบบมีค่าตัวเลข
+    value_vision_tests = {
+        "มองไกล-ขวา": "การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)",
+        "มองไกล-ซ้าย": "การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)",
+        "มองใกล้-ขวา": "การมองภาพระยะใกล้ด้วยตาขวา (Near vision – Right)",
+        "มองใกล้-ซ้าย": "การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision – Left)",
     }
     
     results = {}
     has_any_data = False
     
-    for test_name, (normal_col, abnormal_col) in vision_tests.items():
+    # ประมวลผลรายการตรวจแบบ ปกติ/ผิดปกติ
+    for test_name, (normal_col, abnormal_col) in binary_vision_tests.items():
         normal_val = person_data.get(normal_col) if normal_col else None
         abnormal_val = person_data.get(abnormal_col) if abnormal_col else None
 
@@ -41,8 +48,13 @@ def interpret_vision(person_data):
         elif not is_empty(abnormal_val):
             results[test_name] = "ผิดปกติ"
             has_any_data = True
-        else:
-            results[test_name] = "ไม่มีข้อมูล"
+
+    # ประมวลผลรายการตรวจแบบมีค่าตัวเลข
+    for display_name, col_name in value_vision_tests.items():
+        value = person_data.get(col_name)
+        if not is_empty(value):
+            results[display_name] = str(value)
+            has_any_data = True
 
     # ถ้าไม่มีข้อมูลการตรวจใดๆ เลย
     if not has_any_data:
@@ -109,7 +121,6 @@ def interpret_lung_capacity(person_data):
         try: return float(val)
         except (ValueError, TypeError): return None
 
-    # ดึงข้อมูลจาก person_data ด้วย key ที่ถูกต้อง
     raw_values = {
         'FVC': to_float(person_data.get('FVC')),
         'FVC predic': to_float(person_data.get('FVC predic')),
@@ -128,44 +139,39 @@ def interpret_lung_capacity(person_data):
     fev1_p = raw_values['FEV1 %']
     ratio = raw_values['FEV1/FVC %']
 
-    # ตรวจสอบว่ามีข้อมูลการตรวจหรือไม่
     if all(v is None for v in [fvc_p, fev1_p, ratio]):
         return "ไม่ได้เข้ารับการตรวจ", "", raw_values
 
-    # หากข้อมูลสำคัญขาดไป
     if fvc_p is None or ratio is None:
         return "สมรรถภาพปอดสรุปผลไม่ได้เนื่องจากมีความคลาดเคลื่อนในการทดสอบ", "ให้พบแพทย์เพื่อตรวจวินิจฉัย รักษาเพิ่มเติม", raw_values
 
-    summary = "สมรรถภาพปอดสรุปผลไม่ได้เนื่องจากมีความคลาดเคลื่อนในการทดสอบ" # Default summary
+    summary = "สมรรถภาพปอดสรุปผลไม่ได้เนื่องจากมีความคลาดเคลื่อนในการทดสอบ"
 
-    # Interpretation Logic based on provided standard
     if ratio < 70:
         if fvc_p < 80:
-            summary = "สมรรถภาพปอดสรุปผลไม่ได้เนื่องจากมีความคลาดเคลื่อนในการทดสอบ" # Mixed -> Inconclusive as per list
-        else: # Obstructive
+            summary = "สมรรถภาพปอดสรุปผลไม่ได้เนื่องจากมีความคลาดเคลื่อนในการทดสอบ"
+        else:
             if fev1_p is not None:
-                if fev1_p >= 66: # Mild (66-80 from image, but logic implies >=66)
+                if fev1_p >= 66:
                      summary = "สมรรถภาพปอดพบความผิดปกติแบบหลอดลมอุดกั้นเล็กน้อย"
-                elif fev1_p >= 50: # Moderate
+                elif fev1_p >= 50:
                      summary = "สมรรถภาพปอดพบความผิดปกติแบบหลอดลมอุดกั้นปานกลาง"
-                else: # Severe
+                else:
                      summary = "สมรรถภาพปอดพบความผิดปกติแบบหลอดลมอุดกั้นรุนแรง"
-            else: # fev1_p is None
+            else:
                 summary = "สมรรถภาพปอดพบความผิดปกติแบบหลอดลมอุดกั้น"
 
     elif ratio >= 70:
-        if fvc_p < 80: # Restrictive
-            if fvc_p >= 66: # Mild
+        if fvc_p < 80:
+            if fvc_p >= 66:
                 summary = "สมรรถภาพปอดพบความผิดปกติแบบปอดจำกัดการขยายตัวเล็กน้อย"
-            elif fvc_p >= 50: # Moderate
+            elif fvc_p >= 50:
                 summary = "สมรรถภาพปอดพบความผิดปกติแบบปอดจำกัดการขยายตัวปานกลาง"
-            else: # Severe
+            else:
                 summary = "สมรรถภาพปอดพบความผิดปกติแบบปอดจำกัดการขยายตัวรุนแรง"
-        else: # Normal
+        else:
             summary = "สมรรถภาพปอดปกติ"
 
-    # --- NEW ADVICE LOGIC ---
-    # Set advice based on severity
     if summary == "สมรรถภาพปอดปกติ" or "เล็กน้อย" in summary:
         advice = "เพิ่มสมรรถภาพปอดด้วยการออกกำลังกาย หลีกเลี่ยงการสัมผัสสารเคมี ฝุ่น และควัน"
     else:
