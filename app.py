@@ -632,7 +632,7 @@ def display_performance_report_lung(person_data):
         df_details = pd.DataFrame(detail_data)
         st.dataframe(df_details, use_container_width=True, hide_index=True)
 
-# <<<--- NEW/UPDATED FUNCTION FOR VISION REPORT ---
+# <<<--- CORRECTED FUNCTION FOR VISION REPORT ---
 def render_vision_table_html(df):
     """
     สร้างตาราง HTML ที่ทันสมัยและไม่มี scrollbar สำหรับรายงานผลการตรวจตา
@@ -668,11 +668,18 @@ def render_vision_table_html(df):
     
     table_body = "<tbody>"
     for _, row in df.iterrows():
+        # Using .get() for safety in case a column is missing.
+        test_item = html.escape(str(row.get('รายการตรวจ (Vision Test)', '')))
+        # Escaping ALL columns consistently to prevent HTML injection/breaking issues.
+        # The original code did not escape 'ปกติ (Normal)', which was the likely cause of the error.
+        normal_val = html.escape(str(row.get('ปกติ (Normal)', '')))
+        abnormal_val = html.escape(str(row.get('ผิดปกติ (Abnormal)', '')))
+        
         table_body += f"""
         <tr>
-            <td>{html.escape(str(row['รายการตรวจ (Vision Test)']))}</td>
-            <td>{row['ปกติ (Normal)']}</td>
-            <td>{html.escape(str(row['ผิดปกติ (Abnormal)']))}</td>
+            <td>{test_item}</td>
+            <td>{normal_val}</td>
+            <td>{abnormal_val}</td>
         </tr>
         """
     table_body += "</tbody>"
