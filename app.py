@@ -668,15 +668,36 @@ def display_performance_report(person_data, report_type):
             st.warning("ไม่พบข้อมูลการตรวจสมรรถภาพการมองเห็นในปีนี้")
             return
 
-        # Step 1: Get the raw values from the person_data dictionary.
-        vision_raw_val = person_data.get('สายตา')
-        color_raw_val = person_data.get('ตาบอดสี')
+        # === INLINED LOGIC FROM performance_tests.interpret_vision ===
+        vision_raw = person_data.get('สายตา')
+        color_blindness_raw = person_data.get('ตาบอดสี')
         
-        # Step 2: Call the interpretation function and store the result in a single tuple.
-        vision_results_tuple = performance_tests.interpret_vision(vision_raw_val, color_raw_val)
+        vision_summary = "ไม่ได้เข้ารับการตรวจ"
+        color_summary = "ไม่ได้เข้ารับการตรวจ"
+        advice_parts = []
+
+        if not is_empty(vision_raw):
+            vision_lower = str(vision_raw).lower().strip()
+            if "ปกติ" in vision_lower:
+                vision_summary = "ปกติ"
+            elif "ผิดปกติ" in vision_lower or "สั้น" in vision_lower or "ยาว" in vision_lower or "เอียง" in vision_lower:
+                vision_summary = "ผิดปกติ"
+                advice_parts.append("สายตาผิดปกติ ควรปรึกษาจักษุแพทย์เพื่อตรวจวัดสายตาและพิจารณาตัดแว่น")
+            else:
+                vision_summary = vision_raw
+
+        if not is_empty(color_blindness_raw):
+            color_blindness_lower = str(color_blindness_raw).lower().strip()
+            if "ปกติ" in color_blindness_lower:
+                color_summary = "ปกติ"
+            elif "ผิดปกติ" in color_blindness_lower:
+                color_summary = "ผิดปกติ"
+                advice_parts.append("ภาวะตาบอดสี ควรหลีกเลี่ยงงานที่ต้องใช้การแยกสีที่สำคัญ")
+            else:
+                color_summary = color_blindness_raw
         
-        # Step 3: Unpack the tuple into individual variables.
-        vision_summary, color_summary, vision_advice = vision_results_tuple
+        vision_advice = " ".join(advice_parts)
+        # === END OF INLINED LOGIC ===
 
         st.markdown("<h5><b>สรุปผลภาพรวม</b></h5>", unsafe_allow_html=True)
         v_col1, v_col2 = st.columns(2)
