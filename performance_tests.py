@@ -8,82 +8,77 @@ def is_empty(val):
 
 def interpret_vision(person_data):
     """
-    แปลผลตรวจสมรรถภาพการมองเห็นแบบละเอียด
+    แปลผลตรวจสมรรถภาพการมองเห็นแบบละเอียดตามรายการใหม่
     Args:
         person_data (dict): Dictionary ข้อมูลของบุคคลนั้นๆ จากแถวใน DataFrame
     Returns:
-        dict: Dictionary ที่มีผลการตรวจแต่ละรายการ, สรุป และคำแนะนำ
+        dict: Dictionary ที่มี DataFrame ของผลตรวจ, สรุป และคำแนะนำ
     """
     
-    # รายการตรวจแบบ ปกติ/ผิดปกติ
-    binary_vision_tests = {
-        "การมองเห็นภาพสามมิติ": ("ป.การกะระยะและมองความชัดลึกของภาพ", "ผ.การกะระยะและมองความชัดลึกของภาพ"),
-        "การจำแนกสี": ("ป.การจำแนกสี", "ผ.การจำแนกสี"),
-        "การรวมภาพ": ("ป.การรวมภาพ", "ผ.การรวมภาพ"),
-        "ความสมดุลกล้ามเนื้อตา (แนวนอน)": ("ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน", "ผิดปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน"),
-        "ความสมดุลกล้ามเนื้อตา (แนวตั้ง)": ("ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง", "ผิดปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง"),
-        "สายตาเขซ่อนเร้น": (None, "ผ.สายตาเขซ่อนเร้น"),
-        "ลานสายตา": ("ป.ลานสายตา", None),
+    # Mapping a user-friendly name to the potential normal/abnormal columns
+    # This structure helps in iterating and checking for values easily
+    vision_test_mapping = {
+        "1. การมองด้วย 2 ตา (Binocular vision)": ("ป.การรวมภาพ", "ผ.การรวมภาพ"),
+        "2. การมองภาพระยะไกลสองตา (Far vision – Both)": ("ป.ความชัดของภาพระยะไกล", "ผ.ความชัดของภาพระยะไกล"),
+        "3. การมองภาพระยะไกลตาขวา (Far vision – Right)": ("การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)", None), # This is a value field
+        "4. การมองภาพระยะไกลตาซ้าย (Far vision – Left)": ("การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)", None), # This is a value field
+        "5. การมองภาพ 3 มิติ (Stereo depth)": ("ป.การกะระยะและมองความชัดลึกของภาพ", "ผ.การกะระยะและมองความชัดลึกของภาพ"),
+        "6. การมองจำแนกสี (Color discrimination)": ("ป.การจำแนกสี", "ผ.การจำแนกสี"),
+        "7. ความสมดุลกล้ามเนื้อระยะไกลแนวตั้ง (Far vertical phoria)": ("ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง", "ผิดปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง"),
+        "8. ความสมดุลกล้ามเนื้อระยะไกลแนวนอน (Far lateral phoria)": ("ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน", "ผิดปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน"),
+        "9. การมองภาพระยะใกล้สองตา (Near vision – Both)": ("ป.ความชัดของภาพระยะใกล้", "ผ.ความชัดของภาพระยะใกล้"),
+        "10. การมองภาพระยะใกล้ตาขวา (Near vision – Right)": ("การมองภาพระยะใกล้ด้วยตาขวา (Near vision – Right)", None), # This is a value field
+        "11. การมองภาพระยะใกล้ตาซ้าย (Near vision – Left)": ("การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision – Left)", None), # This is a value field
+        "12. ความสมดุลกล้ามเนื้อระยะใกล้แนวนอน (Near lateral phoria)": ("ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน", "ผิดปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน"),
+        "13. ลานสายตา (Visual field)": ("ป.ลานสายตา", "ผ.ลานสายตา"),
     }
 
-    # รายการตรวจแบบมีค่าตัวเลข
-    value_vision_tests = {
-        "มองไกล-ขวา": "การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)",
-        "มองไกล-ซ้าย": "การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)",
-        "มองใกล้-ขวา": "การมองภาพระยะใกล้ด้วยตาขวา (Near vision – Right)",
-        "มองใกล้-ซ้าย": "การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision – Left)",
-    }
-    
-    results = {}
+    report_data = []
     has_any_data = False
-    
-    # ประมวลผลรายการตรวจแบบ ปกติ/ผิดปกติ
-    for test_name, (normal_col, abnormal_col) in binary_vision_tests.items():
-        normal_val = person_data.get(normal_col) if normal_col else None
-        abnormal_val = person_data.get(abnormal_col) if abnormal_col else None
 
-        if not is_empty(normal_val):
-            results[test_name] = "ปกติ"
-            has_any_data = True
-        elif not is_empty(abnormal_val):
-            results[test_name] = "ผิดปกติ"
-            has_any_data = True
+    for test_name, (normal_col, abnormal_col) in vision_test_mapping.items():
+        result_normal = ""
+        result_abnormal = ""
+        
+        # Check for value-based fields first
+        if abnormal_col is None:
+            value = person_data.get(normal_col)
+            if not is_empty(value):
+                # If there's a value, we can consider it as the 'normal' result for display purposes
+                result_normal = str(value)
+                has_any_data = True
+        else: # Handle normal/abnormal flag fields
+            if not is_empty(person_data.get(normal_col)):
+                result_normal = "✓"
+                has_any_data = True
+            elif not is_empty(person_data.get(abnormal_col)):
+                result_abnormal = "✓"
+                has_any_data = True
+        
+        report_data.append({
+            "รายการตรวจ (Vision Test)": test_name,
+            "ปกติ (Normal)": result_normal,
+            "ผิดปกติ (Abnormal)": result_abnormal
+        })
 
-    # ประมวลผลรายการตรวจแบบมีค่าตัวเลข
-    for display_name, col_name in value_vision_tests.items():
-        value = person_data.get(col_name)
-        if not is_empty(value):
-            results[display_name] = str(value)
-            has_any_data = True
-
-    # ถ้าไม่มีข้อมูลการตรวจใดๆ เลย
     if not has_any_data:
         return {
-            "results": {},
             "summary": "ไม่ได้เข้ารับการตรวจ",
+            "report_df": pd.DataFrame(),
             "recommendation": "",
             "work_fitness": ""
         }
 
-    # ดึงข้อมูลสรุปและคำแนะนำ
-    summary = "สรุปผล: "
-    abnormal_items = [name for name, res in results.items() if res == 'ผิดปกติ']
-    
-    if not abnormal_items:
-        summary += "สมรรถภาพการมองเห็นโดยรวมปกติ"
-    else:
-        summary += f"พบความผิดปกติในส่วนของ {', '.join(abnormal_items)}"
-
+    df = pd.DataFrame(report_data)
     recommendation = person_data.get("แนะนำABN EYE", "")
     work_fitness = person_data.get("สรุปเหมาะสมกับงาน", "")
-    
+
     return {
-        "results": results,
-        "summary": summary,
+        "summary": "มีผลการตรวจ",
+        "report_df": df,
         "recommendation": recommendation if not is_empty(recommendation) else "ไม่มีคำแนะนำเพิ่มเติม",
         "work_fitness": work_fitness if not is_empty(work_fitness) else "ไม่ระบุ"
     }
-
 
 def interpret_hearing(hearing_raw):
     """
