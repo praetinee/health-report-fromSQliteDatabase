@@ -632,7 +632,54 @@ def display_performance_report_lung(person_data):
         df_details = pd.DataFrame(detail_data)
         st.dataframe(df_details, use_container_width=True, hide_index=True)
 
-# <<<--- NEW FUNCTION FOR VISION REPORT ---
+# <<<--- NEW/UPDATED FUNCTION FOR VISION REPORT ---
+def render_vision_table_html(df):
+    """
+    สร้างตาราง HTML ที่ทันสมัยและไม่มี scrollbar สำหรับรายงานผลการตรวจตา
+    """
+    style = """
+    <style>
+        .vision-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            margin-bottom: 2rem;
+        }
+        .vision-table th, .vision-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #333; /* Darker border for dark theme */
+            text-align: left;
+        }
+        .vision-table th {
+            background-color: #2a3950; /* A slightly different shade for header */
+            font-weight: bold;
+        }
+        .vision-table td:nth-child(2), .vision-table td:nth-child(3) {
+            text-align: center;
+            font-size: 1.2em; /* Make checkmarks/values bigger */
+        }
+        .vision-table tr:last-child td {
+            border-bottom: none;
+        }
+    </style>
+    """
+    
+    table_header = "<thead><tr><th>รายการตรวจ (Vision Test)</th><th>ปกติ (Normal)</th><th>ผิดปกติ (Abnormal)</th></tr></thead>"
+    
+    table_body = "<tbody>"
+    for _, row in df.iterrows():
+        table_body += f"""
+        <tr>
+            <td>{row['รายการตรวจ (Vision Test)']}</td>
+            <td>{row['ปกติ (Normal)']}</td>
+            <td>{row['ผิดปกติ (Abnormal)']}</td>
+        </tr>
+        """
+    table_body += "</tbody>"
+    
+    html_content = f"{style}<table class='vision-table'>{table_header}{table_body}</table>"
+    return html_content
+
 def display_performance_report_vision(person_data):
     """
     แสดงผลรายงานสมรรถภาพการมองเห็นในรูปแบบที่ออกแบบใหม่
@@ -644,10 +691,8 @@ def display_performance_report_vision(person_data):
         st.warning("ไม่ได้เข้ารับการตรวจสมรรถภาพการมองเห็นในปีนี้")
         return
 
-    # Display the detailed table of results
-    st.dataframe(vision_data["report_df"], use_container_width=True, hide_index=True)
-    
-    st.markdown("<br>", unsafe_allow_html=True)
+    # Display the detailed table of results using custom HTML
+    st.markdown(render_vision_table_html(vision_data["report_df"]), unsafe_allow_html=True)
     
     # Display Summary and Recommendations
     col1, col2 = st.columns(2)
@@ -785,4 +830,4 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         elif page_to_show == 'main_report':
             display_main_report(person_data)
 else:
-    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
+    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภา
