@@ -356,14 +356,6 @@ def load_sqlite_data():
             
         df_loaded['HN'] = df_loaded['HN'].apply(clean_hn)
         
-        # Add cleaning for vision columns here if needed
-        # For example:
-        # vision_cols = ['Vision_Binocular', 'Vision_Far_Both', ...] # List all vision cols
-        # for col in vision_cols:
-        #     if col in df_loaded.columns:
-        #         df_loaded[col] = df_loaded[col].astype(str).str.strip()
-
-
         df_loaded['ชื่อ-สกุล'] = df_loaded['ชื่อ-สกุล'].astype(str).str.strip().str.replace(r'\s+', ' ', regex=True)
         df_loaded['เลขบัตรประชาชน'] = df_loaded['เลขบัตรประชาชน'].astype(str).str.strip()
         df_loaded['Year'] = df_loaded['Year'].astype(int)
@@ -386,10 +378,12 @@ def has_vision_data(person_data):
     """Check for any vision test data, summary or detailed."""
     summary_keys = ['สายตา', 'ตาบอดสี']
     detailed_keys = [
-        'Vision_Binocular', 'Vision_Far_Both', 'Vision_Far_Right', 'Vision_Far_Left',
-        'Vision_Stereo', 'Vision_Color', 'Vision_Vertical_Phoria', 'Vision_Lateral_Phoria',
-        'Vision_Near_Both', 'Vision_Near_Right', 'Vision_Near_Left', 'Vision_Near_Lateral_Phoria',
-        'Vision_Field'
+        'ป.การรวมภาพ', 'ป.ความชัดของภาพระยะไกล', 'การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)',
+        'การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)', 'ป.การกะระยะและมองความชัดลึกของภาพ',
+        'ป.การจำแนกสี', 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง',
+        'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน', 'ป.ความชัดของภาพระยะใกล้',
+        'การมองภาพระยะใกล้ด้วยตาขวา (Near vision – Right)', 'การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision – Left)',
+        'ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'ป.ลานสายตา'
     ]
     return any(not is_empty(person_data.get(key)) for key in summary_keys + detailed_keys)
 
@@ -494,30 +488,28 @@ def display_common_header(person_data):
         {f"<div style='margin-top: 1rem; text-align: center;'><b>คำแนะนำ:</b> {summary_advice}</div>" if summary_advice else ""}
     </div>""", unsafe_allow_html=True)
 
-# --- NEW: Vision Details Table Renderer ---
+# --- UPDATED: Vision Details Table Renderer with Correct Headers ---
 def render_vision_details_table(person_data):
     """
-    Renders a modern, detailed HTML table for the 13-point vision test.
+    Renders a modern, detailed HTML table for the 13-point vision test
+    using the correct column headers.
     """
-    # Map display names to ASSUMED database column names and possible outcomes.
-    # *** IMPORTANT: You may need to change the 'db_col' values to match your database. ***
     vision_tests = [
-        {'display': '1. การมองด้วย 2 ตา (Binocular vision)', 'db_col': 'Vision_Binocular', 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '2. การมองภาพระยะไกลด้วยสองตา (Far vision - Both)', 'db_col': 'Vision_Far_Both', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
-        {'display': '3. การมองภาพระยะไกลด้วยตาขวา (Far vision - Right)', 'db_col': 'Vision_Far_Right', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
-        {'display': '4. การมองภาพระยะไกลด้วยตาซ้าย (Far vision - Left)', 'db_col': 'Vision_Far_Left', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
-        {'display': '5. การมองภาพ 3 มิติ (Stereo depth)', 'db_col': 'Vision_Stereo', 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '6. การมองจำแนกสี (Color discrimination)', 'db_col': 'Vision_Color', 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '7. ความสมดุลกล้ามเนื้อตาแนวดิ่ง (Far vertical phoria)', 'db_col': 'Vision_Vertical_Phoria', 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '8. ความสมดุลกล้ามเนื้อตาแนวนอน (Far lateral phoria)', 'db_col': 'Vision_Lateral_Phoria', 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '9. การมองภาพระยะใกล้ด้วยสองตา (Near vision - Both)', 'db_col': 'Vision_Near_Both', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
-        {'display': '10. การมองภาพระยะใกล้ด้วยตาขวา (Near vision - Right)', 'db_col': 'Vision_Near_Right', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
-        {'display': '11. การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision - Left)', 'db_col': 'Vision_Near_Left', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
-        {'display': '12. ความสมดุลกล้ามเนื้อตาแนวนอน (Near lateral phoria)', 'db_col': 'Vision_Near_Lateral_Phoria', 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '13. ลานสายตา (Visual field)', 'db_col': 'Vision_Field', 'outcomes': ['ปกติ', 'ผิดปกติ']}
+        {'display': '1. การมองด้วย 2 ตา (Binocular vision)', 'db_col': 'ป.การรวมภาพ', 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '2. การมองภาพระยะไกลด้วยสองตา (Far vision - Both)', 'db_col': 'ป.ความชัดของภาพระยะไกล', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '3. การมองภาพระยะไกลด้วยตาขวา (Far vision - Right)', 'db_col': 'การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '4. การมองภาพระยะไกลด้วยตาซ้าย (Far vision - Left)', 'db_col': 'การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '5. การมองภาพ 3 มิติ (Stereo depth)', 'db_col': 'ป.การกะระยะและมองความชัดลึกของภาพ', 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '6. การมองจำแนกสี (Color discrimination)', 'db_col': 'ป.การจำแนกสี', 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '7. ความสมดุลกล้ามเนื้อตาแนวดิ่ง (Far vertical phoria)', 'db_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง', 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '8. ความสมดุลกล้ามเนื้อตาแนวนอน (Far lateral phoria)', 'db_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน', 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '9. การมองภาพระยะใกล้ด้วยสองตา (Near vision - Both)', 'db_col': 'ป.ความชัดของภาพระยะใกล้', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '10. การมองภาพระยะใกล้ด้วยตาขวา (Near vision - Right)', 'db_col': 'การมองภาพระยะใกล้ด้วยตาขวา (Near vision – Right)', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '11. การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision - Left)', 'db_col': 'การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision – Left)', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '12. ความสมดุลกล้ามเนื้อตาแนวนอน (Near lateral phoria)', 'db_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '13. ลานสายตา (Visual field)', 'db_col': 'ป.ลานสายตา', 'outcomes': ['ปกติ', 'ผิดปกติ']}
     ]
 
-    # Start building the HTML string
     html = """
     <style>
         .vision-table {
@@ -574,18 +566,33 @@ def render_vision_details_table(person_data):
         <tbody>
     """
 
-    # Populate table rows
     for test in vision_tests:
+        # For columns that might represent the result directly (e.g., 'ปกติ...' vs 'ผิดปกติ...')
+        # We need a more robust way to get the value.
+        # Let's try to find if either the 'normal' or 'abnormal' version of the column exists.
         result_value = str(person_data.get(test['db_col'], '')).strip()
+        # A special check for columns that might have 'ผิดปกติ' as a prefix for the abnormal case
+        abnormal_col_name = "ผ." + test['db_col'][2:] if test['db_col'].startswith("ป.") else "ผิด" + test['db_col']
+        if is_empty(result_value):
+            result_value = str(person_data.get(abnormal_col_name, '')).strip()
+
         normal_outcome, abnormal_outcome = test['outcomes']
         
+        # Check if the found value corresponds to normal or abnormal
         is_normal = normal_outcome.lower() in result_value.lower()
         is_abnormal = abnormal_outcome.lower() in result_value.lower()
+
+        # Handle cases where the column name itself implies the result (e.g., 'ปกติความสมดุล...')
+        if not is_normal and not is_abnormal:
+            if 'ปกติ' in test['db_col'] and not is_empty(person_data.get(test['db_col'])):
+                is_normal = True
+            elif 'ผิดปกติ' in test['db_col'] and not is_empty(person_data.get(test['db_col'])):
+                is_abnormal = True
+
 
         normal_class = "result-selected result-normal" if is_normal else "result-not-selected"
         abnormal_class = "result-selected result-abnormal" if is_abnormal else "result-not-selected"
         
-        # If no data, both are not-selected
         if not is_normal and not is_abnormal:
             normal_class = "result-not-selected"
             abnormal_class = "result-not-selected"
@@ -660,12 +667,10 @@ def display_performance_report(person_data, report_type):
             person_data.get('สายตา'), person_data.get('ตาบอดสี')
         )
 
-        # Check if there is any data to display at all
         if not has_vision_data(person_data):
             st.warning("ไม่พบข้อมูลการตรวจสมรรถภาพการมองเห็นในปีนี้")
             return
 
-        # --- Summary Metrics ---
         st.markdown("<h5><b>สรุปผลภาพรวม</b></h5>", unsafe_allow_html=True)
         v_col1, v_col2 = st.columns(2)
         v_col1.metric("ผลตรวจสายตา (ทั่วไป)", vision_summary if not is_empty(vision_summary) else "ไม่มีข้อมูลสรุป")
@@ -675,9 +680,7 @@ def display_performance_report(person_data, report_type):
 
         st.markdown("<hr>", unsafe_allow_html=True)
         
-        # --- Detailed Table ---
         st.markdown("<h5><b>ผลการตรวจโดยละเอียด</b></h5>", unsafe_allow_html=True)
-        # Call the new function to render the detailed table
         detailed_table_html = render_vision_details_table(person_data)
         st.markdown(detailed_table_html, unsafe_allow_html=True)
         
@@ -896,4 +899,3 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
 
 else:
     st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
-
