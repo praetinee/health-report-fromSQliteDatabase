@@ -6,42 +6,72 @@ def is_empty(val):
     """
     return pd.isna(val) or str(val).strip().lower() in ["", "-", "none", "nan", "null"]
 
-def interpret_vision(vision_raw, color_blindness_raw):
+def interpret_vision(person_data):
     """
-    แปลผลตรวจสมรรถภาพการมองเห็นและตาบอดสี
+    แปลผลตรวจสมรรถภาพการมองเห็นแบบละเอียด
     Args:
-        vision_raw (str): ผลตรวจสายตาจากฐานข้อมูล
-        color_blindness_raw (str): ผลตรวจตาบอดสีจากฐานข้อมูล
+        person_data (dict): Dictionary ข้อมูลของบุคคลนั้นๆ จากแถวใน DataFrame
     Returns:
-        tuple: (สรุปผลสายตา, สรุปผลตาบอดสี, คำแนะนำ)
+        dict: Dictionary ที่มีผลการตรวจแต่ละรายการ, สรุป และคำแนะนำ
     """
-    vision_summary = "ไม่ได้เข้ารับการตรวจ"
-    color_blindness_summary = "ไม่ได้เข้ารับการตรวจ"
-    advice_parts = []
+    
+    # กำหนดรายการตรวจและชื่อคอลัมน์ในฐานข้อมูล
+    vision_tests = {
+        "ความชัดของภาพระยะไกล": ("ป.ความชัดของภาพระยะไกล", "ผ.ความชัดของภาพระยะไกล"),
+        "ความชัดของภาพระยะใกล้": ("ป.ความชัดของภาพระยะใกล้", "ผ.ความชัดของภาพระยะใกล้"),
+        "การมองเห็นภาพสามมิติ": ("ป.การกะระยะและมองความชัดลึกของภาพ", "ผ.การกะระยะและมองความชัดลึกของภาพ"),
+        "การจำแนกสี": ("ป.การจำแนกสี", "ผ.การจำแนกสี"),
+        "การรวมภาพ": ("ป.การรวมภาพ", "ผ.การรวมภาพ"),
+        "ความสมดุลกล้ามเนื้อตา (แนวนอน)": ("ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน", "ผิดปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน"),
+        "ความสมดุลกล้ามเนื้อตา (แนวตั้ง)": ("ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง", "ผิดปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง"),
+        "สายตาเขซ่อนเร้น": (None, "ผ.สายตาเขซ่อนเร้น"), # มีแต่คอลัมน์ผิดปกติ
+        "ลานสายตา": ("ป.ลานสายตา", None), # มีแต่คอลัมน์ปกติ
+    }
+    
+    results = {}
+    has_any_data = False
+    
+    for test_name, (normal_col, abnormal_col) in vision_tests.items():
+        normal_val = person_data.get(normal_col) if normal_col else None
+        abnormal_val = person_data.get(abnormal_col) if abnormal_col else None
 
-    # แปลผลสายตา
-    if not is_empty(vision_raw):
-        vision_lower = str(vision_raw).lower().strip()
-        if "ปกติ" in vision_lower:
-            vision_summary = "ปกติ"
-        elif "ผิดปกติ" in vision_lower or "สั้น" in vision_lower or "ยาว" in vision_lower or "เอียง" in vision_lower:
-            vision_summary = f"ผิดปกติ"
-            advice_parts.append("สายตาผิดปกติ ควรปรึกษาจักษุแพทย์เพื่อตรวจวัดสายตาและพิจารณาตัดแว่น")
+        if not is_empty(normal_val):
+            results[test_name] = "ปกติ"
+            has_any_data = True
+        elif not is_empty(abnormal_val):
+            results[test_name] = "ผิดปกติ"
+            has_any_data = True
         else:
-            vision_summary = vision_raw
+            results[test_name] = "ไม่มีข้อมูล"
 
-    # แปลผลตาบอดสี
-    if not is_empty(color_blindness_raw):
-        color_blindness_lower = str(color_blindness_raw).lower().strip()
-        if "ปกติ" in color_blindness_lower:
-            color_blindness_summary = "ปกติ"
-        elif "ผิดปกติ" in color_blindness_lower:
-            color_blindness_summary = "ผิดปกติ"
-            advice_parts.append("ภาวะตาบอดสี ควรหลีกเลี่ยงงานที่ต้องใช้การแยกสีที่สำคัญ")
-        else:
-            color_blindness_summary = color_blindness_raw
+    # ถ้าไม่มีข้อมูลการตรวจใดๆ เลย
+    if not has_any_data:
+        return {
+            "results": {},
+            "summary": "ไม่ได้เข้ารับการตรวจ",
+            "recommendation": "",
+            "work_fitness": ""
+        }
 
-    return vision_summary, color_blindness_summary, " ".join(advice_parts)
+    # ดึงข้อมูลสรุปและคำแนะนำ
+    summary = "สรุปผล: "
+    abnormal_items = [name for name, res in results.items() if res == 'ผิดปกติ']
+    
+    if not abnormal_items:
+        summary += "สมรรถภาพการมองเห็นโดยรวมปกติ"
+    else:
+        summary += f"พบความผิดปกติในส่วนของ {', '.join(abnormal_items)}"
+
+    recommendation = person_data.get("แนะนำABN EYE", "")
+    work_fitness = person_data.get("สรุปเหมาะสมกับงาน", "")
+    
+    return {
+        "results": results,
+        "summary": summary,
+        "recommendation": recommendation if not is_empty(recommendation) else "ไม่มีคำแนะนำเพิ่มเติม",
+        "work_fitness": work_fitness if not is_empty(work_fitness) else "ไม่ระบุ"
+    }
+
 
 def interpret_hearing(hearing_raw):
     """
