@@ -655,7 +655,7 @@ def display_performance_report_lung(person_data):
         df_details = pd.DataFrame(detail_data)
         st.dataframe(df_details, use_container_width=True, hide_index=True)
 
-# --- UPDATED: Performance Report Display ---
+# --- CORRECTED: Performance Report Display ---
 def display_performance_report(person_data, report_type):
     """Displays various performance test reports (lung, vision, hearing)."""
     if report_type == 'lung':
@@ -663,6 +663,8 @@ def display_performance_report(person_data, report_type):
         
     elif report_type == 'vision':
         st.header("รายงานผลการตรวจสมรรถภาพการมองเห็น (Vision Test Report)")
+        
+        # This line is now corrected
         vision_summary, color_summary, vision_advice = performance_tests.interpret_vision(person_data.get('สายตา'), person_data.get('ตาบอดสี'))
 
         if not has_vision_data(person_data):
