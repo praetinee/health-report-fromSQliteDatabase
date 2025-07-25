@@ -644,6 +644,12 @@ def display_performance_report_vision(person_data):
         st.warning("ไม่ได้เข้ารับการตรวจสมรรถภาพการมองเห็นในปีนี้")
         return
 
+    # Display the detailed table of results
+    st.dataframe(vision_data["report_df"], use_container_width=True, hide_index=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Display Summary and Recommendations
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("<h5><b>ความเหมาะสมกับลักษณะงาน</b></h5>", unsafe_allow_html=True)
@@ -651,41 +657,6 @@ def display_performance_report_vision(person_data):
     with col2:
         st.markdown("<h5><b>คำแนะนำ</b></h5>", unsafe_allow_html=True)
         st.info(vision_data.get("recommendation", "ไม่มี"))
-
-    st.markdown("<hr>", unsafe_allow_html=True)
-    
-    results = vision_data.get("results", {})
-    
-    # --- Section for Value-based tests ---
-    st.markdown("<h5><b>ความคมชัดของการมองเห็น (Visual Acuity)</b></h5>", unsafe_allow_html=True)
-    v_col1, v_col2 = st.columns(2)
-    with v_col1:
-        st.metric("มองไกล-ขวา (Far-Right)", results.get("มองไกล-ขวา", "-"))
-        st.metric("มองใกล้-ขวา (Near-Right)", results.get("มองใกล้-ขวา", "-"))
-    with v_col2:
-        st.metric("มองไกล-ซ้าย (Far-Left)", results.get("มองไกล-ซ้าย", "-"))
-        st.metric("มองใกล้-ซ้าย (Near-Left)", results.get("มองใกล้-ซ้าย", "-"))
-
-    st.markdown("<hr>", unsafe_allow_html=True)
-
-    # --- Section for Binary tests ---
-    st.markdown("<h5><b>ผลการตรวจด้านอื่นๆ</b></h5>", unsafe_allow_html=True)
-    
-    other_test_items = {k: v for k, v in results.items() if 'มอง' not in k}
-    if other_test_items:
-        num_cols = 3
-        cols = st.columns(num_cols)
-        
-        for i, (item, result) in enumerate(other_test_items.items()):
-            col_index = i % num_cols
-            with cols[col_index]:
-                icon = "✅" if result == "ปกติ" else "❌" if result == "ผิดปกติ" else "❔"
-                st.markdown(f"""
-                <div style="background-color: rgba(255, 255, 255, 0.05); border-left: 5px solid {'#2e7d32' if result == 'ปกติ' else '#c62828' if result == 'ผิดปกติ' else '#616161'}; padding: 0.75rem; border-radius: 5px; margin-bottom: 1rem;">
-                    <h6 style="margin: 0; font-weight: bold;">{item}</h6>
-                    <p style="margin: 0; font-size: 1.2em;">{icon} {result}</p>
-                </div>
-                """, unsafe_allow_html=True)
 
 
 def display_performance_report(person_data, report_type):
