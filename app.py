@@ -664,8 +664,10 @@ def display_performance_report(person_data, report_type):
     elif report_type == 'vision':
         st.header("รายงานผลการตรวจสมรรถภาพการมองเห็น (Vision Test Report)")
         
-        # This line is now corrected
-        vision_summary, color_summary, vision_advice = performance_tests.interpret_vision(person_data.get('สายตา'), person_data.get('ตาบอดสี'))
+        # Corrected Call to interpret_vision
+        vision_raw_val = person_data.get('สายตา')
+        color_raw_val = person_data.get('ตาบอดสี')
+        vision_summary, color_summary, vision_advice = performance_tests.interpret_vision(vision_raw_val, color_raw_val)
 
         if not has_vision_data(person_data):
             st.warning("ไม่พบข้อมูลการตรวจสมรรถภาพการมองเห็นในปีนี้")
