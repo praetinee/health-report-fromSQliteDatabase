@@ -344,12 +344,17 @@ def load_sqlite_data():
         conn = sqlite3.connect(tmp_path)
         df_loaded = pd.read_sql("SELECT * FROM health_data", conn)
         conn.close()
+        
         df_loaded.columns = df_loaded.columns.str.strip()
         def clean_hn(hn_val):
             if pd.isna(hn_val): return ""
             s_val = str(hn_val).strip()
             return s_val[:-2] if s_val.endswith('.0') else s_val
-        df_loaded['HN'] = df_loaded['HN'].apply(clean_hn)
+        
+        # --- FIX: Ensure HN is always a string for consistent searching ---
+        df_loaded['HN'] = df_loaded['HN'].apply(clean_hn).astype(str)
+        # --------------------------------------------------------------------
+
         df_loaded['ชื่อ-สกุล'] = df_loaded['ชื่อ-สกุล'].astype(str).str.strip().str.replace(r'\s+', ' ', regex=True)
         df_loaded['เลขบัตรประชาชน'] = df_loaded['เลขบัตรประชาชน'].astype(str).str.strip()
         df_loaded['Year'] = df_loaded['Year'].astype(int)
@@ -478,129 +483,71 @@ def display_performance_report_lung(person_data):
     แสดงผลรายงานสมรรถภาพปอดในรูปแบบที่ปรับปรุงใหม่
     """
     st.header("รายงานผลการตรวจสมรรถภาพปอด (Spirometry Report)")
-
-    # เรียกใช้ฟังก์ชันแปลผลที่อัปเดตแล้ว
     lung_summary, lung_advice, lung_raw_values = performance_tests.interpret_lung_capacity(person_data)
 
-    # ---- ตรวจสอบว่ามีการตรวจหรือไม่ ----
     if lung_summary == "ไม่ได้เข้ารับการตรวจ":
         st.warning("ไม่ได้เข้ารับการตรวจสมรรถภาพปอดในปีนี้")
-        return # จบการทำงานของฟังก์ชันทันที
+        return
 
-    # --- ส่วนที่ 1: การ์ดสรุปผล ---
     st.markdown("<h5><b>สรุปผลการตรวจที่สำคัญ</b></h5>", unsafe_allow_html=True)
-    
     def format_val(key):
         val = lung_raw_values.get(key)
         return f"{val:.1f}" if val is not None else "-"
-
     col1, col2, col3 = st.columns(3)
-    col1.metric(
-        label="FVC (% เทียบค่ามาตรฐาน)",
-        value=format_val('FVC %'),
-        help="ความจุของปอดเมื่อหายใจออกเต็มที่ (ควร > 80%)"
-    )
-    col2.metric(
-        label="FEV1 (% เทียบค่ามาตรฐาน)",
-        value=format_val('FEV1 %'),
-        help="ปริมาตรอากาศที่หายใจออกในวินาทีแรก (ควร > 80%)"
-    )
-    col3.metric(
-        label="FEV1/FVC Ratio (%)",
-        value=format_val('FEV1/FVC %'),
-        help="สัดส่วนของ FEV1 ต่อ FVC (ควร > 70%)"
-    )
-        
+    col1.metric(label="FVC (% เทียบค่ามาตรฐาน)", value=format_val('FVC %'), help="ความจุของปอดเมื่อหายใจออกเต็มที่ (ควร > 80%)")
+    col2.metric(label="FEV1 (% เทียบค่ามาตรฐาน)", value=format_val('FEV1 %'), help="ปริมาตรอากาศที่หายใจออกในวินาทีแรก (ควร > 80%)")
+    col3.metric(label="FEV1/FVC Ratio (%)", value=format_val('FEV1/FVC %'), help="สัดส่วนของ FEV1 ต่อ FVC (ควร > 70%)")
     st.markdown("<hr>", unsafe_allow_html=True)
 
-    # --- ส่วนที่ 2: การแปลผลและรายละเอียด ---
     res_col1, res_col2 = st.columns([2, 3])
-
     with res_col1:
         st.markdown("<h5><b>ผลการแปลความหมาย</b></h5>", unsafe_allow_html=True)
-        
-        if "ปกติ" in lung_summary: bg_color = "background-color: #2e7d32; color: white;" # เขียว
-        elif "ไม่ได้" in lung_summary or "คลาดเคลื่อน" in lung_summary: bg_color = "background-color: #616161; color: white;" # เทา
-        else: bg_color = "background-color: #c62828; color: white;" # แดง
-
-        st.markdown(f"""
-            <div style="padding: 1rem; border-radius: 8px; {bg_color} text-align: center;">
-                <h4 style="color: white; margin: 0; font-weight: bold;">{lung_summary}</h4>
-            </div>
-            """, unsafe_allow_html=True)
-
+        if "ปกติ" in lung_summary: bg_color = "background-color: #2e7d32; color: white;"
+        elif "ไม่ได้" in lung_summary or "คลาดเคลื่อน" in lung_summary: bg_color = "background-color: #616161; color: white;"
+        else: bg_color = "background-color: #c62828; color: white;"
+        st.markdown(f'<div style="padding: 1rem; border-radius: 8px; {bg_color} text-align: center;"><h4 style="color: white; margin: 0; font-weight: bold;">{lung_summary}</h4></div>', unsafe_allow_html=True)
         st.markdown("<br><h5><b>คำแนะนำ</b></h5>", unsafe_allow_html=True)
         st.info(lung_advice or "ไม่มีคำแนะนำเพิ่มเติม")
-        
         st.markdown("<h5><b>ผลเอกซเรย์ทรวงอก</b></h5>", unsafe_allow_html=True)
         selected_year = person_data.get("Year")
         cxr_result_interpreted = "ไม่มีข้อมูล"
         if selected_year:
             cxr_col_name = f"CXR{str(selected_year)[-2:]}" if selected_year != (datetime.now().year + 543) else "CXR"
             cxr_result_interpreted = interpret_cxr(person_data.get(cxr_col_name, ''))
-
         st.markdown(f'<div style="font-size: 14px; padding: 0.5rem; background-color: rgba(255,255,255,0.05); border-radius: 4px;">{cxr_result_interpreted}</div>', unsafe_allow_html=True)
-
     with res_col2:
         st.markdown("<h5><b>ตารางแสดงผลโดยละเอียด</b></h5>", unsafe_allow_html=True)
-        
         def format_detail_val(key, format_spec, unit=""):
             val = lung_raw_values.get(key)
             if val is not None and isinstance(val, (int, float)): return f"{val:{format_spec}}{unit}"
             return "-"
-
-        detail_data = {
-            "การทดสอบ (Test)": ["FVC", "FEV1", "FEV1/FVC"],
-            "ค่าที่วัดได้ (Actual)": [
-                format_detail_val('FVC', '.2f', ' L'), format_detail_val('FEV1', '.2f', ' L'),
-                format_detail_val('FEV1/FVC %', '.1f', ' %')
-            ],
-            "ค่ามาตรฐาน (Predicted)": [
-                format_detail_val('FVC predic', '.2f', ' L'), format_detail_val('FEV1 predic', '.2f', ' L'),
-                format_detail_val('FEV1/FVC % pre', '.1f', ' %')
-            ],
-            "% เทียบค่ามาตรฐาน (% Pred)": [
-                format_detail_val('FVC %', '.1f', ' %'), format_detail_val('FEV1 %', '.1f', ' %'), "-"
-            ],
-        }
+        detail_data = {"การทดสอบ (Test)": ["FVC", "FEV1", "FEV1/FVC"],"ค่าที่วัดได้ (Actual)": [format_detail_val('FVC', '.2f', ' L'), format_detail_val('FEV1', '.2f', ' L'), format_detail_val('FEV1/FVC %', '.1f', ' %')],"ค่ามาตรฐาน (Predicted)": [format_detail_val('FVC predic', '.2f', ' L'), format_detail_val('FEV1 predic', '.2f', ' L'), format_detail_val('FEV1/FVC % pre', '.1f', ' %')],"% เทียบค่ามาตรฐาน (% Pred)": [format_detail_val('FVC %', '.1f', ' %'), format_detail_val('FEV1 %', '.1f', ' %'), "-"]}
         df_details = pd.DataFrame(detail_data)
         st.dataframe(df_details, use_container_width=True, hide_index=True)
 
-# แก้ไขฟังก์ชัน display_performance_report ของเดิม ให้เป็นดังนี้
 def display_performance_report(person_data, report_type):
     """Displays various performance test reports (lung, vision, hearing)."""
     if report_type == 'lung':
         display_performance_report_lung(person_data)
-
     elif report_type == 'vision':
         st.header("รายงานผลการตรวจสมรรถภาพการมองเห็น (Vision)")
-        vision_summary, color_summary, vision_advice = performance_tests.interpret_vision(
-            person_data.get('สายตา'), 
-            person_data.get('ตาบอดสี')
-        )
+        vision_summary, color_summary, vision_advice = performance_tests.interpret_vision(person_data.get('สายตา'), person_data.get('ตาบอดสี'))
         if vision_summary == "ไม่ได้เข้ารับการตรวจ" and color_summary == "ไม่ได้เข้ารับการตรวจ":
             st.warning("ไม่ได้เข้ารับการตรวจสมรรถภาพการมองเห็นในปีนี้")
             return
-            
         v_col1, v_col2 = st.columns(2)
         v_col1.metric("ผลตรวจสายตา", vision_summary)
         v_col2.metric("ผลตรวจตาบอดสี", color_summary)
-        if vision_advice: 
-            st.info(f"**คำแนะนำ:** {vision_advice}")
-
+        if vision_advice: st.info(f"**คำแนะนำ:** {vision_advice}")
     elif report_type == 'hearing':
         st.header("รายงานผลการตรวจสมรรถภาพการได้ยิน (Hearing)")
-        hearing_summary, hearing_advice = performance_tests.interpret_hearing(
-            person_data.get('การได้ยิน')
-        )
+        hearing_summary, hearing_advice = performance_tests.interpret_hearing(person_data.get('การได้ยิน'))
         if hearing_summary == "ไม่ได้เข้ารับการตรวจ":
             st.warning("ไม่ได้เข้ารับการตรวจสมรรถภาพการได้ยินในปีนี้")
             return
-
         h_col1, h_col2 = st.columns(2)
         h_col1.metric("สรุปผล", hearing_summary)
-        if hearing_advice: 
-            h_col2.info(f"**คำแนะนำ:** {hearing_advice}")
+        if hearing_advice: h_col2.info(f"**คำแนะนำ:** {hearing_advice}")
 
 def display_main_report(person_data):
     """Displays the main health report with all lab sections."""
@@ -678,7 +625,6 @@ def display_main_report(person_data):
         </div>
     </div>""", unsafe_allow_html=True)
 
-
 # --- Main Application Logic ---
 # Load data once
 df = load_sqlite_data()
@@ -701,12 +647,16 @@ def perform_search():
     st.session_state.selected_date = None
     st.session_state.pop("person_row", None)
     st.session_state.pop("selected_row_found", None)
-    # Set default page to main report, will be re-evaluated
     st.session_state.page = 'main_report' 
     raw_search_term = st.session_state.search_query.strip()
     search_term = re.sub(r'\s+', ' ', raw_search_term)
     if search_term:
-        results_df = df[df["HN"] == search_term if search_term.isdigit() else df["ชื่อ-สกุล"] == search_term].copy()
+        # Use .str.contains() for name search for more flexibility
+        if search_term.isdigit():
+             results_df = df[df["HN"] == search_term].copy()
+        else:
+             results_df = df[df["ชื่อ-สกุล"] == search_term].copy()
+
         if results_df.empty:
             st.error("❌ ไม่พบข้อมูล กรุณาตรวจสอบข้อมูลที่กรอกอีกครั้ง")
             st.session_state.search_result = pd.DataFrame()
@@ -757,13 +707,12 @@ if not results_df.empty:
         with menu_cols[3]:
             if not valid_exam_dates_normalized:
                 if len(person_year_df) == 1:
-                    # FIX: Use the single available row if date is invalid but there's only one record.
-                    st.warning(f"ไม่สามารถระบุวันที่ตรวจได้ จะแสดงผลจากข้อมูลที่มีเพียงรายการเดียวสำหรับปี {st.session_state.selected_year}")
+                    st.warning(f"ไม่พบวันที่ตรวจที่ถูกต้องสำหรับปี {st.session_state.selected_year}")
                     st.session_state.person_row = person_year_df.iloc[0].to_dict()
                     st.session_state.selected_row_found = True
                     st.session_state.selected_date = person_year_df.iloc[0]['วันที่ตรวจ']
                 else:
-                    st.warning(f"ไม่พบวันที่ตรวจที่ถูกต้องสำหรับปี {st.session_state.selected_year}")
+                    st.warning(f"ไม่พบวันที่ตรวจสำหรับปี {st.session_state.selected_year}")
                     st.session_state.pop("person_row", None); st.session_state.pop("selected_row_found", None); st.session_state.pop("selected_date", None)
             else:
                 if st.session_state.get("selected_date") not in valid_exam_dates_normalized:
@@ -784,7 +733,7 @@ st.markdown("<hr>", unsafe_allow_html=True)
 if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
     person_data = st.session_state.person_row
 
-    # --- NEW: Dynamic Button Creation Logic ---
+    # --- UPDATED: Dynamic Button Creation Logic ---
     available_reports = {}
     if has_basic_health_data(person_data):
         available_reports['main_report'] = "สุขภาพพื้นฐาน"
@@ -799,9 +748,11 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         display_common_header(person_data)
         st.warning("ไม่พบข้อมูลการตรวจใดๆ สำหรับวันที่และปีที่เลือก")
     else:
+        # Default page logic
         if st.session_state.page not in available_reports:
             st.session_state.page = list(available_reports.keys())[0]
 
+        # Display buttons in a single row
         btn_cols = st.columns(len(available_reports) or [1])
         for i, (page_key, page_title) in enumerate(available_reports.items()):
             with btn_cols[i]:
@@ -810,7 +761,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                     st.rerun()
 
         # Display the common header and then the selected page
-        display_common_header(st.session_state.person_row)
+        display_common_header(person_data)
         
         page_to_show = st.session_state.page
         if page_to_show == 'vision_report':
