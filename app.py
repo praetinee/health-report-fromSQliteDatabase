@@ -348,12 +348,21 @@ def load_sqlite_data():
         df_loaded.columns = df_loaded.columns.str.strip()
         
         # --- NEW, more robust HN cleaning for REAL data type ---
-        # Coerce to numeric, making non-numbers NaN. Then drop rows with invalid HNs.
-        df_loaded['HN'] = pd.to_numeric(df_loaded['HN'], errors='coerce')
-        df_loaded.dropna(subset=['HN'], inplace=True)
-        # Convert the numeric HN (float) to a 64-bit integer to remove decimals, then to string for searching.
-        df_loaded['HN'] = df_loaded['HN'].astype(np.int64).astype(str)
-        # --------------------------------------------------------------------
+        def clean_real_hn_to_str(hn_val):
+            # Handles empty/null values
+            if pd.isna(hn_val):
+                return ""
+            # Convert to string and strip whitespace
+            s_val = str(hn_val).strip()
+            # If it's a float-like string ending in .0, remove the decimal part
+            if s_val.endswith('.0'):
+                return s_val[:-2]
+            # Otherwise, return the stripped string
+            return s_val
+
+        # Apply the cleaning function and ensure the final type is string
+        df_loaded['HN'] = df_loaded['HN'].apply(clean_real_hn_to_str).astype(str)
+        # -------------------------------------------------------------
 
         df_loaded['ชื่อ-สกุล'] = df_loaded['ชื่อ-สกุล'].astype(str).str.strip().str.replace(r'\s+', ' ', regex=True)
         df_loaded['เลขบัตรประชาชน'] = df_loaded['เลขบัตรประชาชน'].astype(str).str.strip()
