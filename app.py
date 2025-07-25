@@ -687,7 +687,7 @@ if 'page' not in st.session_state: st.session_state.page = 'main_report'
 
 # --- UI Layout for Search and Filters ---
 st.subheader("ค้นหาและเลือกผลตรวจ")
-menu_cols = st.columns([3, 1, 2, 2])
+menu_cols = st.columns([3, 1, 2])
 with menu_cols[0]:
     st.text_input("กรอก HN หรือ ชื่อ-สกุล", key="search_input", on_change=perform_search, placeholder="HN หรือ ชื่อ-สกุล", label_visibility="collapsed")
 with menu_cols[1]:
@@ -705,36 +705,18 @@ if not results_df.empty:
         with menu_cols[2]:
             st.selectbox("ปี พ.ศ.", options=available_years, index=year_idx, format_func=lambda y: f"พ.ศ. {y}", key="year_select", on_change=handle_year_change, label_visibility="collapsed")
         
+        # --- NEW MERGING LOGIC ---
         person_year_df = results_df[results_df["Year"] == st.session_state.selected_year]
-        
-        # --- REVISED LOGIC FOR ROW SELECTION ---
+
         if person_year_df.empty:
             st.warning(f"ไม่พบข้อมูลการตรวจสำหรับปี พ.ศ. {st.session_state.selected_year}")
             st.session_state.pop("person_row", None)
             st.session_state.pop("selected_row_found", None)
         else:
-            date_map_df = pd.DataFrame({'original_date': person_year_df['วันที่ตรวจ'], 'normalized_date': person_year_df['วันที่ตรวจ'].apply(normalize_thai_date)}).drop_duplicates().dropna(subset=['normalized_date'])
-            valid_exam_dates_normalized = sorted(date_map_df['normalized_date'].unique().tolist(), reverse=True)
-            
-            # If there are valid dates, show date selector
-            if valid_exam_dates_normalized:
-                with menu_cols[3]:
-                    if st.session_state.get("selected_date") not in valid_exam_dates_normalized:
-                        st.session_state.selected_date = valid_exam_dates_normalized[0]
-                    date_idx = valid_exam_dates_normalized.index(st.session_state.selected_date)
-                    selected_normalized_date = st.selectbox("วันที่ตรวจ", options=valid_exam_dates_normalized, index=date_idx, key=f"date_select_{st.session_state.selected_year}", label_visibility="collapsed")
-                    st.session_state.selected_date = selected_normalized_date
-                    
-                    original_date_to_find = date_map_df[date_map_df['normalized_date'] == selected_normalized_date]['original_date'].iloc[0]
-                    final_row_df = person_year_df[person_year_df["วันที่ตรวจ"] == original_date_to_find]
-                    if not final_row_df.empty:
-                        st.session_state.person_row = final_row_df.iloc[0].to_dict()
-                        st.session_state.selected_row_found = True
-            # If no valid dates, but data exists, select the first row automatically
-            else:
-                st.session_state.person_row = person_year_df.iloc[0].to_dict()
-                st.session_state.selected_row_found = True
-                st.session_state.selected_date = person_year_df.iloc[0]['วันที่ตรวจ'] # Store the (potentially empty) date
+            # Merge all rows for the selected year into a single comprehensive record.
+            merged_series = person_year_df.bfill().ffill().iloc[0]
+            st.session_state.person_row = merged_series.to_dict()
+            st.session_state.selected_row_found = True
 
 st.markdown("<hr>", unsafe_allow_html=True)
 
