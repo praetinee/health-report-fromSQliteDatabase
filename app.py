@@ -561,18 +561,18 @@ def display_common_header(person_data):
     st.markdown(f"""<div class="personal-info-container">
         <hr style="margin-top: 0.5rem; margin-bottom: 1.5rem;">
         <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; margin-bottom: 1rem; text-align: center; line-height: 1.8;">
-            <div><b>ชื่อ-สกุล:</b> {person_data.get('ชื่อ-สกุล', '-')}</div>
-            <div><b>อายุ:</b> {str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person_data.get('อายุ', '-')} ปี</div>
-            <div><b>เพศ:</b> {person_data.get('เพศ', '-')}</div>
-            <div><b>HN:</b> {str(int(float(person_data.get('HN')))) if str(person_data.get('HN')).replace('.', '', 1).isdigit() else person_data.get('HN', '-')}</div>
-            <div><b>หน่วยงาน:</b> {person_data.get('หน่วยงาน', '-')}</div>
+            <div><b>ชื่อ-สกุล:</b> {html.escape(str(person_data.get('ชื่อ-สกุล', '-')))}</div>
+            <div><b>อายุ:</b> {html.escape(str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else str(person_data.get('อายุ', '-')))} ปี</div>
+            <div><b>เพศ:</b> {html.escape(str(person_data.get('เพศ', '-')))}</div>
+            <div><b>HN:</b> {html.escape(str(person_data.get('HN', '-')))}</div>
+            <div><b>หน่วยงาน:</b> {html.escape(str(person_data.get('หน่วยงาน', '-')))}</div>
         </div>
         <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; margin-bottom: 1.5rem; text-align: center; line-height: 1.8;">
-            <div><b>น้ำหนัก:</b> {weight_display}</div>
-            <div><b>ส่วนสูง:</b> {height_display}</div>
-            <div><b>รอบเอว:</b> {waist_display}</div>
-            <div><b>ความดันโลหิต:</b> {bp_full}</div>
-            <div><b>ชีพจร:</b> {pulse}</div>
+            <div><b>น้ำหนัก:</b> {html.escape(weight_display)}</div>
+            <div><b>ส่วนสูง:</b> {html.escape(height_display)}</div>
+            <div><b>รอบเอว:</b> {html.escape(waist_display)}</div>
+            <div><b>ความดันโลหิต:</b> {html.escape(bp_full)}</div>
+            <div><b>ชีพจร:</b> {html.escape(pulse)}</div>
         </div>
         {f"<div style='margin-top: 1rem; text-align: center;'><b>คำแนะนำ:</b> {summary_advice}</div>" if summary_advice else ""}
     </div>""", unsafe_allow_html=True)
@@ -670,9 +670,9 @@ def render_vision_table_html(df):
     for _, row in df.iterrows():
         table_body += f"""
         <tr>
-            <td>{row['รายการตรวจ (Vision Test)']}</td>
+            <td>{html.escape(str(row['รายการตรวจ (Vision Test)']))}</td>
             <td>{row['ปกติ (Normal)']}</td>
-            <td>{row['ผิดปกติ (Abnormal)']}</td>
+            <td>{html.escape(str(row['ผิดปกติ (Abnormal)']))}</td>
         </tr>
         """
     table_body += "</tbody>"
@@ -831,3 +831,6 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             display_main_report(person_data)
 else:
     st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
+```"
+
+I am seeing a syntax error at line 833 of the `app.py` file, which is an `unterminated string literal`. The user has pointed out that this error is in the last canvas document I provided. How should I respond to the us
