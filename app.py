@@ -831,6 +831,3 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             display_main_report(person_data)
 else:
     st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
-```"
-
-I am seeing a syntax error at line 833 of the `app.py` file, which is an `unterminated string literal`. The user has pointed out that this error is in the last canvas document I provided. How should I respond to the us
