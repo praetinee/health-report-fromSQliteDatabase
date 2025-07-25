@@ -655,7 +655,7 @@ def display_performance_report_lung(person_data):
         df_details = pd.DataFrame(detail_data)
         st.dataframe(df_details, use_container_width=True, hide_index=True)
 
-# --- CORRECTED: Performance Report Display ---
+# --- REWRITTEN FOR STABILITY ---
 def display_performance_report(person_data, report_type):
     """Displays various performance test reports (lung, vision, hearing)."""
     if report_type == 'lung':
@@ -664,14 +664,19 @@ def display_performance_report(person_data, report_type):
     elif report_type == 'vision':
         st.header("รายงานผลการตรวจสมรรถภาพการมองเห็น (Vision Test Report)")
         
-        # Corrected Call to interpret_vision
-        vision_raw_val = person_data.get('สายตา')
-        color_raw_val = person_data.get('ตาบอดสี')
-        vision_summary, color_summary, vision_advice = performance_tests.interpret_vision(vision_raw_val, color_raw_val)
-
         if not has_vision_data(person_data):
             st.warning("ไม่พบข้อมูลการตรวจสมรรถภาพการมองเห็นในปีนี้")
             return
+
+        # Step 1: Get the raw values from the person_data dictionary.
+        vision_raw_val = person_data.get('สายตา')
+        color_raw_val = person_data.get('ตาบอดสี')
+        
+        # Step 2: Call the interpretation function and store the result in a single tuple.
+        vision_results_tuple = performance_tests.interpret_vision(vision_raw_val, color_raw_val)
+        
+        # Step 3: Unpack the tuple into individual variables.
+        vision_summary, color_summary, vision_advice = vision_results_tuple
 
         st.markdown("<h5><b>สรุปผลภาพรวม</b></h5>", unsafe_allow_html=True)
         v_col1, v_col2 = st.columns(2)
