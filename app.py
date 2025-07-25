@@ -347,12 +347,17 @@ def load_sqlite_data():
         
         df_loaded.columns = df_loaded.columns.str.strip()
         
-        # --- FINAL FIX for HN Search (Handles REAL data type) ---
-        # Coerce to numeric, making non-numbers NaN. Then drop rows with invalid HNs.
-        df_loaded['HN'] = pd.to_numeric(df_loaded['HN'], errors='coerce')
-        df_loaded.dropna(subset=['HN'], inplace=True)
-        # Convert the numeric HN (float/REAL) to a 64-bit integer to remove decimals, then to string for searching.
-        df_loaded['HN'] = df_loaded['HN'].astype(np.int64).astype(str)
+        # --- ROBUST FINAL FIX for HN Search ---
+        def clean_hn(hn_val):
+            if pd.isna(hn_val): return ""
+            # Convert to string, strip whitespace
+            s_val = str(hn_val).strip()
+            # Remove '.0' if it exists at the end of the string
+            if s_val.endswith('.0'):
+                return s_val[:-2]
+            return s_val
+            
+        df_loaded['HN'] = df_loaded['HN'].apply(clean_hn)
         # -------------------------------------------------------------
 
         df_loaded['ชื่อ-สกุล'] = df_loaded['ชื่อ-สกุล'].astype(str).str.strip().str.replace(r'\s+', ' ', regex=True)
@@ -710,4 +715,68 @@ if not results_df.empty:
                     st.warning(f"ไม่พบวันที่ตรวจที่ถูกต้องสำหรับปี {st.session_state.selected_year}")
                     st.session_state.person_row = person_year_df.iloc[0].to_dict()
                     st.session_state.selected_row_found = True
-                    st.session_state.selected_date = person_ye
+                    st.session_state.selected_date = person_year_df.iloc[0]['วันที่ตรวจ']
+                else:
+                    st.warning(f"ไม่พบวันที่ตรวจสำหรับปี {st.session_state.selected_year}")
+                    st.session_state.pop("person_row", None); st.session_state.pop("selected_row_found", None); st.session_state.pop("selected_date", None)
+            else:
+                if st.session_state.get("selected_date") not in valid_exam_dates_normalized:
+                    st.session_state.selected_date = valid_exam_dates_normalized[0]
+                date_idx = valid_exam_dates_normalized.index(st.session_state.selected_date)
+                selected_normalized_date = st.selectbox("วันที่ตรวจ", options=valid_exam_dates_normalized, index=date_idx, key=f"date_select_{st.session_state.selected_year}", label_visibility="collapsed")
+                st.session_state.selected_date = selected_normalized_date
+                
+                original_date_to_find = date_map_df[date_map_df['normalized_date'] == selected_normalized_date]['original_date'].iloc[0]
+                final_row_df = person_year_df[person_year_df["วันที่ตรวจ"] == original_date_to_find]
+                if not final_row_df.empty:
+                    st.session_state.person_row = final_row_df.iloc[0].to_dict()
+                    st.session_state.selected_row_found = True
+
+st.markdown("<hr>", unsafe_allow_html=True)
+
+# Main logic to switch between pages
+if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
+    person_data = st.session_state.person_row
+
+    # --- UPDATED: Dynamic Button Creation Logic ---
+    available_reports = {}
+    if has_basic_health_data(person_data):
+        available_reports['main_report'] = "สุขภาพพื้นฐาน"
+    if has_vision_data(person_data):
+        available_reports['vision_report'] = "สมรรถภาพการมองเห็น"
+    if has_hearing_data(person_data):
+        available_reports['hearing_report'] = "สมรรถภาพการได้ยิน"
+    if has_lung_data(person_data):
+        available_reports['lung_report'] = "ความจุปอด"
+
+    if not available_reports:
+        display_common_header(person_data)
+        st.warning("ไม่พบข้อมูลการตรวจใดๆ สำหรับวันที่และปีที่เลือก")
+    else:
+        # Default page logic
+        if st.session_state.page not in available_reports:
+            st.session_state.page = list(available_reports.keys())[0]
+
+        # Display buttons in a single row
+        btn_cols = st.columns(len(available_reports) or [1])
+        for i, (page_key, page_title) in enumerate(available_reports.items()):
+            with btn_cols[i]:
+                if st.button(page_title, use_container_width=True):
+                    st.session_state.page = page_key
+                    st.rerun()
+
+        # Display the common header and then the selected page
+        display_common_header(person_data)
+        
+        page_to_show = st.session_state.page
+        if page_to_show == 'vision_report':
+            display_performance_report(person_data, 'vision')
+        elif page_to_show == 'hearing_report':
+            display_performance_report(person_data, 'hearing')
+        elif page_to_show == 'lung_report':
+            display_performance_report(person_data, 'lung')
+        elif page_to_show == 'main_report':
+            display_main_report(person_data)
+
+else:
+    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
