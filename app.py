@@ -347,21 +347,9 @@ def load_sqlite_data():
         
         df_loaded.columns = df_loaded.columns.str.strip()
         
-        # --- NEW, more robust HN cleaning for REAL data type ---
-        def clean_real_hn_to_str(hn_val):
-            # Handles empty/null values
-            if pd.isna(hn_val):
-                return ""
-            # Convert to string and strip whitespace
-            s_val = str(hn_val).strip()
-            # If it's a float-like string ending in .0, remove the decimal part
-            if s_val.endswith('.0'):
-                return s_val[:-2]
-            # Otherwise, return the stripped string
-            return s_val
-
-        # Apply the cleaning function and ensure the final type is string
-        df_loaded['HN'] = df_loaded['HN'].apply(clean_real_hn_to_str).astype(str)
+        # --- FINAL FIX for HN Search ---
+        # Ensure HN is a clean string for consistent searching
+        df_loaded['HN'] = df_loaded['HN'].astype(str).str.strip()
         # -------------------------------------------------------------
 
         df_loaded['ชื่อ-สกุล'] = df_loaded['ชื่อ-สกุล'].astype(str).str.strip().str.replace(r'\s+', ' ', regex=True)
