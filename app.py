@@ -15,7 +15,7 @@ import os
 # --- Helper Functions (Existing) ---
 def is_empty(val):
     """Check if a value is empty, null, or whitespace."""
-    return str(val).strip().lower() in ["", "-", "none", "nan", "null"]
+    return pd.isna(val) or str(val).strip().lower() in ["", "-", "none", "nan", "null"]
 
 THAI_MONTHS_GLOBAL = {1: "มกราคม", 2: "กุมภาพันธ์", 3: "มีนาคม", 4: "เมษายน", 5: "พฤษภาคม", 6: "มิถุนายน", 7: "กรกฎาคม", 8: "สิงหาคม", 9: "กันยายน", 10: "ตุลาคม", 11: "พฤศจิกายน", 12: "ธันวาคม"}
 THAI_MONTH_ABBR_TO_NUM_GLOBAL = {"ม.ค.": 1, "ม.ค": 1, "มกราคม": 1, "ก.พ.": 2, "ก.พ": 2, "กพ": 2, "กุมภาพันธ์": 2, "มี.ค.": 3, "มี.ค": 3, "มีนาคม": 3, "เม.ย.": 4, "เม.ย": 4, "เมษายน": 4, "พ.ค.": 5, "พ.ค": 5, "พฤษภาคม": 5, "มิ.ย.": 6, "มิ.ย": 6, "มิถุนายน": 6, "ก.ค.": 7, "ก.ค": 7, "กรกฎาคม": 7, "ส.ค.": 8, "ส.ค": 8, "สิงหาคม": 8, "ก.ย.": 9, "ก.ย": 9, "กันยายน": 9, "ต.ค.": 10, "ต.ค": 10, "ตุลาคม": 10, "พ.ย.": 11, "พ.ย": 11, "พฤศจิกายน": 11, "ธ.ค.": 12, "ธ.ค": 12, "ธันวาคม": 12}
@@ -334,7 +334,8 @@ def merge_final_advice_grouped(messages):
 def load_sqlite_data():
     tmp_path = None
     try:
-        file_id = "1HruO9AMrUfniC8hBWtumVdxLJayEc1Xr"
+        # This should point to your actual database file or URL
+        file_id = "1HruO9AMrUfniC8hBWtumVdxLJayEc1Xr" # Example Google Drive ID
         download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
         response = requests.get(download_url)
         response.raise_for_status()
@@ -347,18 +348,21 @@ def load_sqlite_data():
         
         df_loaded.columns = df_loaded.columns.str.strip()
         
-        # --- ROBUST FINAL FIX for HN Search ---
         def clean_hn(hn_val):
             if pd.isna(hn_val): return ""
-            # Convert to string, strip whitespace
             s_val = str(hn_val).strip()
-            # Remove '.0' if it exists at the end of the string
-            if s_val.endswith('.0'):
-                return s_val[:-2]
+            if s_val.endswith('.0'): return s_val[:-2]
             return s_val
             
         df_loaded['HN'] = df_loaded['HN'].apply(clean_hn)
-        # -------------------------------------------------------------
+        
+        # Add cleaning for vision columns here if needed
+        # For example:
+        # vision_cols = ['Vision_Binocular', 'Vision_Far_Both', ...] # List all vision cols
+        # for col in vision_cols:
+        #     if col in df_loaded.columns:
+        #         df_loaded[col] = df_loaded[col].astype(str).str.strip()
+
 
         df_loaded['ชื่อ-สกุล'] = df_loaded['ชื่อ-สกุล'].astype(str).str.strip().str.replace(r'\s+', ' ', regex=True)
         df_loaded['เลขบัตรประชาชน'] = df_loaded['เลขบัตรประชาชน'].astype(str).str.strip()
@@ -372,15 +376,23 @@ def load_sqlite_data():
         if tmp_path and os.path.exists(tmp_path):
             os.remove(tmp_path)
 
-# --- NEW: Data Availability Checkers ---
+# --- Data Availability Checkers ---
 def has_basic_health_data(person_data):
     """Check for a few key indicators of a basic health checkup."""
     key_indicators = ['FBS', 'CHOL', 'HCT', 'Cr', 'WBC (cumm)', 'น้ำหนัก', 'ส่วนสูง', 'SBP']
     return any(not is_empty(person_data.get(key)) for key in key_indicators)
 
 def has_vision_data(person_data):
-    """Check for vision test data."""
-    return not is_empty(person_data.get('สายตา')) or not is_empty(person_data.get('ตาบอดสี'))
+    """Check for any vision test data, summary or detailed."""
+    summary_keys = ['สายตา', 'ตาบอดสี']
+    detailed_keys = [
+        'Vision_Binocular', 'Vision_Far_Both', 'Vision_Far_Right', 'Vision_Far_Left',
+        'Vision_Stereo', 'Vision_Color', 'Vision_Vertical_Phoria', 'Vision_Lateral_Phoria',
+        'Vision_Near_Both', 'Vision_Near_Right', 'Vision_Near_Left', 'Vision_Near_Lateral_Phoria',
+        'Vision_Field'
+    ]
+    return any(not is_empty(person_data.get(key)) for key in summary_keys + detailed_keys)
+
 
 def has_hearing_data(person_data):
     """Check for hearing test data."""
@@ -392,7 +404,7 @@ def has_lung_data(person_data):
     return any(not is_empty(person_data.get(key)) for key in key_indicators)
 
 
-# --- UI and Report Rendering Functions (Including refactored headers) ---
+# --- UI and Report Rendering Functions ---
 def interpret_bp(sbp, dbp):
     """Interprets blood pressure readings."""
     try:
@@ -482,6 +494,112 @@ def display_common_header(person_data):
         {f"<div style='margin-top: 1rem; text-align: center;'><b>คำแนะนำ:</b> {summary_advice}</div>" if summary_advice else ""}
     </div>""", unsafe_allow_html=True)
 
+# --- NEW: Vision Details Table Renderer ---
+def render_vision_details_table(person_data):
+    """
+    Renders a modern, detailed HTML table for the 13-point vision test.
+    """
+    # Map display names to ASSUMED database column names and possible outcomes.
+    # *** IMPORTANT: You may need to change the 'db_col' values to match your database. ***
+    vision_tests = [
+        {'display': '1. การมองด้วย 2 ตา (Binocular vision)', 'db_col': 'Vision_Binocular', 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '2. การมองภาพระยะไกลด้วยสองตา (Far vision - Both)', 'db_col': 'Vision_Far_Both', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '3. การมองภาพระยะไกลด้วยตาขวา (Far vision - Right)', 'db_col': 'Vision_Far_Right', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '4. การมองภาพระยะไกลด้วยตาซ้าย (Far vision - Left)', 'db_col': 'Vision_Far_Left', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '5. การมองภาพ 3 มิติ (Stereo depth)', 'db_col': 'Vision_Stereo', 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '6. การมองจำแนกสี (Color discrimination)', 'db_col': 'Vision_Color', 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '7. ความสมดุลกล้ามเนื้อตาแนวดิ่ง (Far vertical phoria)', 'db_col': 'Vision_Vertical_Phoria', 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '8. ความสมดุลกล้ามเนื้อตาแนวนอน (Far lateral phoria)', 'db_col': 'Vision_Lateral_Phoria', 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '9. การมองภาพระยะใกล้ด้วยสองตา (Near vision - Both)', 'db_col': 'Vision_Near_Both', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '10. การมองภาพระยะใกล้ด้วยตาขวา (Near vision - Right)', 'db_col': 'Vision_Near_Right', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '11. การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision - Left)', 'db_col': 'Vision_Near_Left', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '12. ความสมดุลกล้ามเนื้อตาแนวนอน (Near lateral phoria)', 'db_col': 'Vision_Near_Lateral_Phoria', 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '13. ลานสายตา (Visual field)', 'db_col': 'Vision_Field', 'outcomes': ['ปกติ', 'ผิดปกติ']}
+    ]
+
+    # Start building the HTML string
+    html = """
+    <style>
+        .vision-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            margin-top: 1.5rem;
+        }
+        .vision-table th, .vision-table td {
+            border: 1px solid #e0e0e0;
+            padding: 8px;
+            text-align: left;
+            vertical-align: middle;
+        }
+        .vision-table th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+        }
+        .vision-table tr:nth-child(even) {
+            background-color: #fafafa;
+        }
+        .vision-table .result-col {
+            text-align: center;
+            width: 150px;
+        }
+        .result-item {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            margin: 0 4px;
+            border: 1px solid transparent;
+        }
+        .result-selected {
+            font-weight: bold;
+            color: white;
+        }
+        .result-normal { background-color: #2e7d32; } /* Green */
+        .result-abnormal { background-color: #c62828; } /* Red */
+        .result-not-selected {
+            background-color: #e0e0e0;
+            color: #616161;
+            border: 1px solid #bdbdbd;
+        }
+    </style>
+    <table class="vision-table">
+        <thead>
+            <tr>
+                <th>รายการตรวจ (Vision Test)</th>
+                <th class="result-col">ผลปกติ / ชัดเจน</th>
+                <th class="result-col">ผลผิดปกติ / ไม่ชัดเจน</th>
+            </tr>
+        </thead>
+        <tbody>
+    """
+
+    # Populate table rows
+    for test in vision_tests:
+        result_value = str(person_data.get(test['db_col'], '')).strip()
+        normal_outcome, abnormal_outcome = test['outcomes']
+        
+        is_normal = normal_outcome.lower() in result_value.lower()
+        is_abnormal = abnormal_outcome.lower() in result_value.lower()
+
+        normal_class = "result-selected result-normal" if is_normal else "result-not-selected"
+        abnormal_class = "result-selected result-abnormal" if is_abnormal else "result-not-selected"
+        
+        # If no data, both are not-selected
+        if not is_normal and not is_abnormal:
+            normal_class = "result-not-selected"
+            abnormal_class = "result-not-selected"
+
+        html += f"""
+            <tr>
+                <td>{test['display']}</td>
+                <td class="result-col"><span class="result-item {normal_class}">{normal_outcome}</span></td>
+                <td class="result-col"><span class="result-item {abnormal_class}">{abnormal_outcome}</span></td>
+            </tr>
+        """
+
+    html += "</tbody></table>"
+    return html
 
 def display_performance_report_lung(person_data):
     """
@@ -530,20 +648,39 @@ def display_performance_report_lung(person_data):
         df_details = pd.DataFrame(detail_data)
         st.dataframe(df_details, use_container_width=True, hide_index=True)
 
+# --- UPDATED: Performance Report Display ---
 def display_performance_report(person_data, report_type):
     """Displays various performance test reports (lung, vision, hearing)."""
     if report_type == 'lung':
         display_performance_report_lung(person_data)
+        
     elif report_type == 'vision':
-        st.header("รายงานผลการตรวจสมรรถภาพการมองเห็น (Vision)")
-        vision_summary, color_summary, vision_advice = performance_tests.interpret_vision(person_data.get('สายตา'), person_data.get('ตาบอดสี'))
-        if vision_summary == "ไม่ได้เข้ารับการตรวจ" and color_summary == "ไม่ได้เข้ารับการตรวจ":
-            st.warning("ไม่ได้เข้ารับการตรวจสมรรถภาพการมองเห็นในปีนี้")
+        st.header("รายงานผลการตรวจสมรรถภาพการมองเห็น (Vision Test Report)")
+        vision_summary, color_summary, vision_advice = performance_tests.interpret_vision(
+            person_data.get('สายตา'), person_data.get('ตาบอดสี')
+        )
+
+        # Check if there is any data to display at all
+        if not has_vision_data(person_data):
+            st.warning("ไม่พบข้อมูลการตรวจสมรรถภาพการมองเห็นในปีนี้")
             return
+
+        # --- Summary Metrics ---
+        st.markdown("<h5><b>สรุปผลภาพรวม</b></h5>", unsafe_allow_html=True)
         v_col1, v_col2 = st.columns(2)
-        v_col1.metric("ผลตรวจสายตา", vision_summary)
-        v_col2.metric("ผลตรวจตาบอดสี", color_summary)
-        if vision_advice: st.info(f"**คำแนะนำ:** {vision_advice}")
+        v_col1.metric("ผลตรวจสายตา (ทั่วไป)", vision_summary if not is_empty(vision_summary) else "ไม่มีข้อมูลสรุป")
+        v_col2.metric("ผลตรวจตาบอดสี", color_summary if not is_empty(color_summary) else "ไม่มีข้อมูลสรุป")
+        if vision_advice:
+            st.info(f"**คำแนะนำ:** {vision_advice}")
+
+        st.markdown("<hr>", unsafe_allow_html=True)
+        
+        # --- Detailed Table ---
+        st.markdown("<h5><b>ผลการตรวจโดยละเอียด</b></h5>", unsafe_allow_html=True)
+        # Call the new function to render the detailed table
+        detailed_table_html = render_vision_details_table(person_data)
+        st.markdown(detailed_table_html, unsafe_allow_html=True)
+        
     elif report_type == 'hearing':
         st.header("รายงานผลการตรวจสมรรถภาพการได้ยิน (Hearing)")
         hearing_summary, hearing_advice = performance_tests.interpret_hearing(person_data.get('การได้ยิน'))
@@ -656,7 +793,6 @@ def perform_search():
     raw_search_term = st.session_state.search_query.strip()
     search_term = re.sub(r'\s+', ' ', raw_search_term)
     if search_term:
-        # Use .str.contains() for name search for more flexibility
         if search_term.isdigit():
              results_df = df[df["HN"] == search_term].copy()
         else:
@@ -705,7 +841,6 @@ if not results_df.empty:
         with menu_cols[2]:
             st.selectbox("ปี พ.ศ.", options=available_years, index=year_idx, format_func=lambda y: f"พ.ศ. {y}", key="year_select", on_change=handle_year_change, label_visibility="collapsed")
         
-        # --- NEW MERGING LOGIC ---
         person_year_df = results_df[results_df["Year"] == st.session_state.selected_year]
 
         if person_year_df.empty:
@@ -713,7 +848,6 @@ if not results_df.empty:
             st.session_state.pop("person_row", None)
             st.session_state.pop("selected_row_found", None)
         else:
-            # Merge all rows for the selected year into a single comprehensive record.
             merged_series = person_year_df.bfill().ffill().iloc[0]
             st.session_state.person_row = merged_series.to_dict()
             st.session_state.selected_row_found = True
@@ -724,7 +858,6 @@ st.markdown("<hr>", unsafe_allow_html=True)
 if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
     person_data = st.session_state.person_row
 
-    # --- UPDATED: Dynamic Button Creation Logic ---
     available_reports = {}
     if has_basic_health_data(person_data):
         available_reports['main_report'] = "สุขภาพพื้นฐาน"
@@ -739,11 +872,9 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         display_common_header(person_data)
         st.warning("ไม่พบข้อมูลการตรวจใดๆ สำหรับวันที่และปีที่เลือก")
     else:
-        # Default page logic
         if st.session_state.page not in available_reports:
             st.session_state.page = list(available_reports.keys())[0]
 
-        # Display buttons in a single row
         btn_cols = st.columns(len(available_reports) or [1])
         for i, (page_key, page_title) in enumerate(available_reports.items()):
             with btn_cols[i]:
@@ -751,7 +882,6 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                     st.session_state.page = page_key
                     st.rerun()
 
-        # Display the common header and then the selected page
         display_common_header(person_data)
         
         page_to_show = st.session_state.page
@@ -766,3 +896,4 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
 
 else:
     st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
+
