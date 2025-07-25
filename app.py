@@ -830,4 +830,4 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         elif page_to_show == 'main_report':
             display_main_report(person_data)
 else:
-    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")" from the latest Canvas "app.py (ฉบับเต็ม รวมผลตรวจตา)" abo
+    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
