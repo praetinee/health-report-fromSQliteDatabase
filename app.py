@@ -1011,7 +1011,3 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
 
 else:
     st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
-" from the code I have selected.
-I would like to modify the code.
-Here are the instructions:
-ให้แก้โค้ดเฉพาะส่วนที่เล
