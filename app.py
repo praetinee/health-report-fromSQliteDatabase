@@ -749,38 +749,11 @@ def display_performance_report(person_data, report_type):
             st.warning("ไม่พบข้อมูลการตรวจสมรรถภาพการมองเห็นในปีนี้")
             return
 
-        vision_raw = person_data.get('สายตา')
-        color_blindness_raw = person_data.get('ตาบอดสี')
+        vision_advice_summary = person_data.get('สรุปเหมาะสมกับงาน')
         
-        vision_summary = "ไม่ได้เข้ารับการตรวจ"
-        color_summary = "ไม่ได้เข้ารับการตรวจ"
-        advice_parts = []
-
-        if not is_empty(vision_raw):
-            vision_lower = str(vision_raw).lower().strip()
-            if "ปกติ" in vision_lower:
-                vision_summary = "ปกติ"
-            elif "ผิดปกติ" in vision_lower or "สั้น" in vision_lower or "ยาว" in vision_lower or "เอียง" in vision_lower:
-                vision_summary = "ผิดปกติ"
-                advice_parts.append("สายตาผิดปกติ ควรปรึกษาจักษุแพทย์เพื่อตรวจวัดสายตาและพิจารณาตัดแว่น")
-            else:
-                vision_summary = vision_raw
-
-        if not is_empty(color_blindness_raw):
-            color_blindness_lower = str(color_blindness_raw).lower().strip()
-            if "ปกติ" in color_blindness_lower:
-                color_summary = "ปกติ"
-            elif "ผิดปกติ" in color_blindness_lower:
-                color_summary = "ผิดปกติ"
-                advice_parts.append("ภาวะตาบอดสี ควรหลีกเลี่ยงงานที่ต้องใช้การแยกสีที่สำคัญ")
-            else:
-                color_summary = color_blindness_raw
-        
-        vision_advice = " ".join(advice_parts)
-
         st.markdown("<h5><b>สรุปสมรรถภาพการมองเห็น</b></h5>", unsafe_allow_html=True)
-        if vision_advice:
-            st.info(f"**คำแนะนำ:** {vision_advice}")
+        if not is_empty(vision_advice_summary):
+            st.info(f"**สรุปความเหมาะสมกับงาน:** {vision_advice_summary}")
 
         st.markdown("<hr>", unsafe_allow_html=True)
         
