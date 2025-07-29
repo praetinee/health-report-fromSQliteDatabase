@@ -864,13 +864,18 @@ def display_main_report(person_data):
     with doctor_col:
         st.markdown(f"<div style='background-color: #1b5e20; color: white; padding: 0.4rem 2rem; border-radius: 8px; line-height: 1.6; margin-top: 2rem; margin-bottom: 2rem; font-size: 14px;'><b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}</div>", unsafe_allow_html=True)
     
-    st.markdown(f"""<div style='margin-top: 7rem; text-align: right; padding-right: 1rem;'>
-        <div style='display: inline-block; text-align: center; width: 340px;'>
-            <div style='border-bottom: 1px dotted #ccc; margin-bottom: 0.5rem; width: 100%;'></div>
+    # --- CORRECTED SIGNATURE LAYOUT ---
+    st.markdown("<div style='margin-top: 7rem;'></div>", unsafe_allow_html=True)
+    sig_left, sig_mid, sig_right = st.columns([2, 3, 2])
+    with sig_right:
+        st.markdown("""
+        <div style='text-align: center;'>
+            <div style='border-bottom: 1px dotted var(--text-color); margin-bottom: 0.5rem; width: 100%;'></div>
             <div style='white-space: nowrap;'>นายแพทย์นพรัตน์ รัชฎาพร</div>
             <div style='white-space: nowrap;'>เลขที่ใบอนุญาตผู้ประกอบวิชาชีพเวชกรรม ว.26674</div>
         </div>
-    </div>""", unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
+
 
 # --- Main Application Logic ---
 # Load data once
@@ -1001,4 +1006,4 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             display_main_report(person_data)
 
 else:
-    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
+    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภา
