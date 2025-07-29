@@ -438,6 +438,7 @@ def interpret_cxr(val):
     if any(keyword in val.lower() for keyword in ["ผิดปกติ", "ฝ้า", "รอย", "abnormal", "infiltrate", "lesion"]): return f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
     return val
 
+# --- CORRECTED: display_common_header ---
 def display_common_header(person_data):
     """Displays the common report header with personal and vital sign info."""
     check_date = person_data.get("วันที่ตรวจ", "ไม่มีข้อมูล")
@@ -468,24 +469,29 @@ def display_common_header(person_data):
     waist_display = f"{person_data.get('รอบเอว', '-')} ซม." if not is_empty(person_data.get('รอบเอว', '-')) else "-"
     summary_advice = html.escape(combined_health_advice(bmi_val, person_data.get("SBP", ""), person_data.get("DBP", "")))
     
-    st.markdown(f"""<div class="personal-info-container">
-        <hr style="margin-top: 0.5rem; margin-bottom: 1.5rem;">
-        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; margin-bottom: 1rem; text-align: center; line-height: 1.8;">
-            <div><b>ชื่อ-สกุล:</b> {person_data.get('ชื่อ-สกุล', '-')}</div>
-            <div><b>อายุ:</b> {str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person_data.get('อายุ', '-')} ปี</div>
-            <div><b>เพศ:</b> {person_data.get('เพศ', '-')}</div>
-            <div><b>HN:</b> {str(int(float(person_data.get('HN')))) if str(person_data.get('HN')).replace('.', '', 1).isdigit() else person_data.get('HN', '-')}</div>
-            <div><b>หน่วยงาน:</b> {person_data.get('หน่วยงาน', '-')}</div>
-        </div>
-        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; margin-bottom: 1.5rem; text-align: center; line-height: 1.8;">
-            <div><b>น้ำหนัก:</b> {weight_display}</div>
-            <div><b>ส่วนสูง:</b> {height_display}</div>
-            <div><b>รอบเอว:</b> {waist_display}</div>
-            <div><b>ความดันโลหิต:</b> {bp_full}</div>
-            <div><b>ชีพจร:</b> {pulse}</div>
-        </div>
-        {f"<div style='margin-top: 1rem; text-align: center;'><b>คำแนะนำ:</b> {summary_advice}</div>" if summary_advice else ""}
-    </div>""", unsafe_allow_html=True)
+    html_parts = []
+    html_parts.append('<div class="personal-info-container">')
+    html_parts.append('<hr style="margin-top: 0.5rem; margin-bottom: 1.5rem;">')
+    html_parts.append('<div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; margin-bottom: 1rem; text-align: center; line-height: 1.8;">')
+    html_parts.append(f"<div><b>ชื่อ-สกุล:</b> {person_data.get('ชื่อ-สกุล', '-')}</div>")
+    html_parts.append(f"<div><b>อายุ:</b> {str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person_data.get('อายุ', '-')} ปี</div>")
+    html_parts.append(f"<div><b>เพศ:</b> {person_data.get('เพศ', '-')}</div>")
+    html_parts.append(f"<div><b>HN:</b> {str(int(float(person_data.get('HN')))) if str(person_data.get('HN')).replace('.', '', 1).isdigit() else person_data.get('HN', '-')}</div>")
+    html_parts.append(f"<div><b>หน่วยงาน:</b> {person_data.get('หน่วยงาน', '-')}</div>")
+    html_parts.append('</div>')
+    html_parts.append('<div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; margin-bottom: 1.5rem; text-align: center; line-height: 1.8;">')
+    html_parts.append(f"<div><b>น้ำหนัก:</b> {weight_display}</div>")
+    html_parts.append(f"<div><b>ส่วนสูง:</b> {height_display}</div>")
+    html_parts.append(f"<div><b>รอบเอว:</b> {waist_display}</div>")
+    html_parts.append(f"<div><b>ความดันโลหิต:</b> {bp_full}</div>")
+    html_parts.append(f"<div><b>ชีพจร:</b> {pulse}</div>")
+    html_parts.append('</div>')
+    if summary_advice:
+        html_parts.append(f"<div style='margin-top: 1rem; text-align: center;'><b>คำแนะนำ:</b> {summary_advice}</div>")
+    html_parts.append('</div>')
+    
+    st.markdown("".join(html_parts), unsafe_allow_html=True)
+
 
 # --- CORRECTED: Centralized CSS Injection for a Clearer, Theme-Adaptive Table ---
 def inject_custom_css():
