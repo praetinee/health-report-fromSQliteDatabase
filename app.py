@@ -9,7 +9,6 @@ import numpy as np
 from collections import OrderedDict
 from datetime import datetime
 import re
-import performance_tests # Ensure this file exists
 import os
 
 # --- Helper Functions (Existing) ---
@@ -537,11 +536,11 @@ def inject_custom_css():
     </style>
     """, unsafe_allow_html=True)
 
-# --- UPDATED: Vision Details Table Renderer (CSS Removed) ---
+# --- REFACTORED: Vision Details Table Renderer ---
 def render_vision_details_table(person_data):
     """
     Renders a modern, detailed HTML table for the 13-point vision test.
-    CSS is now injected separately.
+    CSS is now injected separately. This version builds HTML parts in a list.
     """
     vision_tests = [
         {'display': '1. การมองด้วย 2 ตา (Binocular vision)', 'db_col': 'ป.การรวมภาพ', 'outcomes': ['ปกติ', 'ผิดปกติ']},
@@ -559,7 +558,8 @@ def render_vision_details_table(person_data):
         {'display': '13. ลานสายตา (Visual field)', 'db_col': 'ป.ลานสายตา', 'outcomes': ['ปกติ', 'ผิดปกติ']}
     ]
 
-    html = """
+    html_parts = []
+    html_parts.append("""
     <table class="vision-table">
         <thead>
             <tr>
@@ -569,7 +569,7 @@ def render_vision_details_table(person_data):
             </tr>
         </thead>
         <tbody>
-    """
+    """)
 
     for test in vision_tests:
         result_value = str(person_data.get(test['db_col'], '')).strip()
@@ -595,63 +595,71 @@ def render_vision_details_table(person_data):
             normal_class = "result-not-selected"
             abnormal_class = "result-not-selected"
 
-        html += f"""
+        html_parts.append(f"""
             <tr>
                 <td>{test['display']}</td>
                 <td class="result-col"><span class="result-item {normal_class}">{normal_outcome}</span></td>
                 <td class="result-col"><span class="result-item {abnormal_class}">{abnormal_outcome}</span></td>
             </tr>
-        """
+        """)
 
-    html += "</tbody></table>"
-    return html
+    html_parts.append("</tbody></table>")
+    return "".join(html_parts)
 
 def display_performance_report_lung(person_data):
     """
     แสดงผลรายงานสมรรถภาพปอดในรูปแบบที่ปรับปรุงใหม่
     """
     st.header("รายงานผลการตรวจสมรรถภาพปอด (Spirometry Report)")
-    lung_summary, lung_advice, lung_raw_values = performance_tests.interpret_lung_capacity(person_data)
+    # This function requires performance_tests.py. Ensure it's available and correct.
+    try:
+        from performance_tests import interpret_lung_capacity
+        lung_summary, lung_advice, lung_raw_values = interpret_lung_capacity(person_data)
 
-    if lung_summary == "ไม่ได้เข้ารับการตรวจ":
-        st.warning("ไม่ได้เข้ารับการตรวจสมรรถภาพปอดในปีนี้")
-        return
+        if lung_summary == "ไม่ได้เข้ารับการตรวจ":
+            st.warning("ไม่ได้เข้ารับการตรวจสมรรถภาพปอดในปีนี้")
+            return
 
-    st.markdown("<h5><b>สรุปผลการตรวจที่สำคัญ</b></h5>", unsafe_allow_html=True)
-    def format_val(key):
-        val = lung_raw_values.get(key)
-        return f"{val:.1f}" if val is not None else "-"
-    col1, col2, col3 = st.columns(3)
-    col1.metric(label="FVC (% เทียบค่ามาตรฐาน)", value=format_val('FVC %'), help="ความจุของปอดเมื่อหายใจออกเต็มที่ (ควร > 80%)")
-    col2.metric(label="FEV1 (% เทียบค่ามาตรฐาน)", value=format_val('FEV1 %'), help="ปริมาตรอากาศที่หายใจออกในวินาทีแรก (ควร > 80%)")
-    col3.metric(label="FEV1/FVC Ratio (%)", value=format_val('FEV1/FVC %'), help="สัดส่วนของ FEV1 ต่อ FVC (ควร > 70%)")
-    st.markdown("<hr>", unsafe_allow_html=True)
-
-    res_col1, res_col2 = st.columns([2, 3])
-    with res_col1:
-        st.markdown("<h5><b>ผลการแปลความหมาย</b></h5>", unsafe_allow_html=True)
-        if "ปกติ" in lung_summary: bg_color = "background-color: #2e7d32; color: white;"
-        elif "ไม่ได้" in lung_summary or "คลาดเคลื่อน" in lung_summary: bg_color = "background-color: #616161; color: white;"
-        else: bg_color = "background-color: #c62828; color: white;"
-        st.markdown(f'<div style="padding: 1rem; border-radius: 8px; {bg_color} text-align: center;"><h4 style="color: white; margin: 0; font-weight: bold;">{lung_summary}</h4></div>', unsafe_allow_html=True)
-        st.markdown("<br><h5><b>คำแนะนำ</b></h5>", unsafe_allow_html=True)
-        st.info(lung_advice or "ไม่มีคำแนะนำเพิ่มเติม")
-        st.markdown("<h5><b>ผลเอกซเรย์ทรวงอก</b></h5>", unsafe_allow_html=True)
-        selected_year = person_data.get("Year")
-        cxr_result_interpreted = "ไม่มีข้อมูล"
-        if selected_year:
-            cxr_col_name = f"CXR{str(selected_year)[-2:]}" if selected_year != (datetime.now().year + 543) else "CXR"
-            cxr_result_interpreted = interpret_cxr(person_data.get(cxr_col_name, ''))
-        st.markdown(f'<div style="font-size: 14px; padding: 0.5rem; background-color: rgba(255,255,255,0.05); border-radius: 4px;">{cxr_result_interpreted}</div>', unsafe_allow_html=True)
-    with res_col2:
-        st.markdown("<h5><b>ตารางแสดงผลโดยละเอียด</b></h5>", unsafe_allow_html=True)
-        def format_detail_val(key, format_spec, unit=""):
+        st.markdown("<h5><b>สรุปผลการตรวจที่สำคัญ</b></h5>", unsafe_allow_html=True)
+        def format_val(key):
             val = lung_raw_values.get(key)
-            if val is not None and isinstance(val, (int, float)): return f"{val:{format_spec}}{unit}"
-            return "-"
-        detail_data = {"การทดสอบ (Test)": ["FVC", "FEV1", "FEV1/FVC"],"ค่าที่วัดได้ (Actual)": [format_detail_val('FVC', '.2f', ' L'), format_detail_val('FEV1', '.2f', ' L'), format_detail_val('FEV1/FVC %', '.1f', ' %')],"ค่ามาตรฐาน (Predicted)": [format_detail_val('FVC predic', '.2f', ' L'), format_detail_val('FEV1 predic', '.2f', ' L'), format_detail_val('FEV1/FVC % pre', '.1f', ' %')],"% เทียบค่ามาตรฐาน (% Pred)": [format_detail_val('FVC %', '.1f', ' %'), format_detail_val('FEV1 %', '.1f', ' %'), "-"]}
-        df_details = pd.DataFrame(detail_data)
-        st.dataframe(df_details, use_container_width=True, hide_index=True)
+            return f"{val:.1f}" if val is not None else "-"
+        col1, col2, col3 = st.columns(3)
+        col1.metric(label="FVC (% เทียบค่ามาตรฐาน)", value=format_val('FVC %'), help="ความจุของปอดเมื่อหายใจออกเต็มที่ (ควร > 80%)")
+        col2.metric(label="FEV1 (% เทียบค่ามาตรฐาน)", value=format_val('FEV1 %'), help="ปริมาตรอากาศที่หายใจออกในวินาทีแรก (ควร > 80%)")
+        col3.metric(label="FEV1/FVC Ratio (%)", value=format_val('FEV1/FVC %'), help="สัดส่วนของ FEV1 ต่อ FVC (ควร > 70%)")
+        st.markdown("<hr>", unsafe_allow_html=True)
+
+        res_col1, res_col2 = st.columns([2, 3])
+        with res_col1:
+            st.markdown("<h5><b>ผลการแปลความหมาย</b></h5>", unsafe_allow_html=True)
+            if "ปกติ" in lung_summary: bg_color = "background-color: #2e7d32; color: white;"
+            elif "ไม่ได้" in lung_summary or "คลาดเคลื่อน" in lung_summary: bg_color = "background-color: #616161; color: white;"
+            else: bg_color = "background-color: #c62828; color: white;"
+            st.markdown(f'<div style="padding: 1rem; border-radius: 8px; {bg_color} text-align: center;"><h4 style="color: white; margin: 0; font-weight: bold;">{lung_summary}</h4></div>', unsafe_allow_html=True)
+            st.markdown("<br><h5><b>คำแนะนำ</b></h5>", unsafe_allow_html=True)
+            st.info(lung_advice or "ไม่มีคำแนะนำเพิ่มเติม")
+            st.markdown("<h5><b>ผลเอกซเรย์ทรวงอก</b></h5>", unsafe_allow_html=True)
+            selected_year = person_data.get("Year")
+            cxr_result_interpreted = "ไม่มีข้อมูล"
+            if selected_year:
+                cxr_col_name = f"CXR{str(selected_year)[-2:]}" if selected_year != (datetime.now().year + 543) else "CXR"
+                cxr_result_interpreted = interpret_cxr(person_data.get(cxr_col_name, ''))
+            st.markdown(f'<div style="font-size: 14px; padding: 0.5rem; background-color: rgba(255,255,255,0.05); border-radius: 4px;">{cxr_result_interpreted}</div>', unsafe_allow_html=True)
+        with res_col2:
+            st.markdown("<h5><b>ตารางแสดงผลโดยละเอียด</b></h5>", unsafe_allow_html=True)
+            def format_detail_val(key, format_spec, unit=""):
+                val = lung_raw_values.get(key)
+                if val is not None and isinstance(val, (int, float)): return f"{val:{format_spec}}{unit}"
+                return "-"
+            detail_data = {"การทดสอบ (Test)": ["FVC", "FEV1", "FEV1/FVC"],"ค่าที่วัดได้ (Actual)": [format_detail_val('FVC', '.2f', ' L'), format_detail_val('FEV1', '.2f', ' L'), format_detail_val('FEV1/FVC %', '.1f', ' %')],"ค่ามาตรฐาน (Predicted)": [format_detail_val('FVC predic', '.2f', ' L'), format_detail_val('FEV1 predic', '.2f', ' L'), format_detail_val('FEV1/FVC % pre', '.1f', ' %')],"% เทียบค่ามาตรฐาน (% Pred)": [format_detail_val('FVC %', '.1f', ' %'), format_detail_val('FEV1 %', '.1f', ' %'), "-"]}
+            df_details = pd.DataFrame(detail_data)
+            st.dataframe(df_details, use_container_width=True, hide_index=True)
+    except ImportError:
+        st.error("ไม่สามารถโหลดฟังก์ชันการแปลผลปอดจาก performance_tests.py ได้")
+    except Exception as e:
+        st.error(f"เกิดข้อผิดพลาดในการแสดงผลตรวจปอด: {e}")
+
 
 # --- REWRITTEN FOR STABILITY ---
 def display_performance_report(person_data, report_type):
@@ -712,13 +720,21 @@ def display_performance_report(person_data, report_type):
         
     elif report_type == 'hearing':
         st.header("รายงานผลการตรวจสมรรถภาพการได้ยิน (Hearing)")
-        hearing_summary, hearing_advice = performance_tests.interpret_hearing(person_data.get('การได้ยิน'))
-        if hearing_summary == "ไม่ได้เข้ารับการตรวจ":
-            st.warning("ไม่ได้เข้ารับการตรวจสมรรถภาพการได้ยินในปีนี้")
-            return
-        h_col1, h_col2 = st.columns(2)
-        h_col1.metric("สรุปผล", hearing_summary)
-        if hearing_advice: h_col2.info(f"**คำแนะนำ:** {hearing_advice}")
+        # This function requires performance_tests.py. Ensure it's available and correct.
+        try:
+            from performance_tests import interpret_hearing
+            hearing_summary, hearing_advice = interpret_hearing(person_data.get('การได้ยิน'))
+            if hearing_summary == "ไม่ได้เข้ารับการตรวจ":
+                st.warning("ไม่ได้เข้ารับการตรวจสมรรถภาพการได้ยินในปีนี้")
+                return
+            h_col1, h_col2 = st.columns(2)
+            h_col1.metric("สรุปผล", hearing_summary)
+            if hearing_advice: h_col2.info(f"**คำแนะนำ:** {hearing_advice}")
+        except ImportError:
+            st.error("ไม่สามารถโหลดฟังก์ชันการแปลผลการได้ยินจาก performance_tests.py ได้")
+        except Exception as e:
+            st.error(f"เกิดข้อผิดพลาดในการแสดงผลตรวจการได้ยิน: {e}")
+
 
 def display_main_report(person_data):
     """Displays the main health report with all lab sections."""
@@ -925,4 +941,4 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             display_main_report(person_data)
 
 else:
-    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
+    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภา
