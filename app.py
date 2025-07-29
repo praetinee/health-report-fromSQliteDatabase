@@ -487,7 +487,7 @@ def display_common_header(person_data):
         {f"<div style='margin-top: 1rem; text-align: center;'><b>คำแนะนำ:</b> {summary_advice}</div>" if summary_advice else ""}
     </div>""", unsafe_allow_html=True)
 
-# --- NEW: Centralized CSS Injection ---
+# --- CORRECTED: Centralized CSS Injection for Dark Theme ---
 def inject_custom_css():
     st.markdown("""
     <style>
@@ -496,19 +496,22 @@ def inject_custom_css():
             border-collapse: collapse;
             font-size: 14px;
             margin-top: 1.5rem;
+            color: var(--text-color); /* Use Streamlit's text color variable */
         }
         .vision-table th, .vision-table td {
-            border: 1px solid #e0e0e0;
+            border: 1px solid #3a3a44; /* Darker border for dark theme */
             padding: 8px;
             text-align: left;
             vertical-align: middle;
         }
         .vision-table th {
-            background-color: #f5f5f5;
-            font-weight: bold;
+            background-color: #262730; /* Dark grey header */
         }
         .vision-table tr:nth-child(even) {
-            background-color: #fafafa;
+            background-color: #1c1c22; /* Slightly lighter dark for alternating rows */
+        }
+        .vision-table tr:nth-child(odd) {
+            background-color: transparent; /* Use default background */
         }
         .vision-table .result-col {
             text-align: center;
@@ -529,9 +532,9 @@ def inject_custom_css():
         .result-normal { background-color: #2e7d32; } /* Green */
         .result-abnormal { background-color: #c62828; } /* Red */
         .result-not-selected {
-            background-color: #e0e0e0;
-            color: #616161;
-            border: 1px solid #bdbdbd;
+            background-color: #4f4f56;
+            color: #d1d1d6;
+            border: 1px solid #6a6a71;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -540,7 +543,7 @@ def inject_custom_css():
 def render_vision_details_table(person_data):
     """
     Renders a modern, detailed HTML table for the 13-point vision test.
-    CSS is now injected separately. This version builds HTML parts in a list.
+    This version builds HTML parts in a list to avoid indentation issues.
     """
     vision_tests = [
         {'display': '1. การมองด้วย 2 ตา (Binocular vision)', 'db_col': 'ป.การรวมภาพ', 'outcomes': ['ปกติ', 'ผิดปกติ']},
