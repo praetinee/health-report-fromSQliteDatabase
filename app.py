@@ -559,17 +559,9 @@ def render_vision_details_table(person_data):
     ]
 
     html_parts = []
-    html_parts.append("""
-    <table class="vision-table">
-        <thead>
-            <tr>
-                <th>รายการตรวจ (Vision Test)</th>
-                <th class="result-col">ผลปกติ / ชัดเจน</th>
-                <th class="result-col">ผลผิดปกติ / ไม่ชัดเจน</th>
-            </tr>
-        </thead>
-        <tbody>
-    """)
+    html_parts.append('<table class="vision-table">')
+    html_parts.append('<thead><tr><th>รายการตรวจ (Vision Test)</th><th class="result-col">ผลปกติ / ชัดเจน</th><th class="result-col">ผลผิดปกติ / ไม่ชัดเจน</th></tr></thead>')
+    html_parts.append('<tbody>')
 
     for test in vision_tests:
         result_value = str(person_data.get(test['db_col'], '')).strip()
@@ -595,13 +587,11 @@ def render_vision_details_table(person_data):
             normal_class = "result-not-selected"
             abnormal_class = "result-not-selected"
 
-        html_parts.append(f"""
-            <tr>
-                <td>{test['display']}</td>
-                <td class="result-col"><span class="result-item {normal_class}">{normal_outcome}</span></td>
-                <td class="result-col"><span class="result-item {abnormal_class}">{abnormal_outcome}</span></td>
-            </tr>
-        """)
+        html_parts.append('<tr>')
+        html_parts.append(f"<td>{test['display']}</td>")
+        html_parts.append(f'<td class="result-col"><span class="result-item {normal_class}">{normal_outcome}</span></td>')
+        html_parts.append(f'<td class="result-col"><span class="result-item {abnormal_class}">{abnormal_outcome}</span></td>')
+        html_parts.append('</tr>')
 
     html_parts.append("</tbody></table>")
     return "".join(html_parts)
