@@ -543,26 +543,32 @@ def inject_custom_css():
     </style>
     """, unsafe_allow_html=True)
 
-# --- REFACTORED: Vision Details Table Renderer for Clarity ---
+# --- FINAL REWRITE: Vision Details Table Renderer for Correctness ---
 def render_vision_details_table(person_data):
     """
-    Renders a clearer, single-column result table for the vision test.
+    Renders a clearer, single-column result table for the vision test with corrected logic.
     """
     vision_tests = [
-        {'display': '1. การมองด้วย 2 ตา (Binocular vision)', 'db_col': 'ป.การรวมภาพ', 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '2. การมองภาพระยะไกลด้วยสองตา (Far vision - Both)', 'db_col': 'ป.ความชัดของภาพระยะไกล', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
-        {'display': '3. การมองภาพระยะไกลด้วยตาขวา (Far vision - Right)', 'db_col': 'การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
-        {'display': '4. การมองภาพระยะไกลด้วยตาซ้าย (Far vision - Left)', 'db_col': 'การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
-        {'display': '5. การมองภาพ 3 มิติ (Stereo depth)', 'db_col': 'ป.การกะระยะและมองความชัดลึกของภาพ', 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '6. การมองจำแนกสี (Color discrimination)', 'db_col': 'ป.การจำแนกสี', 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '7. ความสมดุลกล้ามเนื้อตาแนวดิ่ง (Far vertical phoria)', 'db_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง', 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '8. ความสมดุลกล้ามเนื้อตาแนวนอน (Far lateral phoria)', 'db_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน', 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '9. การมองภาพระยะใกล้ด้วยสองตา (Near vision - Both)', 'db_col': 'ป.ความชัดของภาพระยะใกล้', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
-        {'display': '10. การมองภาพระยะใกล้ด้วยตาขวา (Near vision - Right)', 'db_col': 'การมองภาพระยะใกล้ด้วยตาขวา (Near vision – Right)', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
-        {'display': '11. การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision - Left)', 'db_col': 'การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision – Left)', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
-        {'display': '12. ความสมดุลกล้ามเนื้อตาแนวนอน (Near lateral phoria)', 'db_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '13. ลานสายตา (Visual field)', 'db_col': 'ป.ลานสายตา', 'outcomes': ['ปกติ', 'ผิดปกติ']}
+        # Tests with a single column where the value determines the outcome
+        {'display': '1. การมองด้วย 2 ตา (Binocular vision)', 'type': 'value', 'col': 'ป.การรวมภาพ', 'normal_val': 'ปกติ', 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '2. การมองภาพระยะไกลด้วยสองตา (Far vision - Both)', 'type': 'value', 'col': 'ป.ความชัดของภาพระยะไกล', 'normal_val': 'ชัดเจน', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '3. การมองภาพระยะไกลด้วยตาขวา (Far vision - Right)', 'type': 'value', 'col': 'การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)', 'normal_val': 'ชัดเจน', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '4. การมองภาพระยะไกลด้วยตาซ้าย (Far vision - Left)', 'type': 'value', 'col': 'การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)', 'normal_val': 'ชัดเจน', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '5. การมองภาพ 3 มิติ (Stereo depth)', 'type': 'value', 'col': 'ป.การกะระยะและมองความชัดลึกของภาพ', 'normal_val': 'ปกติ', 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '6. การมองจำแนกสี (Color discrimination)', 'type': 'value', 'col': 'ป.การจำแนกสี', 'normal_val': 'ปกติ', 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '9. การมองภาพระยะใกล้ด้วยสองตา (Near vision - Both)', 'type': 'value', 'col': 'ป.ความชัดของภาพระยะใกล้', 'normal_val': 'ชัดเจน', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '10. การมองภาพระยะใกล้ด้วยตาขวา (Near vision - Right)', 'type': 'value', 'col': 'การมองภาพระยะใกล้ด้วยตาขวา (Near vision – Right)', 'normal_val': 'ชัดเจน', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '11. การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision - Left)', 'type': 'value', 'col': 'การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision – Left)', 'normal_val': 'ชัดเจน', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '13. ลานสายตา (Visual field)', 'type': 'value', 'col': 'ป.ลานสายตา', 'normal_val': 'ปกติ', 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        
+        # Tests with separate columns for normal/abnormal outcomes, based on presence of data
+        {'display': '7. ความสมดุลกล้ามเนื้อตาแนวดิ่ง (Far vertical phoria)', 'type': 'presence', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง', 'abnormal_col': 'ผิดปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง', 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '8. ความสมดุลกล้ามเนื้อตาแนวนอน (Far lateral phoria)', 'type': 'presence', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน', 'abnormal_col': 'ผิดปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน', 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '12. ความสมดุลกล้ามเนื้อตาแนวนอน (Near lateral phoria)', 'type': 'presence', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'abnormal_col': 'ผิดปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'outcomes': ['ปกติ', 'ผิดปกติ']}
     ]
+
+    # Sort the list by display name to ensure order
+    vision_tests.sort(key=lambda x: int(x['display'].split('.')[0]))
 
     html_parts = []
     html_parts.append('<table class="vision-table">')
@@ -570,20 +576,21 @@ def render_vision_details_table(person_data):
     html_parts.append('<tbody>')
 
     for test in vision_tests:
-        result_value = str(person_data.get(test['db_col'], '')).strip()
-        abnormal_col_name = "ผ." + test['db_col'][2:] if test['db_col'].startswith("ป.") else "ผิด" + test['db_col']
-        if is_empty(result_value):
-            result_value = str(person_data.get(abnormal_col_name, '')).strip()
+        is_normal = False
+        is_abnormal = False
 
-        normal_outcome, abnormal_outcome = test['outcomes']
+        if test['type'] == 'value':
+            result_value = str(person_data.get(test['col'], '')).strip()
+            if not is_empty(result_value):
+                if test['normal_val'].lower() in result_value.lower():
+                    is_normal = True
+                else:
+                    is_abnormal = True # Any non-empty, non-normal value is considered abnormal
         
-        is_normal = normal_outcome.lower() in result_value.lower()
-        is_abnormal = abnormal_outcome.lower() in result_value.lower()
-
-        if not is_normal and not is_abnormal:
-            if 'ปกติ' in test['db_col'] and not is_empty(person_data.get(test['db_col'])):
+        elif test['type'] == 'presence':
+            if not is_empty(person_data.get(test['normal_col'])):
                 is_normal = True
-            elif 'ผิดปกติ' in test['db_col'] and not is_empty(person_data.get(test['db_col'])):
+            elif not is_empty(person_data.get(test['abnormal_col'])):
                 is_abnormal = True
 
         status_text = ""
@@ -785,8 +792,24 @@ def display_main_report(person_data):
     hb_low, hct_low = (12, 36) if sex == "หญิง" else (13, 39)
     cbc_config = [("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None), ("ฮีมาโตคริต (Hct)", "HCT", "ชาย > 39%, หญิง > 36%", hct_low, None), ("เม็ดเลือดขาว (wbc)", "WBC (cumm)", "4,000 - 10,000 /cu.mm", 4000, 10000), ("นิวโทรฟิล (Neutrophil)", "Ne (%)", "43 - 70%", 43, 70), ("ลิมโฟไซต์ (Lymphocyte)", "Ly (%)", "20 - 44%", 20, 44), ("โมโนไซต์ (Monocyte)", "M", "3 - 9%", 3, 9), ("อีโอซิโนฟิล (Eosinophil)", "Eo", "0 - 9%", 0, 9), ("เบโซฟิล (Basophil)", "BA", "0 - 3%", 0, 3), ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150,000 - 500,000 /cu.mm", 150000, 500000)]
     cbc_rows = [([(label, is_abn), (result, is_abn), (norm, is_abn)]) for label, col, norm, low, high in cbc_config for val in [get_float(col, person)] for result, is_abn in [flag(val, low, high)]]
-    blood_config = [("น้ำตาลในเลือด (FBS)", "FBS", "74 - 106 mg/dl", 74, 106), ("กรดยูริก (Uric Acid)", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2), ("การทำงานของเอนไซม์ตับ (ALK)", "ALP", "30 - 120 U/L", 30, 120), ("การทำงานของเอนไซม์ตับ (SGOT)", "SGOT", "< 37 U/L", None, 37), ("การทำงานของเอนไซม์ตับ (SGPT)", "SGPT", "< 41 U/L", None, 41), ("คลอเรสเตอรอล (CHOL)", "CHOL", "150 - 200 mg/dl", 150, 200), ("ไตรกลีเซอไรด์ (TGL)", "TGL", "35 - 150 mg/dl", 35, 150), ("ไขมันดี (HDL)", "HDL", "> 40 mg/dl", 40, None, True), ("ไขมันเลว (LDL)", "LDL", "0 - 160 mg/dl", 0, 160), ("การทำงานของไต (BUN)", "BUN", "7.9 - 20 mg/dl", 7.9, 20), ("การทำงานของไต (Cr)", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17), ("ประสิทธิภาพการกรองของไต (GFR)", "GFR", "> 60 mL/min", 60, None, True)]
+    
+    # --- CORRECTED BLOOD CHEMISTRY CONFIG ---
+    blood_config = [
+        ("น้ำตาลในเลือด (FBS)", "FBS", "74 - 106 mg/dl", 74, 106), 
+        ("กรดยูริก (Uric Acid)", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2), 
+        ("การทำงานของเอนไซม์ตับ (ALK)", "ALP", "30 - 120 U/L", 30, 120), 
+        ("การทำงานของเอนไซม์ตับ (SGOT)", "SGOT", "< 37 U/L", None, 37), 
+        ("การทำงานของเอนไซม์ตับ (SGPT)", "SGPT", "< 41 U/L", None, 41), 
+        ("คลอเรสเตอรอล (CHOL)", "CHOL", "150 - 200 mg/dl", 150, 200),
+        ("ไตรกลีเซอไรด์ (TGL)", "TGL", "35 - 150 mg/dl", None, 150),
+        ("ไขมันดี (HDL)", "HDL", "> 40 mg/dl", 40, None, True), 
+        ("ไขมันเลว (LDL)", "LDL", "0 - 160 mg/dl", None, 160),
+        ("การทำงานของไต (BUN)", "BUN", "7.9 - 20 mg/dl", 7.9, 20), 
+        ("การทำงานของไต (Cr)", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17), 
+        ("ประสิทธิภาพการกรองของไต (GFR)", "GFR", "> 60 mL/min", 60, None, True)
+    ]
     blood_rows = [([(label, is_abn), (result, is_abn), (norm, is_abn)]) for label, col, norm, low, high, *opt in blood_config for higher in [opt[0] if opt else False] for val in [get_float(col, person)] for result, is_abn in [flag(val, low, high, higher)]]
+    
     left_spacer, col1, col2, right_spacer = st.columns([0.5, 3, 3, 0.5])
     with col1: st.markdown(render_lab_table_html("ผลตรวจ CBC (Complete Blood Count)", None, ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows), unsafe_allow_html=True)
     with col2: st.markdown(render_lab_table_html("ผลตรวจเลือด (Blood Chemistry)", None, ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows), unsafe_allow_html=True)
