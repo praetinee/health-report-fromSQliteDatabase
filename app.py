@@ -487,7 +487,7 @@ def display_common_header(person_data):
         {f"<div style='margin-top: 1rem; text-align: center;'><b>คำแนะนำ:</b> {summary_advice}</div>" if summary_advice else ""}
     </div>""", unsafe_allow_html=True)
 
-# --- CORRECTED: Centralized CSS Injection for Dark Theme ---
+# --- CORRECTED: Centralized CSS Injection for a Clearer, Theme-Adaptive Table ---
 def inject_custom_css():
     st.markdown("""
     <style>
@@ -499,51 +499,48 @@ def inject_custom_css():
             color: var(--text-color); /* Use Streamlit's text color variable */
         }
         .vision-table th, .vision-table td {
-            border: 1px solid #3a3a44; /* Darker border for dark theme */
-            padding: 8px;
+            border: 1px solid var(--secondary-background-color); /* Use theme's secondary bg for borders */
+            padding: 10px; /* Increased padding for readability */
             text-align: left;
             vertical-align: middle;
         }
         .vision-table th {
-            background-color: #262730; /* Dark grey header */
+            background-color: var(--secondary-background-color); /* Use theme's secondary bg for header */
+            font-weight: bold;
         }
-        .vision-table tr:nth-child(even) {
-            background-color: #1c1c22; /* Slightly lighter dark for alternating rows */
-        }
-        .vision-table tr:nth-child(odd) {
-            background-color: transparent; /* Use default background */
-        }
-        .vision-table .result-col {
+        .vision-table .result-cell {
             text-align: center;
-            width: 150px;
+            width: 180px;
         }
-        .result-item {
+        .vision-result {
             display: inline-block;
-            padding: 4px 12px;
+            padding: 6px 16px;
             border-radius: 16px;
-            font-size: 12px;
-            margin: 0 4px;
-            border: 1px solid transparent;
-        }
-        .result-selected {
+            font-size: 13px;
             font-weight: bold;
             color: white;
+            border: 1px solid transparent;
         }
-        .result-normal { background-color: #2e7d32; } /* Green */
-        .result-abnormal { background-color: #c62828; } /* Red */
-        .result-not-selected {
-            background-color: #4f4f56;
+        .vision-normal {
+            background-color: #2e7d32; /* Green */
+            border-color: #5b9f60;
+        }
+        .vision-abnormal {
+            background-color: #c62828; /* Red */
+            border-color: #e57373;
+        }
+        .vision-not-tested {
+            background-color: #4f4f56; /* Grey */
+            border-color: #6a6a71;
             color: #d1d1d6;
-            border: 1px solid #6a6a71;
         }
     </style>
     """, unsafe_allow_html=True)
 
-# --- REFACTORED: Vision Details Table Renderer ---
+# --- REFACTORED: Vision Details Table Renderer for Clarity ---
 def render_vision_details_table(person_data):
     """
-    Renders a modern, detailed HTML table for the 13-point vision test.
-    This version builds HTML parts in a list to avoid indentation issues.
+    Renders a clearer, single-column result table for the vision test.
     """
     vision_tests = [
         {'display': '1. การมองด้วย 2 ตา (Binocular vision)', 'db_col': 'ป.การรวมภาพ', 'outcomes': ['ปกติ', 'ผิดปกติ']},
@@ -563,7 +560,7 @@ def render_vision_details_table(person_data):
 
     html_parts = []
     html_parts.append('<table class="vision-table">')
-    html_parts.append('<thead><tr><th>รายการตรวจ (Vision Test)</th><th class="result-col">ผลปกติ / ชัดเจน</th><th class="result-col">ผลผิดปกติ / ไม่ชัดเจน</th></tr></thead>')
+    html_parts.append('<thead><tr><th>รายการตรวจ (Vision Test)</th><th class="result-cell">ผลการตรวจ</th></tr></thead>')
     html_parts.append('<tbody>')
 
     for test in vision_tests:
@@ -583,17 +580,22 @@ def render_vision_details_table(person_data):
             elif 'ผิดปกติ' in test['db_col'] and not is_empty(person_data.get(test['db_col'])):
                 is_abnormal = True
 
-        normal_class = "result-selected result-normal" if is_normal else "result-not-selected"
-        abnormal_class = "result-selected result-abnormal" if is_abnormal else "result-not-selected"
-        
-        if not is_normal and not is_abnormal:
-            normal_class = "result-not-selected"
-            abnormal_class = "result-not-selected"
+        status_text = ""
+        status_class = ""
+
+        if is_normal:
+            status_text = test['outcomes'][0]
+            status_class = 'vision-normal'
+        elif is_abnormal:
+            status_text = test['outcomes'][1]
+            status_class = 'vision-abnormal'
+        else:
+            status_text = "ไม่ได้ตรวจ"
+            status_class = 'vision-not-tested'
 
         html_parts.append('<tr>')
         html_parts.append(f"<td>{test['display']}</td>")
-        html_parts.append(f'<td class="result-col"><span class="result-item {normal_class}">{normal_outcome}</span></td>')
-        html_parts.append(f'<td class="result-col"><span class="result-item {abnormal_class}">{abnormal_outcome}</span></td>')
+        html_parts.append(f'<td class="result-cell"><span class="vision-result {status_class}">{status_text}</span></td>')
         html_parts.append('</tr>')
 
     html_parts.append("</tbody></table>")
@@ -618,9 +620,6 @@ def interpret_lung_capacity(person_data):
         'FEV1 %': to_float(person_data.get('FEV1เปอร์เซ็นต์')),
         'FEV1/FVC %': to_float(person_data.get('FEV1/FVC%')),
         'FEV1/FVC % pre': to_float(person_data.get('FEV1/FVC % pre')),
-        'PEF': to_float(person_data.get('PEF')),
-        'FEF25-75': to_float(person_data.get('FEF25-75')),
-        'FEF25-75 %': to_float(person_data.get('FEF25-75 %')),
     }
 
     fvc_p = raw_values['FVC %']
