@@ -375,7 +375,7 @@ def has_basic_health_data(person_data):
 
 def has_vision_data(person_data):
     """Check for any vision test data, summary or detailed."""
-    summary_keys = ['สายตา', 'ตาบอดสี']
+    summary_keys = ['สายตา', 'ตาบอดสี', 'สรุปเหมาะสมกับงาน']
     detailed_keys = [
         'ป.การรวมภาพ', 'ป.ความชัดของภาพระยะไกล', 'การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)',
         'การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)', 'ป.การกะระยะและมองความชัดลึกของภาพ',
@@ -736,40 +736,45 @@ def display_performance_report_lung(person_data):
         st.dataframe(df_details, use_container_width=True, hide_index=True)
 
 
-# --- REWRITTEN FOR STABILITY ---
+# --- FINAL VERSION: display_performance_report ---
 def display_performance_report(person_data, report_type):
     """Displays various performance test reports (lung, vision, hearing)."""
-    if report_type == 'lung':
-        display_performance_report_lung(person_data)
-        
-    elif report_type == 'vision':
-        st.markdown("<h2 style='text-align: center;'>รายงานผลการตรวจสมรรถภาพการมองเห็น (Vision Test Report)</h2>", unsafe_allow_html=True)
-        
-        if not has_vision_data(person_data):
-            st.warning("ไม่พบข้อมูลการตรวจสมรรถภาพการมองเห็นในปีนี้")
-            return
+    # Use columns to constrain the width of the report sections
+    left_spacer, main_col, right_spacer = st.columns([0.5, 6, 0.5])
+    
+    with main_col:
+        if report_type == 'lung':
+            display_performance_report_lung(person_data)
+            
+        elif report_type == 'vision':
+            st.markdown("<h2 style='text-align: center;'>รายงานผลการตรวจสมรรถภาพการมองเห็น (Vision Test Report)</h2>", unsafe_allow_html=True)
+            
+            if not has_vision_data(person_data):
+                st.warning("ไม่พบข้อมูลการตรวจสมรรถภาพการมองเห็นในปีนี้")
+                return
 
-        vision_advice_summary = person_data.get('สรุปเหมาะสมกับงาน')
-        
-        st.markdown("<h5><b>สรุปสมรรถภาพการมองเห็น</b></h5>", unsafe_allow_html=True)
-        if not is_empty(vision_advice_summary):
-            st.info(f"**สรุปความเหมาะสมกับงาน:** {vision_advice_summary}")
+            vision_advice_summary = person_data.get('สรุปเหมาะสมกับงาน')
+            
+            if not is_empty(vision_advice_summary):
+                st.markdown(f"<div style='text-align: center; margin-top: 1rem;'>", unsafe_allow_html=True)
+                st.info(f"**สรุปความเหมาะสมกับงาน:** {vision_advice_summary}")
+                st.markdown("</div>", unsafe_allow_html=True)
 
-        st.markdown("<hr>", unsafe_allow_html=True)
-        
-        st.markdown("<h5><b>ผลการตรวจโดยละเอียด</b></h5>", unsafe_allow_html=True)
-        detailed_table_html = render_vision_details_table(person_data)
-        st.markdown(detailed_table_html, unsafe_allow_html=True)
-        
-    elif report_type == 'hearing':
-        st.header("รายงานผลการตรวจสมรรถภาพการได้ยิน (Hearing)")
-        hearing_summary, hearing_advice = interpret_hearing(person_data.get('การได้ยิน'))
-        if hearing_summary == "ไม่ได้เข้ารับการตรวจ":
-            st.warning("ไม่ได้เข้ารับการตรวจสมรรถภาพการได้ยินในปีนี้")
-            return
-        h_col1, h_col2 = st.columns(2)
-        h_col1.metric("สรุปผล", hearing_summary)
-        if hearing_advice: h_col2.info(f"**คำแนะนำ:** {hearing_advice}")
+            st.markdown("<hr>", unsafe_allow_html=True)
+            
+            st.markdown("<h5><b>ผลการตรวจโดยละเอียด</b></h5>", unsafe_allow_html=True)
+            detailed_table_html = render_vision_details_table(person_data)
+            st.markdown(detailed_table_html, unsafe_allow_html=True)
+            
+        elif report_type == 'hearing':
+            st.header("รายงานผลการตรวจสมรรถภาพการได้ยิน (Hearing)")
+            hearing_summary, hearing_advice = interpret_hearing(person_data.get('การได้ยิน'))
+            if hearing_summary == "ไม่ได้เข้ารับการตรวจ":
+                st.warning("ไม่ได้เข้ารับการตรวจสมรรถภาพการได้ยินในปีนี้")
+                return
+            h_col1, h_col2 = st.columns(2)
+            h_col1.metric("สรุปผล", hearing_summary)
+            if hearing_advice: h_col2.info(f"**คำแนะนำ:** {hearing_advice}")
 
 
 def display_main_report(person_data):
