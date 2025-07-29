@@ -743,7 +743,7 @@ def display_performance_report(person_data, report_type):
         display_performance_report_lung(person_data)
         
     elif report_type == 'vision':
-        st.header("รายงานผลการตรวจสมรรถภาพการมองเห็น (Vision Test Report)")
+        st.markdown("<h2 style='text-align: center;'>รายงานผลการตรวจสมรรถภาพการมองเห็น (Vision Test Report)</h2>", unsafe_allow_html=True)
         
         if not has_vision_data(person_data):
             st.warning("ไม่พบข้อมูลการตรวจสมรรถภาพการมองเห็นในปีนี้")
@@ -778,10 +778,7 @@ def display_performance_report(person_data, report_type):
         
         vision_advice = " ".join(advice_parts)
 
-        st.markdown("<h5><b>สรุปผลภาพรวม</b></h5>", unsafe_allow_html=True)
-        v_col1, v_col2 = st.columns(2)
-        v_col1.metric("ผลตรวจสายตา (ทั่วไป)", vision_summary if not is_empty(vision_summary) else "ไม่มีข้อมูลสรุป")
-        v_col2.metric("ผลตรวจตาบอดสี", color_summary if not is_empty(color_summary) else "ไม่มีข้อมูลสรุป")
+        st.markdown("<h5><b>สรุปสมรรถภาพการมองเห็น</b></h5>", unsafe_allow_html=True)
         if vision_advice:
             st.info(f"**คำแนะนำ:** {vision_advice}")
 
