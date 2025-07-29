@@ -488,29 +488,9 @@ def display_common_header(person_data):
         {f"<div style='margin-top: 1rem; text-align: center;'><b>คำแนะนำ:</b> {summary_advice}</div>" if summary_advice else ""}
     </div>""", unsafe_allow_html=True)
 
-# --- UPDATED: Vision Details Table Renderer with Correct Headers ---
-def render_vision_details_table(person_data):
-    """
-    Renders a modern, detailed HTML table for the 13-point vision test
-    using the correct column headers.
-    """
-    vision_tests = [
-        {'display': '1. การมองด้วย 2 ตา (Binocular vision)', 'db_col': 'ป.การรวมภาพ', 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '2. การมองภาพระยะไกลด้วยสองตา (Far vision - Both)', 'db_col': 'ป.ความชัดของภาพระยะไกล', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
-        {'display': '3. การมองภาพระยะไกลด้วยตาขวา (Far vision - Right)', 'db_col': 'การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
-        {'display': '4. การมองภาพระยะไกลด้วยตาซ้าย (Far vision - Left)', 'db_col': 'การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
-        {'display': '5. การมองภาพ 3 มิติ (Stereo depth)', 'db_col': 'ป.การกะระยะและมองความชัดลึกของภาพ', 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '6. การมองจำแนกสี (Color discrimination)', 'db_col': 'ป.การจำแนกสี', 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '7. ความสมดุลกล้ามเนื้อตาแนวดิ่ง (Far vertical phoria)', 'db_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง', 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '8. ความสมดุลกล้ามเนื้อตาแนวนอน (Far lateral phoria)', 'db_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน', 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '9. การมองภาพระยะใกล้ด้วยสองตา (Near vision - Both)', 'db_col': 'ป.ความชัดของภาพระยะใกล้', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
-        {'display': '10. การมองภาพระยะใกล้ด้วยตาขวา (Near vision - Right)', 'db_col': 'การมองภาพระยะใกล้ด้วยตาขวา (Near vision – Right)', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
-        {'display': '11. การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision - Left)', 'db_col': 'การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision – Left)', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
-        {'display': '12. ความสมดุลกล้ามเนื้อตาแนวนอน (Near lateral phoria)', 'db_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '13. ลานสายตา (Visual field)', 'db_col': 'ป.ลานสายตา', 'outcomes': ['ปกติ', 'ผิดปกติ']}
-    ]
-
-    html = """
+# --- NEW: Centralized CSS Injection ---
+def inject_custom_css():
+    st.markdown("""
     <style>
         .vision-table {
             width: 100%;
@@ -555,6 +535,31 @@ def render_vision_details_table(person_data):
             border: 1px solid #bdbdbd;
         }
     </style>
+    """, unsafe_allow_html=True)
+
+# --- UPDATED: Vision Details Table Renderer (CSS Removed) ---
+def render_vision_details_table(person_data):
+    """
+    Renders a modern, detailed HTML table for the 13-point vision test.
+    CSS is now injected separately.
+    """
+    vision_tests = [
+        {'display': '1. การมองด้วย 2 ตา (Binocular vision)', 'db_col': 'ป.การรวมภาพ', 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '2. การมองภาพระยะไกลด้วยสองตา (Far vision - Both)', 'db_col': 'ป.ความชัดของภาพระยะไกล', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '3. การมองภาพระยะไกลด้วยตาขวา (Far vision - Right)', 'db_col': 'การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '4. การมองภาพระยะไกลด้วยตาซ้าย (Far vision - Left)', 'db_col': 'การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '5. การมองภาพ 3 มิติ (Stereo depth)', 'db_col': 'ป.การกะระยะและมองความชัดลึกของภาพ', 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '6. การมองจำแนกสี (Color discrimination)', 'db_col': 'ป.การจำแนกสี', 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '7. ความสมดุลกล้ามเนื้อตาแนวดิ่ง (Far vertical phoria)', 'db_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง', 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '8. ความสมดุลกล้ามเนื้อตาแนวนอน (Far lateral phoria)', 'db_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน', 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '9. การมองภาพระยะใกล้ด้วยสองตา (Near vision - Both)', 'db_col': 'ป.ความชัดของภาพระยะใกล้', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '10. การมองภาพระยะใกล้ด้วยตาขวา (Near vision - Right)', 'db_col': 'การมองภาพระยะใกล้ด้วยตาขวา (Near vision – Right)', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '11. การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision - Left)', 'db_col': 'การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision – Left)', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '12. ความสมดุลกล้ามเนื้อตาแนวนอน (Near lateral phoria)', 'db_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '13. ลานสายตา (Visual field)', 'db_col': 'ป.ลานสายตา', 'outcomes': ['ปกติ', 'ผิดปกติ']}
+    ]
+
+    html = """
     <table class="vision-table">
         <thead>
             <tr>
@@ -567,28 +572,21 @@ def render_vision_details_table(person_data):
     """
 
     for test in vision_tests:
-        # For columns that might represent the result directly (e.g., 'ปกติ...' vs 'ผิดปกติ...')
-        # We need a more robust way to get the value.
-        # Let's try to find if either the 'normal' or 'abnormal' version of the column exists.
         result_value = str(person_data.get(test['db_col'], '')).strip()
-        # A special check for columns that might have 'ผิดปกติ' as a prefix for the abnormal case
         abnormal_col_name = "ผ." + test['db_col'][2:] if test['db_col'].startswith("ป.") else "ผิด" + test['db_col']
         if is_empty(result_value):
             result_value = str(person_data.get(abnormal_col_name, '')).strip()
 
         normal_outcome, abnormal_outcome = test['outcomes']
         
-        # Check if the found value corresponds to normal or abnormal
         is_normal = normal_outcome.lower() in result_value.lower()
         is_abnormal = abnormal_outcome.lower() in result_value.lower()
 
-        # Handle cases where the column name itself implies the result (e.g., 'ปกติความสมดุล...')
         if not is_normal and not is_abnormal:
             if 'ปกติ' in test['db_col'] and not is_empty(person_data.get(test['db_col'])):
                 is_normal = True
             elif 'ผิดปกติ' in test['db_col'] and not is_empty(person_data.get(test['db_col'])):
                 is_abnormal = True
-
 
         normal_class = "result-selected result-normal" if is_normal else "result-not-selected"
         abnormal_class = "result-selected result-abnormal" if is_abnormal else "result-not-selected"
@@ -806,6 +804,7 @@ if df is None:
 
 # Page config and styles
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
+inject_custom_css() # Call CSS injection function
 st.markdown("""<style>
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
     html, body, div, span, p, td, th, li, ul, ol, table, h1, h2, h3, h4, h5, h6, label, button, input, select, option, .stButton>button, .stTextInput>div>div>input, .stSelectbox>div>div>div { font-family: 'Sarabun', sans-serif !important; }
