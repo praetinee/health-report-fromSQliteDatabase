@@ -692,7 +692,7 @@ def display_performance_report_lung(person_data):
     """
     แสดงผลรายงานสมรรถภาพปอดในรูปแบบที่ปรับปรุงใหม่
     """
-    st.header("รายงานผลการตรวจสมรรถภาพปอด (Spirometry Report)")
+    st.markdown("<h2 style='text-align: center;'>รายงานผลการตรวจสมรรถภาพปอด (Spirometry Report)</h2>", unsafe_allow_html=True)
     lung_summary, lung_advice, lung_raw_values = interpret_lung_capacity(person_data)
 
     if lung_summary == "ไม่ได้เข้ารับการตรวจ":
