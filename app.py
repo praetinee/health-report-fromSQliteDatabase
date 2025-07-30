@@ -550,16 +550,16 @@ def render_vision_details_table(person_data):
     """
     vision_tests = [
         # Tests with a single column where the value determines the outcome
-        {'display': '1. การมองด้วย 2 ตา (Binocular vision)', 'type': 'value', 'col': 'ป.การรวมภาพ', 'normal_val': 'ปกติ', 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '2. การมองภาพระยะไกลด้วยสองตา (Far vision - Both)', 'type': 'value', 'col': 'ป.ความชัดของภาพระยะไกล', 'normal_val': 'ชัดเจน', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
-        {'display': '3. การมองภาพระยะไกลด้วยตาขวา (Far vision - Right)', 'type': 'value', 'col': 'การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)', 'normal_val': 'ชัดเจน', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
-        {'display': '4. การมองภาพระยะไกลด้วยตาซ้าย (Far vision - Left)', 'type': 'value', 'col': 'การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)', 'normal_val': 'ชัดเจน', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
-        {'display': '5. การมองภาพ 3 มิติ (Stereo depth)', 'type': 'value', 'col': 'ป.การกะระยะและมองความชัดลึกของภาพ', 'normal_val': 'ปกติ', 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '6. การมองจำแนกสี (Color discrimination)', 'type': 'value', 'col': 'ป.การจำแนกสี', 'normal_val': 'ปกติ', 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '9. การมองภาพระยะใกล้ด้วยสองตา (Near vision - Both)', 'type': 'value', 'col': 'ป.ความชัดของภาพระยะใกล้', 'normal_val': 'ชัดเจน', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
-        {'display': '10. การมองภาพระยะใกล้ด้วยตาขวา (Near vision - Right)', 'type': 'value', 'col': 'การมองภาพระยะใกล้ด้วยตาขวา (Near vision – Right)', 'normal_val': 'ชัดเจน', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
-        {'display': '11. การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision - Left)', 'type': 'value', 'col': 'การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision – Left)', 'normal_val': 'ชัดเจน', 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
-        {'display': '13. ลานสายตา (Visual field)', 'type': 'value', 'col': 'ป.ลานสายตา', 'normal_val': 'ปกติ', 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '1. การมองด้วย 2 ตา (Binocular vision)', 'type': 'value', 'col': 'ป.การรวมภาพ', 'normal_keywords': ['ปกติ'], 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '2. การมองภาพระยะไกลด้วยสองตา (Far vision - Both)', 'type': 'value', 'col': 'ป.ความชัดของภาพระยะไกล', 'normal_keywords': ['ชัดเจน', 'ปกติ'], 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '3. การมองภาพระยะไกลด้วยตาขวา (Far vision - Right)', 'type': 'value', 'col': 'การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)', 'normal_keywords': ['ชัดเจน', 'ปกติ'], 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '4. การมองภาพระยะไกลด้วยตาซ้าย (Far vision - Left)', 'type': 'value', 'col': 'การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)', 'normal_keywords': ['ชัดเจน', 'ปกติ'], 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '5. การมองภาพ 3 มิติ (Stereo depth)', 'type': 'value', 'col': 'ป.การกะระยะและมองความชัดลึกของภาพ', 'normal_keywords': ['ปกติ'], 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '6. การมองจำแนกสี (Color discrimination)', 'type': 'value', 'col': 'ป.การจำแนกสี', 'normal_keywords': ['ปกติ'], 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '9. การมองภาพระยะใกล้ด้วยสองตา (Near vision - Both)', 'type': 'value', 'col': 'ป.ความชัดของภาพระยะใกล้', 'normal_keywords': ['ชัดเจน', 'ปกติ'], 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '10. การมองภาพระยะใกล้ด้วยตาขวา (Near vision - Right)', 'type': 'value', 'col': 'การมองภาพระยะใกล้ด้วยตาขวา (Near vision – Right)', 'normal_keywords': ['ชัดเจน', 'ปกติ'], 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '11. การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision - Left)', 'type': 'value', 'col': 'การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision – Left)', 'normal_keywords': ['ชัดเจน', 'ปกติ'], 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '13. ลานสายตา (Visual field)', 'type': 'value', 'col': 'ป.ลานสายตา', 'normal_keywords': ['ปกติ'], 'outcomes': ['ปกติ', 'ผิดปกติ']},
         
         # Tests with separate columns for normal/abnormal outcomes, based on presence of data
         {'display': '7. ความสมดุลกล้ามเนื้อตาแนวดิ่ง (Far vertical phoria)', 'type': 'presence', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง', 'abnormal_col': 'ผิดปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง', 'outcomes': ['ปกติ', 'ผิดปกติ']},
@@ -584,7 +584,8 @@ def render_vision_details_table(person_data):
             result_value = str(person_data.get(test['col'], '')).strip()
             if not is_empty(result_value):
                 result_text = result_value
-                if test['normal_val'].lower() in result_value.lower():
+                # NEW LOGIC: Check if any of the normal keywords are in the result
+                if any(keyword.lower() in result_value.lower() for keyword in test['normal_keywords']):
                     is_normal = True
                 else:
                     is_abnormal = True 
@@ -603,7 +604,7 @@ def render_vision_details_table(person_data):
         status_class = ""
 
         if is_normal:
-            status_text = test['outcomes'][0]
+            status_text = test['outcomes'][0] # Use the primary normal outcome for display (e.g., 'ปกติ', 'ชัดเจน')
             status_class = 'vision-normal'
         elif is_abnormal:
             status_text = result_text # Show the actual abnormal text
@@ -807,9 +808,9 @@ def display_main_report(person_data):
         ("การทำงานของเอนไซม์ตับ (SGOT)", "SGOT", "< 37 U/L", None, 37), 
         ("การทำงานของเอนไซม์ตับ (SGPT)", "SGPT", "< 41 U/L", None, 41), 
         ("คลอเรสเตอรอล (CHOL)", "CHOL", "150 - 200 mg/dl", 150, 200),
-        ("ไตรกลีเซอไรด์ (TGL)", "TGL", "35 - 150 mg/dl", None, 150),
+        ("ไตรกลีเซอไรด์ (TGL)", "TGL", "35 - 150 mg/dl", 35, 150),
         ("ไขมันดี (HDL)", "HDL", "> 40 mg/dl", 40, None, True), 
-        ("ไขมันเลว (LDL)", "LDL", "0 - 160 mg/dl", None, 160),
+        ("ไขมันเลว (LDL)", "LDL", "0 - 160 mg/dl", 0, 160),
         ("การทำงานของไต (BUN)", "BUN", "7.9 - 20 mg/dl", 7.9, 20), 
         ("การทำงานของไต (Cr)", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17), 
         ("ประสิทธิภาพการกรองของไต (GFR)", "GFR", "> 60 mL/min", 60, None, True)
