@@ -479,6 +479,8 @@ def display_common_header(person_data):
     html_parts = []
     html_parts.append('<div class="personal-info-container">')
     html_parts.append('<hr style="margin-top: 0.5rem; margin-bottom: 1.5rem;">')
+    # --- EDITED LINE ---
+    html_parts.append("<div style='text-align: center; font-size: 13px; color: #555; margin-bottom: 1.5rem;'><b>หมายเหตุ:</b> เพื่อความถูกต้อง ควรอ่านข้อความหรือดูสัญลักษณ์อื่นประกอบกับสีเสมอ</div>")
     html_parts.append('<div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; margin-bottom: 1rem; text-align: center; line-height: 1.8;">')
     html_parts.append(f"<div><b>ชื่อ-สกุล:</b> {person_data.get('ชื่อ-สกุล', '-')}</div>")
     html_parts.append(f"<div><b>อายุ:</b> {str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person_data.get('อายุ', '-')} ปี</div>")
