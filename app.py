@@ -10,6 +10,8 @@ from collections import OrderedDict
 from datetime import datetime
 import re
 import os
+# --- แก้ไข: Import ฟังก์ชันใหม่ ---
+from performance_tests import interpret_audiogram
 
 # --- Helper Functions (Existing) ---
 def is_empty(val):
@@ -394,9 +396,17 @@ def has_vision_data(person_data):
     return any(not is_empty(person_data.get(key)) for key in detailed_keys)
 
 
+# --- แก้ไข: ฟังก์ชันตรวจสอบข้อมูลการได้ยิน ---
 def has_hearing_data(person_data):
-    """Check for hearing test data."""
-    return not is_empty(person_data.get('การได้ยิน'))
+    """Check for detailed hearing (audiogram) data."""
+    # ตรวจสอบคอลัมน์บางส่วนจากที่คาดว่าจะมี
+    hearing_keys = [
+        'R_500Hz', 'L_500Hz',
+        'R_1000Hz', 'L_1000Hz',
+        'R_4000Hz', 'L_4000Hz'
+    ]
+    return any(not is_empty(person_data.get(key)) for key in hearing_keys)
+
 
 def has_lung_data(person_data):
     """Check for lung capacity test data."""
@@ -703,22 +713,80 @@ def interpret_lung_capacity(person_data):
         
     return summary, advice, raw_values
 
-def interpret_hearing(hearing_raw):
+# --- เพิ่ม: ฟังก์ชันแสดงผลการตรวจการได้ยิน ---
+def display_performance_report_hearing(person_data):
     """
-    แปลผลตรวจสมรรถภาพการได้ยิน
+    แสดงผลรายงานสมรรถภาพการได้ยิน (Audiogram) ในรูปแบบใหม่
     """
-    summary = "ไม่ได้เข้ารับการตรวจ"
-    advice = ""
-    if not is_empty(hearing_raw):
-        hearing_lower = str(hearing_raw).lower().strip()
-        if "ปกติ" in hearing_lower:
-            summary = "ปกติ"
-        elif "ผิดปกติ" in hearing_lower or "เสื่อม" in hearing_lower:
-            summary = "ผิดปกติ"
-            advice = "การได้ยินผิดปกติ ควรพบแพทย์เพื่อตรวจประเมินและหาสาเหตุ"
-        else:
-            summary = hearing_raw
-    return summary, advice
+    st.markdown("<h2 style='text-align: center;'>รายงานผลการตรวจสมรรถภาพการได้ยิน (Audiometry Report)</h2>", unsafe_allow_html=True)
+    
+    hearing_results = interpret_audiogram(person_data)
+
+    if hearing_results['summary'].get('overall') == "ไม่ได้เข้ารับการตรวจ":
+        st.warning("ไม่ได้เข้ารับการตรวจสมรรถภาพการได้ยินในปีนี้")
+        return
+
+    # --- ส่วนสรุปผล ---
+    st.markdown("<h5><b>สรุปผลการตรวจ</b></h5>", unsafe_allow_html=True)
+    summary_col1, summary_col2 = st.columns(2)
+    with summary_col1:
+        st.metric(label="การได้ยินหูขวา", value=hearing_results['summary'].get('right', 'N/A'))
+    with summary_col2:
+        st.metric(label="การได้ยินหูซ้าย", value=hearing_results['summary'].get('left', 'N/A'))
+
+    # --- ส่วนคำแนะนำ ---
+    st.markdown("<br><h5><b>คำแนะนำ</b></h5>", unsafe_allow_html=True)
+    advice = hearing_results.get('advice', 'ไม่มีคำแนะนำเพิ่มเติม')
+    if "ผิดปกติ" in hearing_results['summary'].get('overall', ''):
+        st.error(f"**คำแนะนำ:** {advice}")
+    else:
+        st.success(f"**คำแนะนำ:** {advice}")
+    
+    st.markdown("<hr>", unsafe_allow_html=True)
+
+    # --- ส่วนตารางข้อมูลดิบและค่าเฉลี่ย ---
+    data_col, avg_col = st.columns([3, 2])
+
+    with data_col:
+        st.markdown("<h5><b>ผลการตรวจวัดระดับการได้ยิน (หน่วย: dB)</b></h5>", unsafe_allow_html=True)
+        raw_data = hearing_results.get('raw_values', {})
+        
+        # สร้าง DataFrame จากข้อมูลดิบ
+        df_data = []
+        for freq, values in raw_data.items():
+            df_data.append({
+                "ความถี่": freq,
+                "หูขวา (dB)": values.get('right', '-'),
+                "หูซ้าย (dB)": values.get('left', '-')
+            })
+        
+        df_display = pd.DataFrame(df_data)
+        st.dataframe(df_display, use_container_width=True, hide_index=True)
+
+    with avg_col:
+        st.markdown("<h5><b>ค่าเฉลี่ยการได้ยิน</b></h5>", unsafe_allow_html=True)
+        averages = hearing_results.get('averages', {})
+        
+        avg_r_speech = averages.get('right_500_2000')
+        avg_l_speech = averages.get('left_500_2000')
+        avg_r_high = averages.get('right_3000_6000')
+        avg_l_high = averages.get('left_3000_6000')
+
+        st.markdown(f"""
+        <div style='background-color: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px;'>
+            <b>ค่าเฉลี่ยที่ความถี่เสียงพูด (500-2000 Hz):</b>
+            <ul>
+                <li>หูขวา: {f'{avg_r_speech:.1f} dB' if avg_r_speech is not None else 'N/A'}</li>
+                <li>หูซ้าย: {f'{avg_l_speech:.1f} dB' if avg_l_speech is not None else 'N/A'}</li>
+            </ul>
+            <b>ค่าเฉลี่ยที่ความถี่สูง (3000-6000 Hz):</b>
+            <ul>
+                <li>หูขวา: {f'{avg_r_high:.1f} dB' if avg_r_high is not None else 'N/A'}</li>
+                <li>หูซ้าย: {f'{avg_l_high:.1f} dB' if avg_l_high is not None else 'N/A'}</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+
 
 def display_performance_report_lung(person_data):
     """
@@ -877,14 +945,8 @@ def display_performance_report(person_data, report_type):
             st.markdown(detailed_table_html, unsafe_allow_html=True)
             
         elif report_type == 'hearing':
-            st.header("รายงานผลการตรวจสมรรถภาพการได้ยิน (Hearing)")
-            hearing_summary, hearing_advice = interpret_hearing(person_data.get('การได้ยิน'))
-            if hearing_summary == "ไม่ได้เข้ารับการตรวจ":
-                st.warning("ไม่ได้เข้ารับการตรวจสมรรถภาพการได้ยินในปีนี้")
-                return
-            h_col1, h_col2 = st.columns(2)
-            h_col1.metric("สรุปผล", hearing_summary)
-            if hearing_advice: h_col2.info(f"**คำแนะนำ:** {hearing_advice}")
+            # --- แก้ไข: เรียกใช้ฟังก์ชันแสดงผลใหม่ ---
+            display_performance_report_hearing(person_data)
 
 
 def display_main_report(person_data):
