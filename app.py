@@ -784,6 +784,12 @@ def display_performance_report(person_data, report_type):
                 st.info(f"**สรุปความเหมาะสมกับงาน:** {vision_advice_summary}")
                 st.markdown("</div>", unsafe_allow_html=True)
 
+            strabismus_val = person_data.get('ผ.สายตาเขซ่อนเร้น')
+            if not is_empty(strabismus_val):
+                st.markdown(f"<div style='text-align: center; margin-top: 1rem;'>", unsafe_allow_html=True)
+                st.warning(f"**ความผิดปกติของสายตาที่ตรวจพบ:** {strabismus_val}")
+                st.markdown("</div>", unsafe_allow_html=True)
+
             st.markdown("<hr>", unsafe_allow_html=True)
             
             st.markdown("<h5><b>ผลการตรวจโดยละเอียด</b></h5>", unsafe_allow_html=True)
