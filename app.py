@@ -780,12 +780,26 @@ def display_performance_report(person_data, report_type):
         elif report_type == 'vision':
             st.markdown("<h2 style='text-align: center;'>รายงานผลการตรวจสมรรถภาพการมองเห็น (Vision Test Report)</h2>", unsafe_allow_html=True)
             
+            # Check for detailed results first
             if not has_vision_data(person_data):
                 st.warning("ไม่พบข้อมูลผลการตรวจสมรรถภาพการมองเห็นโดยละเอียดในปีนี้")
+                # Also check if there are summary fields, and if so, inform the user they might be from another year.
+                vision_advice_summary = person_data.get('สรุปเหมาะสมกับงาน')
+                doctor_advice = person_data.get('แนะนำABN EYE')
+                if not is_empty(vision_advice_summary) or not is_empty(doctor_advice):
+                    st.info("หมายเหตุ: ข้อมูลสรุปที่แสดงอาจมาจากผลการตรวจในปีอื่น")
+                    if not is_empty(vision_advice_summary):
+                         st.markdown(f"<div style='text-align: center; margin-top: 1rem;'>", unsafe_allow_html=True)
+                         st.info(f"**สรุปความเหมาะสมกับงาน:** {vision_advice_summary}")
+                         st.markdown("</div>", unsafe_allow_html=True)
+                    if not is_empty(doctor_advice):
+                         st.markdown(f"<div style='text-align: center; margin-top: 1rem;'>", unsafe_allow_html=True)
+                         st.warning(f"**คำแนะนำเพิ่มเติมจากแพทย์:** {doctor_advice}")
+                         st.markdown("</div>", unsafe_allow_html=True)
                 return
 
+            # If we have detailed data, proceed to show the full report
             vision_advice_summary = person_data.get('สรุปเหมาะสมกับงาน')
-            
             if not is_empty(vision_advice_summary):
                 st.markdown(f"<div style='text-align: center; margin-top: 1rem;'>", unsafe_allow_html=True)
                 st.info(f"**สรุปความเหมาะสมกับงาน:** {vision_advice_summary}")
@@ -1069,4 +1083,4 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             display_main_report(person_data)
 
 else:
-    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภา
+    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
