@@ -401,9 +401,7 @@ def has_hearing_data(person_data):
     """Check for detailed hearing (audiogram) data."""
     # ตรวจสอบคอลัมน์บางส่วนจากที่คาดว่าจะมี
     hearing_keys = [
-        'R_500Hz', 'L_500Hz',
-        'R_1000Hz', 'L_1000Hz',
-        'R_4000Hz', 'L_4000Hz'
+        'R500', 'L500', 'R1k', 'L1k', 'R4k', 'L4k'
     ]
     return any(not is_empty(person_data.get(key)) for key in hearing_keys)
 
@@ -729,9 +727,9 @@ def display_performance_report_hearing(person_data):
     st.markdown("<h5><b>สรุปผลการตรวจ</b></h5>", unsafe_allow_html=True)
     summary_col1, summary_col2 = st.columns(2)
     with summary_col1:
-        st.metric(label="การได้ยินหูขวา", value=hearing_results['summary'].get('right', 'N/A'))
+        st.metric(label="ระดับการได้ยินหูขวา", value=hearing_results['summary'].get('right', 'N/A'))
     with summary_col2:
-        st.metric(label="การได้ยินหูซ้าย", value=hearing_results['summary'].get('left', 'N/A'))
+        st.metric(label="ระดับการได้ยินหูซ้าย", value=hearing_results['summary'].get('left', 'N/A'))
 
     # --- ส่วนคำแนะนำ ---
     st.markdown("<br><h5><b>คำแนะนำ</b></h5>", unsafe_allow_html=True)
@@ -763,7 +761,7 @@ def display_performance_report_hearing(person_data):
         st.dataframe(df_display, use_container_width=True, hide_index=True)
 
     with avg_col:
-        st.markdown("<h5><b>ค่าเฉลี่ยการได้ยิน</b></h5>", unsafe_allow_html=True)
+        st.markdown("<h5><b>ค่าเฉลี่ยการได้ยิน (dB)</b></h5>", unsafe_allow_html=True)
         averages = hearing_results.get('averages', {})
         
         avg_r_speech = averages.get('right_500_2000')
@@ -772,19 +770,51 @@ def display_performance_report_hearing(person_data):
         avg_l_high = averages.get('left_3000_6000')
 
         st.markdown(f"""
-        <div style='background-color: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px;'>
-            <b>ค่าเฉลี่ยที่ความถี่เสียงพูด (500-2000 Hz):</b>
+        <div style='background-color: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px; line-height: 1.8;'>
+            <b>ความถี่เสียงพูด (500-2000 Hz):</b>
             <ul>
-                <li>หูขวา: {f'{avg_r_speech:.1f} dB' if avg_r_speech is not None else 'N/A'}</li>
-                <li>หูซ้าย: {f'{avg_l_speech:.1f} dB' if avg_l_speech is not None else 'N/A'}</li>
+                <li>หูขวา: {f'{avg_r_speech:.1f}' if avg_r_speech is not None else 'N/A'}</li>
+                <li>หูซ้าย: {f'{avg_l_speech:.1f}' if avg_l_speech is not None else 'N/A'}</li>
             </ul>
-            <b>ค่าเฉลี่ยที่ความถี่สูง (3000-6000 Hz):</b>
+            <b>ความถี่สูง (3000-6000 Hz):</b>
             <ul>
-                <li>หูขวา: {f'{avg_r_high:.1f} dB' if avg_r_high is not None else 'N/A'}</li>
-                <li>หูซ้าย: {f'{avg_l_high:.1f} dB' if avg_l_high is not None else 'N/A'}</li>
+                <li>หูขวา: {f'{avg_r_high:.1f}' if avg_r_high is not None else 'N/A'}</li>
+                <li>หูซ้าย: {f'{avg_l_high:.1f}' if avg_l_high is not None else 'N/A'}</li>
             </ul>
         </div>
         """, unsafe_allow_html=True)
+
+    # --- ส่วนเปรียบเทียบ Baseline ---
+    if hearing_results.get('sts_detected') is not None: # Check if baseline was processed
+        st.markdown("<hr>", unsafe_allow_html=True)
+        st.markdown("<h5><b>การเปรียบเทียบกับผลตรวจพื้นฐาน (Baseline)</b></h5>", unsafe_allow_html=True)
+
+        if not any(val is not None for freq in hearing_results.get('baseline_values', {}).values() for val in freq.values()):
+             st.info("ไม่พบข้อมูล Baseline สำหรับการเปรียบเทียบ")
+        else:
+            if hearing_results.get('sts_detected'):
+                st.warning("⚠️ **พบการเปลี่ยนแปลงระดับการได้ยินอย่างมีนัยสำคัญ (Standard Threshold Shift - STS)**")
+
+            baseline_df_data = []
+            for freq, values in hearing_results.get('raw_values', {}).items():
+                baseline_df_data.append({
+                    "ความถี่": freq,
+                    "ปัจจุบัน (ขวา)": values.get('right', '-'),
+                    "Baseline (ขวา)": hearing_results['baseline_values'][freq].get('right', '-'),
+                    "Shift (ขวา)": hearing_results['shift_values'][freq].get('right', '-'),
+                    "ปัจจุบัน (ซ้าย)": values.get('left', '-'),
+                    "Baseline (ซ้าย)": hearing_results['baseline_values'][freq].get('left', '-'),
+                    "Shift (ซ้าย)": hearing_results['shift_values'][freq].get('left', '-'),
+                })
+            baseline_df = pd.DataFrame(baseline_df_data)
+            st.dataframe(baseline_df, use_container_width=True, hide_index=True)
+
+    # --- ส่วนข้อมูลสรุปเพิ่มเติม ---
+    if hearing_results.get('other_data'):
+        st.markdown("<hr>", unsafe_allow_html=True)
+        st.markdown("<h5><b>ข้อมูลเพิ่มเติม</b></h5>", unsafe_allow_html=True)
+        for key, value in hearing_results['other_data'].items():
+            st.markdown(f"**{key.replace('_', ' ')}:** {value}")
 
 
 def display_performance_report_lung(person_data):
