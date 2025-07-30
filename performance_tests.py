@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 def is_empty(val):
     """
@@ -79,22 +80,27 @@ def interpret_audiogram(person_data):
         try: return int(float(val))
         except (ValueError, TypeError): return None
 
-    # --- สำคัญ: แก้ไขชื่อคอลัมน์ตรงนี้ให้ตรงกับฐานข้อมูลของคุณ ---
-    # โครงสร้าง: 'ความถี่': ('ชื่อคอลัมน์หูขวา', 'ชื่อคอลัมน์หูซ้าย')
+    # --- อัปเดตชื่อคอลัมน์ตามที่ผู้ใช้ระบุ ---
     freq_columns = {
-        '500 Hz': ('R_500Hz', 'L_500Hz'),
-        '1000 Hz': ('R_1000Hz', 'L_1000Hz'),
-        '2000 Hz': ('R_2000Hz', 'L_2000Hz'),
-        '3000 Hz': ('R_3000Hz', 'L_3000Hz'),
-        '4000 Hz': ('R_4000Hz', 'L_4000Hz'),
-        '6000 Hz': ('R_6000Hz', 'L_6000Hz'),
-        '8000 Hz': ('R_8000Hz', 'L_8000Hz'),
+        '500 Hz': ('R500', 'L500'),
+        '1000 Hz': ('R1k', 'L1k'),
+        '2000 Hz': ('R2k', 'L2k'),
+        '3000 Hz': ('R3k', 'L3k'),
+        '4000 Hz': ('R4k', 'L4k'),
+        '6000 Hz': ('R6k', 'L6k'),
+        '8000 Hz': ('R8k', 'L8k'),
     }
     # ---------------------------------------------------------
 
-    results = {'raw_values': {}, 'averages': {}, 'summary': {}, 'advice': ""}
+    results = {
+        'raw_values': {}, 'baseline_values': {}, 'shift_values': {},
+        'averages': {}, 'summary': {}, 'advice': "", 'sts_detected': False,
+        'other_data': {}
+    }
     has_data = False
+    has_baseline_data = False
 
+    # --- ดึงข้อมูลปัจจุบันและ Baseline ---
     for freq, (r_col, l_col) in freq_columns.items():
         r_val = to_int(person_data.get(r_col))
         l_val = to_int(person_data.get(l_col))
@@ -102,43 +108,68 @@ def interpret_audiogram(person_data):
         if r_val is not None or l_val is not None:
             has_data = True
 
+        # ดึงข้อมูล Baseline
+        r_base_col, l_base_col = r_col + 'B', l_col + 'B'
+        r_base_val = to_int(person_data.get(r_base_col))
+        l_base_val = to_int(person_data.get(l_base_col))
+        results['baseline_values'][freq] = {'right': r_base_val, 'left': l_base_val}
+        if r_base_val is not None or l_base_val is not None:
+            has_baseline_data = True
+
     if not has_data:
         return {'summary': {'overall': "ไม่ได้เข้ารับการตรวจ"}, 'advice': "", 'raw_values': {}, 'averages': {}}
 
-    # Calculate averages
-    def calculate_avg(freq_keys, ear):
-        vals = [results['raw_values'][f][ear] for f in freq_keys if results['raw_values'][f][ear] is not None]
-        return sum(vals) / len(vals) if vals else None
-
-    results['averages']['right_500_2000'] = calculate_avg(['500 Hz', '1000 Hz', '2000 Hz'], 'right')
-    results['averages']['left_500_2000'] = calculate_avg(['500 Hz', '1000 Hz', '2000 Hz'], 'left')
-    results['averages']['right_3000_6000'] = calculate_avg(['3000 Hz', '4000 Hz', '6000 Hz'], 'right')
-    results['averages']['left_3000_6000'] = calculate_avg(['3000 Hz', '4000 Hz', '6000 Hz'], 'left')
-
-    # Interpretation logic
-    def classify_hearing(avg_val):
-        if avg_val is None: return "ข้อมูลไม่เพียงพอ"
-        if avg_val <= 25: return "ปกติ"
-        if avg_val <= 40: return "หูตึงเล็กน้อย"
-        if avg_val <= 55: return "หูตึงปานกลาง"
-        if avg_val <= 70: return "หูตึงค่อนข้างรุนแรง"
-        if avg_val <= 90: return "หูตึงรุนแรง"
-        return "หูตึงรุนแรงมาก"
-
-    summary_r = classify_hearing(results['averages']['right_500_2000'])
-    summary_l = classify_hearing(results['averages']['left_500_2000'])
+    # --- คำนวณค่าเฉลี่ย ---
+    # ใช้ค่าที่คำนวณไว้ล่วงหน้าถ้ามี, หรือคำนวณใหม่ถ้าไม่มี
+    results['averages']['right_500_2000'] = to_int(person_data.get('AVRต่ำ'))
+    results['averages']['left_500_2000'] = to_int(person_data.get('AVLต่ำ'))
+    results['averages']['right_3000_6000'] = to_int(person_data.get('AVRสูง'))
+    results['averages']['left_3000_6000'] = to_int(person_data.get('AVLสูง'))
+    
+    # --- แปลผลระดับการได้ยิน ---
+    summary_r = person_data.get('ระดับการได้ยินหูขวา', '')
+    summary_l = person_data.get('ระดับการได้ยินหูซ้าย', '')
+    if is_empty(summary_r): summary_r = "N/A"
+    if is_empty(summary_l): summary_l = "N/A"
     results['summary']['right'] = summary_r
     results['summary']['left'] = summary_l
+    results['summary']['overall'] = person_data.get('ผลตรวจการได้ยินหูขวา', 'N/A') # ใช้ค่าสรุปจากฐานข้อมูลเป็นหลัก
 
-    if summary_r == "ปกติ" and summary_l == "ปกติ":
-        results['summary']['overall'] = "การได้ยินโดยรวมปกติ"
-        results['advice'] = "สมรรถภาพการได้ยินอยู่ในเกณฑ์ปกติ ควรหลีกเลี่ยงการอยู่ในที่เสียงดังเป็นเวลานานเพื่อถนอมการได้ยิน"
-    else:
-        results['summary']['overall'] = "การได้ยินผิดปกติ"
-        advice_parts = []
-        if summary_r != "ปกติ": advice_parts.append(f"หูขวา: {summary_r}")
-        if summary_l != "ปกติ": advice_parts.append(f"หูซ้าย: {summary_l}")
-        results['advice'] = f"ผลการได้ยิน: {', '.join(advice_parts)} ควรพบแพทย์ผู้เชี่ยวชาญด้านหู คอ จมูก เพื่อตรวจประเมินเพิ่มเติม และพิจารณาแนวทางการรักษาหรือใช้อุปกรณ์ช่วยฟัง"
+    # --- คำแนะนำ ---
+    results['advice'] = person_data.get('คำแนะนำผลตรวจการได้ยิน', 'ไม่มีคำแนะนำเพิ่มเติม')
+
+    # --- คำนวณ Shift และ STS ถ้ามีข้อมูล Baseline ---
+    if has_baseline_data:
+        sts_freqs = ['2000 Hz', '3000 Hz', '4000 Hz']
+        shifts_r, shifts_l = [], []
+        for freq, values in results['raw_values'].items():
+            base_vals = results['baseline_values'][freq]
+            shift_r, shift_l = None, None
+            if values['right'] is not None and base_vals['right'] is not None:
+                shift_r = values['right'] - base_vals['right']
+            if values['left'] is not None and base_vals['left'] is not None:
+                shift_l = values['left'] - base_vals['left']
+            results['shift_values'][freq] = {'right': shift_r, 'left': shift_l}
+
+            if freq in sts_freqs:
+                if shift_r is not None: shifts_r.append(shift_r)
+                if shift_l is not None: shifts_l.append(shift_l)
+        
+        avg_shift_r = np.mean(shifts_r) if shifts_r else 0
+        avg_shift_l = np.mean(shifts_l) if shifts_l else 0
+
+        if avg_shift_r >= 10 or avg_shift_l >= 10:
+            results['sts_detected'] = True
+    
+    # --- ดึงข้อมูลสรุปอื่นๆ ---
+    other_keys = [
+        'ผลการได้ยินเปรียบเทียบALLFq', 'ผลการได้ยินเปรียบเทียบAVRFqต่ำ',
+        'ผลการได้ยินเปรียบเทียบAVRFqสูง', 'ข้อมูลประกอบการตรวจสมรรถภาพการได้ยิน'
+    ]
+    for key in other_keys:
+        val = person_data.get(key)
+        if not is_empty(val):
+            results['other_data'][key] = val
 
     return results
 
