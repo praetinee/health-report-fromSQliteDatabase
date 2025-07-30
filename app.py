@@ -374,17 +374,24 @@ def has_basic_health_data(person_data):
     return any(not is_empty(person_data.get(key)) for key in key_indicators)
 
 def has_vision_data(person_data):
-    """Check for any vision test data, summary or detailed."""
-    summary_keys = ['สายตา', 'ตาบอดสี', 'สรุปเหมาะสมกับงาน']
+    """Check for any ACTUAL vision test data, ignoring summary/advice fields."""
     detailed_keys = [
-        'ป.การรวมภาพ', 'ป.ความชัดของภาพระยะไกล', 'การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)',
-        'การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)', 'ป.การกะระยะและมองความชัดลึกของภาพ',
-        'ป.การจำแนกสี', 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง',
-        'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน', 'ป.ความชัดของภาพระยะใกล้',
-        'การมองภาพระยะใกล้ด้วยตาขวา (Near vision – Right)', 'การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision – Left)',
-        'ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'ป.ลานสายตา'
+        'ป.การรวมภาพ', 'ผ.การรวมภาพ',
+        'ป.ความชัดของภาพระยะไกล', 'ผ.ความชัดของภาพระยะไกล',
+        'การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)',
+        'การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)',
+        'ป.การกะระยะและมองความชัดลึกของภาพ', 'ผ.การกะระยะและมองความชัดลึกของภาพ',
+        'ป.การจำแนกสี', 'ผ.การจำแนกสี',
+        'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง',
+        'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน',
+        'ป.ความชัดของภาพระยะใกล้', 'ผ.ความชัดของภาพระยะใกล้',
+        'การมองภาพระยะใกล้ด้วยตาขวา (Near vision – Right)',
+        'การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision – Left)',
+        'ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน',
+        'ป.ลานสายตา', 'ผ.ลานสายตา',
+        'ผ.สายตาเขซ่อนเร้น'
     ]
-    return any(not is_empty(person_data.get(key)) for key in summary_keys + detailed_keys)
+    return any(not is_empty(person_data.get(key)) for key in detailed_keys)
 
 
 def has_hearing_data(person_data):
@@ -774,7 +781,7 @@ def display_performance_report(person_data, report_type):
             st.markdown("<h2 style='text-align: center;'>รายงานผลการตรวจสมรรถภาพการมองเห็น (Vision Test Report)</h2>", unsafe_allow_html=True)
             
             if not has_vision_data(person_data):
-                st.warning("ไม่พบข้อมูลการตรวจสมรรถภาพการมองเห็นในปีนี้")
+                st.warning("ไม่พบข้อมูลผลการตรวจสมรรถภาพการมองเห็นโดยละเอียดในปีนี้")
                 return
 
             vision_advice_summary = person_data.get('สรุปเหมาะสมกับงาน')
@@ -1062,4 +1069,4 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             display_main_report(person_data)
 
 else:
-    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
+    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภา
