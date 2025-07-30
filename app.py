@@ -10,13 +10,9 @@ from collections import OrderedDict
 from datetime import datetime
 import re
 import os
-from performance_tests import display_performance_report, has_vision_data
+from performance_tests import display_performance_report, has_vision_data, has_hearing_data, has_lung_data, interpret_cxr, is_empty
 
 # --- Helper Functions (Existing) ---
-def is_empty(val):
-    """Check if a value is empty, null, or whitespace."""
-    return pd.isna(val) or str(val).strip().lower() in ["", "-", "none", "nan", "null"]
-
 THAI_MONTHS_GLOBAL = {1: "มกราคม", 2: "กุมภาพันธ์", 3: "มีนาคม", 4: "เมษายน", 5: "พฤษภาคม", 6: "มิถุนายน", 7: "กรกฎาคม", 8: "สิงหาคม", 9: "กันยายน", 10: "ตุลาคม", 11: "พฤศจิกายน", 12: "ธันวาคม"}
 THAI_MONTH_ABBR_TO_NUM_GLOBAL = {"ม.ค.": 1, "ม.ค": 1, "มกราคม": 1, "ก.พ.": 2, "ก.พ": 2, "กพ": 2, "กุมภาพันธ์": 2, "มี.ค.": 3, "มี.ค": 3, "มีนาคม": 3, "เม.ย.": 4, "เม.ย": 4, "เมษายน": 4, "พ.ค.": 5, "พ.ค": 5, "พฤษภาคม": 5, "มิ.ย.": 6, "มิ.ย": 6, "มิถุนายน": 6, "ก.ค.": 7, "ก.ค": 7, "กรกฎาคม": 7, "ส.ค.": 8, "ส.ค": 8, "สิงหาคม": 8, "ก.ย.": 9, "ก.ย": 9, "กันยายน": 9, "ต.ค.": 10, "ต.ค": 10, "ตุลาคม": 10, "พ.ย.": 11, "พ.ย": 11, "พฤศจิกายน": 11, "ธ.ค.": 12, "ธ.ค": 12, "ธันวาคม": 12}
 
@@ -374,16 +370,6 @@ def has_basic_health_data(person_data):
     key_indicators = ['FBS', 'CHOL', 'HCT', 'Cr', 'WBC (cumm)', 'น้ำหนัก', 'ส่วนสูง', 'SBP']
     return any(not is_empty(person_data.get(key)) for key in key_indicators)
 
-def has_hearing_data(person_data):
-    """Check for hearing test data."""
-    return not is_empty(person_data.get('การได้ยิน'))
-
-def has_lung_data(person_data):
-    """Check for lung capacity test data."""
-    key_indicators = ['FVC เปอร์เซ็นต์', 'FEV1เปอร์เซ็นต์', 'FEV1/FVC%']
-    return any(not is_empty(person_data.get(key)) for key in key_indicators)
-
-
 # --- UI and Report Rendering Functions ---
 def interpret_bp(sbp, dbp):
     """Interprets blood pressure readings."""
@@ -419,12 +405,6 @@ def combined_health_advice(bmi, sbp, dbp):
     if bmi_text and not bp_text: return f"{bmi_text} แนะนำให้ดูแลเรื่องโภชนาการและการออกกำลังกายอย่างเหมาะสม"
     return ""
     
-def interpret_cxr(val):
-    val = str(val or "").strip()
-    if is_empty(val): return "ไม่ได้เข้ารับการตรวจเอกซเรย์"
-    if any(keyword in val.lower() for keyword in ["ผิดปกติ", "ฝ้า", "รอย", "abnormal", "infiltrate", "lesion"]): return f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
-    return val
-
 # --- CORRECTED: display_common_header ---
 def display_common_header(person_data):
     """Displays the common report header with personal and vital sign info."""
@@ -758,6 +738,3 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
 
 else:
     st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
-" from the Canvas.
-I want to make the following changes:
-เปลี่ยนสีพื้นหลังของ "สรุปความเหมาะสมกับงาน" เป็นสีน้ำเงินโปร่งแสง และเปลี่ยนไอคอนเป็นรูปเครื่องหมาย
