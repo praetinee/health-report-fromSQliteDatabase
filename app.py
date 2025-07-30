@@ -551,20 +551,20 @@ def render_vision_details_table(person_data):
     vision_tests = [
         # Tests with a single column where the value determines the outcome
         {'display': '1. การมองด้วย 2 ตา (Binocular vision)', 'type': 'value', 'col': 'ป.การรวมภาพ', 'normal_keywords': ['ปกติ'], 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '2. การมองภาพระยะไกลด้วยสองตา (Far vision - Both)', 'type': 'value', 'col': 'ป.ความชัดของภาพระยะไกล', 'normal_keywords': ['ชัดเจน', 'ปกติ'], 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '2. การมองภาพระยะไกลด้วยสองตา (Far vision - Both)', 'type': 'paired_value', 'normal_col': 'ป.ความชัดของภาพระยะไกล', 'abnormal_col': 'ผ.ความชัดของภาพระยะไกล', 'normal_keywords': ['ชัดเจน', 'ปกติ'], 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
         {'display': '3. การมองภาพระยะไกลด้วยตาขวา (Far vision - Right)', 'type': 'value', 'col': 'การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)', 'normal_keywords': ['ชัดเจน', 'ปกติ'], 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
         {'display': '4. การมองภาพระยะไกลด้วยตาซ้าย (Far vision - Left)', 'type': 'value', 'col': 'การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)', 'normal_keywords': ['ชัดเจน', 'ปกติ'], 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
-        {'display': '5. การมองภาพ 3 มิติ (Stereo depth)', 'type': 'value', 'col': 'ป.การกะระยะและมองความชัดลึกของภาพ', 'normal_keywords': ['ปกติ'], 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '6. การมองจำแนกสี (Color discrimination)', 'type': 'value', 'col': 'ป.การจำแนกสี', 'normal_keywords': ['ปกติ'], 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '9. การมองภาพระยะใกล้ด้วยสองตา (Near vision - Both)', 'type': 'value', 'col': 'ป.ความชัดของภาพระยะใกล้', 'normal_keywords': ['ชัดเจน', 'ปกติ'], 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
+        {'display': '5. การมองภาพ 3 มิติ (Stereo depth)', 'type': 'paired_value', 'normal_col': 'ป.การกะระยะและมองความชัดลึกของภาพ', 'abnormal_col': 'ผ.การกะระยะและมองความชัดลึกของภาพ', 'normal_keywords': ['ปกติ'], 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '6. การมองจำแนกสี (Color discrimination)', 'type': 'paired_value', 'normal_col': 'ป.การจำแนกสี', 'abnormal_col': 'ผ.การจำแนกสี', 'normal_keywords': ['ปกติ'], 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '9. การมองภาพระยะใกล้ด้วยสองตา (Near vision - Both)', 'type': 'paired_value', 'normal_col': 'ป.ความชัดของภาพระยะใกล้', 'abnormal_col': 'ผ.ความชัดของภาพระยะใกล้', 'normal_keywords': ['ชัดเจน', 'ปกติ'], 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
         {'display': '10. การมองภาพระยะใกล้ด้วยตาขวา (Near vision - Right)', 'type': 'value', 'col': 'การมองภาพระยะใกล้ด้วยตาขวา (Near vision – Right)', 'normal_keywords': ['ชัดเจน', 'ปกติ'], 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
         {'display': '11. การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision - Left)', 'type': 'value', 'col': 'การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision – Left)', 'normal_keywords': ['ชัดเจน', 'ปกติ'], 'outcomes': ['ชัดเจน', 'ไม่ชัดเจน']},
         {'display': '13. ลานสายตา (Visual field)', 'type': 'value', 'col': 'ป.ลานสายตา', 'normal_keywords': ['ปกติ'], 'outcomes': ['ปกติ', 'ผิดปกติ']},
         
-        # Tests with separate columns for normal/abnormal outcomes, based on presence of data
-        {'display': '7. ความสมดุลกล้ามเนื้อตาแนวดิ่ง (Far vertical phoria)', 'type': 'presence', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง', 'abnormal_col': 'ผิดปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง', 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '8. ความสมดุลกล้ามเนื้อตาแนวนอน (Far lateral phoria)', 'type': 'presence', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน', 'abnormal_col': 'ผิดปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน', 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '12. ความสมดุลกล้ามเนื้อตาแนวนอน (Near lateral phoria)', 'type': 'presence', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'abnormal_col': 'ผิดปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'outcomes': ['ปกติ', 'ผิดปกติ']}
+        # Phoria tests with complex relationship to 'ผ.สายตาเขซ่อนเร้น'
+        {'display': '7. ความสมดุลกล้ามเนื้อตาแนวดิ่ง (Far vertical phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง', 'related_keyword': 'แนวตั้งระยะไกล', 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '8. ความสมดุลกล้ามเนื้อตาแนวนอน (Far lateral phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน', 'related_keyword': 'แนวนอนระยะไกล', 'outcomes': ['ปกติ', 'ผิดปกติ']},
+        {'display': '12. ความสมดุลกล้ามเนื้อตาแนวนอน (Near lateral phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'related_keyword': 'แนวนอนระยะใกล้', 'outcomes': ['ปกติ', 'ผิดปกติ']}
     ]
 
     # Sort the list by display name to ensure order
@@ -575,6 +575,8 @@ def render_vision_details_table(person_data):
     html_parts.append('<thead><tr><th>รายการตรวจ (Vision Test)</th><th class="result-cell">ผลการตรวจ</th></tr></thead>')
     html_parts.append('<tbody>')
 
+    strabismus_val = str(person_data.get('ผ.สายตาเขซ่อนเร้น', '')).strip()
+
     for test in vision_tests:
         is_normal = False
         is_abnormal = False
@@ -584,13 +586,12 @@ def render_vision_details_table(person_data):
             result_value = str(person_data.get(test['col'], '')).strip()
             if not is_empty(result_value):
                 result_text = result_value
-                # NEW LOGIC: Check if any of the normal keywords are in the result
                 if any(keyword.lower() in result_value.lower() for keyword in test['normal_keywords']):
                     is_normal = True
                 else:
                     is_abnormal = True 
         
-        elif test['type'] == 'presence':
+        elif test['type'] == 'paired_value':
             normal_val = str(person_data.get(test['normal_col'], '')).strip()
             abnormal_val = str(person_data.get(test['abnormal_col'], '')).strip()
             if not is_empty(normal_val):
@@ -599,15 +600,24 @@ def render_vision_details_table(person_data):
             elif not is_empty(abnormal_val):
                 is_abnormal = True
                 result_text = abnormal_val
+        
+        elif test['type'] == 'phoria':
+            normal_val = str(person_data.get(test['normal_col'], '')).strip()
+            if not is_empty(normal_val):
+                is_normal = True
+                result_text = normal_val
+            elif not is_empty(strabismus_val) and test['related_keyword'] in strabismus_val:
+                is_abnormal = True
+                result_text = f"สายตาเขซ่อนเร้น ({test['related_keyword']})"
 
         status_text = ""
         status_class = ""
 
         if is_normal:
-            status_text = test['outcomes'][0] # Use the primary normal outcome for display (e.g., 'ปกติ', 'ชัดเจน')
+            status_text = test['outcomes'][0]
             status_class = 'vision-normal'
         elif is_abnormal:
-            status_text = result_text # Show the actual abnormal text
+            status_text = result_text 
             status_class = 'vision-abnormal'
         else:
             status_text = "ไม่ได้ตรวจ"
