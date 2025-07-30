@@ -578,20 +578,26 @@ def render_vision_details_table(person_data):
     for test in vision_tests:
         is_normal = False
         is_abnormal = False
+        result_text = ""
 
         if test['type'] == 'value':
             result_value = str(person_data.get(test['col'], '')).strip()
             if not is_empty(result_value):
+                result_text = result_value
                 if test['normal_val'].lower() in result_value.lower():
                     is_normal = True
                 else:
-                    is_abnormal = True # Any non-empty, non-normal value is considered abnormal
+                    is_abnormal = True 
         
         elif test['type'] == 'presence':
-            if not is_empty(person_data.get(test['normal_col'])):
+            normal_val = str(person_data.get(test['normal_col'], '')).strip()
+            abnormal_val = str(person_data.get(test['abnormal_col'], '')).strip()
+            if not is_empty(normal_val):
                 is_normal = True
-            elif not is_empty(person_data.get(test['abnormal_col'])):
+                result_text = normal_val
+            elif not is_empty(abnormal_val):
                 is_abnormal = True
+                result_text = abnormal_val
 
         status_text = ""
         status_class = ""
@@ -600,7 +606,7 @@ def render_vision_details_table(person_data):
             status_text = test['outcomes'][0]
             status_class = 'vision-normal'
         elif is_abnormal:
-            status_text = test['outcomes'][1]
+            status_text = result_text # Show the actual abnormal text
             status_class = 'vision-abnormal'
         else:
             status_text = "ไม่ได้ตรวจ"
