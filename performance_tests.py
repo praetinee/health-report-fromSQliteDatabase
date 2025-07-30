@@ -45,7 +45,7 @@ def interpret_vision(vision_raw, color_blindness_raw):
 
 def interpret_hearing(hearing_raw):
     """
-    แปลผลตรวจสมรรถภาพการได้ยิน
+    แปลผลตรวจสมรรถภาพการได้ยิน (แบบสรุปเก่า)
     Args:
         hearing_raw (str): ผลตรวจการได้ยินจากฐานข้อมูล
     Returns:
@@ -65,6 +65,83 @@ def interpret_hearing(hearing_raw):
             summary = hearing_raw
 
     return summary, advice
+
+def interpret_audiogram(person_data):
+    """
+    แปลผลตรวจสมรรถภาพการได้ยินอย่างละเอียด (Audiogram)
+    Args:
+        person_data (dict): Dictionary ข้อมูลของบุคคลนั้นๆ
+    Returns:
+        dict: ผลการแปลข้อมูลอย่างละเอียด
+    """
+    def to_int(val):
+        if is_empty(val): return None
+        try: return int(float(val))
+        except (ValueError, TypeError): return None
+
+    # --- สำคัญ: แก้ไขชื่อคอลัมน์ตรงนี้ให้ตรงกับฐานข้อมูลของคุณ ---
+    # โครงสร้าง: 'ความถี่': ('ชื่อคอลัมน์หูขวา', 'ชื่อคอลัมน์หูซ้าย')
+    freq_columns = {
+        '500 Hz': ('R_500Hz', 'L_500Hz'),
+        '1000 Hz': ('R_1000Hz', 'L_1000Hz'),
+        '2000 Hz': ('R_2000Hz', 'L_2000Hz'),
+        '3000 Hz': ('R_3000Hz', 'L_3000Hz'),
+        '4000 Hz': ('R_4000Hz', 'L_4000Hz'),
+        '6000 Hz': ('R_6000Hz', 'L_6000Hz'),
+        '8000 Hz': ('R_8000Hz', 'L_8000Hz'),
+    }
+    # ---------------------------------------------------------
+
+    results = {'raw_values': {}, 'averages': {}, 'summary': {}, 'advice': ""}
+    has_data = False
+
+    for freq, (r_col, l_col) in freq_columns.items():
+        r_val = to_int(person_data.get(r_col))
+        l_val = to_int(person_data.get(l_col))
+        results['raw_values'][freq] = {'right': r_val, 'left': l_val}
+        if r_val is not None or l_val is not None:
+            has_data = True
+
+    if not has_data:
+        return {'summary': {'overall': "ไม่ได้เข้ารับการตรวจ"}, 'advice': "", 'raw_values': {}, 'averages': {}}
+
+    # Calculate averages
+    def calculate_avg(freq_keys, ear):
+        vals = [results['raw_values'][f][ear] for f in freq_keys if results['raw_values'][f][ear] is not None]
+        return sum(vals) / len(vals) if vals else None
+
+    results['averages']['right_500_2000'] = calculate_avg(['500 Hz', '1000 Hz', '2000 Hz'], 'right')
+    results['averages']['left_500_2000'] = calculate_avg(['500 Hz', '1000 Hz', '2000 Hz'], 'left')
+    results['averages']['right_3000_6000'] = calculate_avg(['3000 Hz', '4000 Hz', '6000 Hz'], 'right')
+    results['averages']['left_3000_6000'] = calculate_avg(['3000 Hz', '4000 Hz', '6000 Hz'], 'left')
+
+    # Interpretation logic
+    def classify_hearing(avg_val):
+        if avg_val is None: return "ข้อมูลไม่เพียงพอ"
+        if avg_val <= 25: return "ปกติ"
+        if avg_val <= 40: return "หูตึงเล็กน้อย"
+        if avg_val <= 55: return "หูตึงปานกลาง"
+        if avg_val <= 70: return "หูตึงค่อนข้างรุนแรง"
+        if avg_val <= 90: return "หูตึงรุนแรง"
+        return "หูตึงรุนแรงมาก"
+
+    summary_r = classify_hearing(results['averages']['right_500_2000'])
+    summary_l = classify_hearing(results['averages']['left_500_2000'])
+    results['summary']['right'] = summary_r
+    results['summary']['left'] = summary_l
+
+    if summary_r == "ปกติ" and summary_l == "ปกติ":
+        results['summary']['overall'] = "การได้ยินโดยรวมปกติ"
+        results['advice'] = "สมรรถภาพการได้ยินอยู่ในเกณฑ์ปกติ ควรหลีกเลี่ยงการอยู่ในที่เสียงดังเป็นเวลานานเพื่อถนอมการได้ยิน"
+    else:
+        results['summary']['overall'] = "การได้ยินผิดปกติ"
+        advice_parts = []
+        if summary_r != "ปกติ": advice_parts.append(f"หูขวา: {summary_r}")
+        if summary_l != "ปกติ": advice_parts.append(f"หูซ้าย: {summary_l}")
+        results['advice'] = f"ผลการได้ยิน: {', '.join(advice_parts)} ควรพบแพทย์ผู้เชี่ยวชาญด้านหู คอ จมูก เพื่อตรวจประเมินเพิ่มเติม และพิจารณาแนวทางการรักษาหรือใช้อุปกรณ์ช่วยฟัง"
+
+    return results
+
 
 def interpret_lung_capacity(person_data):
     """
