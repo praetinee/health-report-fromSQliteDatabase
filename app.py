@@ -1113,6 +1113,3 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
 
 else:
     st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
-" from the Canvas.
-I want to make the following changes:
-เปลี่ยนสีพื้นหลังของ "สรุปความเหมาะสมกับงาน" เป็นสีน้ำเงินโปร่งแสง และเปลี่ยนไอคอนเป็นรูปเครื่องหมาย
