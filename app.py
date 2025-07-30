@@ -784,11 +784,39 @@ def display_performance_report(person_data, report_type):
                 st.info(f"**สรุปความเหมาะสมกับงาน:** {vision_advice_summary}")
                 st.markdown("</div>", unsafe_allow_html=True)
 
-            strabismus_val = person_data.get('ผ.สายตาเขซ่อนเร้น')
-            if not is_empty(strabismus_val):
-                st.markdown(f"<div style='text-align: center; margin-top: 1rem;'>", unsafe_allow_html=True)
-                st.warning(f"**ความผิดปกติของสายตาที่ตรวจพบ:** {strabismus_val}")
-                st.markdown("</div>", unsafe_allow_html=True)
+            # --- CORRECTED LOGIC FOR ABNORMALITIES ---
+            abnormality_fields = OrderedDict([
+                ('ผ.สายตาเขซ่อนเร้น', 'สายตาเขซ่อนเร้น'),
+                ('ผ.การรวมภาพ', 'การรวมภาพ'),
+                ('ผ.ความชัดของภาพระยะไกล', 'ความชัดของภาพระยะไกล'),
+                ('ผ.การกะระยะและมองความชัดลึกของภาพ', 'การกะระยะ/ความชัดลึก'),
+                ('ผ.การจำแนกสี', 'การจำแนกสี'),
+                ('ผ.ความชัดของภาพระยะใกล้', 'ความชัดของภาพระยะใกล้'),
+                ('ผ.ลานสายตา', 'ลานสายตา'),
+                ('แนะนำABN EYE', 'คำแนะนำเพิ่มเติมจากแพทย์')
+            ])
+
+            found_abnormalities = []
+            for col, name in abnormality_fields.items():
+                val = person_data.get(col)
+                if not is_empty(val):
+                    val_str = str(val).strip()
+                    if len(val_str) > 5: 
+                         found_abnormalities.append(f"<b>{name}:</b> {val_str}")
+                    else:
+                         found_abnormalities.append(f"<b>{name}:</b> พบความผิดปกติ")
+
+            if found_abnormalities:
+                abnormalities_html_list = "".join([f"<li>{item}</li>" for item in found_abnormalities])
+                st.markdown(f"""
+                <div style='background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 1rem; border-radius: 0.5rem; margin-top: 1rem;'>
+                    <h5 style='margin-top: 0; margin-bottom: 0.5rem; color: #856404;'>ความผิดปกติของสายตาที่ตรวจพบ</h5>
+                    <ul style='margin-bottom: 0; padding-left: 20px;'>
+                        {abnormalities_html_list}
+                    </ul>
+                </div>
+                """, unsafe_allow_html=True)
+            # --- END OF CORRECTED LOGIC ---
 
             st.markdown("<hr>", unsafe_allow_html=True)
             
