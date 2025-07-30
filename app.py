@@ -784,7 +784,7 @@ def display_performance_report(person_data, report_type):
                 st.info(f"**สรุปความเหมาะสมกับงาน:** {vision_advice_summary}")
                 st.markdown("</div>", unsafe_allow_html=True)
 
-            # --- CORRECTED LOGIC FOR ABNORMALITIES ---
+            # --- SIMPLIFIED ABNORMALITY SUMMARY ---
             abnormality_fields = OrderedDict([
                 ('ผ.สายตาเขซ่อนเร้น', 'สายตาเขซ่อนเร้น'),
                 ('ผ.การรวมภาพ', 'การรวมภาพ'),
@@ -792,31 +792,32 @@ def display_performance_report(person_data, report_type):
                 ('ผ.การกะระยะและมองความชัดลึกของภาพ', 'การกะระยะ/ความชัดลึก'),
                 ('ผ.การจำแนกสี', 'การจำแนกสี'),
                 ('ผ.ความชัดของภาพระยะใกล้', 'ความชัดของภาพระยะใกล้'),
-                ('ผ.ลานสายตา', 'ลานสายตา'),
-                ('แนะนำABN EYE', 'คำแนะนำเพิ่มเติมจากแพทย์')
+                ('ผ.ลานสายตา', 'ลานสายตา')
             ])
 
-            found_abnormalities = []
+            abnormal_topics = []
             for col, name in abnormality_fields.items():
-                val = person_data.get(col)
-                if not is_empty(val):
-                    val_str = str(val).strip()
-                    if len(val_str) > 5: 
-                         found_abnormalities.append(f"<b>{name}:</b> {val_str}")
-                    else:
-                         found_abnormalities.append(f"<b>{name}:</b> พบความผิดปกติ")
+                if not is_empty(person_data.get(col)):
+                    abnormal_topics.append(name)
 
-            if found_abnormalities:
-                abnormalities_html_list = "".join([f"<li>{item}</li>" for item in found_abnormalities])
+            doctor_advice = person_data.get('แนะนำABN EYE')
+
+            if abnormal_topics or not is_empty(doctor_advice):
+                summary_parts = []
+                if abnormal_topics:
+                    summary_parts.append(f"<b>พบความผิดปกติเกี่ยวกับ:</b> {', '.join(abnormal_topics)}")
+                
+                if not is_empty(doctor_advice):
+                    summary_parts.append(f"<b>คำแนะนำเพิ่มเติมจากแพทย์:</b> {doctor_advice}")
+
+                summary_html = "<br>".join(summary_parts)
                 st.markdown(f"""
                 <div style='background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 1rem; border-radius: 0.5rem; margin-top: 1rem;'>
-                    <h5 style='margin-top: 0; margin-bottom: 0.5rem; color: #856404;'>ความผิดปกติของสายตาที่ตรวจพบ</h5>
-                    <ul style='margin-bottom: 0; padding-left: 20px;'>
-                        {abnormalities_html_list}
-                    </ul>
+                    <h5 style='margin-top: 0; margin-bottom: 0.5rem; color: #856404;'>สรุปความผิดปกติของสายตา</h5>
+                    <p style='margin:0;'>{summary_html}</p>
                 </div>
                 """, unsafe_allow_html=True)
-            # --- END OF CORRECTED LOGIC ---
+            # --- END OF SIMPLIFIED SUMMARY ---
 
             st.markdown("<hr>", unsafe_allow_html=True)
             
@@ -1061,4 +1062,4 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             display_main_report(person_data)
 
 else:
-    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
+    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภา
