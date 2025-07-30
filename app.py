@@ -833,9 +833,9 @@ def display_performance_report(person_data, report_type):
 
                 summary_html = "<br>".join(summary_parts)
                 st.markdown(f"""
-                <div style='background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 1rem; border-radius: 0.5rem; margin-top: 1rem;'>
-                    <h5 style='margin-top: 0; margin-bottom: 0.5rem; color: #856404;'>สรุปความผิดปกติของสายตา</h5>
-                    <p style='margin:0;'>{summary_html}</p>
+                <div style='background-color: rgba(255, 229, 100, 0.1); border: 1px solid rgba(255, 229, 100, 0.3); padding: 1rem; border-radius: 0.5rem; margin-top: 1rem;'>
+                    <h5 style='margin-top: 0; margin-bottom: 0.5rem; color: #FFE564;'>สรุปความผิดปกติของสายตา</h5>
+                    <p style='margin:0; color: var(--text-color);'>{summary_html}</p>
                 </div>
                 """, unsafe_allow_html=True)
             # --- END OF SIMPLIFIED SUMMARY ---
