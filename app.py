@@ -1054,7 +1054,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     if has_hearing_data(person_data):
         available_reports['hearing_report'] = "สมรรถภาพการได้ยิน"
     if has_lung_data(person_data):
-        available_reports['lung_report'] = "ความจุปอด"
+        available_reports['lung_report'] = "สมรรถภาพปอด"
 
     if not available_reports:
         display_common_header(person_data)
