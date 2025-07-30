@@ -789,21 +789,45 @@ def display_performance_report(person_data, report_type):
                 if not is_empty(vision_advice_summary) or not is_empty(doctor_advice):
                     st.info("หมายเหตุ: ข้อมูลสรุปที่แสดงอาจมาจากผลการตรวจในปีอื่น")
                     if not is_empty(vision_advice_summary):
-                         st.markdown(f"<div style='text-align: center; margin-top: 1rem;'>", unsafe_allow_html=True)
-                         st.info(f"**สรุปความเหมาะสมกับงาน:** {vision_advice_summary}")
-                         st.markdown("</div>", unsafe_allow_html=True)
+                         st.markdown(f"""
+                         <div style='background-color: rgba(64, 128, 255, 0.1); border: 1px solid rgba(64, 128, 255, 0.3); padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
+                            <div style='flex-shrink: 0;'>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4080FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                            </div>
+                            <div>
+                                <h5 style='margin-top: 0; margin-bottom: 0.25rem; color: #A6C8FF;'>สรุปความเหมาะสมกับงาน</h5>
+                                <p style='margin:0; color: var(--text-color);'>{vision_advice_summary}</p>
+                            </div>
+                         </div>
+                         """, unsafe_allow_html=True)
                     if not is_empty(doctor_advice):
-                         st.markdown(f"<div style='text-align: center; margin-top: 1rem;'>", unsafe_allow_html=True)
-                         st.warning(f"**คำแนะนำเพิ่มเติมจากแพทย์:** {doctor_advice}")
-                         st.markdown("</div>", unsafe_allow_html=True)
+                         st.markdown(f"""
+                         <div style='background-color: rgba(255, 229, 100, 0.1); border: 1px solid rgba(255, 229, 100, 0.3); padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
+                            <div style='flex-shrink: 0;'>
+                               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFE564" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg>
+                            </div>
+                            <div>
+                                <h5 style='margin-top: 0; margin-bottom: 0.25rem; color: #FFE564;'>คำแนะนำเพิ่มเติมจากแพทย์</h5>
+                                <p style='margin:0; color: var(--text-color);'>{doctor_advice}</p>
+                            </div>
+                         </div>
+                         """, unsafe_allow_html=True)
                 return
 
             # If we have detailed data, proceed to show the full report
             vision_advice_summary = person_data.get('สรุปเหมาะสมกับงาน')
             if not is_empty(vision_advice_summary):
-                st.markdown(f"<div style='text-align: center; margin-top: 1rem;'>", unsafe_allow_html=True)
-                st.info(f"**สรุปความเหมาะสมกับงาน:** {vision_advice_summary}")
-                st.markdown("</div>", unsafe_allow_html=True)
+                st.markdown(f"""
+                 <div style='background-color: rgba(64, 128, 255, 0.1); border: 1px solid rgba(64, 128, 255, 0.3); padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
+                    <div style='flex-shrink: 0;'>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4080FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    </div>
+                    <div>
+                        <h5 style='margin-top: 0; margin-bottom: 0.25rem; color: #A6C8FF;'>สรุปความเหมาะสมกับงาน</h5>
+                        <p style='margin:0; color: var(--text-color);'>{vision_advice_summary}</p>
+                    </div>
+                 </div>
+                 """, unsafe_allow_html=True)
 
             # --- SIMPLIFIED ABNORMALITY SUMMARY ---
             abnormality_fields = OrderedDict([
@@ -833,9 +857,14 @@ def display_performance_report(person_data, report_type):
 
                 summary_html = "<br>".join(summary_parts)
                 st.markdown(f"""
-                <div style='background-color: rgba(255, 229, 100, 0.1); border: 1px solid rgba(255, 229, 100, 0.3); padding: 1rem; border-radius: 0.5rem; margin-top: 1rem;'>
-                    <h5 style='margin-top: 0; margin-bottom: 0.5rem; color: #FFE564;'>สรุปความผิดปกติของสายตา</h5>
-                    <p style='margin:0; color: var(--text-color);'>{summary_html}</p>
+                <div style='background-color: rgba(255, 229, 100, 0.1); border: 1px solid rgba(255, 229, 100, 0.3); padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
+                    <div style='flex-shrink: 0;'>
+                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFE564" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg>
+                    </div>
+                    <div>
+                        <h5 style='margin-top: 0; margin-bottom: 0.25rem; color: #FFE564;'>สรุปความผิดปกติของสายตา</h5>
+                        <p style='margin:0; color: var(--text-color);'>{summary_html}</p>
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
             # --- END OF SIMPLIFIED SUMMARY ---
@@ -1084,3 +1113,6 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
 
 else:
     st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
+" from the Canvas.
+I want to make the following changes:
+เปลี่ยนสีพื้นหลังของ "สรุปความเหมาะสมกับงาน" เป็นสีน้ำเงินโปร่งแสง และเปลี่ยนไอคอนเป็นรูปเครื่องหมาย
