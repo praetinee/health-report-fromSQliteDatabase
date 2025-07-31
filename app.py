@@ -725,11 +725,35 @@ def display_performance_report_hearing(person_data):
 
     # --- ส่วนสรุปผล ---
     st.markdown("<h5><b>สรุปผลการตรวจ</b></h5>", unsafe_allow_html=True)
-    summary_col1, summary_col2 = st.columns(2)
-    with summary_col1:
-        st.metric(label="ระดับการได้ยินหูขวา", value=hearing_results['summary'].get('right', 'N/A'))
-    with summary_col2:
-        st.metric(label="ระดับการได้ยินหูซ้าย", value=hearing_results['summary'].get('left', 'N/A'))
+    summary_r = hearing_results['summary'].get('right', 'N/A')
+    summary_l = hearing_results['summary'].get('left', 'N/A')
+
+    # Define background color based on result
+    def get_summary_color(summary_text):
+        if "ปกติ" in summary_text:
+            return "rgba(46, 125, 50, 0.2)" # Greenish
+        elif "N/A" in summary_text or "ไม่ได้" in summary_text:
+            return "rgba(120, 120, 120, 0.2)" # Greyish
+        else:
+            return "rgba(198, 40, 40, 0.2)" # Reddish
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown(f"""
+        <div style="background-color: {get_summary_color(summary_r)}; padding: 1rem; border-radius: 8px; text-align: center; height: 100%;">
+            <p style="font-size: 0.9rem; font-weight: bold; margin: 0; color: var(--text-color);">ระดับการได้ยินหูขวา</p>
+            <p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">{summary_r}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown(f"""
+        <div style="background-color: {get_summary_color(summary_l)}; padding: 1rem; border-radius: 8px; text-align: center; height: 100%;">
+            <p style="font-size: 0.9rem; font-weight: bold; margin: 0; color: var(--text-color);">ระดับการได้ยินหูซ้าย</p>
+            <p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">{summary_l}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
 
     # --- ส่วนคำแนะนำ ---
     st.markdown("<br><h5><b>คำแนะนำ</b></h5>", unsafe_allow_html=True)
@@ -1204,4 +1228,4 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             display_main_report(person_data)
 
 else:
-    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
+    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภา
