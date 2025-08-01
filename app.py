@@ -555,6 +555,26 @@ def inject_custom_css():
             border-color: #6a6a71;
             color: #d1d1d6;
         }
+        /* New styles for HTML tables generated from dataframes */
+        .styled-df-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'Sarabun', sans-serif !important;
+            font-size: 14px;
+            color: var(--text-color);
+        }
+        .styled-df-table th, .styled-df-table td {
+            border-bottom: 1px solid var(--secondary-background-color);
+            padding: 10px;
+            text-align: left;
+        }
+        .styled-df-table thead th {
+            background-color: var(--secondary-background-color);
+            font-weight: bold;
+        }
+        .styled-df-table tbody tr:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
     </style>
     """, unsafe_allow_html=True)
 
@@ -815,7 +835,7 @@ def display_performance_report_hearing(person_data):
             })
         
         df_display = pd.DataFrame(df_data)
-        st.dataframe(df_display, use_container_width=True, hide_index=True)
+        st.markdown(df_display.to_html(escape=False, index=False, classes="styled-df-table"), unsafe_allow_html=True)
 
     with avg_col:
         st.markdown("<h5><b>ค่าเฉลี่ยการได้ยิน (dB)</b></h5>", unsafe_allow_html=True)
@@ -864,7 +884,7 @@ def display_performance_report_hearing(person_data):
                     "Shift (ซ้าย)": hearing_results['shift_values'][freq].get('left', '-'),
                 })
             baseline_df = pd.DataFrame(baseline_df_data)
-            st.dataframe(baseline_df, use_container_width=True, hide_index=True)
+            st.markdown(baseline_df.to_html(escape=False, index=False, classes="styled-df-table"), unsafe_allow_html=True)
 
     # --- ส่วนข้อมูลสรุปเพิ่มเติม ---
     if hearing_results.get('other_data'):
@@ -919,7 +939,7 @@ def display_performance_report_lung(person_data):
             return "-"
         detail_data = {"การทดสอบ (Test)": ["FVC", "FEV1", "FEV1/FVC"],"ค่าที่วัดได้ (Actual)": [format_detail_val('FVC', '.2f', ' L'), format_detail_val('FEV1', '.2f', ' L'), format_detail_val('FEV1/FVC %', '.1f', ' %')],"ค่ามาตรฐาน (Predicted)": [format_detail_val('FVC predic', '.2f', ' L'), format_detail_val('FEV1 predic', '.2f', ' L'), format_detail_val('FEV1/FVC % pre', '.1f', ' %')],"% เทียบค่ามาตรฐาน (% Pred)": [format_detail_val('FVC %', '.1f', ' %'), format_detail_val('FEV1 %', '.1f', ' %'), "-"]}
         df_details = pd.DataFrame(detail_data)
-        st.dataframe(df_details, use_container_width=True, hide_index=True)
+        st.markdown(df_details.to_html(escape=False, index=False, classes="styled-df-table"), unsafe_allow_html=True)
 
 
 # --- FINAL VERSION: display_performance_report ---
