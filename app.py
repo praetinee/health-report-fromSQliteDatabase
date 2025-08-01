@@ -723,10 +723,45 @@ def display_performance_report_hearing(person_data):
         st.warning("ไม่ได้เข้ารับการตรวจสมรรถภาพการได้ยินในปีนี้")
         return
 
+    # --- NEW: Helper function to format summary text ---
+    def format_hearing_summary(summary_text):
+        if is_empty(summary_text) or "N/A" in summary_text:
+            return f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">N/A</p>'
+        
+        if "ปกติ" in summary_text:
+            return f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">{summary_text}</p>'
+
+        if "การได้ยินลดลงที่ระดับความถี่" in summary_text:
+            parts = summary_text.split("ที่ระดับความถี่")
+            main_status = parts[0].strip() if parts[0] else "การได้ยินลดลง"
+            
+            freq_str = parts[1].strip() if len(parts) > 1 else ""
+            
+            # Format frequencies
+            freqs = [f.strip() for f in freq_str.split(',')]
+            formatted_freqs = []
+            for f in freqs:
+                f_lower = f.lower()
+                if 'k' in f_lower:
+                    formatted_freqs.append(f_lower.replace('k', ' kHz'))
+                else:
+                    formatted_freqs.append(f'{f_lower} Hz')
+            
+            freq_display = ", ".join(formatted_freqs)
+            
+            return f"""
+                <p style="font-size: 1.2rem; font-weight: bold; margin: 0; color: var(--text-color);">{main_status}</p>
+                <p style="font-size: 0.8rem; margin: 0.25rem 0 0 0; color: var(--text-color);">ที่ความถี่: {freq_display}</p>
+            """
+        
+        # Fallback for other unexpected formats
+        return f'<p style="font-size: 1.1rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">{summary_text}</p>'
+
+
     # --- ส่วนสรุปผล ---
     st.markdown("<h5><b>สรุปผลการตรวจ</b></h5>", unsafe_allow_html=True)
-    summary_r = hearing_results['summary'].get('right', 'N/A')
-    summary_l = hearing_results['summary'].get('left', 'N/A')
+    summary_r_raw = hearing_results['summary'].get('right', 'N/A')
+    summary_l_raw = hearing_results['summary'].get('left', 'N/A')
 
     # Define background color based on result
     def get_summary_color(summary_text):
@@ -740,17 +775,17 @@ def display_performance_report_hearing(person_data):
     col1, col2 = st.columns(2)
     with col1:
         st.markdown(f"""
-        <div style="background-color: {get_summary_color(summary_r)}; padding: 1rem; border-radius: 8px; text-align: center; height: 100%;">
+        <div style="background-color: {get_summary_color(summary_r_raw)}; padding: 1rem; border-radius: 8px; text-align: center; height: 100%;">
             <p style="font-size: 0.9rem; font-weight: bold; margin: 0; color: var(--text-color);">ระดับการได้ยินหูขวา</p>
-            <p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">{summary_r}</p>
+            {format_hearing_summary(summary_r_raw)}
         </div>
         """, unsafe_allow_html=True)
 
     with col2:
         st.markdown(f"""
-        <div style="background-color: {get_summary_color(summary_l)}; padding: 1rem; border-radius: 8px; text-align: center; height: 100%;">
+        <div style="background-color: {get_summary_color(summary_l_raw)}; padding: 1rem; border-radius: 8px; text-align: center; height: 100%;">
             <p style="font-size: 0.9rem; font-weight: bold; margin: 0; color: var(--text-color);">ระดับการได้ยินหูซ้าย</p>
-            <p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">{summary_l}</p>
+            {format_hearing_summary(summary_l_raw)}
         </div>
         """, unsafe_allow_html=True)
 
@@ -1228,4 +1263,4 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             display_main_report(person_data)
 
 else:
-    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
+    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภา
