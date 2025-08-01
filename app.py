@@ -758,7 +758,7 @@ def display_performance_report_hearing(person_data):
             freq_str = parts[1].strip() if len(parts) > 1 else ""
             
             # Format frequencies
-            freqs = [f.strip() for f in freq_str.split(',')]
+            freqs = [f.strip() for f in freq_str.split(',') if f.strip()]
             formatted_freqs = []
             for f in freqs:
                 if not f: continue
