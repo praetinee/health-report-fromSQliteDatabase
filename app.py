@@ -811,10 +811,10 @@ def display_performance_report_hearing(person_data):
 
     # --- ส่วนสรุปผล ---
     st.markdown("<h5><b>สรุปผลการตรวจ</b></h5>", unsafe_allow_html=True)
-    summary_r_raw = hearing_results['summary'].get('right_raw', 'N/A')
-    summary_l_raw = hearing_results['summary'].get('left_raw', 'N/A')
-    severity_r = hearing_results['summary'].get('right_severity', 'N/A')
-    severity_l = hearing_results['summary'].get('left_severity', 'N/A')
+    summary_r_raw = person_data.get('ผลตรวจการได้ยินหูขวา', 'N/A')
+    summary_l_raw = person_data.get('ผลตรวจการได้ยินหูซ้าย', 'N/A')
+    severity_r = person_data.get('ระดับการได้ยินหูขวา', 'N/A')
+    severity_l = person_data.get('ระดับการได้ยินหูซ้าย', 'N/A')
 
     # Define background color based on result
     def get_summary_color(summary_text):
