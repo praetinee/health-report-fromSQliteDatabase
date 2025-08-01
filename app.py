@@ -752,8 +752,8 @@ def display_performance_report_hearing(person_data):
             return f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">{summary_text}</p>'
 
         if "การได้ยินลดลงที่ระดับความถี่" in summary_text:
-            parts = summary_text.split("ที่ระดับความถี่")
-            main_status = parts[0].strip() if parts[0] else "การได้ยินลดลง"
+            parts = summary_text.split(',', 1)
+            main_status = "การได้ยินลดลง"
             
             freq_str = parts[1].strip() if len(parts) > 1 else ""
             
@@ -761,6 +761,7 @@ def display_performance_report_hearing(person_data):
             freqs = [f.strip() for f in freq_str.split(',')]
             formatted_freqs = []
             for f in freqs:
+                if not f: continue
                 f_lower = f.lower()
                 if 'k' in f_lower:
                     formatted_freqs.append(f_lower.replace('k', ' kHz'))
