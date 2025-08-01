@@ -749,10 +749,8 @@ def display_performance_report_hearing(person_data):
             
             freq_display = ", ".join(formatted_freqs)
             
-            return f"""
-                <p style="font-size: 1.2rem; font-weight: bold; margin: 0; color: var(--text-color);">{main_status}</p>
-                <p style="font-size: 0.8rem; margin: 0.25rem 0 0 0; color: var(--text-color);">ที่ความถี่: {freq_display}</p>
-            """
+            return (f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0; color: var(--text-color);">{main_status}</p>'
+                    f'<p style="font-size: 0.8rem; margin: 0.25rem 0 0 0; color: var(--text-color);">ที่ความถี่: {freq_display}</p>')
         
         # Fallback for other unexpected formats
         return f'<p style="font-size: 1.1rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">{summary_text}</p>'
