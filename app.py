@@ -1281,9 +1281,4 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         elif page_to_show == 'hearing_report':
             display_performance_report(person_data, 'hearing')
         elif page_to_show == 'lung_report':
-            display_performance_report(person_data, 'lung')
-        elif page_to_show == 'main_report':
-            display_main_report(person_data)
-
-else:
-    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
+            display_performance_repo
