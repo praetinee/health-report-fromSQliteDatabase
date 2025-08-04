@@ -11,7 +11,7 @@ from datetime import datetime
 import re
 import os
 # --- แก้ไข: Import ฟังก์ชันใหม่ ---
-from performance_tests import interpret_audiogram
+from performance_tests import interpret_audiogram, interpret_lung_capacity
 
 # --- Helper Functions (Existing) ---
 def is_empty(val):
