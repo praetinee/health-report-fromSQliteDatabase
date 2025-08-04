@@ -175,8 +175,8 @@ def interpret_audiogram(person_data):
     results['summary']['right_raw'] = summary_r_raw
     results['summary']['left_raw'] = summary_l_raw
     results['summary']['overall'] = person_data.get('ผลตรวจการได้ยินหูขวา', 'N/A')
-    results['summary']['summary_html_right'] = format_hearing_summary_html(summary_r_raw or severity_r, severity_r, right_ear_values)
-    results['summary']['summary_html_left'] = format_hearing_summary_html(summary_l_raw or severity_l, severity_l, left_ear_values)
+    results['summary']['summary_html_right'] = format_hearing_summary_html(severity_r, right_ear_values)
+    results['summary']['summary_html_left'] = format_hearing_summary_html(severity_l, left_ear_values)
     results['advice'] = person_data.get('คำแนะนำผลตรวจการได้ยิน', 'ไม่มีคำแนะนำเพิ่มเติม')
 
     if has_baseline_data:
