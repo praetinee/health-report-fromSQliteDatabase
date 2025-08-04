@@ -118,15 +118,15 @@ def interpret_audiogram(person_data):
         if avg_val <= 90: return "หูตึงรุนแรง"
         return "หูตึงรุนแรงมาก"
 
-    def format_hearing_summary_html(summary_text, severity_text, ear_values):
-        if is_empty(summary_text) or "N/A" in summary_text:
-            return f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">N/A</p>'
+    def format_hearing_summary_html(severity_text, ear_values):
+        if is_empty(severity_text) or "ข้อมูลไม่เพียงพอ" in severity_text:
+            return '<p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">N/A</p>'
         
-        if "ปกติ" in summary_text:
-            return f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">{summary_text}</p>'
+        if "ปกติ" in severity_text:
+            return f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">{severity_text}</p>'
 
-        main_status = severity_text if not is_empty(severity_text) and "ข้อมูลไม่เพียงพอ" not in severity_text else "การได้ยินลดลง"
-        
+        main_status = severity_text
+
         affected_freqs = []
         for freq, db_val in ear_values.items():
             if db_val is not None and db_val > 25:
