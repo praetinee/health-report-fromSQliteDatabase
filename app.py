@@ -743,78 +743,12 @@ def display_performance_report_hearing(person_data):
         st.warning("ไม่ได้เข้ารับการตรวจสมรรถภาพการได้ยินในปีนี้")
         return
 
-    # --- NEW: Helper function to format summary text ---
-    def format_hearing_summary(summary_text, severity_text):
-        if is_empty(summary_text) or "N/A" in summary_text:
-            return f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">N/A</p>'
-        
-        if "ปกติ" in summary_text:
-            return f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">{summary_text}</p>'
-
-        # Use the calculated severity as the main status
-        main_status = severity_text if not is_empty(severity_text) and "ข้อมูลไม่เพียงพอ" not in severity_text else "การได้ยินลดลง"
-
-        # Extract frequencies from the original summary text
-        freq_str = ""
-        if "ที่ระดับความถี่" in summary_text:
-            parts = summary_text.split(',', 1)
-            freq_str = parts[1].strip() if len(parts) > 1 else ""
-        elif "การได้ยินลดลง" in summary_text:
-             # Handle cases where the format might be different, e.g. "การได้ยินลดลง,500,1k"
-             parts = summary_text.split(',', 1)
-             freq_str = parts[1].strip() if len(parts) > 1 else ""
-
-        if not freq_str:
-            # If no frequencies are listed, just show the severity.
-            return f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">{main_status}</p>'
-
-        # Categorize frequencies
-        freqs = [f.strip().lower() for f in freq_str.split(',') if f.strip()]
-        
-        low_tones = []
-        speech_tones = []
-        high_tones = []
-
-        for f in freqs:
-            if '500' in f:
-                low_tones.append('500 Hz')
-            elif '1k' in f:
-                speech_tones.append('1 kHz')
-            elif '2k' in f:
-                speech_tones.append('2 kHz')
-            elif '3k' in f:
-                high_tones.append('3 kHz')
-            elif '4k' in f:
-                high_tones.append('4 kHz')
-            elif '6k' in f:
-                high_tones.append('6 kHz')
-            elif '8k' in f:
-                high_tones.append('8 kHz')
-
-        # Build the HTML output
-        html_output = f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0; color: var(--text-color);">{main_status}</p>'
-        
-        details_parts = []
-        if speech_tones:
-            details_parts.append(f'เสียงพูด ({", ".join(speech_tones)})')
-        if high_tones:
-            details_parts.append(f'เสียงแหลม ({", ".join(high_tones)})')
-        if low_tones:
-            details_parts.append(f'เสียงทุ้ม ({", ".join(low_tones)})')
-
-        if details_parts:
-            details_str = ", ".join(details_parts)
-            html_output += f'<p style="font-size: 0.8rem; margin: 0.25rem 0 0 0; color: var(--text-color);">กระทบความถี่: {details_str}</p>'
-
-        return html_output.strip()
-
-
     # --- ส่วนสรุปผล ---
     st.markdown("<h5><b>สรุปผลการตรวจ</b></h5>", unsafe_allow_html=True)
-    summary_r_raw = person_data.get('ผลตรวจการได้ยินหูขวา', 'N/A')
-    summary_l_raw = person_data.get('ผลตรวจการได้ยินหูซ้าย', 'N/A')
-    severity_r = person_data.get('ระดับการได้ยินหูขวา', 'N/A')
-    severity_l = person_data.get('ระดับการได้ยินหูซ้าย', 'N/A')
+    summary_r_raw = hearing_results['summary'].get('right_raw', 'N/A')
+    summary_html_right = hearing_results['summary'].get('summary_html_right', '<p>N/A</p>')
+    summary_l_raw = hearing_results['summary'].get('left_raw', 'N/A')
+    summary_html_left = hearing_results['summary'].get('summary_html_left', '<p>N/A</p>')
 
     # Define background color based on result
     def get_summary_color(summary_text):
@@ -830,7 +764,7 @@ def display_performance_report_hearing(person_data):
         st.markdown(f"""
         <div style="background-color: {get_summary_color(summary_r_raw)}; padding: 1rem; border-radius: 8px; text-align: center; height: 100%;">
             <p style="font-size: 0.9rem; font-weight: bold; margin: 0; color: var(--text-color);">ระดับการได้ยินหูขวา</p>
-            {format_hearing_summary(summary_r_raw, severity_r)}
+            {summary_html_right}
         </div>
         """, unsafe_allow_html=True)
 
@@ -838,7 +772,7 @@ def display_performance_report_hearing(person_data):
         st.markdown(f"""
         <div style="background-color: {get_summary_color(summary_l_raw)}; padding: 1rem; border-radius: 8px; text-align: center; height: 100%;">
             <p style="font-size: 0.9rem; font-weight: bold; margin: 0; color: var(--text-color);">ระดับการได้ยินหูซ้าย</p>
-            {format_hearing_summary(summary_l_raw, severity_l)}
+            {summary_html_left}
         </div>
         """, unsafe_allow_html=True)
 
