@@ -80,17 +80,11 @@ def interpret_audiogram(person_data):
         try: return int(float(val))
         except (ValueError, TypeError): return None
 
-    # --- อัปเดตชื่อคอลัมน์ตามที่ผู้ใช้ระบุ ---
     freq_columns = {
-        '500 Hz': ('R500', 'L500'),
-        '1000 Hz': ('R1k', 'L1k'),
-        '2000 Hz': ('R2k', 'L2k'),
-        '3000 Hz': ('R3k', 'L3k'),
-        '4000 Hz': ('R4k', 'L4k'),
-        '6000 Hz': ('R6k', 'L6k'),
+        '500 Hz': ('R500', 'L500'), '1000 Hz': ('R1k', 'L1k'), '2000 Hz': ('R2k', 'L2k'),
+        '3000 Hz': ('R3k', 'L3k'), '4000 Hz': ('R4k', 'L4k'), '6000 Hz': ('R6k', 'L6k'),
         '8000 Hz': ('R8k', 'L8k'),
     }
-    # ---------------------------------------------------------
 
     results = {
         'raw_values': {}, 'baseline_values': {}, 'shift_values': {},
@@ -100,76 +94,113 @@ def interpret_audiogram(person_data):
     has_data = False
     has_baseline_data = False
 
-    # --- ดึงข้อมูลปัจจุบันและ Baseline ---
     for freq, (r_col, l_col) in freq_columns.items():
         r_val = to_int(person_data.get(r_col))
         l_val = to_int(person_data.get(l_col))
         results['raw_values'][freq] = {'right': r_val, 'left': l_val}
-        if r_val is not None or l_val is not None:
-            has_data = True
+        if r_val is not None or l_val is not None: has_data = True
 
-        # ดึงข้อมูล Baseline
-        r_base_col, l_base_col = r_col + 'B', l_col + 'B'
-        r_base_val = to_int(person_data.get(r_base_col))
-        l_base_val = to_int(person_data.get(l_base_col))
+        r_base_val = to_int(person_data.get(r_col + 'B'))
+        l_base_val = to_int(person_data.get(l_col + 'B'))
         results['baseline_values'][freq] = {'right': r_base_val, 'left': l_base_val}
-        if r_base_val is not None or l_base_val is not None:
-            has_baseline_data = True
+        if r_base_val is not None or l_base_val is not None: has_baseline_data = True
 
     if not has_data:
-        return {'summary': {'overall': "ไม่ได้เข้ารับการตรวจ"}, 'advice': "", 'raw_values': {}, 'averages': {}}
+        return {'summary': {'overall': "ไม่ได้เข้ารับการตรวจ"}, 'advice': ""}
 
-    # --- คำนวณค่าเฉลี่ย ---
-    # ใช้ค่าที่คำนวณไว้ล่วงหน้าถ้ามี, หรือคำนวณใหม่ถ้าไม่มี
+    def classify_hearing(avg_val):
+        if avg_val is None: return "ข้อมูลไม่เพียงพอ"
+        if avg_val <= 25: return "ปกติ"
+        if avg_val <= 40: return "หูตึงเล็กน้อย"
+        if avg_val <= 55: return "หูตึงปานกลาง"
+        if avg_val <= 70: return "หูตึงค่อนข้างรุนแรง"
+        if avg_val <= 90: return "หูตึงรุนแรง"
+        return "หูตึงรุนแรงมาก"
+
+    def format_hearing_summary_html(summary_text, severity_text):
+        if is_empty(summary_text) or "N/A" in summary_text:
+            return f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">N/A</p>'
+        
+        if "ปกติ" in summary_text:
+            return f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">{summary_text}</p>'
+
+        main_status = severity_text if not is_empty(severity_text) and "ข้อมูลไม่เพียงพอ" not in severity_text else "การได้ยินลดลง"
+        
+        freq_str = ""
+        if "ที่ระดับความถี่" in summary_text:
+            parts = summary_text.split(',', 1)
+            freq_str = parts[1].strip() if len(parts) > 1 else ""
+        elif "การได้ยินลดลง" in summary_text:
+             parts = summary_text.split(',', 1)
+             freq_str = parts[1].strip() if len(parts) > 1 else ""
+
+        if not freq_str:
+            return f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">{main_status}</p>'
+
+        freqs = [f.strip().lower() for f in freq_str.split(',') if f.strip()]
+        
+        low_tones, speech_tones, high_tones = [], [], []
+        for f in freqs:
+            if '500' in f: low_tones.append('500 Hz')
+            elif '1k' in f: speech_tones.append('1 kHz')
+            elif '2k' in f: speech_tones.append('2 kHz')
+            elif '3k' in f: high_tones.append('3 kHz')
+            elif '4k' in f: high_tones.append('4 kHz')
+            elif '6k' in f: high_tones.append('6 kHz')
+            elif '8k' in f: high_tones.append('8 kHz')
+
+        html_output = f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0; color: var(--text-color);">{main_status}</p>'
+        details_parts = []
+        if speech_tones: details_parts.append(f'เสียงพูด ({", ".join(speech_tones)})')
+        if high_tones: details_parts.append(f'เสียงแหลม ({", ".join(high_tones)})')
+        if low_tones: details_parts.append(f'เสียงทุ้ม ({", ".join(low_tones)})')
+
+        if details_parts:
+            details_str = ", ".join(details_parts)
+            html_output += f'<p style="font-size: 0.8rem; margin: 0.25rem 0 0 0; color: var(--text-color);">กระทบความถี่: {details_str}</p>'
+
+        return html_output.strip()
+
     results['averages']['right_500_2000'] = to_int(person_data.get('AVRต่ำ'))
     results['averages']['left_500_2000'] = to_int(person_data.get('AVLต่ำ'))
     results['averages']['right_3000_6000'] = to_int(person_data.get('AVRสูง'))
     results['averages']['left_3000_6000'] = to_int(person_data.get('AVLสูง'))
     
-    # --- แปลผลระดับการได้ยิน ---
-    summary_r = person_data.get('ระดับการได้ยินหูขวา', '')
-    summary_l = person_data.get('ระดับการได้ยินหูซ้าย', '')
-    if is_empty(summary_r): summary_r = "N/A"
-    if is_empty(summary_l): summary_l = "N/A"
-    results['summary']['right'] = summary_r
-    results['summary']['left'] = summary_l
-    results['summary']['overall'] = person_data.get('ผลตรวจการได้ยินหูขวา', 'N/A') # ใช้ค่าสรุปจากฐานข้อมูลเป็นหลัก
+    severity_r = person_data.get('ระดับการได้ยินหูขวา', classify_hearing(results['averages']['right_500_2000']))
+    severity_l = person_data.get('ระดับการได้ยินหูซ้าย', classify_hearing(results['averages']['left_500_2000']))
+    summary_r_raw = person_data.get('ผลตรวจการได้ยินหูขวา', '')
+    summary_l_raw = person_data.get('ผลตรวจการได้ยินหูซ้าย', '')
 
-    # --- คำแนะนำ ---
+    results['summary']['right_raw'] = summary_r_raw
+    results['summary']['left_raw'] = summary_l_raw
+    results['summary']['right_severity'] = severity_r
+    results['summary']['left_severity'] = severity_l
+    results['summary']['overall'] = person_data.get('ผลตรวจการได้ยินหูขวา', 'N/A')
+    results['summary']['summary_html_right'] = format_hearing_summary_html(summary_r_raw, severity_r)
+    results['summary']['summary_html_left'] = format_hearing_summary_html(summary_l_raw, severity_l)
     results['advice'] = person_data.get('คำแนะนำผลตรวจการได้ยิน', 'ไม่มีคำแนะนำเพิ่มเติม')
 
-    # --- คำนวณ Shift และ STS ถ้ามีข้อมูล Baseline ---
     if has_baseline_data:
         sts_freqs = ['2000 Hz', '3000 Hz', '4000 Hz']
         shifts_r, shifts_l = [], []
         for freq, values in results['raw_values'].items():
             base_vals = results['baseline_values'][freq]
             shift_r, shift_l = None, None
-            if values['right'] is not None and base_vals['right'] is not None:
-                shift_r = values['right'] - base_vals['right']
-            if values['left'] is not None and base_vals['left'] is not None:
-                shift_l = values['left'] - base_vals['left']
+            if values['right'] is not None and base_vals['right'] is not None: shift_r = values['right'] - base_vals['right']
+            if values['left'] is not None and base_vals['left'] is not None: shift_l = values['left'] - base_vals['left']
             results['shift_values'][freq] = {'right': shift_r, 'left': shift_l}
-
             if freq in sts_freqs:
                 if shift_r is not None: shifts_r.append(shift_r)
                 if shift_l is not None: shifts_l.append(shift_l)
         
         avg_shift_r = np.mean(shifts_r) if shifts_r else 0
         avg_shift_l = np.mean(shifts_l) if shifts_l else 0
-
-        if avg_shift_r >= 10 or avg_shift_l >= 10:
-            results['sts_detected'] = True
+        if avg_shift_r >= 10 or avg_shift_l >= 10: results['sts_detected'] = True
     
-    # --- ดึงข้อมูลสรุปอื่นๆ ---
-    other_keys = [
-        'ผลการได้ยินเปรียบเทียบALLFq', 'ผลการได้ยินเปรียบเทียบAVRFqต่ำ',
-        'ผลการได้ยินเปรียบเทียบAVRFqสูง', 'ข้อมูลประกอบการตรวจสมรรถภาพการได้ยิน'
-    ]
+    other_keys = ['ผลการได้ยินเปรียบเทียบALLFq', 'ผลการได้ยินเปรียบเทียบAVRFqต่ำ', 'ผลการได้ยินเปรียบเทียบAVRFqสูง', 'ข้อมูลประกอบการตรวจสมรรถภาพการได้ยิน']
     for key in other_keys:
         val = person_data.get(key)
-        if not is_empty(val):
-            results['other_data'][key] = val
+        if not is_empty(val): results['other_data'][key] = val
 
     return results
 
@@ -187,7 +218,6 @@ def interpret_lung_capacity(person_data):
         try: return float(val)
         except (ValueError, TypeError): return None
 
-    # ดึงข้อมูลจาก person_data ด้วย key ที่ถูกต้อง
     raw_values = {
         'FVC': to_float(person_data.get('FVC')),
         'FVC predic': to_float(person_data.get('FVC predic')),
@@ -206,44 +236,38 @@ def interpret_lung_capacity(person_data):
     fev1_p = raw_values['FEV1 %']
     ratio = raw_values['FEV1/FVC %']
 
-    # ตรวจสอบว่ามีข้อมูลการตรวจหรือไม่
     if all(v is None for v in [fvc_p, fev1_p, ratio]):
         return "ไม่ได้เข้ารับการตรวจ", "", raw_values
 
-    # หากข้อมูลสำคัญขาดไป
     if fvc_p is None or ratio is None:
         return "สมรรถภาพปอดสรุปผลไม่ได้เนื่องจากมีความคลาดเคลื่อนในการทดสอบ", "ให้พบแพทย์เพื่อตรวจวินิจฉัย รักษาเพิ่มเติม", raw_values
 
-    summary = "สมรรถภาพปอดสรุปผลไม่ได้เนื่องจากมีความคลาดเคลื่อนในการทดสอบ" # Default summary
+    summary = "สมรรถภาพปอดสรุปผลไม่ได้เนื่องจากมีความคลาดเคลื่อนในการทดสอบ"
 
-    # Interpretation Logic based on provided standard
     if ratio < 70:
         if fvc_p < 80:
-            summary = "สมรรถภาพปอดสรุปผลไม่ได้เนื่องจากมีความคลาดเคลื่อนในการทดสอบ" # Mixed -> Inconclusive as per list
-        else: # Obstructive
+            summary = "สมรรถภาพปอดสรุปผลไม่ได้เนื่องจากมีความคลาดเคลื่อนในการทดสอบ"
+        else:
             if fev1_p is not None:
-                if fev1_p >= 66: # Mild (66-80 from image, but logic implies >=66)
+                if fev1_p >= 66:
                      summary = "สมรรถภาพปอดพบความผิดปกติแบบหลอดลมอุดกั้นเล็กน้อย"
-                elif fev1_p >= 50: # Moderate
+                elif fev1_p >= 50:
                      summary = "สมรรถภาพปอดพบความผิดปกติแบบหลอดลมอุดกั้นปานกลาง"
-                else: # Severe
+                else:
                      summary = "สมรรถภาพปอดพบความผิดปกติแบบหลอดลมอุดกั้นรุนแรง"
-            else: # fev1_p is None
+            else:
                 summary = "สมรรถภาพปอดพบความผิดปกติแบบหลอดลมอุดกั้น"
-
     elif ratio >= 70:
-        if fvc_p < 80: # Restrictive
-            if fvc_p >= 66: # Mild
+        if fvc_p < 80:
+            if fvc_p >= 66:
                 summary = "สมรรถภาพปอดพบความผิดปกติแบบปอดจำกัดการขยายตัวเล็กน้อย"
-            elif fvc_p >= 50: # Moderate
+            elif fvc_p >= 50:
                 summary = "สมรรถภาพปอดพบความผิดปกติแบบปอดจำกัดการขยายตัวปานกลาง"
-            else: # Severe
+            else:
                 summary = "สมรรถภาพปอดพบความผิดปกติแบบปอดจำกัดการขยายตัวรุนแรง"
-        else: # Normal
+        else:
             summary = "สมรรถภาพปอดปกติ"
 
-    # --- NEW ADVICE LOGIC ---
-    # Set advice based on severity
     if summary == "สมรรถภาพปอดปกติ" or "เล็กน้อย" in summary:
         advice = "เพิ่มสมรรถภาพปอดด้วยการออกกำลังกาย หลีกเลี่ยงการสัมผัสสารเคมี ฝุ่น และควัน"
     else:
