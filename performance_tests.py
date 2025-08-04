@@ -127,11 +127,12 @@ def interpret_audiogram(person_data):
         main_status = severity_text if not is_empty(severity_text) and "ข้อมูลไม่เพียงพอ" not in severity_text else "การได้ยินลดลง"
         
         freq_str = ""
-        if "ที่ระดับความถี่" in summary_text:
-            parts = summary_text.split(',', 1)
-            freq_str = parts[1].strip() if len(parts) > 1 else ""
-        elif "การได้ยินลดลง" in summary_text:
+        # Improved logic to find frequencies after a comma or specific phrase
+        if ',' in summary_text:
              parts = summary_text.split(',', 1)
+             freq_str = parts[1].strip() if len(parts) > 1 else ""
+        elif "ที่ระดับความถี่" in summary_text:
+             parts = summary_text.split("ที่ระดับความถี่", 1)
              freq_str = parts[1].strip() if len(parts) > 1 else ""
 
         if not freq_str:
@@ -173,8 +174,6 @@ def interpret_audiogram(person_data):
 
     results['summary']['right_raw'] = summary_r_raw
     results['summary']['left_raw'] = summary_l_raw
-    results['summary']['right_severity'] = severity_r
-    results['summary']['left_severity'] = severity_l
     results['summary']['overall'] = person_data.get('ผลตรวจการได้ยินหูขวา', 'N/A')
     results['summary']['summary_html_right'] = format_hearing_summary_html(summary_r_raw, severity_r)
     results['summary']['summary_html_left'] = format_hearing_summary_html(summary_l_raw, severity_l)
