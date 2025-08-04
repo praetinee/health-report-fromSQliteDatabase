@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import re
 
 def is_empty(val):
     """
@@ -117,15 +118,15 @@ def interpret_audiogram(person_data):
         if avg_val <= 90: return "หูตึงรุนแรง"
         return "หูตึงรุนแรงมาก"
 
-    def format_hearing_summary_html(severity_text, ear_values):
-        if is_empty(severity_text) or "ข้อมูลไม่เพียงพอ" in severity_text:
-            return '<p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">N/A</p>'
+    def format_hearing_summary_html(summary_text, severity_text, ear_values):
+        if is_empty(summary_text) or "N/A" in summary_text:
+            return f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">N/A</p>'
         
-        if "ปกติ" in severity_text:
-            return f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">{severity_text}</p>'
+        if "ปกติ" in summary_text:
+            return f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">{summary_text}</p>'
 
-        main_status = severity_text
-
+        main_status = severity_text if not is_empty(severity_text) and "ข้อมูลไม่เพียงพอ" not in severity_text else "การได้ยินลดลง"
+        
         affected_freqs = []
         for freq, db_val in ear_values.items():
             if db_val is not None and db_val > 25:
@@ -136,7 +137,12 @@ def interpret_audiogram(person_data):
 
         low_tones, speech_tones, high_tones = [], [], []
         for f in affected_freqs:
-            freq_val = int(re.sub(r'[^0-9]', '', f))
+            freq_val_str = re.sub(r'[^0-9]', '', f)
+            if not freq_val_str: continue
+            freq_val = int(freq_val_str)
+            
+            if 'k' in f.lower(): freq_val *= 1000
+
             if freq_val <= 500: low_tones.append(f)
             elif freq_val <= 2000: speech_tones.append(f)
             else: high_tones.append(f)
@@ -169,8 +175,8 @@ def interpret_audiogram(person_data):
     results['summary']['right_raw'] = summary_r_raw
     results['summary']['left_raw'] = summary_l_raw
     results['summary']['overall'] = person_data.get('ผลตรวจการได้ยินหูขวา', 'N/A')
-    results['summary']['summary_html_right'] = format_hearing_summary_html(severity_r, right_ear_values)
-    results['summary']['summary_html_left'] = format_hearing_summary_html(severity_l, left_ear_values)
+    results['summary']['summary_html_right'] = format_hearing_summary_html(summary_r_raw or severity_r, severity_r, right_ear_values)
+    results['summary']['summary_html_left'] = format_hearing_summary_html(summary_l_raw or severity_l, severity_l, left_ear_values)
     results['advice'] = person_data.get('คำแนะนำผลตรวจการได้ยิน', 'ไม่มีคำแนะนำเพิ่มเติม')
 
     if has_baseline_data:
