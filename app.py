@@ -754,7 +754,7 @@ def display_performance_report_hearing(person_data):
     def get_summary_color(summary_text):
         if "ปกติ" in summary_text:
             return "rgba(46, 125, 50, 0.2)" # Greenish
-        elif "N/A" in summary_text or "ไม่ได้" in summary_text:
+        elif "N/A" in summary_text or "ไม่ได้" in summary_text or is_empty(summary_text):
             return "rgba(120, 120, 120, 0.2)" # Greyish
         else:
             return "rgba(198, 40, 40, 0.2)" # Reddish
