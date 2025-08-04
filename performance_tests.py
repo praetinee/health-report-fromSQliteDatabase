@@ -117,38 +117,29 @@ def interpret_audiogram(person_data):
         if avg_val <= 90: return "หูตึงรุนแรง"
         return "หูตึงรุนแรงมาก"
 
-    def format_hearing_summary_html(summary_text, severity_text):
-        if is_empty(summary_text) or "N/A" in summary_text:
-            return f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">N/A</p>'
+    def format_hearing_summary_html(severity_text, ear_values):
+        if is_empty(severity_text) or "ข้อมูลไม่เพียงพอ" in severity_text:
+            return '<p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">N/A</p>'
         
-        if "ปกติ" in summary_text:
-            return f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">{summary_text}</p>'
+        if "ปกติ" in severity_text:
+            return f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">{severity_text}</p>'
 
-        main_status = severity_text if not is_empty(severity_text) and "ข้อมูลไม่เพียงพอ" not in severity_text else "การได้ยินลดลง"
+        main_status = severity_text
+
+        affected_freqs = []
+        for freq, db_val in ear_values.items():
+            if db_val is not None and db_val > 25:
+                affected_freqs.append(freq)
         
-        freq_str = ""
-        # Improved logic to find frequencies after a comma or specific phrase
-        if ',' in summary_text:
-             parts = summary_text.split(',', 1)
-             freq_str = parts[1].strip() if len(parts) > 1 else ""
-        elif "ที่ระดับความถี่" in summary_text:
-             parts = summary_text.split("ที่ระดับความถี่", 1)
-             freq_str = parts[1].strip() if len(parts) > 1 else ""
-
-        if not freq_str:
+        if not affected_freqs:
             return f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">{main_status}</p>'
 
-        freqs = [f.strip().lower() for f in freq_str.split(',') if f.strip()]
-        
         low_tones, speech_tones, high_tones = [], [], []
-        for f in freqs:
-            if '500' in f: low_tones.append('500 Hz')
-            elif '1k' in f: speech_tones.append('1 kHz')
-            elif '2k' in f: speech_tones.append('2 kHz')
-            elif '3k' in f: high_tones.append('3 kHz')
-            elif '4k' in f: high_tones.append('4 kHz')
-            elif '6k' in f: high_tones.append('6 kHz')
-            elif '8k' in f: high_tones.append('8 kHz')
+        for f in affected_freqs:
+            freq_val = int(re.sub(r'[^0-9]', '', f))
+            if freq_val <= 500: low_tones.append(f)
+            elif freq_val <= 2000: speech_tones.append(f)
+            else: high_tones.append(f)
 
         html_output = f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0; color: var(--text-color);">{main_status}</p>'
         details_parts = []
@@ -172,11 +163,14 @@ def interpret_audiogram(person_data):
     summary_r_raw = person_data.get('ผลตรวจการได้ยินหูขวา', '')
     summary_l_raw = person_data.get('ผลตรวจการได้ยินหูซ้าย', '')
 
+    right_ear_values = {freq: vals['right'] for freq, vals in results['raw_values'].items()}
+    left_ear_values = {freq: vals['left'] for freq, vals in results['raw_values'].items()}
+
     results['summary']['right_raw'] = summary_r_raw
     results['summary']['left_raw'] = summary_l_raw
     results['summary']['overall'] = person_data.get('ผลตรวจการได้ยินหูขวา', 'N/A')
-    results['summary']['summary_html_right'] = format_hearing_summary_html(summary_r_raw, severity_r)
-    results['summary']['summary_html_left'] = format_hearing_summary_html(summary_l_raw, severity_l)
+    results['summary']['summary_html_right'] = format_hearing_summary_html(severity_r, right_ear_values)
+    results['summary']['summary_html_left'] = format_hearing_summary_html(severity_l, left_ear_values)
     results['advice'] = person_data.get('คำแนะนำผลตรวจการได้ยิน', 'ไม่มีคำแนะนำเพิ่มเติม')
 
     if has_baseline_data:
