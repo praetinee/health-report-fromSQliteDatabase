@@ -1177,9 +1177,10 @@ def display_main_report(person_data):
                 <b>ประวัติโรคไวรัสตับอักเสบบี ปี พ.ศ. {selected_year}:</b> {hep_history}<br>
                 <b>ประวัติการได้รับวัคซีนในปี พ.ศ. {selected_year}:</b> {hep_vaccine}
             </div>""", unsafe_allow_html=True)
-            advice = hepatitis_b_advice(hbsag, hbsab, hbcab)
-            bg_color = "rgba(57, 255, 20, 0.2)" if "มีภูมิคุ้มกัน" in advice else "rgba(255, 255, 0, 0.2)"
-            st.markdown(f"<div style='line-height: 1.6; padding: 0.4rem 1.5rem; border-radius: 6px; background-color: {bg_color}; color: var(--text-color); margin-bottom: 1.5rem; font-size: 14px;'>{advice}</div>", unsafe_allow_html=True)
+            if not (hbsag == "-" and hbsab == "-" and hbcab == "-"):
+                advice = hepatitis_b_advice(hbsag, hbsab, hbcab)
+                bg_color = "rgba(57, 255, 20, 0.2)" if "มีภูมิคุ้มกัน" in advice else "rgba(255, 255, 0, 0.2)"
+                st.markdown(f"<div style='line-height: 1.6; padding: 0.4rem 1.5rem; border-radius: 6px; background-color: {bg_color}; color: var(--text-color); margin-bottom: 1.5rem; font-size: 14px;'>{advice}</div>", unsafe_allow_html=True)
             
     # --- แก้ไข: สร้างสรุปความเห็นแพทย์อัตโนมัติเสมอสำหรับหน้ารายงานหลัก ---
     doctor_suggestion = generate_holistic_advice(person_data)
@@ -1187,6 +1188,9 @@ def display_main_report(person_data):
     left_spacer3, doctor_col, right_spacer3 = st.columns([0.5, 6, 0.5])
     with doctor_col:
         st.markdown(f"<div style='background-color: #1b5e20; color: white; padding: 0.4rem 2rem; border-radius: 8px; line-height: 1.6; margin-top: 2rem; margin-bottom: 2rem; font-size: 14px;'><b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}</div>", unsafe_allow_html=True)
+    
+    # --- ลบส่วนลายเซ็นแพทย์ ---
+
 
 # --- Main Application Logic ---
 # Load data once
