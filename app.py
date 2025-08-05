@@ -10,6 +10,8 @@ from collections import OrderedDict
 from datetime import datetime
 import re
 import os
+import base64
+from streamlit_js_eval import streamlit_js_eval
 # --- แก้ไข: Import ฟังก์ชันใหม่ ---
 from performance_tests import interpret_audiogram, generate_holistic_advice
 from print_report import generate_printable_report
@@ -1095,7 +1097,7 @@ def display_performance_report(person_data, report_type, all_person_history_df=N
             st.markdown(detailed_table_html, unsafe_allow_html=True)
             
         elif report_type == 'hearing':
-            # --- แก้ไข: เรียกใช้ฟังก์ชันแสดงผลใหม่ ---
+            # --- แก้ไข: ส่งประวัติทั้งหมดไปยังฟังก์ชัน ---
             display_performance_report_hearing(person_data, all_person_history_df)
 
 
@@ -1316,14 +1318,20 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                     st.rerun()
         
         with btn_cols[len(available_reports)]:
-            report_html_data = generate_printable_report(person_data)
-            st.download_button(
-                label="📄 พิมพ์รายงาน",
-                data=report_html_data,
-                file_name=f"Health_Report_{person_data.get('HN', 'NA')}_{person_data.get('Year', 'YYYY')}.html",
-                mime="text/html",
-                use_container_width=True
-            )
+            if st.button("📄 พิมพ์รายงาน", use_container_width=True):
+                report_html_data = generate_printable_report(person_data)
+                b64_html = base64.b64encode(report_html_data.encode()).decode()
+                
+                # JavaScript to open a new window, write the HTML, and trigger the print dialog
+                js_code = f"""
+                    const reportHtml = atob('{b64_html}');
+                    const printWindow = window.open('', '_blank');
+                    printWindow.document.write(reportHtml);
+                    printWindow.document.close();
+                    printWindow.focus(); // Necessary for some browsers
+                    printWindow.print();
+                """
+                streamlit_js_eval(js_code)
 
         display_common_header(person_data)
         
