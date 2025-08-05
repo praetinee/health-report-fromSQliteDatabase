@@ -289,3 +289,108 @@ def interpret_lung_capacity(person_data):
         advice = "ให้พบแพทย์เพื่อตรวจวินิจฉัย รักษาเพิ่มเติม"
         
     return summary, advice, raw_values
+
+def generate_holistic_advice(person_data):
+    """
+    สร้างสรุปความเห็นของแพทย์แบบองค์รวมโดยอัตโนมัติจากข้อมูลสุขภาพทั้งหมด
+    """
+    def get_float(val):
+        if is_empty(val): return None
+        try: return float(str(val).replace(",", "").strip())
+        except: return None
+
+    issues = {'high': [], 'medium': [], 'low': []}
+
+    # 1. BMI and Blood Pressure
+    weight = get_float(person_data.get("น้ำหนัก"))
+    height = get_float(person_data.get("ส่วนสูง"))
+    sbp = get_float(person_data.get("SBP"))
+    dbp = get_float(person_data.get("DBP"))
+
+    if weight and height and height > 0:
+        bmi = weight / ((height / 100) ** 2)
+        if bmi >= 30:
+            issues['medium'].append("ภาวะอ้วน (BMI ≥ 30)")
+        elif bmi >= 25:
+            issues['low'].append("น้ำหนักเกิน (BMI 25-29.9)")
+
+    if sbp and dbp:
+        if sbp >= 160 or dbp >= 100:
+            issues['high'].append(f"ความดันโลหิตสูงระดับรุนแรง ({int(sbp)}/{int(dbp)} mmHg)")
+        elif sbp >= 140 or dbp >= 90:
+            issues['medium'].append(f"ความดันโลหิตสูง ({int(sbp)}/{int(dbp)} mmHg)")
+        elif sbp >= 120 or dbp >= 80:
+            issues['low'].append(f"ความดันโลหิตเริ่มสูง ({int(sbp)}/{int(dbp)} mmHg)")
+
+    # 2. Blood Sugar (FBS)
+    fbs = get_float(person_data.get("FBS"))
+    if fbs:
+        if fbs >= 126:
+            issues['high'].append(f"ระดับน้ำตาลในเลือดสูง เข้าเกณฑ์เบาหวาน ({int(fbs)} mg/dL)")
+        elif fbs >= 100:
+            issues['medium'].append(f"ภาวะเสี่ยงเบาหวาน ({int(fbs)} mg/dL)")
+
+    # 3. Lipids (ไขมัน)
+    chol = get_float(person_data.get("CHOL"))
+    tgl = get_float(person_data.get("TGL"))
+    ldl = get_float(person_data.get("LDL"))
+    hdl = get_float(person_data.get("HDL"))
+    lipid_issues = []
+    if chol and chol >= 240: lipid_issues.append("Cholesterol สูง")
+    if tgl and tgl >= 200: lipid_issues.append("Triglyceride สูง")
+    if ldl and ldl >= 160: lipid_issues.append("LDL สูง")
+    if hdl and hdl < 40: lipid_issues.append("HDL ต่ำ")
+    if lipid_issues:
+        issues['medium'].append(f"ภาวะไขมันในเลือดผิดปกติ ({', '.join(lipid_issues)})")
+
+    # 4. Kidney Function (GFR)
+    gfr = get_float(person_data.get("GFR"))
+    if gfr:
+        if gfr < 30:
+            issues['high'].append("การทำงานของไตลดลงอย่างมาก")
+        elif gfr < 60:
+            issues['medium'].append("การทำงานของไตเริ่มเสื่อม")
+
+    # 5. Liver Function (SGOT/SGPT)
+    sgot = get_float(person_data.get("SGOT"))
+    sgpt = get_float(person_data.get("SGPT"))
+    if (sgot and sgot > 37) or (sgpt and sgpt > 41):
+        issues['medium'].append("ค่าเอนไซม์ตับสูงกว่าปกติ")
+
+    # 6. Uric Acid
+    uric = get_float(person_data.get("Uric Acid"))
+    if uric and uric > 7.2:
+        issues['low'].append("ระดับกรดยูริกสูง")
+
+    # 7. CBC (Anemia)
+    sex = person_data.get("เพศ", "ชาย")
+    hb = get_float(person_data.get("Hb(%)"))
+    hct = get_float(person_data.get("HCT"))
+    hb_limit = 12 if sex == "หญิง" else 13
+    hct_limit = 36 if sex == "หญิง" else 39
+    if (hb and hb < hb_limit) or (hct and hct < hct_limit):
+        issues['medium'].append("ภาวะโลหิตจาง")
+
+    # --- Build the final summary string ---
+    summary_parts = []
+    if not any(issues.values()):
+        return "ผลการตรวจสุขภาพโดยรวมอยู่ในเกณฑ์ปกติ ควรดูแลรักษาสุขภาพที่ดีเช่นนี้ต่อไป และมาตรวจสุขภาพประจำปีอย่างสม่ำเสมอ"
+
+    summary_parts.append("ผลตรวจสุขภาพโดยรวมพบประเด็นที่ควรให้ความสำคัญดังนี้:")
+    
+    if issues['high']:
+        summary_parts.append("<b><u>ประเด็นสำคัญเร่งด่วน:</u></b> " + " ".join([f"<li>{i}</li>" for i in issues['high']]))
+    if issues['medium']:
+        summary_parts.append("<b><u>ประเด็นที่ควรติดตามและปรับเปลี่ยนพฤติกรรม:</u></b> " + " ".join([f"<li>{i}</li>" for i in issues['medium']]))
+    if issues['low']:
+        summary_parts.append("<b><u>ประเด็นอื่นๆ:</u></b> " + " ".join([f"<li>{i}</li>" for i in issues['low']]))
+
+    # Add concluding remarks
+    if issues['high']:
+        summary_parts.append("<br><b>คำแนะนำ:</b> จากผลตรวจข้างต้น ท่านมีความเสี่ยงสูง ควร<b>พบแพทย์</b>เพื่อประเมินอาการ รับการวินิจฉัย และการรักษาที่เหมาะสมโดยเร็วที่สุด")
+    elif issues['medium']:
+        summary_parts.append("<br><b>คำแนะนำ:</b> ควรปรับเปลี่ยนพฤติกรรมสุขภาพอย่างจริงจัง ทั้งด้านอาหารและการออกกำลังกาย เพื่อควบคุมภาวะเสี่ยงต่างๆ และควรตรวจติดตามผลเลือดตามคำแนะนำของแพทย์")
+    else: # Only low issues
+        summary_parts.append("<br><b>คำแนะนำ:</b> ควรใส่ใจดูแลสุขภาพและปรับพฤติกรรมเล็กน้อยเพื่อป้องกันไม่ให้ค่าต่างๆ ผิดปกติมากขึ้นในอนาคต")
+
+    return "<ul>" + "".join(summary_parts) + "</ul>"
