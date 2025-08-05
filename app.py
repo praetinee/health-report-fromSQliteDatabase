@@ -1327,9 +1327,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                     window.onload = function() {
                         setTimeout(function(){
                             window.print();
-                            window.onafterprint = function() {
-                                window.close();
-                            }
+                            window.onafterprint = function() { window.close(); };
                         }, 500); // Delay to ensure content is rendered
                     }
                 </script>
@@ -1340,7 +1338,6 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                 b64_html = base64.b64encode(report_html_with_script.encode('utf-8')).decode()
                 
                 # JavaScript to open a new window using a hidden link, which is more robust against popup blockers
-                link_id = f"print-link-{int(datetime.now().timestamp())}"
                 js_code = f"""
                     var a = document.createElement('a');
                     a.href = 'data:text/html;base64,{b64_html}';
