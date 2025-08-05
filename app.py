@@ -1374,4 +1374,4 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         st.session_state.print_trigger = False
 
 else:
-    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุข
+    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
