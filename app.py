@@ -11,10 +11,11 @@ from datetime import datetime
 import re
 import os
 import base64
+import json
 from streamlit_js_eval import streamlit_js_eval
 # --- แก้ไข: Import ฟังก์ชันใหม่ ---
 from performance_tests import interpret_audiogram, generate_holistic_advice
-from print_report import generate_printable_report, get_print_javascript
+from print_report import generate_printable_report
 
 # --- Helper Functions (Existing) ---
 def is_empty(val):
@@ -1252,6 +1253,7 @@ if 'search_result' not in st.session_state: st.session_state.search_result = pd.
 if 'selected_year' not in st.session_state: st.session_state.selected_year = None
 if 'selected_date' not in st.session_state: st.session_state.selected_date = None
 if 'page' not in st.session_state: st.session_state.page = 'main_report'
+if 'print_trigger' not in st.session_state: st.session_state.print_trigger = False
 
 # --- UI Layout for Search and Filters ---
 st.subheader("ค้นหาและเลือกผลตรวจ")
@@ -1313,21 +1315,13 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         btn_cols = st.columns(len(available_reports) + 1)
         for i, (page_key, page_title) in enumerate(available_reports.items()):
             with btn_cols[i]:
-                if st.button(page_title, use_container_width=True):
+                if st.button(page_title, use_container_width=True, key=f"btn_{page_key}"):
                     st.session_state.page = page_key
                     st.rerun()
         
         with btn_cols[len(available_reports)]:
-            # เปลี่ยนจาก st.download_button เป็น st.button และเรียกใช้ JavaScript
-            if st.button("📄 พิมพ์รายงาน", use_container_width=True, key="print_button"):
-                # 1. สร้าง HTML สำหรับพิมพ์จาก print_report.py
-                report_html_data = generate_printable_report(person_data)
-                
-                # 2. สร้าง JavaScript ที่จะทำการพิมพ์ HTML นั้น
-                js_to_run = get_print_javascript(report_html_data)
-                
-                # 3. สั่งให้ JavaScript ทำงานในฝั่ง client
-                streamlit_js_eval(js_code=js_to_run)
+            if st.button("📄 พิมพ์รายงาน", use_container_width=True):
+                st.session_state.print_trigger = True
 
         display_common_header(person_data)
         
@@ -1341,6 +1335,41 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             display_performance_report(person_data, 'lung')
         elif page_to_show == 'main_report':
             display_main_report(person_data)
+
+    # --- NEW COMPONENT FOR PRINTING ---
+    if st.session_state.get("print_trigger", False):
+        report_html_data = generate_printable_report(person_data)
+        escaped_html = json.dumps(report_html_data)
+        
+        print_component = f"""
+        <iframe id="print-iframe" style="display:none;"></iframe>
+        <script>
+            (function() {{
+                const iframe = document.getElementById('print-iframe');
+                if (!iframe) return;
+
+                const iframeDoc = iframe.contentWindow.document;
+                iframeDoc.open();
+                iframeDoc.write({escaped_html});
+                iframeDoc.close();
+                
+                iframe.onload = function() {{
+                    setTimeout(function() {{
+                        try {{
+                            iframe.contentWindow.focus();
+                            iframe.contentWindow.print();
+                        }} catch (e) {{
+                            console.error("Printing failed:", e);
+                            alert("Could not open print dialog.");
+                        }}
+                    }}, 500);
+                }};
+            }})();
+        </script>
+        """
+        
+        st.components.v1.html(print_component, height=0, width=0)
+        st.session_state.print_trigger = False
 
 else:
     st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
