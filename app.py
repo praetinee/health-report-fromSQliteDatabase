@@ -1331,7 +1331,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                     printWindow.focus(); // Necessary for some browsers
                     printWindow.print();
                 """
-                streamlit_js_eval(js_code)
+                streamlit_js_eval(js_expressions=js_code)
 
         display_common_header(person_data)
         
@@ -1347,4 +1347,4 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             display_main_report(person_data)
 
 else:
-    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
+    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภา
