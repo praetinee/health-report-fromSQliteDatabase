@@ -1102,7 +1102,7 @@ def display_performance_report(person_data, report_type, all_person_history_df=N
             display_performance_report_hearing(person_data, all_person_history_df)
 
 
-def display_main_report(person_data):
+def display_main_report(person_data, all_person_history_df):
     """Displays the main health report with all lab sections."""
     person = person_data
     sex = str(person.get("เพศ", "")).strip()
@@ -1171,12 +1171,31 @@ def display_main_report(person_data):
                 <tbody><tr><td style="padding: 8px; border: 1px solid transparent;">{hbsag}</td><td style="padding: 8px; border: 1px solid transparent;">{hbsab}</td><td style="padding: 8px; border: 1px solid transparent;">{hbcab}</td></tr></tbody>
             </table></div>""", unsafe_allow_html=True)
             
+            # --- NEW LOGIC for Hep B details ---
+            hep_check_year_raw = person.get("ปีตรวจHEP")
+            if not is_empty(hep_check_year_raw):
+                # Use the date from the specific column if it exists
+                hep_test_year_display = safe_text(normalize_thai_date(hep_check_year_raw))
+            else:
+                # If not, find the latest year with any Hep B data from the entire history
+                hep_cols = ['HbsAg', 'HbsAb', 'HBcAB']
+                # Filter out rows where all hep columns are empty
+                hep_history_df = all_person_history_df.dropna(subset=hep_cols, how='all').copy()
+                if not hep_history_df.empty:
+                    # Get the max year from the filtered data
+                    latest_hep_year = hep_history_df['Year'].max()
+                    hep_test_year_display = f"พ.ศ. {latest_hep_year}"
+                else:
+                    # If no hep data at all in the entire history, display a dash
+                    hep_test_year_display = "-"
+
             hep_history, hep_vaccine = safe_text(person.get("สรุปประวัติ Hepb")), safe_text(person.get("วัคซีนhep b 67"))
             st.markdown(f"""<div style='padding: 0.75rem 1rem; background-color: rgba(255,255,255,0.05); border-radius: 6px; margin-bottom: 1.5rem; line-height: 1.8; font-size: 14px;'>
-                <b>ปีที่ตรวจ:</b> พ.ศ. {selected_year}<br>
+                <b>ปีที่ตรวจภูมิคุ้มกัน:</b> {hep_test_year_display}<br>
                 <b>ประวัติโรคไวรัสตับอักเสบบี ปี พ.ศ. {selected_year}:</b> {hep_history}<br>
                 <b>ประวัติการได้รับวัคซีนในปี พ.ศ. {selected_year}:</b> {hep_vaccine}
             </div>""", unsafe_allow_html=True)
+
             if not (is_empty(hbsag) and is_empty(hbsab) and is_empty(hbcab)):
                 advice = hepatitis_b_advice(hbsag, hbsab, hbcab)
                 bg_color = "rgba(57, 255, 20, 0.2)" if "มีภูมิคุ้มกัน" in advice else "rgba(255, 255, 0, 0.2)"
@@ -1327,7 +1346,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         elif page_to_show == 'lung_report':
             display_performance_report(person_data, 'lung')
         elif page_to_show == 'main_report':
-            display_main_report(person_data)
+            display_main_report(person_data, all_person_history_df)
 
     # --- NEW COMPONENT FOR PRINTING ---
     if st.session_state.get("print_trigger", False):
