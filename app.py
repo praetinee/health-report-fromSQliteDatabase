@@ -14,7 +14,7 @@ import base64
 from streamlit_js_eval import streamlit_js_eval
 # --- แก้ไข: Import ฟังก์ชันใหม่ ---
 from performance_tests import interpret_audiogram, generate_holistic_advice
-from print_report import generate_printable_report
+from print_report import generate_printable_report, get_print_javascript
 
 # --- Helper Functions (Existing) ---
 def is_empty(val):
@@ -1309,7 +1309,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         if st.session_state.page not in available_reports:
             st.session_state.page = list(available_reports.keys())[0]
 
-        # --- เพิ่มปุ่มพิมพ์รายงาน ---
+        # --- แก้ไข: เปลี่ยนปุ่มพิมพ์รายงาน ---
         btn_cols = st.columns(len(available_reports) + 1)
         for i, (page_key, page_title) in enumerate(available_reports.items()):
             with btn_cols[i]:
@@ -1318,26 +1318,16 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                     st.rerun()
         
         with btn_cols[len(available_reports)]:
-            report_html_data = generate_printable_report(person_data)
-            print_script = """
-            <script>
-                window.onload = function() {
-                    setTimeout(function(){
-                        window.print();
-                        window.onafterprint = function() { window.close(); };
-                    }, 500);
-                }
-            </script>
-            """
-            report_html_with_script = report_html_data.replace("</body>", f"{print_script}</body>")
-            
-            st.download_button(
-                label="📄 พิมพ์รายงาน",
-                data=report_html_with_script.encode('utf-8'),
-                file_name=f"Health_Report_{person_data.get('HN', 'NA')}_{person_data.get('Year', 'YYYY')}.html",
-                mime="text/html",
-                use_container_width=True
-            )
+            # เปลี่ยนจาก st.download_button เป็น st.button และเรียกใช้ JavaScript
+            if st.button("📄 พิมพ์รายงาน", use_container_width=True, key="print_button"):
+                # 1. สร้าง HTML สำหรับพิมพ์จาก print_report.py
+                report_html_data = generate_printable_report(person_data)
+                
+                # 2. สร้าง JavaScript ที่จะทำการพิมพ์ HTML นั้น
+                js_to_run = get_print_javascript(report_html_data)
+                
+                # 3. สั่งให้ JavaScript ทำงานในฝั่ง client
+                streamlit_js_eval(js_code=js_to_run)
 
         display_common_header(person_data)
         
