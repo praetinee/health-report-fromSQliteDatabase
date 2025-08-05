@@ -722,7 +722,8 @@ def render_other_results_html(person, sex):
     """
 
     # Hepatitis
-    hep_a_raw = safe_text(person.get("Hepatitis A"))
+    hep_a_value = person.get("Hepatitis A")
+    hep_a_display_text = "ไม่ได้เข้ารับการตรวจไวรัสตับอักเสบเอ" if is_empty(hep_a_value) else safe_text(hep_a_value)
     hbsag_raw = safe_text(person.get("HbsAg"))
     hbsab_raw = safe_text(person.get("HbsAb"))
     hbcab_raw = safe_text(person.get("HBcAB"))
@@ -737,7 +738,7 @@ def render_other_results_html(person, sex):
     hepatitis_html = f"""
     {render_section_header("ผลตรวจไวรัสตับอักเสบ (Viral Hepatitis)")}
     <table class="print-lab-table">
-        <tr><td style="text-align: left; width: 40%;"><b>ไวรัสตับอักเสบ เอ</b></td><td style="text-align: left;">{hep_a_raw}</td></tr>
+        <tr><td style="text-align: left; width: 40%;"><b>ไวรัสตับอักเสบ เอ</b></td><td style="text-align: left;">{hep_a_display_text}</td></tr>
         <tr><td style="text-align: left; width: 40%;"><b>ไวรัสตับอักเสบ บี (HBsAg)</b></td><td style="text-align: left;">{hbsag_raw}</td></tr>
         <tr><td style="text-align: left; width: 40%;"><b>ภูมิคุ้มกัน (HBsAb)</b></td><td style="text-align: left;">{hbsab_raw}</td></tr>
         <tr><td style="text-align: left; width: 40%;"><b>การติดเชื้อ (HBcAb)</b></td><td style="text-align: left;">{hbcab_raw}</td></tr>
