@@ -1318,35 +1318,26 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                     st.rerun()
         
         with btn_cols[len(available_reports)]:
-            if st.button("📄 พิมพ์รายงาน", use_container_width=True):
-                report_html_data = generate_printable_report(person_data)
-                
-                # --- NEW: Embed print script directly into the report HTML ---
-                print_script = """
-                <script>
-                    window.onload = function() {
-                        setTimeout(function(){
-                            window.print();
-                            window.onafterprint = function() { window.close(); };
-                        }, 500); // Delay to ensure content is rendered
-                    }
-                </script>
-                """
-                # Insert the script before the closing </body> tag
-                report_html_with_script = report_html_data.replace("</body>", f"{print_script}</body>")
-                
-                b64_html = base64.b64encode(report_html_with_script.encode('utf-8')).decode()
-                
-                # JavaScript to open a new window using a hidden link, which is more robust against popup blockers
-                js_code = f"""
-                    var a = document.createElement('a');
-                    a.href = 'data:text/html;base64,{b64_html}';
-                    a.target = '_blank';
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                """
-                streamlit_js_eval(js_expressions=js_code)
+            report_html_data = generate_printable_report(person_data)
+            print_script = """
+            <script>
+                window.onload = function() {
+                    setTimeout(function(){
+                        window.print();
+                        window.onafterprint = function() { window.close(); };
+                    }, 500);
+                }
+            </script>
+            """
+            report_html_with_script = report_html_data.replace("</body>", f"{print_script}</body>")
+            
+            st.download_button(
+                label="📄 พิมพ์รายงาน",
+                data=report_html_with_script.encode('utf-8'),
+                file_name=f"Health_Report_{person_data.get('HN', 'NA')}_{person_data.get('Year', 'YYYY')}.html",
+                mime="text/html",
+                use_container_width=True
+            )
 
         display_common_header(person_data)
         
