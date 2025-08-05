@@ -5,6 +5,9 @@ import html
 from collections import OrderedDict
 import json
 
+# --- แก้ไข: import ฟังก์ชัน generate_holistic_advice ---
+from performance_tests import generate_holistic_advice
+
 # ==============================================================================
 # หมายเหตุ: ไฟล์นี้มีฟังก์ชันที่จำเป็นสำหรับการสร้างรายงานในรูปแบบ HTML
 # ฟังก์ชันส่วนใหญ่ถูกคัดลอกมาจาก app.py และปรับเปลี่ยนเพื่อสร้างผลลัพธ์เป็นสตริง HTML
@@ -15,7 +18,9 @@ import json
 # --- Helper Functions (คัดลอกมาจาก app.py) ---
 
 def is_empty(val):
-    return str(val).strip().lower() in ["", "-", "none", "nan", "null"]
+    """Check if a value is empty, null, or whitespace."""
+    return pd.isna(val) or str(val).strip().lower() in ["", "-", "none", "nan", "null"]
+
 
 THAI_MONTHS_GLOBAL = {
     1: "มกราคม", 2: "กุมภาพันธ์", 3: "มีนาคม", 4: "เมษายน",
@@ -24,6 +29,7 @@ THAI_MONTHS_GLOBAL = {
 }
 
 def get_float(col, person_data):
+    """Safely gets a float value from person_data dictionary."""
     try:
         val = person_data.get(col, "")
         if is_empty(val):
@@ -52,12 +58,14 @@ def flag(val, low=None, high=None, higher_is_better=False):
         formatted_val = f"{val_float:,.1f}"
 
     is_abn = False
-    if higher_is_better and low is not None:
-        is_abn = val_float < low
-    elif low is not None and val_float < low:
-        is_abn = True
-    elif high is not None and val_float > high:
-        is_abn = True
+    if higher_is_better:
+        if low is not None and val_float < low:
+            is_abn = True
+    else:
+        if low is not None and val_float < low:
+            is_abn = True
+        if high is not None and val_float > high:
+            is_abn = True
 
     return formatted_val, is_abn
 
@@ -71,6 +79,7 @@ def safe_value(val):
     return val
 
 def kidney_summary_gfr_only(gfr_raw):
+    """Generates a summary for kidney function based on GFR."""
     try:
         gfr = float(str(gfr_raw).replace(",", "").strip())
         if gfr == 0:
@@ -83,6 +92,7 @@ def kidney_summary_gfr_only(gfr_raw):
         return ""
 
 def kidney_advice_from_summary(summary_text):
+    """Generates advice based on kidney summary."""
     if summary_text == "การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย":
         return (
             "การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย "
@@ -92,6 +102,7 @@ def kidney_advice_from_summary(summary_text):
     return ""
 
 def fbs_advice(fbs_raw):
+    """Generates advice based on Fasting Blood Sugar (FBS) level."""
     if is_empty(fbs_raw):
         return ""
     try:
@@ -110,6 +121,7 @@ def fbs_advice(fbs_raw):
         return ""
 
 def summarize_liver(alp_val, sgot_val, sgpt_val):
+    """Summarizes liver function based on ALP, SGOT, and SGPT."""
     try:
         alp = float(alp_val)
         sgot = float(sgot_val)
@@ -123,13 +135,13 @@ def summarize_liver(alp_val, sgot_val, sgpt_val):
         return ""
 
 def liver_advice(summary_text):
+    """Generates advice based on liver function summary."""
     if summary_text == "การทำงานของตับสูงกว่าเกณฑ์ปกติเล็กน้อย":
         return "ควรลดอาหารไขมันสูงและตรวจติดตามการทำงานของตับซ้ำ"
-    elif summary_text == "ปกติ":
-        return ""
-    return "-"
+    return ""
 
 def uric_acid_advice(value_raw):
+    """Generates advice based on Uric Acid level."""
     try:
         value = float(value_raw)
         if value > 7.2:
@@ -139,6 +151,7 @@ def uric_acid_advice(value_raw):
         return ""
 
 def summarize_lipids(chol_raw, tgl_raw, ldl_raw):
+    """Summarizes lipid profile."""
     try:
         chol = float(str(chol_raw).replace(",", "").strip())
         tgl = float(str(tgl_raw).replace(",", "").strip())
@@ -155,6 +168,7 @@ def summarize_lipids(chol_raw, tgl_raw, ldl_raw):
         return ""
 
 def lipids_advice(summary_text):
+    """Generates advice based on lipid summary."""
     if summary_text == "ไขมันในเลือดสูง":
         return (
             "ไขมันในเลือดสูง ควรลดอาหารที่มีไขมันอิ่มตัว เช่น ของทอด หนังสัตว์ "
@@ -168,6 +182,7 @@ def lipids_advice(summary_text):
     return ""
 
 def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
+    """Generates advice based on Complete Blood Count (CBC) results."""
     advice_parts = []
     try:
         hb_val = float(hb)
@@ -198,6 +213,7 @@ def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
     return " ".join(advice_parts)
 
 def interpret_bp(sbp, dbp):
+    """Interprets blood pressure readings."""
     try:
         sbp = float(sbp)
         dbp = float(dbp)
@@ -215,6 +231,7 @@ def interpret_bp(sbp, dbp):
         return "-"
 
 def combined_health_advice(bmi, sbp, dbp):
+    """Generates combined advice for BMI and blood pressure."""
     if is_empty(bmi) and is_empty(sbp) and is_empty(dbp):
         return ""
     try:
@@ -259,6 +276,7 @@ def combined_health_advice(bmi, sbp, dbp):
     return ""
 
 def merge_final_advice_grouped(messages):
+    """Merges and groups final advice messages."""
     groups = {
         "FBS": [], "ไต": [], "ตับ": [], "ยูริค": [], "ไขมัน": [], "อื่นๆ": []
     }
@@ -585,9 +603,7 @@ def render_personal_info(person):
 
 def render_lab_section(person, sex):
     # CBC Data
-    if sex == "หญิง": hb_low, hct_low = 12, 36
-    elif sex == "ชาย": hb_low, hct_low = 13, 39
-    else: hb_low, hct_low = 12, 36
+    hb_low, hct_low = (12, 36) if sex == "หญิง" else (13, 39)
 
     cbc_config = [
         ("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None),
@@ -609,16 +625,17 @@ def render_lab_section(person, sex):
     # Blood Chemistry Data
     blood_config = [
         ("น้ำตาลในเลือด (FBS)", "FBS", "74 - 106 mg/dl", 74, 106),
-        ("การทำงานของไต (BUN)", "BUN", "7.9 - 20 mg/dl", 7.9, 20),
-        ("การทำงานของไต (Cr)", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17),
-        ("ประสิทธิภาพการกรองของไต (GFR)", "GFR", "> 60 mL/min", 60, None, True),
         ("กรดยูริก (Uric Acid)", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2),
+        ("การทำงานของเอนไซม์ตับ (ALK)", "ALP", "30 - 120 U/L", 30, 120),
+        ("การทำงานของเอนไซม์ตับ (SGOT)", "SGOT", "< 37 U/L", None, 37),
+        ("การทำงานของเอนไซม์ตับ (SGPT)", "SGPT", "< 41 U/L", None, 41),
         ("คลอเรสเตอรอล (CHOL)", "CHOL", "150 - 200 mg/dl", 150, 200),
         ("ไตรกลีเซอไรด์ (TGL)", "TGL", "35 - 150 mg/dl", 35, 150),
         ("ไขมันดี (HDL)", "HDL", "> 40 mg/dl", 40, None, True),
         ("ไขมันเลว (LDL)", "LDL", "0 - 160 mg/dl", 0, 160),
-        ("การทำงานของเอนไซม์ตับ (SGOT)", "SGOT", "< 37 U/L", None, 37),
-        ("การทำงานของเอนไซม์ตับ (SGPT)", "SGPT", "< 41 U/L", None, 41),
+        ("การทำงานของไต (BUN)", "BUN", "7.9 - 20 mg/dl", 7.9, 20),
+        ("การทำงานของไต (Cr)", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17),
+        ("ประสิทธิภาพการกรองของไต (GFR)", "GFR", "> 60 mL/min", 60, None, True)
     ]
     blood_rows = []
     for label, col, norm, low, high, *opt in blood_config:
@@ -627,8 +644,8 @@ def render_lab_section(person, sex):
         result, is_abn = flag(val, low, high, higher)
         blood_rows.append([(label, is_abn), (result, is_abn), (norm, is_abn)])
 
-    cbc_html = render_lab_table_html("ผลตรวจ CBC", None, ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows, "print-lab-table")
-    blood_html = render_lab_table_html("ผลตรวจเลือด", None, ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows, "print-lab-table")
+    cbc_html = render_lab_table_html("ผลตรวจ CBC (Complete Blood Count)", None, ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows, "print-lab-table")
+    blood_html = render_lab_table_html("ผลตรวจเลือด (Blood Chemistry)", None, ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows, "print-lab-table")
     
     return f"""
     <table style="width: 100%; border-collapse: collapse; page-break-inside: avoid;">
@@ -659,7 +676,7 @@ def render_other_results_html(person, sex):
         urine_rows.append([(label, is_abn), (safe_value(val), is_abn), (norm, is_abn)])
     urine_html = render_lab_table_html("ผลการตรวจปัสสาวะ", "Urinalysis", ["การตรวจ", "ผลตรวจ", "ค่าปกติ"], urine_rows, "print-lab-table")
 
-    # Urine Advice Box - SHOW IMMEDIATELY AFTER urine table, in left column
+    # Urine Advice Box
     urine_summary = advice_urine(sex, person.get("Alb", "-"), person.get("sugar", "-"), person.get("RBC1", "-"), person.get("WBC1", "-"))
     urine_advice_box_html = ""
     if urine_summary:
@@ -685,7 +702,7 @@ def render_other_results_html(person, sex):
     stool_exam_text = interpret_stool_exam(stool_exam_raw)
     stool_cs_text = interpret_stool_cs(stool_cs_raw)
     stool_html = f"""
-    {render_section_header("ผลตรวจอุจจาระ")}
+    {render_section_header("ผลตรวจอุจจาระ (Stool Examination)")}
     <table class="print-lab-table">
         <tr><td style="text-align: left; width: 40%;"><b>ผลตรวจอุจจาระทั่วไป</b></td><td style="text-align: left;">{stool_exam_text}</td></tr>
         <tr><td style="text-align: left; width: 40%;"><b>ผลตรวจอุจจาระเพาะเชื้อ</b></td><td style="text-align: left;">{stool_cs_text}</td></tr>
@@ -718,7 +735,7 @@ def render_other_results_html(person, sex):
         advice_bg_color = '#fff8e1'  # yellow highlight
 
     hepatitis_html = f"""
-    {render_section_header("ผลตรวจไวรัสตับอักเสบ")}
+    {render_section_header("ผลตรวจไวรัสตับอักเสบ (Viral Hepatitis)")}
     <table class="print-lab-table">
         <tr><td style="text-align: left; width: 40%;"><b>ไวรัสตับอักเสบ เอ</b></td><td style="text-align: left;">{hep_a_raw}</td></tr>
         <tr><td style="text-align: left; width: 40%;"><b>ไวรัสตับอักเสบ บี (HBsAg)</b></td><td style="text-align: left;">{hbsag_raw}</td></tr>
@@ -728,17 +745,15 @@ def render_other_results_html(person, sex):
     </table>
     """
 
-    # Doctor Suggestion - SHOW AFTER hepatitis, in right column
-    doctor_suggestion = str(person.get("DOCTER suggest", "")).strip()
-    if is_empty(doctor_suggestion):
-        doctor_suggestion = "<i>ไม่มีคำแนะนำจากแพทย์</i>"
+    # --- แก้ไข: เรียกใช้ฟังก์ชัน generate_holistic_advice เพื่อให้ข้อมูลตรงกัน ---
+    doctor_suggestion = generate_holistic_advice(person)
     doctor_suggestion_html = f"""
     <div style="background-color: #e8f5e9; color: #1b5e20; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; margin-top: 1rem; font-size: 11px; border: 1px solid #a5d6a7;">
         <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
     </div>
     """
 
-    # RE-ARRANGE layout
+    # จัดเรียง Layout ใหม่
     return f"""
     <table style="width: 100%; border-collapse: collapse; page-break-inside: avoid;">
         <tr>
@@ -805,7 +820,7 @@ def generate_printable_report(person):
     <html lang="th">
     <head>
         <meta charset="UTF-8">
-        <title>รายงานผลการตรวจสุขภาพ - {person.get('ชื่อ-สกุล', '')}</title>
+        <title>รายงานผลการตรวจสุขภาพ - {html.escape(person.get('ชื่อ-สกุล', ''))}</title>
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
             body {{
@@ -814,15 +829,18 @@ def generate_printable_report(person):
                 margin: 10mm;
                 color: #333;
             }}
-            p {{ margin: 0.1rem 0; }}
+            p, div, span, td, th {{ line-height: 1.4; }}
             table {{ border-collapse: collapse; width: 100%; }}
             .print-lab-table td, .print-lab-table th {{
                 padding: 1px 3px;
                 border: 1px solid #ccc;
                 text-align: center;
+                vertical-align: middle;
             }}
             .print-lab-table th {{ background-color: #f2f2f2; font-weight: bold; }}
             .print-lab-table-abn {{ background-color: #ffdddd !important; }}
+            ul {{ padding-left: 20px; margin: 0; }}
+            li {{ margin-bottom: 4px; }}
             @media print {{
                 body {{ -webkit-print-color-adjust: exact; margin: 0; }}
             }}
@@ -839,55 +857,3 @@ def generate_printable_report(person):
     </html>
     """
     return final_html
-
-# --- NEW FUNCTION FOR IN-BROWSER PRINTING ---
-def get_print_javascript(html_content):
-    """
-    Generates JavaScript to print HTML content using a hidden iframe.
-    This avoids creating new tabs or downloading files.
-    
-    Args:
-        html_content (str): The self-contained HTML of the report.
-    
-    Returns:
-        str: The JavaScript code to be executed.
-    """
-    # Use json.dumps to safely escape the HTML content for embedding
-    # in a JavaScript string literal. This handles quotes, newlines, etc.
-    escaped_html = json.dumps(html_content)
-    
-    js_code = f"""
-    (function() {{
-        // Find an existing iframe used for printing, or create a new one.
-        let iframe = document.getElementById('print-iframe-container');
-        if (!iframe) {{
-            iframe = document.createElement('iframe');
-            iframe.id = 'print-iframe-container';
-            // The iframe must be in the DOM to be printed, but it can be hidden.
-            iframe.style.position = 'absolute';
-            iframe.style.width = '0';
-            iframe.style.height = '0';
-            iframe.style.border = '0';
-            document.body.appendChild(iframe);
-        }}
-        
-        const iframeDoc = iframe.contentWindow.document;
-        
-        // Write the HTML content into the iframe.
-        iframeDoc.open();
-        iframeDoc.write({escaped_html});
-        iframeDoc.close();
-        
-        // A timeout is necessary to ensure the browser has time to render
-        // the content inside the iframe before the print dialog is triggered.
-        setTimeout(() => {{
-            try {{
-                iframe.contentWindow.focus(); // Focus on the iframe's content.
-                iframe.contentWindow.print(); // Open the browser's print dialog.
-            }} catch (e) {{
-                console.error("Printing from iframe failed:", e);
-            }}
-        }}, 500); // 500ms should be sufficient for rendering.
-    }})();
-    """
-    return js_code
