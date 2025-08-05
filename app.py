@@ -1320,16 +1320,28 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         with btn_cols[len(available_reports)]:
             if st.button("📄 พิมพ์รายงาน", use_container_width=True):
                 report_html_data = generate_printable_report(person_data)
-                b64_html = base64.b64encode(report_html_data.encode()).decode()
+                b64_html = base64.b64encode(report_html_data.encode('utf-8')).decode('ascii')
                 
-                # JavaScript to open a new window, write the HTML, and trigger the print dialog
+                # JavaScript to correctly decode the Base64 UTF-8 string and print
                 js_code = f"""
-                    const reportHtml = atob('{b64_html}');
+                    // Helper function to decode base64 string to UTF-8
+                    function b64_to_utf8(str) {{
+                        return decodeURIComponent(Array.prototype.map.call(atob(str), function(c) {{
+                            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                        }}).join(''));
+                    }}
+
+                    const reportHtml = b64_to_utf8('{b64_html}');
                     const printWindow = window.open('', '_blank');
+                    printWindow.document.open();
                     printWindow.document.write(reportHtml);
                     printWindow.document.close();
                     printWindow.focus(); // Necessary for some browsers
-                    printWindow.print();
+                    
+                    // Delay printing slightly to ensure content is rendered
+                    setTimeout(function(){{
+                        printWindow.print();
+                    }}, 500);
                 """
                 streamlit_js_eval(js_expressions=js_code)
 
@@ -1347,4 +1359,4 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             display_main_report(person_data)
 
 else:
-    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
+    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภา
