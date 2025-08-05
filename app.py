@@ -1171,13 +1171,13 @@ def display_main_report(person_data):
                 <tbody><tr><td style="padding: 8px; border: 1px solid transparent;">{hbsag}</td><td style="padding: 8px; border: 1px solid transparent;">{hbsab}</td><td style="padding: 8px; border: 1px solid transparent;">{hbcab}</td></tr></tbody>
             </table></div>""", unsafe_allow_html=True)
             
-            hep_check_date, hep_history, hep_vaccine = safe_text(normalize_thai_date(person.get("ปีตรวจHEP"))), safe_text(person.get("สรุปประวัติ Hepb")), safe_text(person.get("วัคซีนhep b 67"))
+            hep_history, hep_vaccine = safe_text(person.get("สรุปประวัติ Hepb")), safe_text(person.get("วัคซีนhep b 67"))
             st.markdown(f"""<div style='padding: 0.75rem 1rem; background-color: rgba(255,255,255,0.05); border-radius: 6px; margin-bottom: 1.5rem; line-height: 1.8; font-size: 14px;'>
-                <b>วันที่ตรวจภูมิคุ้มกัน:</b> {hep_check_date}<br>
+                <b>ปีที่ตรวจ:</b> พ.ศ. {selected_year}<br>
                 <b>ประวัติโรคไวรัสตับอักเสบบี ปี พ.ศ. {selected_year}:</b> {hep_history}<br>
                 <b>ประวัติการได้รับวัคซีนในปี พ.ศ. {selected_year}:</b> {hep_vaccine}
             </div>""", unsafe_allow_html=True)
-            if not (hbsag == "-" and hbsab == "-" and hbcab == "-"):
+            if not (is_empty(hbsag) and is_empty(hbsab) and is_empty(hbcab)):
                 advice = hepatitis_b_advice(hbsag, hbsab, hbcab)
                 bg_color = "rgba(57, 255, 20, 0.2)" if "มีภูมิคุ้มกัน" in advice else "rgba(255, 255, 0, 0.2)"
                 st.markdown(f"<div style='line-height: 1.6; padding: 0.4rem 1.5rem; border-radius: 6px; background-color: {bg_color}; color: var(--text-color); margin-bottom: 1.5rem; font-size: 14px;'>{advice}</div>", unsafe_allow_html=True)
