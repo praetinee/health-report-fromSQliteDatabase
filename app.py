@@ -12,6 +12,7 @@ import re
 import os
 # --- แก้ไข: Import ฟังก์ชันใหม่ ---
 from performance_tests import interpret_audiogram, generate_holistic_advice
+from print_report import generate_printable_report
 
 # --- Helper Functions (Existing) ---
 def is_empty(val):
@@ -1306,12 +1307,23 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         if st.session_state.page not in available_reports:
             st.session_state.page = list(available_reports.keys())[0]
 
-        btn_cols = st.columns(len(available_reports) or [1])
+        # --- เพิ่มปุ่มพิมพ์รายงาน ---
+        btn_cols = st.columns(len(available_reports) + 1)
         for i, (page_key, page_title) in enumerate(available_reports.items()):
             with btn_cols[i]:
                 if st.button(page_title, use_container_width=True):
                     st.session_state.page = page_key
                     st.rerun()
+        
+        with btn_cols[len(available_reports)]:
+            report_html_data = generate_printable_report(person_data)
+            st.download_button(
+                label="📄 พิมพ์รายงาน",
+                data=report_html_data,
+                file_name=f"Health_Report_{person_data.get('HN', 'NA')}_{person_data.get('Year', 'YYYY')}.html",
+                mime="text/html",
+                use_container_width=True
+            )
 
         display_common_header(person_data)
         
