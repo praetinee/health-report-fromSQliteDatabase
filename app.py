@@ -1234,7 +1234,7 @@ def perform_search():
     st.session_state.selected_date = None
     st.session_state.pop("person_row", None)
     st.session_state.pop("selected_row_found", None)
-    st.session_state.page = 'main_report' 
+    st.session_state.page = 'main_report'
     raw_search_term = st.session_state.search_query.strip()
     search_term = re.sub(r'\s+', ' ', raw_search_term)
     if search_term:
@@ -1266,29 +1266,51 @@ if 'selected_year' not in st.session_state: st.session_state.selected_year = Non
 if 'selected_date' not in st.session_state: st.session_state.selected_date = None
 if 'page' not in st.session_state: st.session_state.page = 'main_report'
 if 'print_trigger' not in st.session_state: st.session_state.print_trigger = False
+if 'print_counter' not in st.session_state: st.session_state.print_counter = 0
 
 # --- UI Layout for Search and Filters ---
 st.subheader("ค้นหาและเลือกผลตรวจ")
-menu_cols = st.columns([3, 1, 2])
-with menu_cols[0]:
-    st.text_input("กรอก HN หรือ ชื่อ-สกุล", key="search_input", on_change=perform_search, placeholder="HN หรือ ชื่อ-สกุล", label_visibility="collapsed")
-with menu_cols[1]:
-    st.button("ค้นหา", use_container_width=True, on_click=perform_search)
 
-results_df = st.session_state.search_result
+with st.form(key="search_form"):
+    form_cols = st.columns([3, 1])
+    with form_cols[0]:
+        st.text_input(
+            "กรอก HN หรือ ชื่อ-สกุล",
+            key="search_input_widget",
+            placeholder="HN หรือ ชื่อ-สกุล",
+            label_visibility="collapsed"
+        )
+    with form_cols[1]:
+        submitted = st.form_submit_button("ค้นหา", use_container_width=True)
+
+    if submitted:
+        st.session_state.search_input = st.session_state.search_input_widget
+        perform_search()
+
+results_df = st.session_state.get('search_result', pd.DataFrame())
 if not results_df.empty:
     available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
     if not available_years:
         st.warning("ไม่พบข้อมูลปีที่ตรวจสำหรับบุคคลนี้")
     else:
-        if st.session_state.selected_year not in available_years:
+        if st.session_state.get('selected_year') not in available_years:
             st.session_state.selected_year = available_years[0]
         year_idx = available_years.index(st.session_state.selected_year)
-        with menu_cols[2]:
-            st.selectbox("ปี พ.ศ.", options=available_years, index=year_idx, format_func=lambda y: f"พ.ศ. {y}", key="year_select", on_change=handle_year_change, label_visibility="collapsed")
+        
+        # Use columns to align the year selector to the right, matching the form layout
+        _form_spacer, year_col = st.columns([4, 2])
+        with year_col:
+            st.selectbox(
+                "ปี พ.ศ.",
+                options=available_years,
+                index=year_idx,
+                format_func=lambda y: f"พ.ศ. {y}",
+                key="year_select",
+                on_change=handle_year_change,
+                label_visibility="collapsed"
+            )
         
         person_year_df = results_df[results_df["Year"] == st.session_state.selected_year]
-
         if person_year_df.empty:
             st.warning(f"ไม่พบข้อมูลการตรวจสำหรับปี พ.ศ. {st.session_state.selected_year}")
             st.session_state.pop("person_row", None)
@@ -1334,6 +1356,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         with btn_cols[len(available_reports)]:
             if st.button("📄 พิมพ์รายงาน", use_container_width=True):
                 st.session_state.print_trigger = True
+                st.session_state.print_counter += 1
 
         display_common_header(person_data)
         
@@ -1354,33 +1377,41 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         escaped_html = json.dumps(report_html_data)
         
         print_component = f"""
-        <iframe id="print-iframe" style="display:none;"></iframe>
         <script>
             (function() {{
-                const iframe = document.getElementById('print-iframe');
-                if (!iframe) return;
+                const handlePrint = () => {{
+                    const oldIframe = document.getElementById('print-iframe-container');
+                    if (oldIframe) {{
+                        oldIframe.remove();
+                    }}
 
-                const iframeDoc = iframe.contentWindow.document;
-                iframeDoc.open();
-                iframeDoc.write({escaped_html});
-                iframeDoc.close();
-                
-                iframe.onload = function() {{
-                    setTimeout(function() {{
-                        try {{
-                            iframe.contentWindow.focus();
-                            iframe.contentWindow.print();
-                        }} catch (e) {{
-                            console.error("Printing failed:", e);
-                            alert("Could not open print dialog.");
-                        }}
-                    }}, 500);
+                    const iframe = document.createElement('iframe');
+                    iframe.id = 'print-iframe-container';
+                    iframe.style.display = 'none';
+                    document.body.appendChild(iframe);
+
+                    const iframeDoc = iframe.contentWindow.document;
+                    iframeDoc.open();
+                    iframeDoc.write({escaped_html});
+                    iframeDoc.close();
+
+                    iframe.onload = function() {{
+                        setTimeout(function() {{
+                            try {{
+                                iframe.contentWindow.focus();
+                                iframe.contentWindow.print();
+                            }} catch (e) {{
+                                console.error("Printing failed:", e);
+                            }}
+                        }}, 250);
+                    }};
                 }};
+                handlePrint();
             }})();
         </script>
         """
         
-        st.components.v1.html(print_component, height=0, width=0)
+        st.components.v1.html(print_component, height=0, width=0, key=f"print_html_{st.session_state.print_counter}")
         st.session_state.print_trigger = False
 
 else:
