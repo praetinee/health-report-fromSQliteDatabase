@@ -731,13 +731,14 @@ def interpret_lung_capacity(person_data):
     return summary, advice, raw_values
 
 # --- เพิ่ม: ฟังก์ชันแสดงผลการตรวจการได้ยิน ---
-def display_performance_report_hearing(person_data):
+def display_performance_report_hearing(person_data, all_person_history_df):
     """
     แสดงผลรายงานสมรรถภาพการได้ยิน (Audiogram) ในรูปแบบใหม่
     """
     st.markdown("<h2 style='text-align: center;'>รายงานผลการตรวจสมรรถภาพการได้ยิน (Audiometry Report)</h2>", unsafe_allow_html=True)
     
-    hearing_results = interpret_audiogram(person_data)
+    # --- แก้ไข: เรียกฟังก์ชัน interpret_audiogram พร้อมส่งประวัติทั้งหมด ---
+    hearing_results = interpret_audiogram(person_data, all_person_history_df)
 
     if hearing_results['summary'].get('overall') == "ไม่ได้เข้ารับการตรวจ":
         st.warning("ไม่ได้เข้ารับการตรวจสมรรถภาพการได้ยินในปีนี้")
@@ -766,7 +767,7 @@ def display_performance_report_hearing(person_data):
 
         if not freq_str:
             # If no frequencies are listed, just show the severity.
-            return f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">{main_status}</p>'
+            return f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0; color: var(--text-color);">{main_status}</p>'
 
         # Categorize frequencies
         freqs = [f.strip().lower() for f in freq_str.split(',') if f.strip()]
@@ -896,30 +897,37 @@ def display_performance_report_hearing(person_data):
         </div>
         """, unsafe_allow_html=True)
 
-    # --- ส่วนเปรียบเทียบ Baseline ---
-    if hearing_results.get('sts_detected') is not None: # Check if baseline was processed
-        st.markdown("<hr>", unsafe_allow_html=True)
+    # --- ส่วนเปรียบเทียบ Baseline (ปรับปรุงใหม่) ---
+    baseline_source = hearing_results.get('baseline_source', 'none')
+    st.markdown("<hr>", unsafe_allow_html=True)
+
+    if baseline_source != 'none':
+        baseline_year = hearing_results.get('baseline_year')
+        if baseline_source == 'first_year':
+            st.markdown(f"<h5><b>การเปรียบเทียบกับผลตรวจครั้งแรก (พ.ศ. {baseline_year})</b></h5>", unsafe_allow_html=True)
+        else:  # 'explicit'
+            st.markdown("<h5><b>การเปรียบเทียบกับผลตรวจพื้นฐาน (Baseline)</b></h5>", unsafe_allow_html=True)
+
+        if hearing_results.get('sts_detected'):
+            st.warning("⚠️ **พบการเปลี่ยนแปลงระดับการได้ยินอย่างมีนัยสำคัญ (Standard Threshold Shift - STS)**")
+
+        baseline_df_data = []
+        for freq, values in hearing_results.get('raw_values', {}).items():
+            baseline_df_data.append({
+                "ความถี่": freq,
+                "ปัจจุบัน (ขวา)": values.get('right', '-'),
+                "Baseline (ขวา)": hearing_results['baseline_values'][freq].get('right', '-'),
+                "Shift (ขวา)": hearing_results['shift_values'][freq].get('right', '-'),
+                "ปัจจุบัน (ซ้าย)": values.get('left', '-'),
+                "Baseline (ซ้าย)": hearing_results['baseline_values'][freq].get('left', '-'),
+                "Shift (ซ้าย)": hearing_results['shift_values'][freq].get('left', '-'),
+            })
+        baseline_df = pd.DataFrame(baseline_df_data)
+        st.markdown(baseline_df.to_html(escape=False, index=False, classes="styled-df-table"), unsafe_allow_html=True)
+    else:
         st.markdown("<h5><b>การเปรียบเทียบกับผลตรวจพื้นฐาน (Baseline)</b></h5>", unsafe_allow_html=True)
+        st.info("ไม่สามารถเปรียบเทียบผลได้ เนื่องจากการตรวจนี้เป็นการตรวจครั้งแรก หรือไม่พบข้อมูลการตรวจในปีก่อนหน้า")
 
-        if not any(val is not None for freq in hearing_results.get('baseline_values', {}).values() for val in freq.values()):
-             st.info("ไม่พบข้อมูล Baseline สำหรับการเปรียบเทียบ")
-        else:
-            if hearing_results.get('sts_detected'):
-                st.warning("⚠️ **พบการเปลี่ยนแปลงระดับการได้ยินอย่างมีนัยสำคัญ (Standard Threshold Shift - STS)**")
-
-            baseline_df_data = []
-            for freq, values in hearing_results.get('raw_values', {}).items():
-                baseline_df_data.append({
-                    "ความถี่": freq,
-                    "ปัจจุบัน (ขวา)": values.get('right', '-'),
-                    "Baseline (ขวา)": hearing_results['baseline_values'][freq].get('right', '-'),
-                    "Shift (ขวา)": hearing_results['shift_values'][freq].get('right', '-'),
-                    "ปัจจุบัน (ซ้าย)": values.get('left', '-'),
-                    "Baseline (ซ้าย)": hearing_results['baseline_values'][freq].get('left', '-'),
-                    "Shift (ซ้าย)": hearing_results['shift_values'][freq].get('left', '-'),
-                })
-            baseline_df = pd.DataFrame(baseline_df_data)
-            st.markdown(baseline_df.to_html(escape=False, index=False, classes="styled-df-table"), unsafe_allow_html=True)
 
     # --- ส่วนข้อมูลสรุปเพิ่มเติม ---
     if hearing_results.get('other_data'):
@@ -978,7 +986,7 @@ def display_performance_report_lung(person_data):
 
 
 # --- FINAL VERSION: display_performance_report ---
-def display_performance_report(person_data, report_type):
+def display_performance_report(person_data, report_type, all_person_history_df=None):
     """Displays various performance test reports (lung, vision, hearing)."""
     # Use columns to constrain the width of the report sections
     left_spacer, main_col, right_spacer = st.columns([0.5, 6, 0.5])
@@ -1087,7 +1095,7 @@ def display_performance_report(person_data, report_type):
             
         elif report_type == 'hearing':
             # --- แก้ไข: เรียกใช้ฟังก์ชันแสดงผลใหม่ ---
-            display_performance_report_hearing(person_data)
+            display_performance_report_hearing(person_data, all_person_history_df)
 
 
 def display_main_report(person_data):
@@ -1278,6 +1286,8 @@ st.markdown("<hr>", unsafe_allow_html=True)
 # Main logic to switch between pages
 if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
     person_data = st.session_state.person_row
+    # --- แก้ไข: ดึงประวัติการค้นหาทั้งหมดมาใช้ ---
+    all_person_history_df = st.session_state.search_result
 
     available_reports = {}
     if has_basic_health_data(person_data):
@@ -1309,7 +1319,8 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         if page_to_show == 'vision_report':
             display_performance_report(person_data, 'vision')
         elif page_to_show == 'hearing_report':
-            display_performance_report(person_data, 'hearing')
+            # --- แก้ไข: ส่งประวัติทั้งหมดไปยังฟังก์ชัน ---
+            display_performance_report(person_data, 'hearing', all_person_history_df=all_person_history_df)
         elif page_to_show == 'lung_report':
             display_performance_report(person_data, 'lung')
         elif page_to_show == 'main_report':
