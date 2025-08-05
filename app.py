@@ -1330,19 +1330,24 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                             window.onafterprint = function() {
                                 window.close();
                             }
-                        }, 250); // Delay to ensure content is rendered
+                        }, 500); // Delay to ensure content is rendered
                     }
                 </script>
                 """
                 # Insert the script before the closing </body> tag
                 report_html_with_script = report_html_data.replace("</body>", f"{print_script}</body>")
                 
-                b64_html = base64.b64encode(report_html_with_script.encode('utf-8')).decode('ascii')
+                b64_html = base64.b64encode(report_html_with_script.encode('utf-8')).decode()
                 
-                # JavaScript to open a new window with the report content
+                # JavaScript to open a new window using a hidden link, which is more robust against popup blockers
+                link_id = f"print-link-{int(datetime.now().timestamp())}"
                 js_code = f"""
-                    const reportData = 'data:text/html;base64,{b64_html}';
-                    window.open(reportData, '_blank');
+                    var a = document.createElement('a');
+                    a.href = 'data:text/html;base64,{b64_html}';
+                    a.target = '_blank';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
                 """
                 streamlit_js_eval(js_expressions=js_code)
 
