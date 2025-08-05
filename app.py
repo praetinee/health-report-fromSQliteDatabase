@@ -1187,19 +1187,6 @@ def display_main_report(person_data):
     left_spacer3, doctor_col, right_spacer3 = st.columns([0.5, 6, 0.5])
     with doctor_col:
         st.markdown(f"<div style='background-color: #1b5e20; color: white; padding: 0.4rem 2rem; border-radius: 8px; line-height: 1.6; margin-top: 2rem; margin-bottom: 2rem; font-size: 14px;'><b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}</div>", unsafe_allow_html=True)
-    
-    # --- CORRECTED SIGNATURE LAYOUT ---
-    st.markdown("<div style='margin-top: 7rem;'></div>", unsafe_allow_html=True)
-    sig_left, sig_mid, sig_right = st.columns([2, 3, 2])
-    with sig_right:
-        st.markdown("""
-        <div style='text-align: center;'>
-            <div style='border-bottom: 1px dotted var(--text-color); margin-bottom: 0.5rem; width: 100%;'></div>
-            <div style='white-space: nowrap;'>นายแพทย์นพรัตน์ รัชฎาพร</div>
-            <div style='white-space: nowrap;'>เลขที่ใบอนุญาตผู้ประกอบวิชาชีพเวชกรรม ว.26674</div>
-        </div>
-        """, unsafe_allow_html=True)
-
 
 # --- Main Application Logic ---
 # Load data once
