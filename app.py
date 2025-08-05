@@ -1355,6 +1355,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         with btn_cols[len(available_reports)]:
             if st.button("📄 พิมพ์รายงาน", use_container_width=True):
                 st.session_state.print_trigger = True
+                st.rerun()
 
         display_common_header(person_data)
         
@@ -1375,34 +1376,37 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         escaped_html = json.dumps(report_html_data)
         
         js_code = f"""
-            const oldIframe = document.getElementById('print-iframe-container');
-            if (oldIframe) {{
-                oldIframe.remove();
-            }}
+            (function() {{
+                const iframeId = 'print-iframe-container';
+                let iframe = document.getElementById(iframeId);
+                if (iframe) {{
+                    iframe.remove();
+                }}
 
-            const iframe = document.createElement('iframe');
-            iframe.id = 'print-iframe-container';
-            iframe.style.display = 'none';
-            document.body.appendChild(iframe);
+                iframe = document.createElement('iframe');
+                iframe.id = iframeId;
+                iframe.style.display = 'none';
+                document.body.appendChild(iframe);
 
-            const iframeDoc = iframe.contentWindow.document;
-            iframeDoc.open();
-            iframeDoc.write({escaped_html});
-            iframeDoc.close();
+                const iframeDoc = iframe.contentWindow.document;
+                iframeDoc.open();
+                iframeDoc.write({escaped_html});
+                iframeDoc.close();
 
-            iframe.onload = function() {{
-                setTimeout(function() {{
-                    try {{
-                        iframe.contentWindow.focus();
-                        iframe.contentWindow.print();
-                    }} catch (e) {{
-                        console.error("Printing failed:", e);
-                        alert("Could not open print dialog.");
-                    }}
-                }}, 250);
-            }};
+                iframe.onload = function() {{
+                    setTimeout(function() {{
+                        try {{
+                            iframe.contentWindow.focus();
+                            iframe.contentWindow.print();
+                        }} catch (e) {{
+                            console.error("Printing failed:", e);
+                            alert("Could not open print dialog.");
+                        }}
+                    }}, 250);
+                }};
+            }})();
         """
-        streamlit_js_eval(js_code=js_code, key='print_script')
+        streamlit_js_eval(js_code=js_code, key='print_script_unique')
         st.session_state.print_trigger = False
 
 else:
