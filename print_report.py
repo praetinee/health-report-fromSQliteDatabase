@@ -3,6 +3,7 @@ from datetime import datetime
 import re
 import html
 from collections import OrderedDict
+import json
 
 # ==============================================================================
 # หมายเหตุ: ไฟล์นี้มีฟังก์ชันที่จำเป็นสำหรับการสร้างรายงานในรูปแบบ HTML
@@ -838,3 +839,55 @@ def generate_printable_report(person):
     </html>
     """
     return final_html
+
+# --- NEW FUNCTION FOR IN-BROWSER PRINTING ---
+def get_print_javascript(html_content):
+    """
+    Generates JavaScript to print HTML content using a hidden iframe.
+    This avoids creating new tabs or downloading files.
+    
+    Args:
+        html_content (str): The self-contained HTML of the report.
+    
+    Returns:
+        str: The JavaScript code to be executed.
+    """
+    # Use json.dumps to safely escape the HTML content for embedding
+    # in a JavaScript string literal. This handles quotes, newlines, etc.
+    escaped_html = json.dumps(html_content)
+    
+    js_code = f"""
+    (function() {{
+        // Find an existing iframe used for printing, or create a new one.
+        let iframe = document.getElementById('print-iframe-container');
+        if (!iframe) {{
+            iframe = document.createElement('iframe');
+            iframe.id = 'print-iframe-container';
+            // The iframe must be in the DOM to be printed, but it can be hidden.
+            iframe.style.position = 'absolute';
+            iframe.style.width = '0';
+            iframe.style.height = '0';
+            iframe.style.border = '0';
+            document.body.appendChild(iframe);
+        }}
+        
+        const iframeDoc = iframe.contentWindow.document;
+        
+        // Write the HTML content into the iframe.
+        iframeDoc.open();
+        iframeDoc.write({escaped_html});
+        iframeDoc.close();
+        
+        // A timeout is necessary to ensure the browser has time to render
+        // the content inside the iframe before the print dialog is triggered.
+        setTimeout(() => {{
+            try {{
+                iframe.contentWindow.focus(); // Focus on the iframe's content.
+                iframe.contentWindow.print(); // Open the browser's print dialog.
+            }} catch (e) {{
+                console.error("Printing from iframe failed:", e);
+            }}
+        }}, 500); // 500ms should be sufficient for rendering.
+    }})();
+    """
+    return js_code
