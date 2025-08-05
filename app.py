@@ -11,7 +11,7 @@ from datetime import datetime
 import re
 import os
 # --- แก้ไข: Import ฟังก์ชันใหม่ ---
-from performance_tests import interpret_audiogram
+from performance_tests import interpret_audiogram, generate_holistic_advice
 
 # --- Helper Functions (Existing) ---
 def is_empty(val):
@@ -1175,9 +1175,9 @@ def display_main_report(person_data):
             bg_color = "rgba(57, 255, 20, 0.2)" if "มีภูมิคุ้มกัน" in advice else "rgba(255, 255, 0, 0.2)"
             st.markdown(f"<div style='line-height: 1.6; padding: 0.4rem 1.5rem; border-radius: 6px; background-color: {bg_color}; color: var(--text-color); margin-bottom: 1.5rem; font-size: 14px;'>{advice}</div>", unsafe_allow_html=True)
             
-    doctor_suggestion = str(person.get("DOCTER suggest", "")).strip()
-    if doctor_suggestion.lower() in ["", "-", "none", "nan", "null"]:
-        doctor_suggestion = "<i>ไม่มีคำแนะนำจากแพทย์</i>"
+    # --- แก้ไข: สร้างสรุปความเห็นแพทย์อัตโนมัติเสมอสำหรับหน้ารายงานหลัก ---
+    doctor_suggestion = generate_holistic_advice(person_data)
+
     left_spacer3, doctor_col, right_spacer3 = st.columns([0.5, 6, 0.5])
     with doctor_col:
         st.markdown(f"<div style='background-color: #1b5e20; color: white; padding: 0.4rem 2rem; border-radius: 8px; line-height: 1.6; margin-top: 2rem; margin-bottom: 2rem; font-size: 14px;'><b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}</div>", unsafe_allow_html=True)
