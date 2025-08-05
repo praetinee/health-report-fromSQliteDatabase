@@ -1266,7 +1266,6 @@ if 'selected_year' not in st.session_state: st.session_state.selected_year = Non
 if 'selected_date' not in st.session_state: st.session_state.selected_date = None
 if 'page' not in st.session_state: st.session_state.page = 'main_report'
 if 'print_trigger' not in st.session_state: st.session_state.print_trigger = False
-if 'print_counter' not in st.session_state: st.session_state.print_counter = 0
 
 # --- UI Layout for Search and Filters ---
 st.subheader("ค้นหาและเลือกผลตรวจ")
@@ -1356,7 +1355,6 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         with btn_cols[len(available_reports)]:
             if st.button("📄 พิมพ์รายงาน", use_container_width=True):
                 st.session_state.print_trigger = True
-                st.session_state.print_counter += 1
 
         display_common_header(person_data)
         
@@ -1376,42 +1374,35 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         report_html_data = generate_printable_report(person_data)
         escaped_html = json.dumps(report_html_data)
         
-        print_component = f"""
-        <script>
-            (function() {{
-                const handlePrint = () => {{
-                    const oldIframe = document.getElementById('print-iframe-container');
-                    if (oldIframe) {{
-                        oldIframe.remove();
+        js_code = f"""
+            const oldIframe = document.getElementById('print-iframe-container');
+            if (oldIframe) {{
+                oldIframe.remove();
+            }}
+
+            const iframe = document.createElement('iframe');
+            iframe.id = 'print-iframe-container';
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+
+            const iframeDoc = iframe.contentWindow.document;
+            iframeDoc.open();
+            iframeDoc.write({escaped_html});
+            iframeDoc.close();
+
+            iframe.onload = function() {{
+                setTimeout(function() {{
+                    try {{
+                        iframe.contentWindow.focus();
+                        iframe.contentWindow.print();
+                    }} catch (e) {{
+                        console.error("Printing failed:", e);
+                        alert("Could not open print dialog.");
                     }}
-
-                    const iframe = document.createElement('iframe');
-                    iframe.id = 'print-iframe-container';
-                    iframe.style.display = 'none';
-                    document.body.appendChild(iframe);
-
-                    const iframeDoc = iframe.contentWindow.document;
-                    iframeDoc.open();
-                    iframeDoc.write({escaped_html});
-                    iframeDoc.close();
-
-                    iframe.onload = function() {{
-                        setTimeout(function() {{
-                            try {{
-                                iframe.contentWindow.focus();
-                                iframe.contentWindow.print();
-                            }} catch (e) {{
-                                console.error("Printing failed:", e);
-                            }}
-                        }}, 250);
-                    }};
-                }};
-                handlePrint();
-            }})();
-        </script>
+                }}, 250);
+            }};
         """
-        
-        st.components.v1.html(print_component, height=0, width=0, key=f"print_html_{st.session_state.print_counter}")
+        streamlit_js_eval(js_code=js_code, key='print_script')
         st.session_state.print_trigger = False
 
 else:
