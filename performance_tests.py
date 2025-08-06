@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from collections import OrderedDict
 
 # ==============================================================================
 # หมายเหตุ: ไฟล์นี้ถูกปรับปรุงใหม่ทั้งหมด
@@ -122,6 +123,7 @@ def generate_comprehensive_recommendations(person_data):
     โดยจัดลำดับความสำคัญของแต่ละประเด็น
     """
     issues = {'high': [], 'medium': [], 'low': []}
+    conditions = set()
     
     # --- 1. Vital Signs & BMI ---
     weight = get_float(person_data, "น้ำหนัก")
@@ -132,75 +134,87 @@ def generate_comprehensive_recommendations(person_data):
     if weight and height and height > 0:
         bmi = weight / ((height / 100) ** 2)
         if bmi >= 30:
-            issues['medium'].append(f"<b>ภาวะอ้วนรุนแรง (BMI ≥ 30)</b> ซึ่งเพิ่มความเสี่ยงต่อโรคหัวใจ เบาหวาน และความดันโลหิตสูง")
+            issues['medium'].append(f"<b>ภาวะอ้วน (BMI ≥ 30):</b> เป็นความเสี่ยงหลักต่อโรคเรื้อรังต่างๆ")
+            conditions.add('obesity')
         elif bmi >= 25:
-            issues['low'].append(f"<b>น้ำหนักเกินเกณฑ์ (BMI 25-29.9)</b> ควรควบคุมอาหารและออกกำลังกายเพื่อลดความเสี่ยง")
+            issues['low'].append(f"<b>น้ำหนักเกินเกณฑ์ (BMI 25-29.9):</b> ควรเริ่มควบคุมอาหารและออกกำลังกาย")
+            conditions.add('overweight')
     
     if sbp and dbp:
         if sbp >= 160 or dbp >= 100:
-            issues['high'].append(f"<b>ความดันโลหิตสูงระดับรุนแรง ({int(sbp)}/{int(dbp)} mmHg)</b> ควรพบแพทย์โดยเร็ว")
+            issues['high'].append(f"<b>ความดันโลหิตสูงรุนแรง ({int(sbp)}/{int(dbp)} mmHg):</b> มีความเสี่ยงอันตราย ควรพบแพทย์โดยเร็ว")
+            conditions.add('hypertension')
         elif sbp >= 140 or dbp >= 90:
-            issues['medium'].append(f"<b>ความดันโลหิตสูง ({int(sbp)}/{int(dbp)} mmHg)</b> ควรปรับเปลี่ยนพฤติกรรมและติดตามอย่างใกล้ชิด")
+            issues['medium'].append(f"<b>ความดันโลหิตสูง ({int(sbp)}/{int(dbp)} mmHg):</b> ควรปรับเปลี่ยนพฤติกรรมและติดตามใกล้ชิด")
+            conditions.add('hypertension')
         elif sbp >= 120 or dbp >= 80:
-            issues['low'].append(f"<b>ความดันโลหิตเริ่มสูง ({int(sbp)}/{int(dbp)} mmHg)</b> เป็นสัญญาณเตือนให้เริ่มดูแลสุขภาพ")
+            issues['low'].append(f"<b>ความดันโลหิตเริ่มสูง ({int(sbp)}/{int(dbp)} mmHg):</b> เป็นสัญญาณเตือนให้เริ่มดูแลสุขภาพ")
+            conditions.add('prehypertension')
 
     # --- 2. Blood Chemistry ---
     fbs = get_float(person_data, "FBS")
     if fbs:
         if fbs >= 126:
-            issues['high'].append(f"<b>ระดับน้ำตาลในเลือดสูง ({int(fbs)} mg/dL)</b> เข้าเกณฑ์วินิจฉัยโรคเบาหวาน ควรพบแพทย์เพื่อยืนยันและรับการรักษา")
+            issues['high'].append(f"<b>ระดับน้ำตาลในเลือดสูง ({int(fbs)} mg/dL):</b> เข้าเกณฑ์เบาหวาน ควรพบแพทย์เพื่อยืนยันและรักษา")
+            conditions.add('diabetes')
         elif fbs >= 100:
-            issues['medium'].append(f"<b>ภาวะเสี่ยงเบาหวาน ({int(fbs)} mg/dL)</b> ควรควบคุมอาหารประเภทแป้งและน้ำตาล และออกกำลังกายสม่ำเสมอ")
+            issues['medium'].append(f"<b>ภาวะเสี่ยงเบาหวาน ({int(fbs)} mg/dL):</b> ควรควบคุมอาหารและออกกำลังกายอย่างจริงจัง")
+            conditions.add('prediabetes')
 
     chol = get_float(person_data, "CHOL")
     tgl = get_float(person_data, "TGL")
     ldl = get_float(person_data, "LDL")
     hdl = get_float(person_data, "HDL")
     lipid_issues = []
-    if chol and chol >= 240: lipid_issues.append("Cholesterol สูงมาก")
-    elif chol and chol >= 200: lipid_issues.append("Cholesterol สูง")
-    if tgl and tgl >= 200: lipid_issues.append("Triglyceride สูง")
-    if ldl and ldl >= 160: lipid_issues.append("LDL (ไขมันเลว) สูง")
+    if chol and chol >= 200: lipid_issues.append("Cholesterol สูง")
+    if tgl and tgl >= 150: lipid_issues.append("Triglyceride สูง")
+    if ldl and ldl >= 130: lipid_issues.append("LDL (ไขมันเลว) สูง")
     if hdl and hdl < 40: lipid_issues.append("HDL (ไขมันดี) ต่ำ")
     if lipid_issues:
-        issues['medium'].append(f"<b>ภาวะไขมันในเลือดผิดปกติ</b> ({', '.join(lipid_issues)}) ควรลดอาหารมัน ของทอด และเพิ่มการออกกำลังกาย")
+        issues['medium'].append(f"<b>ภาวะไขมันในเลือดผิดปกติ ({', '.join(lipid_issues)}):</b> เพิ่มความเสี่ยงโรคหัวใจและหลอดเลือด")
+        conditions.add('dyslipidemia')
 
     gfr = get_float(person_data, "GFR")
     if gfr:
         if gfr < 30:
-            issues['high'].append("<b>การทำงานของไตลดลงอย่างมาก</b> ควรพบแพทย์ผู้เชี่ยวชาญด้านโรคไต")
+            issues['high'].append("<b>การทำงานของไตลดลงมาก (ระยะ 4-5):</b> ควรพบแพทย์ผู้เชี่ยวชาญโรคไตโดยด่วน")
+            conditions.add('kidney_disease')
         elif gfr < 60:
-            issues['medium'].append("<b>การทำงานของไตเริ่มเสื่อม (ระยะ 3)</b> ควรลดอาหารเค็มและโปรตีนสูง และปรึกษาแพทย์")
+            issues['medium'].append("<b>การทำงานของไตเริ่มเสื่อม (ระยะ 3):</b> ควรลดอาหารเค็มและโปรตีนสูง ปรึกษาแพทย์")
+            conditions.add('kidney_disease')
         elif gfr < 90:
-             issues['low'].append("<b>การทำงานของไตลดลงเล็กน้อย (ระยะ 2)</b> ควรดื่มน้ำให้เพียงพอและหลีกเลี่ยงยาที่มีผลต่อไต")
+             issues['low'].append("<b>การทำงานของไตลดลงเล็กน้อย (ระยะ 2):</b> ควรดื่มน้ำให้เพียงพอและหลีกเลี่ยงยาที่มีผลต่อไต")
+             conditions.add('kidney_disease')
 
     sgot = get_float(person_data, "SGOT")
     sgpt = get_float(person_data, "SGPT")
     if (sgot and sgot > 37) or (sgpt and sgpt > 41):
-        issues['medium'].append("<b>ค่าเอนไซม์ตับสูงกว่าปกติ</b> อาจเกิดจากไขมันพอกตับ หรือตับอักเสบ ควรลดของมัน แอลกอฮอล์ และตรวจติดตาม")
+        issues['medium'].append("<b>ค่าเอนไซม์ตับสูง:</b> อาจเกิดจากไขมันพอกตับ หรือตับอักเสบ ควรลดของมัน แอลกอฮอล์")
+        conditions.add('liver')
 
     uric = get_float(person_data, "Uric Acid")
     if uric and uric > 7.2:
-        issues['low'].append("<b>ระดับกรดยูริกสูง</b> เสี่ยงต่อโรคเกาต์ ควรลดการทานเครื่องในสัตว์ สัตว์ปีก และยอดผัก")
+        issues['low'].append("<b>กรดยูริกสูง:</b> เสี่ยงต่อโรคเกาต์ ควรลดการทานเครื่องในสัตว์ สัตว์ปีก และยอดผัก")
+        conditions.add('uric_acid')
 
     # --- 3. Complete Blood Count (CBC) ---
     sex = person_data.get("เพศ", "ชาย")
     hb = get_float(person_data, "Hb(%)")
-    hct = get_float(person_data, "HCT")
     wbc = get_float(person_data, "WBC (cumm)")
     platelet = get_float(person_data, "Plt (/mm)")
     
     hb_limit = 12 if sex == "หญิง" else 13
     if hb and hb < hb_limit:
-        issues['medium'].append("<b>ภาวะโลหิตจาง</b> ควรทานอาหารที่มีธาตุเหล็กสูงและวิตามินซี และตรวจหาสาเหตุเพิ่มเติม")
+        issues['medium'].append("<b>ภาวะโลหิตจาง:</b> ควรทานอาหารที่มีธาตุเหล็กสูงและตรวจหาสาเหตุเพิ่มเติม")
+        conditions.add('anemia')
         
     if wbc:
-        if wbc > 10000: issues['medium'].append("<b>เม็ดเลือดขาวสูง</b> อาจมีการอักเสบหรือติดเชื้อในร่างกาย ควรตรวจหาสาเหตุ")
-        if wbc < 4000: issues['low'].append("<b>เม็ดเลือดขาวต่ำ</b> อาจส่งผลต่อภูมิคุ้มกัน ควรพักผ่อนให้เพียงพอและตรวจติดตาม")
+        if wbc > 10000: issues['medium'].append("<b>เม็ดเลือดขาวสูง:</b> อาจมีการอักเสบหรือติดเชื้อในร่างกาย ควรตรวจหาสาเหตุ")
+        if wbc < 4000: issues['low'].append("<b>เม็ดเลือดขาวต่ำ:</b> อาจส่งผลต่อภูมิคุ้มกัน ควรพักผ่อนให้เพียงพอ")
         
     if platelet:
-        if platelet < 150000: issues['medium'].append("<b>เกล็ดเลือดต่ำ</b> อาจมีความเสี่ยงเลือดออกง่าย ควรระมัดระวังอุบัติเหตุและปรึกษาแพทย์")
-        if platelet > 500000: issues['medium'].append("<b>เกล็ดเลือดสูง</b> ควรพบแพทย์เพื่อตรวจหาสาเหตุเพิ่มเติม")
+        if platelet < 150000: issues['medium'].append("<b>เกล็ดเลือดต่ำ:</b> อาจเสี่ยงเลือดออกง่าย ควรระมัดระวังอุบัติเหตุและปรึกษาแพทย์")
+        if platelet > 500000: issues['medium'].append("<b>เกล็ดเลือดสูง:</b> ควรพบแพทย์เพื่อตรวจหาสาเหตุ")
 
     # --- 4. Urinalysis, Stool, X-ray, EKG, Hepatitis ---
     urine_issues = interpret_urine(person_data)
@@ -219,74 +233,16 @@ def generate_comprehensive_recommendations(person_data):
     cxr_col = f"CXR{str(year)[-2:]}" if str(year) != "" and str(year) != str(np.datetime64('now', 'Y').astype(int) + 1970 + 543) else "CXR"
     cxr_result, cxr_status = interpret_cxr(person_data.get(cxr_col, ''))
     if cxr_status == 'abnormal':
-        issues['high'].append(f"<b>ผลเอกซเรย์ทรวงอกผิดปกติ:</b> {cxr_result} ควรพบแพทย์เพื่อตรวจวินิจฉัยเพิ่มเติม")
+        issues['high'].append(f"<b>ผลเอกซเรย์ทรวงอกผิดปกติ ({cxr_result}):</b> ควรพบแพทย์เพื่อตรวจวินิจฉัยเพิ่มเติม")
 
     ekg_col = f"EKG{str(year)[-2:]}" if str(year) != "" and str(year) != str(np.datetime64('now', 'Y').astype(int) + 1970 + 543) else "EKG"
     ekg_result, ekg_status = interpret_ekg(person_data.get(ekg_col, ''))
     if ekg_status == 'abnormal':
-        issues['high'].append(f"<b>ผลคลื่นไฟฟ้าหัวใจผิดปกติ:</b> {ekg_result} ควรพบแพทย์โรคหัวใจ")
+        issues['high'].append(f"<b>ผลคลื่นไฟฟ้าหัวใจผิดปกติ ({ekg_result}):</b> ควรพบแพทย์โรคหัวใจ")
 
     # --- Build the final HTML output ---
     html_parts = []
     
-    # Detailed Issues
-    if issues['high']:
-        html_parts.append("<div style='border-left: 5px solid #c62828; padding-left: 15px; margin-bottom: 1rem;'>")
-        html_parts.append("<h5 style='color: #c62828; margin-top:0;'>ประเด็นสำคัญเร่งด่วน (ควรพบแพทย์)</h5><ul>")
-        for item in set(issues['high']): html_parts.append(f"<li>{item}</li>")
-        html_parts.append("</ul></div>")
-
-    if issues['medium']:
-        html_parts.append("<div style='border-left: 5px solid #f9a825; padding-left: 15px; margin-bottom: 1rem;'>")
-        html_parts.append("<h5 style='color: #f9a825; margin-top:0;'>ประเด็นที่ควรติดตามและปรับพฤติกรรม</h5><ul>")
-        for item in set(issues['medium']): html_parts.append(f"<li>{item}</li>")
-        html_parts.append("</ul></div>")
-
-    if issues['low']:
-        html_parts.append("<div style='border-left: 5px solid #1976d2; padding-left: 15px; margin-bottom: 1rem;'>")
-        html_parts.append("<h5 style='color: #1976d2; margin-top:0;'>ประเด็นอื่นๆ และการเฝ้าระวัง</h5><ul>")
-        for item in set(issues['low']): html_parts.append(f"<li>{item}</li>")
-        html_parts.append("</ul></div>")
-
-    # --- NEW: Build Personalized General Recommendations ---
-    if any(issues.values()):
-        all_issue_text = " ".join(issues['high'] + issues['medium'] + issues['low'])
-        general_advice_items = []
-
-        # Diet Advice
-        diet_advice_str = "<li><b>อาหาร:</b>"
-        diet_points = []
-        if any(k in all_issue_text for k in ["เบาหวาน", "น้ำตาล"]):
-            diet_points.append("ลดอาหารหวานและแป้ง")
-        if any(k in all_issue_text for k in ["ไขมัน", "ตับ", "อ้วน", "น้ำหนัก"]):
-            diet_points.append("ลดอาหารมันและของทอด")
-        if any(k in all_issue_text for k in ["ความดัน", "ไต"]):
-            diet_points.append("ลดอาหารเค็ม")
-        if "ยูริก" in all_issue_text:
-            diet_points.append("ลดอาหารที่มีพิวรีนสูง (เครื่องในสัตว์, ยอดผัก)")
-        
-        if diet_points:
-            diet_advice_str += " " + ", ".join(list(set(diet_points))) + " และเน้นทานผักผลไม้ให้มากขึ้น"
-        else:
-            diet_advice_str += " ทานอาหารให้หลากหลายครบ 5 หมู่, ลดหวาน มัน เค็ม, เพิ่มผักและผลไม้"
-        diet_advice_str += "</li>"
-        general_advice_items.append(diet_advice_str)
-
-        # Exercise Advice
-        if any(k in all_issue_text for k in ["อ้วน", "น้ำหนัก", "ความดัน", "เบาหวาน", "ไขมัน"]):
-            general_advice_items.append("<li><b>การออกกำลังกาย:</b> ควรออกกำลังกายแบบแอโรบิก (เช่น เดินเร็ว, วิ่ง, ว่ายน้ำ) อย่างน้อย 150 นาทีต่อสัปดาห์เพื่อควบคุมน้ำหนักและลดความเสี่ยงของโรค</li>")
-        else:
-             general_advice_items.append("<li><b>การออกกำลังกาย:</b> เคลื่อนไหวร่างกายอย่างสม่ำเสมอ อย่างน้อย 3-4 วันต่อสัปดาห์ เพื่อสุขภาพที่แข็งแรง</li>")
-
-        # Universal Advice
-        general_advice_items.append("<li><b>การพักผ่อน:</b> นอนหลับให้เพียงพอ 7-8 ชั่วโมงต่อคืน และจัดการความเครียดอย่างเหมาะสม</li>")
-        general_advice_items.append("<li><b>ตรวจสุขภาพ:</b> ควรมาตรวจสุขภาพประจำปีอย่างสม่ำเสมอเพื่อติดตามผล</li>")
-
-        html_parts.append("<div style='border-left: 5px solid #607d8b; padding-left: 15px; margin-top: 2rem;'>")
-        html_parts.append("<h5 style='color: #607d8b; margin-top:0;'>คำแนะนำการปฏิบัติตัวโดยทั่วไป</h5><ul>")
-        html_parts.extend(general_advice_items)
-        html_parts.append("</ul></div>")
-
     if not any(issues.values()):
         return """
         <div style='background-color: #e8f5e9; color: #1b5e20; padding: 1rem; border-radius: 8px; text-align: center;'>
@@ -294,6 +250,80 @@ def generate_comprehensive_recommendations(person_data):
             <p style='margin-top: 0.5rem;'>ไม่พบความผิดปกติที่มีนัยสำคัญ ขอแนะนำให้รักษาสุขภาพที่ดีเช่นนี้ต่อไป และมาตรวจสุขภาพประจำปีอย่างสม่ำเสมอ</p>
         </div>
         """
+
+    # Detailed Issues
+    if issues['high']:
+        html_parts.append("<div style='border-left: 5px solid #c62828; padding-left: 15px; margin-bottom: 1.5rem;'>")
+        html_parts.append("<h5 style='color: #c62828; margin-top:0;'>ควรพบแพทย์เพื่อประเมินเพิ่มเติม</h5><ul>")
+        for item in set(issues['high']): html_parts.append(f"<li>{item}</li>")
+        html_parts.append("</ul></div>")
+
+    if issues['medium']:
+        html_parts.append("<div style='border-left: 5px solid #f9a825; padding-left: 15px; margin-bottom: 1.5rem;'>")
+        html_parts.append("<h5 style='color: #f9a825; margin-top:0;'>ประเด็นสุขภาพที่ควรปรับพฤติกรรม</h5><ul>")
+        for item in set(issues['medium']): html_parts.append(f"<li>{item}</li>")
+        html_parts.append("</ul></div>")
+
+    if issues['low']:
+        html_parts.append("<div style='border-left: 5px solid #1976d2; padding-left: 15px; margin-bottom: 1.5rem;'>")
+        html_parts.append("<h5 style='color: #1976d2; margin-top:0;'>ข้อควรระวังและการเฝ้าติดตาม</h5><ul>")
+        for item in set(issues['low']): html_parts.append(f"<li>{item}</li>")
+        html_parts.append("</ul></div>")
+
+    # --- Build Personalized Health Plan ---
+    health_plan = {'nutrition': set(), 'exercise': set(), 'monitoring': set()}
+    
+    # Map conditions to advice
+    if 'diabetes' in conditions or 'prediabetes' in conditions:
+        health_plan['nutrition'].add("ควบคุมอาหารประเภทแป้งและน้ำตาลอย่างจริงจัง")
+        health_plan['monitoring'].add("ตรวจติดตามระดับน้ำตาลในเลือดสม่ำเสมอ")
+    if 'hypertension' in conditions or 'prehypertension' in conditions:
+        health_plan['nutrition'].add("ลดอาหารเค็มและโซเดียมสูง")
+        health_plan['monitoring'].add("วัดความดันโลหิตที่บ้านอย่างสม่ำเสมอ")
+    if 'dyslipidemia' in conditions:
+        health_plan['nutrition'].add("ลดอาหารมัน ของทอด และไขมันอิ่มตัว")
+    if 'obesity' in conditions or 'overweight' in conditions:
+        health_plan['nutrition'].add("ควบคุมปริมาณอาหารและเลือกทานอาหารแคลอรี่ต่ำ")
+    if 'kidney_disease' in conditions:
+        health_plan['nutrition'].add("ลดอาหารเค็มจัดและโปรตีนสูงบางชนิด (ปรึกษาแพทย์)")
+        health_plan['monitoring'].add("ดื่มน้ำให้เพียงพอและหลีกเลี่ยงยาที่มีผลต่อไต")
+    if 'liver' in conditions:
+        health_plan['nutrition'].add("งดเครื่องดื่มแอลกอฮอล์และลดอาหารไขมันสูง")
+    if 'uric_acid' in conditions:
+        health_plan['nutrition'].add("ลดการทานเครื่องในสัตว์, สัตว์ปีก, และยอดผัก")
+    if 'anemia' in conditions:
+        health_plan['nutrition'].add("ทานอาหารที่มีธาตุเหล็กและวิตามินซีสูง เช่น ตับ, เนื้อแดง, ผักใบเขียว")
+
+    # General exercise advice based on NCD risk
+    if any(c in conditions for c in ['obesity', 'overweight', 'hypertension', 'diabetes', 'prediabetes', 'dyslipidemia']):
+        health_plan['exercise'].add("ออกกำลังกายแบบแอโรบิก (เดินเร็ว, วิ่ง, ว่ายน้ำ) อย่างน้อย 150 นาที/สัปดาห์")
+    else:
+        health_plan['exercise'].add("เคลื่อนไหวร่างกายอย่างสม่ำเสมอ 3-4 วัน/สัปดาห์")
+
+    # Universal advice
+    health_plan['monitoring'].add("นอนหลับพักผ่อนให้เพียงพอ 7-8 ชั่วโมง/คืน")
+    health_plan['monitoring'].add("มาตรวจสุขภาพประจำปีเพื่อติดตามผล")
+
+    # Build HTML for Health Plan
+    html_parts.append("<div style='border-left: 5px solid #4caf50; padding-left: 15px; margin-top: 2rem;'>")
+    html_parts.append("<h5 style='color: #4caf50; margin-top:0;'>แผนการดูแลสุขภาพเบื้องต้น (Your Health Plan)</h5>")
+    
+    if health_plan['nutrition']:
+        html_parts.append("<b>ด้านโภชนาการ:</b><ul>")
+        for item in sorted(list(health_plan['nutrition'])): html_parts.append(f"<li>{item}</li>")
+        html_parts.append("</ul>")
+        
+    if health_plan['exercise']:
+        html_parts.append("<b>ด้านการออกกำลังกาย:</b><ul>")
+        for item in sorted(list(health_plan['exercise'])): html_parts.append(f"<li>{item}</li>")
+        html_parts.append("</ul>")
+
+    if health_plan['monitoring']:
+        html_parts.append("<b>การติดตามและดูแลทั่วไป:</b><ul>")
+        for item in sorted(list(health_plan['monitoring'])): html_parts.append(f"<li>{item}</li>")
+        html_parts.append("</ul>")
+
+    html_parts.append("</div>")
 
     return "".join(html_parts)
     
