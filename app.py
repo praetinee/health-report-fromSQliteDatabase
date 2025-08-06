@@ -13,11 +13,11 @@ import os
 import base64
 import json
 from streamlit_js_eval import streamlit_js_eval
-# --- แก้ไข: Import ฟังก์ชันใหม่ ---
-from performance_tests import interpret_audiogram, generate_holistic_advice
+# --- แก้ไข: Import ฟังก์ชันใหม่ และลบ import ที่ไม่ใช้แล้ว ---
+from performance_tests import interpret_audiogram, interpret_lung_capacity, generate_comprehensive_recommendations
 from print_report import generate_printable_report
 
-# --- Helper Functions (Existing) ---
+# --- Helper Functions (ที่ยังคงใช้งาน) ---
 def is_empty(val):
     """Check if a value is empty, null, or whitespace."""
     return pd.isna(val) or str(val).strip().lower() in ["", "-", "none", "nan", "null"]
@@ -109,112 +109,23 @@ def render_lab_table_html(title, subtitle, headers, rows, table_class="lab-table
     html_content += "</tbody></table></div>"
     return html_content
 
-def kidney_summary_gfr_only(gfr_raw):
-    """Generates a summary for kidney function based on GFR."""
-    try:
-        gfr = float(str(gfr_raw).replace(",", "").strip())
-        if gfr == 0: return ""
-        return "การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย" if gfr < 60 else "ปกติ"
-    except: return ""
-
-def kidney_advice_from_summary(summary_text):
-    """Generates advice based on kidney summary."""
-    if summary_text == "การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย":
-        return "การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย ลดอาหารเค็ม อาหารโปรตีนสูงย่อยยาก ดื่มน้ำ 8-10 แก้วต่อวัน และไม่ควรกลั้นปัสสาวะ มีอาการบวมผิดปกติให้พบแพทย์"
-    return ""
-
-def fbs_advice(fbs_raw):
-    """Generates advice based on Fasting Blood Sugar (FBS) level."""
-    if is_empty(fbs_raw): return ""
-    try:
-        value = float(str(fbs_raw).replace(",", "").strip())
-        if value == 0: return ""
-        if 100 <= value < 106: return "ระดับน้ำตาลเริ่มสูงเล็กน้อย ควรปรับพฤติกรรมการบริโภคอาหารหวาน แป้ง และออกกำลังกาย"
-        if 106 <= value < 126: return "ระดับน้ำตาลสูงเล็กน้อย ควรลดอาหารหวาน แป้ง ของมัน ตรวจติดตามน้ำตาลซ้ำ และออกกำลังกายสม่ำเสมอ"
-        if value >= 126: return "ระดับน้ำตาลสูง ควรพบแพทย์เพื่อตรวจยืนยันเบาหวาน และติดตามอาการ"
-        return ""
-    except: return ""
-
-def summarize_liver(alp_val, sgot_val, sgpt_val):
-    """Summarizes liver function based on ALP, SGOT, and SGPT."""
-    try:
-        alp, sgot, sgpt = float(alp_val), float(sgot_val), float(sgpt_val)
-        if alp == 0 or sgot == 0 or sgpt == 0: return "-"
-        if alp > 120 or sgot > 36 or sgpt > 40: return "การทำงานของตับสูงกว่าเกณฑ์ปกติเล็กน้อย"
-        return "ปกติ"
-    except: return ""
-
-def liver_advice(summary_text):
-    """Generates advice based on liver function summary."""
-    if summary_text == "การทำงานของตับสูงกว่าเกณฑ์ปกติเล็กน้อย": return "ควรลดอาหารไขมันสูงและตรวจติดตามการทำงานของตับซ้ำ"
-    return ""
-
-def uric_acid_advice(value_raw):
-    """Generates advice based on Uric Acid level."""
-    try:
-        if float(value_raw) > 7.2: return "ควรลดอาหารที่มีพิวรีนสูง เช่น เครื่องในสัตว์ อาหารทะเล และพบแพทย์หากมีอาการปวดข้อ"
-        return ""
-    except: return "-"
-
-def summarize_lipids(chol_raw, tgl_raw, ldl_raw):
-    """Summarizes lipid profile."""
-    try:
-        chol, tgl, ldl = float(str(chol_raw).replace(",", "").strip()), float(str(tgl_raw).replace(",", "").strip()), float(str(ldl_raw).replace(",", "").strip())
-        if chol == 0 and tgl == 0: return ""
-        if chol >= 250 or tgl >= 250 or ldl >= 180: return "ไขมันในเลือดสูง"
-        if chol <= 200 and tgl <= 150: return "ปกติ"
-        return "ไขมันในเลือดสูงเล็กน้อย"
-    except: return ""
-
-def lipids_advice(summary_text):
-    """Generates advice based on lipid summary."""
-    if summary_text == "ไขมันในเลือดสูง": return "ไขมันในเลือดสูง ควรลดอาหารที่มีไขมันอิ่มตัว เช่น ของทอด หนังสัตว์ ออกกำลังกายสม่ำเสมอ และพิจารณาพบแพทย์เพื่อตรวจติดตาม"
-    if summary_text == "ไขมันในเลือดสูงเล็กน้อย": return "ไขมันในเลือดสูงเล็กน้อย ควรปรับพฤติกรรมการบริโภค ลดของมัน และออกกำลังกายเพื่อควบคุมระดับไขมัน"
-    return ""
-
-def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
-    """Generates advice based on Complete Blood Count (CBC) results."""
-    advice_parts = []
-    try:
-        if float(hb) < (13 if sex == "ชาย" else 12): advice_parts.append("ระดับฮีโมโกลบินต่ำ ควรตรวจหาภาวะโลหิตจางและติดตามซ้ำ")
-    except: pass
-    try:
-        if float(hct) < (39 if sex == "ชาย" else 36): advice_parts.append("ค่าฮีมาโตคริตต่ำ ควรตรวจหาภาวะเลือดจางและตรวจติดตาม")
-    except: pass
-    try:
-        wbc_val = float(wbc)
-        if wbc_val < 4000: advice_parts.append("เม็ดเลือดขาวต่ำ อาจเกิดจากภูมิคุ้มกันลด ควรติดตาม")
-        elif wbc_val > 10000: advice_parts.append("เม็ดเลือดขาวสูง อาจมีการอักเสบ ติดเชื้อ หรือความผิดปกติ ควรพบแพทย์")
-    except: pass
-    try:
-        plt_val = float(plt)
-        if plt_val < 150000: advice_parts.append("เกล็ดเลือดต่ำ อาจมีภาวะเลือดออกง่าย ควรตรวจยืนยันซ้ำ")
-        elif plt_val > 500000: advice_parts.append("เกล็ดเลือดสูง ควรพบแพทย์เพื่อตรวจหาสาเหตุเพิ่มเติม")
-    except: pass
-    return " ".join(advice_parts)
+# --- ลบฟังก์ชันคำแนะนำย่อยๆ ที่ไม่ใช้แล้ว ---
+# kidney_summary_gfr_only, kidney_advice_from_summary, fbs_advice, summarize_liver,
+# liver_advice, uric_acid_advice, summarize_lipids, lipids_advice, cbc_advice,
+# merge_final_advice_grouped, advice_urine
 
 def safe_text(val): return "-" if str(val).strip().lower() in ["", "none", "nan", "-"] else str(val).strip()
 def safe_value(val):
     val = str(val or "").strip()
     return "-" if val.lower() in ["", "nan", "none", "-"] else val
-def interpret_alb(value):
-    val = str(value).strip().lower()
-    if val == "negative": return "ไม่พบ"
-    if val in ["trace", "1+", "2+"]: return "พบโปรตีนในปัสสาวะเล็กน้อย"
-    if val in ["3+", "4+"]: return "พบโปรตีนในปัสสาวะ"
-    return "-"
-def interpret_sugar(value):
-    val = str(value).strip().lower()
-    if val == "negative": return "ไม่พบ"
-    if val == "trace": return "พบน้ำตาลในปัสสาวะเล็กน้อย"
-    if val in ["1+", "2+", "3+", "4+", "5+", "6+"]: return "พบน้ำตาลในปัสสาวะ"
-    return "-"
+
 def parse_range_or_number(val):
     val = val.replace("cell/hpf", "").replace("cells/hpf", "").replace("cell", "").strip().lower()
     try:
         if "-" in val: return map(float, val.split("-"))
         else: num = float(val); return num, num
     except: return None, None
+
 def interpret_rbc(value):
     val = str(value or "").strip().lower()
     if val in ["-", "", "none", "nan"]: return "-"
@@ -223,6 +134,7 @@ def interpret_rbc(value):
     if high <= 2: return "ปกติ"
     if high <= 5: return "พบเม็ดเลือดแดงในปัสสาวะเล็กน้อย"
     return "พบเม็ดเลือดแดงในปัสสาวะ"
+
 def interpret_wbc(value):
     val = str(value or "").strip().lower()
     if val in ["-", "", "none", "nan"]: return "-"
@@ -231,14 +143,7 @@ def interpret_wbc(value):
     if high <= 5: return "ปกติ"
     if high <= 10: return "พบเม็ดเลือดขาวในปัสสาวะเล็กน้อย"
     return "พบเม็ดเลือดขาวในปัสสาวะ"
-def advice_urine(sex, alb, sugar, rbc, wbc):
-    alb_t, sugar_t, rbc_t, wbc_t = interpret_alb(alb), interpret_sugar(sugar), interpret_rbc(rbc), interpret_wbc(wbc)
-    if all(x in ["-", "ปกติ", "ไม่พบ", "พบโปรตีนในปัสสาวะเล็กน้อย", "พบน้ำตาลในปัสสาวะเล็กน้อย"] for x in [alb_t, sugar_t, rbc_t, wbc_t]): return ""
-    if "พบน้ำตาลในปัสสาวะ" in sugar_t and "เล็กน้อย" not in sugar_t: return "ควรลดการบริโภคน้ำตาล และตรวจระดับน้ำตาลในเลือดเพิ่มเติม"
-    if sex == "หญิง" and "พบเม็ดเลือดแดง" in rbc_t and "ปกติ" in wbc_t: return "อาจมีปนเปื้อนจากประจำเดือน แนะนำให้ตรวจซ้ำ"
-    if sex == "ชาย" and "พบเม็ดเลือดแดง" in rbc_t and "ปกติ" in wbc_t: return "พบเม็ดเลือดแดงในปัสสาวะ ควรตรวจทางเดินปัสสาวะเพิ่มเติม"
-    if "พบเม็ดเลือดขาว" in wbc_t and "เล็กน้อย" not in wbc_t: return "อาจมีการอักเสบของระบบทางเดินปัสสาวะ แนะนำให้ตรวจซ้ำ"
-    return "ควรตรวจปัสสาวะซ้ำเพื่อติดตามผล"
+
 def is_urine_abnormal(test_name, value, normal_range):
     val = str(value or "").strip().lower()
     if val in ["", "-", "none", "nan", "null"]: return False
@@ -261,8 +166,8 @@ def render_urine_section(person_data, sex, year_selected):
     df_urine = pd.DataFrame(urine_data, columns=["การตรวจ", "ผลตรวจ", "ค่าปกติ"])
     html_content = render_lab_table_html("ผลการตรวจปัสสาวะ", "Urinalysis", ["การตรวจ", "ผล", "ค่าปกติ"], [[(row["การตรวจ"], is_urine_abnormal(row["การตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"])), (safe_value(row["ผลตรวจ"]), is_urine_abnormal(row["การตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"])), (row["ค่าปกติ"], is_urine_abnormal(row["การตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"]))] for _, row in df_urine.iterrows()], table_class="urine-table")
     st.markdown(html_content, unsafe_allow_html=True)
-    summary = advice_urine(sex, person_data.get("Alb", "-"), person_data.get("sugar", "-"), person_data.get("RBC1", "-"), person_data.get("WBC1", "-"))
-    return summary, any(not is_empty(val) for _, val, _ in urine_data)
+    # --- แก้ไข: ไม่ต้องคืนค่า summary เพราะจะถูกรวมในคำแนะนำหลัก ---
+    return any(not is_empty(val) for _, val, _ in urine_data)
 
 def interpret_stool_exam(val):
     """Interprets stool examination results."""
@@ -319,20 +224,6 @@ def hepatitis_b_advice(hbsag, hbsab, hbcab):
     if "positive" in hbcab and "positive" not in hbsab: return "เคยติดเชื้อแต่ไม่มีภูมิคุ้มกันในปัจจุบัน"
     if all(x == "negative" for x in [hbsag, hbsab, hbcab]): return "ไม่มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี ควรปรึกษาแพทย์เพื่อรับวัคซีน"
     return "ไม่สามารถสรุปผลชัดเจน แนะนำให้พบแพทย์เพื่อประเมินซ้ำ"
-
-def merge_final_advice_grouped(messages):
-    """Merges and groups final advice messages."""
-    groups = {"FBS": [], "ไต": [], "ตับ": [], "ยูริค": [], "ไขมัน": [], "อื่นๆ": []}
-    for msg in messages:
-        if not msg or msg.strip() in ["-", ""]: continue
-        if "น้ำตาล" in msg: groups["FBS"].append(msg)
-        elif "ไต" in msg: groups["ไต"].append(msg)
-        elif "ตับ" in msg: groups["ตับ"].append(msg)
-        elif "พิวรีน" in msg or "ยูริค" in msg: groups["ยูริค"].append(msg)
-        elif "ไขมัน" in msg: groups["ไขมัน"].append(msg)
-        else: groups["อื่นๆ"].append(msg)
-    output = [f"<b>{title}:</b> {' '.join(list(OrderedDict.fromkeys(msgs)))}" for title, msgs in groups.items() if msgs]
-    return "<br>".join(output) if output else "ไม่พบคำแนะนำเพิ่มเติมจากผลตรวจ"
 
 # --- Data Loading ---
 @st.cache_data(ttl=600)
@@ -400,13 +291,9 @@ def has_vision_data(person_data):
     return any(not is_empty(person_data.get(key)) for key in detailed_keys)
 
 
-# --- แก้ไข: ฟังก์ชันตรวจสอบข้อมูลการได้ยิน ---
 def has_hearing_data(person_data):
     """Check for detailed hearing (audiogram) data."""
-    # ตรวจสอบคอลัมน์บางส่วนจากที่คาดว่าจะมี
-    hearing_keys = [
-        'R500', 'L500', 'R1k', 'L1k', 'R4k', 'L4k'
-    ]
+    hearing_keys = [ 'R500', 'L500', 'R1k', 'L1k', 'R4k', 'L4k' ]
     return any(not is_empty(person_data.get(key)) for key in hearing_keys)
 
 
@@ -457,7 +344,6 @@ def interpret_cxr(val):
     if any(keyword in val.lower() for keyword in ["ผิดปกติ", "ฝ้า", "รอย", "abnormal", "infiltrate", "lesion"]): return f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
     return val
 
-# --- CORRECTED: display_common_header ---
 def display_common_header(person_data):
     """Displays the common report header with personal and vital sign info."""
     check_date = person_data.get("วันที่ตรวจ", "ไม่มีข้อมูล")
@@ -512,7 +398,6 @@ def display_common_header(person_data):
     st.markdown("".join(html_parts), unsafe_allow_html=True)
 
 
-# --- CORRECTED: Centralized CSS Injection for a Clearer, Theme-Adaptive Table ---
 def inject_custom_css():
     st.markdown("""
     <style>
@@ -582,7 +467,6 @@ def inject_custom_css():
     </style>
     """, unsafe_allow_html=True)
 
-# --- FINAL REWRITE: Vision Details Table Renderer for Correctness ---
 def render_vision_details_table(person_data):
     """
     Renders a clearer, single-column result table for the vision test with corrected logic.
@@ -670,85 +554,18 @@ def render_vision_details_table(person_data):
     html_parts.append("</tbody></table>")
     return "".join(html_parts)
 
-# --- INLINED PERFORMANCE TEST FUNCTIONS ---
-def interpret_lung_capacity(person_data):
-    """
-    แปลผลตรวจสมรรถภาพความจุปอดตามตรรกะมาตรฐานที่กำหนด
-    """
-    def to_float(val):
-        if is_empty(val): return None
-        try: return float(val)
-        except (ValueError, TypeError): return None
-
-    raw_values = {
-        'FVC': to_float(person_data.get('FVC')),
-        'FVC predic': to_float(person_data.get('FVC predic')),
-        'FVC %': to_float(person_data.get('FVC เปอร์เซ็นต์')),
-        'FEV1': to_float(person_data.get('FEV1')),
-        'FEV1 predic': to_float(person_data.get('FEV1 predic')),
-        'FEV1 %': to_float(person_data.get('FEV1เปอร์เซ็นต์')),
-        'FEV1/FVC %': to_float(person_data.get('FEV1/FVC%')),
-        'FEV1/FVC % pre': to_float(person_data.get('FEV1/FVC % pre')),
-    }
-
-    fvc_p = raw_values['FVC %']
-    fev1_p = raw_values['FEV1 %']
-    ratio = raw_values['FEV1/FVC %']
-
-    if all(v is None for v in [fvc_p, fev1_p, ratio]):
-        return "ไม่ได้เข้ารับการตรวจ", "", raw_values
-
-    if fvc_p is None or ratio is None:
-        return "สมรรถภาพปอดสรุปผลไม่ได้เนื่องจากมีความคลาดเคลื่อนในการทดสอบ", "ให้พบแพทย์เพื่อตรวจวินิจฉัย รักษาเพิ่มเติม", raw_values
-
-    summary = "สมรรถภาพปอดสรุปผลไม่ได้เนื่องจากมีความคลาดเคลื่อนในการทดสอบ"
-
-    if ratio < 70:
-        if fvc_p < 80:
-            summary = "สมรรถภาพปอดสรุปผลไม่ได้เนื่องจากมีความคลาดเคลื่อนในการทดสอบ"
-        else:
-            if fev1_p is not None:
-                if fev1_p >= 66:
-                     summary = "สมรรถภาพปอดพบความผิดปกติแบบหลอดลมอุดกั้นเล็กน้อย"
-                elif fev1_p >= 50:
-                     summary = "สมรรถภาพปอดพบความผิดปกติแบบหลอดลมอุดกั้นปานกลาง"
-                else:
-                     summary = "สมรรถภาพปอดพบความผิดปกติแบบหลอดลมอุดกั้นรุนแรง"
-            else:
-                summary = "สมรรถภาพปอดพบความผิดปกติแบบหลอดลมอุดกั้น"
-    elif ratio >= 70:
-        if fvc_p < 80:
-            if fvc_p >= 66:
-                summary = "สมรรถภาพปอดพบความผิดปกติแบบปอดจำกัดการขยายตัวเล็กน้อย"
-            elif fvc_p >= 50:
-                summary = "สมรรถภาพปอดพบความผิดปกติแบบปอดจำกัดการขยายตัวปานกลาง"
-            else:
-                summary = "สมรรถภาพปอดพบความผิดปกติแบบปอดจำกัดการขยายตัวรุนแรง"
-        else:
-            summary = "สมรรถภาพปอดปกติ"
-
-    if summary == "สมรรถภาพปอดปกติ" or "เล็กน้อย" in summary:
-        advice = "เพิ่มสมรรถภาพปอดด้วยการออกกำลังกาย หลีกเลี่ยงการสัมผัสสารเคมี ฝุ่น และควัน"
-    else:
-        advice = "ให้พบแพทย์เพื่อตรวจวินิจฉัย รักษาเพิ่มเติม"
-        
-    return summary, advice, raw_values
-
-# --- เพิ่ม: ฟังก์ชันแสดงผลการตรวจการได้ยิน ---
 def display_performance_report_hearing(person_data, all_person_history_df):
     """
     แสดงผลรายงานสมรรถภาพการได้ยิน (Audiogram) ในรูปแบบใหม่
     """
     st.markdown("<h2 style='text-align: center;'>รายงานผลการตรวจสมรรถภาพการได้ยิน (Audiometry Report)</h2>", unsafe_allow_html=True)
     
-    # --- แก้ไข: เรียกฟังก์ชัน interpret_audiogram พร้อมส่งประวัติทั้งหมด ---
     hearing_results = interpret_audiogram(person_data, all_person_history_df)
 
     if hearing_results['summary'].get('overall') == "ไม่ได้เข้ารับการตรวจ":
         st.warning("ไม่ได้เข้ารับการตรวจสมรรถภาพการได้ยินในปีนี้")
         return
 
-    # --- NEW: Helper function to format summary text ---
     def format_hearing_summary(summary_text, severity_text):
         if is_empty(summary_text) or "N/A" in summary_text:
             return f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">N/A</p>'
@@ -756,79 +573,51 @@ def display_performance_report_hearing(person_data, all_person_history_df):
         if "ปกติ" in summary_text:
             return f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">{summary_text}</p>'
 
-        # Use the calculated severity as the main status
         main_status = severity_text if not is_empty(severity_text) and "ข้อมูลไม่เพียงพอ" not in severity_text else "การได้ยินลดลง"
-
-        # Extract frequencies from the original summary text
         freq_str = ""
         if "ที่ระดับความถี่" in summary_text:
             parts = summary_text.split(',', 1)
             freq_str = parts[1].strip() if len(parts) > 1 else ""
         elif "การได้ยินลดลง" in summary_text:
-             # Handle cases where the format might be different, e.g. "การได้ยินลดลง,500,1k"
              parts = summary_text.split(',', 1)
              freq_str = parts[1].strip() if len(parts) > 1 else ""
 
         if not freq_str:
-            # If no frequencies are listed, just show the severity.
             return f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0; color: var(--text-color);">{main_status}</p>'
 
-        # Categorize frequencies
         freqs = [f.strip().lower() for f in freq_str.split(',') if f.strip()]
-        
-        low_tones = []
-        speech_tones = []
-        high_tones = []
+        low_tones, speech_tones, high_tones = [], [], []
 
         for f in freqs:
-            if '500' in f:
-                low_tones.append('500 Hz')
-            elif '1k' in f:
-                speech_tones.append('1 kHz')
-            elif '2k' in f:
-                speech_tones.append('2 kHz')
-            elif '3k' in f:
-                high_tones.append('3 kHz')
-            elif '4k' in f:
-                high_tones.append('4 kHz')
-            elif '6k' in f:
-                high_tones.append('6 kHz')
-            elif '8k' in f:
-                high_tones.append('8 kHz')
+            if '500' in f: low_tones.append('500 Hz')
+            elif '1k' in f: speech_tones.append('1 kHz')
+            elif '2k' in f: speech_tones.append('2 kHz')
+            elif '3k' in f: high_tones.append('3 kHz')
+            elif '4k' in f: high_tones.append('4 kHz')
+            elif '6k' in f: high_tones.append('6 kHz')
+            elif '8k' in f: high_tones.append('8 kHz')
 
-        # Build the HTML output
         html_output = f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0; color: var(--text-color);">{main_status}</p>'
-        
         details_parts = []
-        if speech_tones:
-            details_parts.append(f'เสียงพูด ({", ".join(speech_tones)})')
-        if high_tones:
-            details_parts.append(f'เสียงแหลม ({", ".join(high_tones)})')
-        if low_tones:
-            details_parts.append(f'เสียงทุ้ม ({", ".join(low_tones)})')
+        if speech_tones: details_parts.append(f'เสียงพูด ({", ".join(speech_tones)})')
+        if high_tones: details_parts.append(f'เสียงแหลม ({", ".join(high_tones)})')
+        if low_tones: details_parts.append(f'เสียงทุ้ม ({", ".join(low_tones)})')
 
         if details_parts:
-            details_str = ", ".join(details_parts)
-            html_output += f'<p style="font-size: 0.8rem; margin: 0.25rem 0 0 0; color: var(--text-color);">กระทบความถี่: {details_str}</p>'
+            html_output += f'<p style="font-size: 0.8rem; margin: 0.25rem 0 0 0; color: var(--text-color);">กระทบความถี่: {", ".join(details_parts)}</p>'
 
         return html_output.strip()
 
-
-    # --- ส่วนสรุปผล ---
     st.markdown("<h5><b>สรุปผลการตรวจ</b></h5>", unsafe_allow_html=True)
     summary_r_raw = person_data.get('ผลตรวจการได้ยินหูขวา', 'N/A')
     summary_l_raw = person_data.get('ผลตรวจการได้ยินหูซ้าย', 'N/A')
     severity_r = person_data.get('ระดับการได้ยินหูขวา', 'N/A')
     severity_l = person_data.get('ระดับการได้ยินหูซ้าย', 'N/A')
 
-    # Define background color based on result
     def get_summary_color(summary_text):
-        if "ปกติ" in summary_text:
-            return "rgba(46, 125, 50, 0.2)" # Greenish
-        elif "N/A" in summary_text or "ไม่ได้" in summary_text:
-            return "rgba(120, 120, 120, 0.2)" # Greyish
-        else:
-            return "rgba(198, 40, 40, 0.2)" # Reddish
+        if "ปกติ" in summary_text: return "rgba(46, 125, 50, 0.2)"
+        elif "N/A" in summary_text or "ไม่ได้" in summary_text: return "rgba(120, 120, 120, 0.2)"
+        else: return "rgba(198, 40, 40, 0.2)"
 
     col1, col2 = st.columns(2)
     with col1:
@@ -847,8 +636,6 @@ def display_performance_report_hearing(person_data, all_person_history_df):
         </div>
         """, unsafe_allow_html=True)
 
-
-    # --- ส่วนคำแนะนำ ---
     st.markdown("<br><h5><b>คำแนะนำ</b></h5>", unsafe_allow_html=True)
     advice = hearing_results.get('advice', 'ไม่มีคำแนะนำเพิ่มเติม')
     if "ผิดปกติ" in hearing_results['summary'].get('overall', ''):
@@ -858,34 +645,18 @@ def display_performance_report_hearing(person_data, all_person_history_df):
     
     st.markdown("<hr>", unsafe_allow_html=True)
 
-    # --- ส่วนตารางข้อมูลดิบและค่าเฉลี่ย ---
     data_col, avg_col = st.columns([3, 2])
-
     with data_col:
         st.markdown("<h5><b>ผลการตรวจวัดระดับการได้ยิน (หน่วย: dB)</b></h5>", unsafe_allow_html=True)
         raw_data = hearing_results.get('raw_values', {})
-        
-        # สร้าง DataFrame จากข้อมูลดิบ
-        df_data = []
-        for freq, values in raw_data.items():
-            df_data.append({
-                "ความถี่": freq,
-                "หูขวา (dB)": values.get('right', '-'),
-                "หูซ้าย (dB)": values.get('left', '-')
-            })
-        
-        df_display = pd.DataFrame(df_data)
-        st.markdown(df_display.to_html(escape=False, index=False, classes="styled-df-table"), unsafe_allow_html=True)
+        df_data = [{"ความถี่": freq, "หูขวา (dB)": v.get('right', '-'), "หูซ้าย (dB)": v.get('left', '-')} for freq, v in raw_data.items()]
+        st.markdown(pd.DataFrame(df_data).to_html(escape=False, index=False, classes="styled-df-table"), unsafe_allow_html=True)
 
     with avg_col:
         st.markdown("<h5><b>ค่าเฉลี่ยการได้ยิน (dB)</b></h5>", unsafe_allow_html=True)
         averages = hearing_results.get('averages', {})
-        
-        avg_r_speech = averages.get('right_500_2000')
-        avg_l_speech = averages.get('left_500_2000')
-        avg_r_high = averages.get('right_3000_6000')
-        avg_l_high = averages.get('left_3000_6000')
-
+        avg_r_speech, avg_l_speech = averages.get('right_500_2000'), averages.get('left_500_2000')
+        avg_r_high, avg_l_high = averages.get('right_3000_6000'), averages.get('left_3000_6000')
         st.markdown(f"""
         <div style='background-color: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px; line-height: 1.8;'>
             <b>ความถี่เสียงพูด (500-2000 Hz):</b>
@@ -901,39 +672,23 @@ def display_performance_report_hearing(person_data, all_person_history_df):
         </div>
         """, unsafe_allow_html=True)
 
-    # --- ส่วนเปรียบเทียบ Baseline (ปรับปรุงใหม่) ---
-    baseline_source = hearing_results.get('baseline_source', 'none')
     st.markdown("<hr>", unsafe_allow_html=True)
-
+    baseline_source = hearing_results.get('baseline_source', 'none')
     if baseline_source != 'none':
         baseline_year = hearing_results.get('baseline_year')
-        if baseline_source == 'first_year':
-            st.markdown(f"<h5><b>การเปรียบเทียบกับผลตรวจครั้งแรก (พ.ศ. {baseline_year})</b></h5>", unsafe_allow_html=True)
-        else:  # 'explicit'
-            st.markdown("<h5><b>การเปรียบเทียบกับผลตรวจพื้นฐาน (Baseline)</b></h5>", unsafe_allow_html=True)
-
+        st.markdown(f"<h5><b>การเปรียบเทียบกับผลตรวจ{'ครั้งแรก' if baseline_source == 'first_year' else 'พื้นฐาน'} (พ.ศ. {baseline_year})</b></h5>", unsafe_allow_html=True)
         if hearing_results.get('sts_detected'):
             st.warning("⚠️ **พบการเปลี่ยนแปลงระดับการได้ยินอย่างมีนัยสำคัญ (Standard Threshold Shift - STS)**")
-
-        baseline_df_data = []
-        for freq, values in hearing_results.get('raw_values', {}).items():
-            baseline_df_data.append({
-                "ความถี่": freq,
-                "ปัจจุบัน (ขวา)": values.get('right', '-'),
-                "Baseline (ขวา)": hearing_results['baseline_values'][freq].get('right', '-'),
-                "Shift (ขวา)": hearing_results['shift_values'][freq].get('right', '-'),
-                "ปัจจุบัน (ซ้าย)": values.get('left', '-'),
-                "Baseline (ซ้าย)": hearing_results['baseline_values'][freq].get('left', '-'),
-                "Shift (ซ้าย)": hearing_results['shift_values'][freq].get('left', '-'),
-            })
-        baseline_df = pd.DataFrame(baseline_df_data)
-        st.markdown(baseline_df.to_html(escape=False, index=False, classes="styled-df-table"), unsafe_allow_html=True)
+        baseline_df_data = [
+            {"ความถี่": freq, "ปัจจุบัน (ขวา)": v.get('right', '-'), "Baseline (ขวา)": hearing_results['baseline_values'][freq].get('right', '-'), "Shift (ขวา)": hearing_results['shift_values'][freq].get('right', '-'),
+             "ปัจจุบัน (ซ้าย)": v.get('left', '-'), "Baseline (ซ้าย)": hearing_results['baseline_values'][freq].get('left', '-'), "Shift (ซ้าย)": hearing_results['shift_values'][freq].get('left', '-')}
+            for freq, v in hearing_results.get('raw_values', {}).items()
+        ]
+        st.markdown(pd.DataFrame(baseline_df_data).to_html(escape=False, index=False, classes="styled-df-table"), unsafe_allow_html=True)
     else:
         st.markdown("<h5><b>การเปรียบเทียบกับผลตรวจพื้นฐาน (Baseline)</b></h5>", unsafe_allow_html=True)
         st.info("ไม่สามารถเปรียบเทียบผลได้ เนื่องจากการตรวจนี้เป็นการตรวจครั้งแรก หรือไม่พบข้อมูลการตรวจในปีก่อนหน้า")
 
-
-    # --- ส่วนข้อมูลสรุปเพิ่มเติม ---
     if hearing_results.get('other_data'):
         st.markdown("<hr>", unsafe_allow_html=True)
         st.markdown("<h5><b>ข้อมูลเพิ่มเติม</b></h5>", unsafe_allow_html=True)
@@ -989,23 +744,17 @@ def display_performance_report_lung(person_data):
         st.markdown(df_details.to_html(escape=False, index=False, classes="styled-df-table"), unsafe_allow_html=True)
 
 
-# --- FINAL VERSION: display_performance_report ---
 def display_performance_report(person_data, report_type, all_person_history_df=None):
     """Displays various performance test reports (lung, vision, hearing)."""
-    # Use columns to constrain the width of the report sections
     left_spacer, main_col, right_spacer = st.columns([0.5, 6, 0.5])
     
     with main_col:
         if report_type == 'lung':
             display_performance_report_lung(person_data)
-            
         elif report_type == 'vision':
             st.markdown("<h2 style='text-align: center;'>รายงานผลการตรวจสมรรถภาพการมองเห็น (Vision Test Report)</h2>", unsafe_allow_html=True)
-            
-            # Check for detailed results first
             if not has_vision_data(person_data):
                 st.warning("ไม่พบข้อมูลผลการตรวจสมรรถภาพการมองเห็นโดยละเอียดในปีนี้")
-                # Also check if there are summary fields, and if so, inform the user they might be from another year.
                 vision_advice_summary = person_data.get('สรุปเหมาะสมกับงาน')
                 doctor_advice = person_data.get('แนะนำABN EYE')
                 if not is_empty(vision_advice_summary) or not is_empty(doctor_advice):
@@ -1013,92 +762,44 @@ def display_performance_report(person_data, report_type, all_person_history_df=N
                     if not is_empty(vision_advice_summary):
                          st.markdown(f"""
                          <div style='background-color: rgba(64, 128, 255, 0.1); border: 1px solid rgba(64, 128, 255, 0.3); padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
-                            <div style='flex-shrink: 0;'>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4080FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                            </div>
-                            <div>
-                                <h5 style='margin-top: 0; margin-bottom: 0.25rem; color: #A6C8FF;'>สรุปความเหมาะสมกับงาน</h5>
-                                <p style='margin:0; color: var(--text-color);'>{vision_advice_summary}</p>
-                            </div>
-                         </div>
-                         """, unsafe_allow_html=True)
+                            <div style='flex-shrink: 0;'><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4080FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div>
+                            <div><h5 style='margin-top: 0; margin-bottom: 0.25rem; color: #A6C8FF;'>สรุปความเหมาะสมกับงาน</h5><p style='margin:0; color: var(--text-color);'>{vision_advice_summary}</p></div>
+                         </div>""", unsafe_allow_html=True)
                     if not is_empty(doctor_advice):
                          st.markdown(f"""
                          <div style='background-color: rgba(255, 229, 100, 0.1); border: 1px solid rgba(255, 229, 100, 0.3); padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
-                            <div style='flex-shrink: 0;'>
-                               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFE564" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg>
-                            </div>
-                            <div>
-                                <h5 style='margin-top: 0; margin-bottom: 0.25rem; color: #FFE564;'>คำแนะนำเพิ่มเติมจากแพทย์</h5>
-                                <p style='margin:0; color: var(--text-color);'>{doctor_advice}</p>
-                            </div>
-                         </div>
-                         """, unsafe_allow_html=True)
+                            <div style='flex-shrink: 0;'><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFE564" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg></div>
+                            <div><h5 style='margin-top: 0; margin-bottom: 0.25rem; color: #FFE564;'>คำแนะนำเพิ่มเติมจากแพทย์</h5><p style='margin:0; color: var(--text-color);'>{doctor_advice}</p></div>
+                         </div>""", unsafe_allow_html=True)
                 return
 
-            # If we have detailed data, proceed to show the full report
             vision_advice_summary = person_data.get('สรุปเหมาะสมกับงาน')
             if not is_empty(vision_advice_summary):
                 st.markdown(f"""
                  <div style='background-color: rgba(64, 128, 255, 0.1); border: 1px solid rgba(64, 128, 255, 0.3); padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
-                    <div style='flex-shrink: 0;'>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4080FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                    </div>
-                    <div>
-                        <h5 style='margin-top: 0; margin-bottom: 0.25rem; color: #A6C8FF;'>สรุปความเหมาะสมกับงาน</h5>
-                        <p style='margin:0; color: var(--text-color);'>{vision_advice_summary}</p>
-                    </div>
-                 </div>
-                 """, unsafe_allow_html=True)
+                    <div style='flex-shrink: 0;'><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4080FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div>
+                    <div><h5 style='margin-top: 0; margin-bottom: 0.25rem; color: #A6C8FF;'>สรุปความเหมาะสมกับงาน</h5><p style='margin:0; color: var(--text-color);'>{vision_advice_summary}</p></div>
+                 </div>""", unsafe_allow_html=True)
 
-            # --- SIMPLIFIED ABNORMALITY SUMMARY ---
-            abnormality_fields = OrderedDict([
-                ('ผ.สายตาเขซ่อนเร้น', 'สายตาเขซ่อนเร้น'),
-                ('ผ.การรวมภาพ', 'การรวมภาพ'),
-                ('ผ.ความชัดของภาพระยะไกล', 'ความชัดของภาพระยะไกล'),
-                ('ผ.การกะระยะและมองความชัดลึกของภาพ', 'การกะระยะ/ความชัดลึก'),
-                ('ผ.การจำแนกสี', 'การจำแนกสี'),
-                ('ผ.ความชัดของภาพระยะใกล้', 'ความชัดของภาพระยะใกล้'),
-                ('ผ.ลานสายตา', 'ลานสายตา')
-            ])
-
-            abnormal_topics = []
-            for col, name in abnormality_fields.items():
-                if not is_empty(person_data.get(col)):
-                    abnormal_topics.append(name)
-
+            abnormality_fields = OrderedDict([('ผ.สายตาเขซ่อนเร้น', 'สายตาเขซ่อนเร้น'), ('ผ.การรวมภาพ', 'การรวมภาพ'), ('ผ.ความชัดของภาพระยะไกล', 'ความชัดของภาพระยะไกล'), ('ผ.การกะระยะและมองความชัดลึกของภาพ', 'การกะระยะ/ความชัดลึก'), ('ผ.การจำแนกสี', 'การจำแนกสี'), ('ผ.ความชัดของภาพระยะใกล้', 'ความชัดของภาพระยะใกล้'), ('ผ.ลานสายตา', 'ลานสายตา')])
+            abnormal_topics = [name for col, name in abnormality_fields.items() if not is_empty(person_data.get(col))]
             doctor_advice = person_data.get('แนะนำABN EYE')
 
             if abnormal_topics or not is_empty(doctor_advice):
                 summary_parts = []
-                if abnormal_topics:
-                    summary_parts.append(f"<b>พบความผิดปกติเกี่ยวกับ:</b> {', '.join(abnormal_topics)}")
-                
-                if not is_empty(doctor_advice):
-                    summary_parts.append(f"<b>คำแนะนำเพิ่มเติมจากแพทย์:</b> {doctor_advice}")
-
-                summary_html = "<br>".join(summary_parts)
+                if abnormal_topics: summary_parts.append(f"<b>พบความผิดปกติเกี่ยวกับ:</b> {', '.join(abnormal_topics)}")
+                if not is_empty(doctor_advice): summary_parts.append(f"<b>คำแนะนำเพิ่มเติมจากแพทย์:</b> {doctor_advice}")
                 st.markdown(f"""
                 <div style='background-color: rgba(255, 229, 100, 0.1); border: 1px solid rgba(255, 229, 100, 0.3); padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
-                    <div style='flex-shrink: 0;'>
-                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFE564" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg>
-                    </div>
-                    <div>
-                        <h5 style='margin-top: 0; margin-bottom: 0.25rem; color: #FFE564;'>สรุปความผิดปกติของสายตา</h5>
-                        <p style='margin:0; color: var(--text-color);'>{summary_html}</p>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-            # --- END OF SIMPLIFIED SUMMARY ---
+                    <div style='flex-shrink: 0;'><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFE564" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg></div>
+                    <div><h5 style='margin-top: 0; margin-bottom: 0.25rem; color: #FFE564;'>สรุปความผิดปกติของสายตา</h5><p style='margin:0; color: var(--text-color);'>{"<br>".join(summary_parts)}</p></div>
+                </div>""", unsafe_allow_html=True)
 
             st.markdown("<hr>", unsafe_allow_html=True)
-            
             st.markdown("<h5><b>ผลการตรวจโดยละเอียด</b></h5>", unsafe_allow_html=True)
-            detailed_table_html = render_vision_details_table(person_data)
-            st.markdown(detailed_table_html, unsafe_allow_html=True)
+            st.markdown(render_vision_details_table(person_data), unsafe_allow_html=True)
             
         elif report_type == 'hearing':
-            # --- แก้ไข: ส่งประวัติทั้งหมดไปยังฟังก์ชัน ---
             display_performance_report_hearing(person_data, all_person_history_df)
 
 
@@ -1111,43 +812,21 @@ def display_main_report(person_data, all_person_history_df):
     cbc_config = [("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None), ("ฮีมาโตคริต (Hct)", "HCT", "ชาย > 39%, หญิง > 36%", hct_low, None), ("เม็ดเลือดขาว (wbc)", "WBC (cumm)", "4,000 - 10,000 /cu.mm", 4000, 10000), ("นิวโทรฟิล (Neutrophil)", "Ne (%)", "43 - 70%", 43, 70), ("ลิมโฟไซต์ (Lymphocyte)", "Ly (%)", "20 - 44%", 20, 44), ("โมโนไซต์ (Monocyte)", "M", "3 - 9%", 3, 9), ("อีโอซิโนฟิล (Eosinophil)", "Eo", "0 - 9%", 0, 9), ("เบโซฟิล (Basophil)", "BA", "0 - 3%", 0, 3), ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150,000 - 500,000 /cu.mm", 150000, 500000)]
     cbc_rows = [([(label, is_abn), (result, is_abn), (norm, is_abn)]) for label, col, norm, low, high in cbc_config for val in [get_float(col, person)] for result, is_abn in [flag(val, low, high)]]
     
-    # --- CORRECTED BLOOD CHEMISTRY CONFIG ---
-    blood_config = [
-        ("น้ำตาลในเลือด (FBS)", "FBS", "74 - 106 mg/dl", 74, 106), 
-        ("กรดยูริก (Uric Acid)", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2), 
-        ("การทำงานของเอนไซม์ตับ (ALK)", "ALP", "30 - 120 U/L", 30, 120), 
-        ("การทำงานของเอนไซม์ตับ (SGOT)", "SGOT", "< 37 U/L", None, 37), 
-        ("การทำงานของเอนไซม์ตับ (SGPT)", "SGPT", "< 41 U/L", None, 41), 
-        ("คลอเรสเตอรอล (CHOL)", "CHOL", "150 - 200 mg/dl", 150, 200),
-        ("ไตรกลีเซอไรด์ (TGL)", "TGL", "35 - 150 mg/dl", 35, 150),
-        ("ไขมันดี (HDL)", "HDL", "> 40 mg/dl", 40, None, True), 
-        ("ไขมันเลว (LDL)", "LDL", "0 - 160 mg/dl", 0, 160),
-        ("การทำงานของไต (BUN)", "BUN", "7.9 - 20 mg/dl", 7.9, 20), 
-        ("การทำงานของไต (Cr)", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17), 
-        ("ประสิทธิภาพการกรองของไต (GFR)", "GFR", "> 60 mL/min", 60, None, True)
-    ]
+    blood_config = [("น้ำตาลในเลือด (FBS)", "FBS", "74 - 106 mg/dl", 74, 106), ("กรดยูริก (Uric Acid)", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2), ("การทำงานของเอนไซม์ตับ (ALK)", "ALP", "30 - 120 U/L", 30, 120), ("การทำงานของเอนไซม์ตับ (SGOT)", "SGOT", "< 37 U/L", None, 37), ("การทำงานของเอนไซม์ตับ (SGPT)", "SGPT", "< 41 U/L", None, 41), ("คลอเรสเตอรอล (CHOL)", "CHOL", "150 - 200 mg/dl", 150, 200), ("ไตรกลีเซอไรด์ (TGL)", "TGL", "35 - 150 mg/dl", 35, 150), ("ไขมันดี (HDL)", "HDL", "> 40 mg/dl", 40, None, True), ("ไขมันเลว (LDL)", "LDL", "0 - 160 mg/dl", 0, 160), ("การทำงานของไต (BUN)", "BUN", "7.9 - 20 mg/dl", 7.9, 20), ("การทำงานของไต (Cr)", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17), ("ประสิทธิภาพการกรองของไต (GFR)", "GFR", "> 60 mL/min", 60, None, True)]
     blood_rows = [([(label, is_abn), (result, is_abn), (norm, is_abn)]) for label, col, norm, low, high, *opt in blood_config for higher in [opt[0] if opt else False] for val in [get_float(col, person)] for result, is_abn in [flag(val, low, high, higher)]]
     
     left_spacer, col1, col2, right_spacer = st.columns([0.5, 3, 3, 0.5])
     with col1: st.markdown(render_lab_table_html("ผลตรวจ CBC (Complete Blood Count)", None, ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows), unsafe_allow_html=True)
     with col2: st.markdown(render_lab_table_html("ผลตรวจเลือด (Blood Chemistry)", None, ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows), unsafe_allow_html=True)
-    advice_list = [kidney_advice_from_summary(kidney_summary_gfr_only(person.get("GFR", ""))), fbs_advice(person.get("FBS", "")), liver_advice(summarize_liver(person.get("ALP", ""), person.get("SGOT", ""), person.get("SGPT", ""))), uric_acid_advice(person.get("Uric Acid", "")), lipids_advice(summarize_lipids(person.get("CHOL", ""), person.get("TGL", ""), person.get("LDL", ""))), cbc_advice(person.get("Hb(%)", ""), person.get("HCT", ""), person.get("WBC (cumm)", ""), person.get("Plt (/mm)", ""), sex=sex)]
-    spacer_l, main_col, spacer_r = st.columns([0.5, 6, 0.5])
-    with main_col:
-        final_advice_html = merge_final_advice_grouped(advice_list)
-        has_general_advice = "ไม่พบคำแนะนำเพิ่มเติม" not in final_advice_html
-        background_color_general_advice = "rgba(255, 255, 0, 0.2)" if has_general_advice else "rgba(57, 255, 20, 0.2)"
-        st.markdown(f'<div style="background-color: {background_color_general_advice}; padding: 0.6rem 2.5rem; border-radius: 10px; line-height: 1.6; color: var(--text-color); font-size: 14px;">{final_advice_html}</div>', unsafe_allow_html=True)
+    
+    # --- ลบส่วนคำแนะนำย่อยๆ ที่กระจัดกระจาย ---
     
     selected_year = person.get("Year", datetime.now().year + 543)
     with st.container():
         left_spacer_ua, col_ua_left, col_ua_right, right_spacer_ua = st.columns([0.5, 3, 3, 0.5])
         with col_ua_left:
-            urine_summary, has_urine_result = render_urine_section(person, sex, selected_year)
-            if has_urine_result:
-                bg_color, advice_text = ("rgba(255, 255, 0, 0.2)", f"<b>&emsp;ผลตรวจปัสสาวะ:</b> {urine_summary}") if urine_summary else ("rgba(57, 255, 20, 0.2)", "<b>&emsp;ผลตรวจปัสาวะ:</b> อยู่ในเกณฑ์ปกติ")
-                st.markdown(f'<div style="background-color: {bg_color}; padding: 0.6rem 1.5rem; border-radius: 10px; line-height: 1.6; color: var(--text-color); font-size: 14px; margin-top: 1rem;">{advice_text}</div>', unsafe_allow_html=True)
-            
+            # --- แก้ไข: ไม่ต้องแสดงคำแนะนำปัสสาวะแยก ---
+            has_urine_result = render_urine_section(person, sex, selected_year)
             st.markdown(render_section_header("ผลตรวจอุจจาระ (Stool Examination)"), unsafe_allow_html=True)
             st.markdown(render_stool_html_table(interpret_stool_exam(person.get("Stool exam", "")), interpret_stool_cs(person.get("Stool C/S", ""))), unsafe_allow_html=True)
 
@@ -1171,22 +850,15 @@ def display_main_report(person_data, all_person_history_df):
                 <tbody><tr><td style="padding: 8px; border: 1px solid transparent;">{hbsag}</td><td style="padding: 8px; border: 1px solid transparent;">{hbsab}</td><td style="padding: 8px; border: 1px solid transparent;">{hbcab}</td></tr></tbody>
             </table></div>""", unsafe_allow_html=True)
             
-            # --- NEW LOGIC for Hep B details ---
             hep_check_year_raw = person.get("ปีตรวจHEP")
             if not is_empty(hep_check_year_raw):
-                # Use the date from the specific column if it exists
                 hep_test_year_display = safe_text(normalize_thai_date(hep_check_year_raw))
             else:
-                # If not, find the latest year with any Hep B data from the entire history
                 hep_cols = ['HbsAg', 'HbsAb', 'HBcAB']
-                # Filter out rows where all hep columns are empty
                 hep_history_df = all_person_history_df.dropna(subset=hep_cols, how='all').copy()
                 if not hep_history_df.empty:
-                    # Get the max year from the filtered data
-                    latest_hep_year = hep_history_df['Year'].max()
-                    hep_test_year_display = f"พ.ศ. {latest_hep_year}"
+                    hep_test_year_display = f"พ.ศ. {hep_history_df['Year'].max()}"
                 else:
-                    # If no hep data at all in the entire history, display a dash
                     hep_test_year_display = "-"
 
             hep_history, hep_vaccine = safe_text(person.get("สรุปประวัติ Hepb")), safe_text(person.get("วัคซีนhep b 67"))
@@ -1201,25 +873,23 @@ def display_main_report(person_data, all_person_history_df):
                 bg_color = "rgba(57, 255, 20, 0.2)" if "มีภูมิคุ้มกัน" in advice else "rgba(255, 255, 0, 0.2)"
                 st.markdown(f"<div style='line-height: 1.6; padding: 0.4rem 1.5rem; border-radius: 6px; background-color: {bg_color}; color: var(--text-color); margin-bottom: 1.5rem; font-size: 14px;'>{advice}</div>", unsafe_allow_html=True)
             
-    # --- แก้ไข: สร้างสรุปความเห็นแพทย์อัตโนมัติเสมอสำหรับหน้ารายงานหลัก ---
-    doctor_suggestion = generate_holistic_advice(person_data)
-
-    left_spacer3, doctor_col, right_spacer3 = st.columns([0.5, 6, 0.5])
-    with doctor_col:
-        st.markdown(f"<div style='background-color: #1b5e20; color: white; padding: 0.4rem 2rem; border-radius: 8px; line-height: 1.6; margin-top: 2rem; margin-bottom: 2rem; font-size: 14px;'><b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}</div>", unsafe_allow_html=True)
+    # --- แก้ไข: สร้างส่วนสรุปและคำแนะนำใหม่ทั้งหมด ---
+    st.markdown("<hr style='margin: 2rem 0;'>", unsafe_allow_html=True)
+    recommendations_html = generate_comprehensive_recommendations(person_data)
     
-    # --- ลบส่วนลายเซ็นแพทย์ ---
+    left_spacer3, main_col3, right_spacer3 = st.columns([0.5, 6, 0.5])
+    with main_col3:
+        st.markdown(render_section_header("สรุปและคำแนะนำการปฏิบัติตัว (Summary & Recommendations)"), unsafe_allow_html=True)
+        st.markdown(f"<div style='line-height: 1.7; font-size: 14px;'>{recommendations_html}</div>", unsafe_allow_html=True)
 
 
 # --- Main Application Logic ---
-# Load data once
 df = load_sqlite_data()
 if df is None:
     st.stop()
 
-# Page config and styles
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
-inject_custom_css() # Call CSS injection function
+inject_custom_css()
 st.markdown("""<style>
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
     html, body, div, span, p, td, th, li, ul, ol, table, h1, h2, h3, h4, h5, h6, label, button, input, select, option, .stButton>button, .stTextInput>div>div>input, .stSelectbox>div>div>div { font-family: 'Sarabun', sans-serif !important; }
@@ -1227,7 +897,6 @@ st.markdown("""<style>
     .stDownloadButton button { width: 100%; }
 </style>""", unsafe_allow_html=True)
 
-# Callbacks for search and year selection
 def perform_search():
     st.session_state.search_query = st.session_state.search_input
     st.session_state.selected_year = None
@@ -1258,7 +927,6 @@ def handle_year_change():
     st.session_state.pop("selected_row_found", None)
     st.session_state.page = 'main_report'
 
-# Initialize session state
 if 'search_query' not in st.session_state: st.session_state.search_query = ""
 if 'search_input' not in st.session_state: st.session_state.search_input = ""
 if 'search_result' not in st.session_state: st.session_state.search_result = pd.DataFrame()
@@ -1267,7 +935,6 @@ if 'selected_date' not in st.session_state: st.session_state.selected_date = Non
 if 'page' not in st.session_state: st.session_state.page = 'main_report'
 if 'print_trigger' not in st.session_state: st.session_state.print_trigger = False
 
-# --- UI Layout for Search and Filters ---
 st.subheader("ค้นหาและเลือกผลตรวจ")
 menu_cols = st.columns([3, 1, 2])
 with menu_cols[0]:
@@ -1300,21 +967,15 @@ if not results_df.empty:
 
 st.markdown("<hr>", unsafe_allow_html=True)
 
-# Main logic to switch between pages
 if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
     person_data = st.session_state.person_row
-    # --- แก้ไข: ดึงประวัติการค้นหาทั้งหมดมาใช้ ---
     all_person_history_df = st.session_state.search_result
 
     available_reports = {}
-    if has_basic_health_data(person_data):
-        available_reports['main_report'] = "สุขภาพพื้นฐาน"
-    if has_vision_data(person_data):
-        available_reports['vision_report'] = "สมรรถภาพการมองเห็น"
-    if has_hearing_data(person_data):
-        available_reports['hearing_report'] = "สมรรถภาพการได้ยิน"
-    if has_lung_data(person_data):
-        available_reports['lung_report'] = "สมรรถภาพปอด"
+    if has_basic_health_data(person_data): available_reports['main_report'] = "สุขภาพพื้นฐาน"
+    if has_vision_data(person_data): available_reports['vision_report'] = "สมรรถภาพการมองเห็น"
+    if has_hearing_data(person_data): available_reports['hearing_report'] = "สมรรถภาพการได้ยิน"
+    if has_lung_data(person_data): available_reports['lung_report'] = "สมรรถภาพปอด"
 
     if not available_reports:
         display_common_header(person_data)
@@ -1323,7 +984,6 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         if st.session_state.page not in available_reports:
             st.session_state.page = list(available_reports.keys())[0]
 
-        # --- แก้ไข: เปลี่ยนปุ่มพิมพ์รายงาน ---
         btn_cols = st.columns(len(available_reports) + 1)
         for i, (page_key, page_title) in enumerate(available_reports.items()):
             with btn_cols[i]:
@@ -1341,14 +1001,12 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         if page_to_show == 'vision_report':
             display_performance_report(person_data, 'vision')
         elif page_to_show == 'hearing_report':
-            # --- แก้ไข: ส่งประวัติทั้งหมดไปยังฟังก์ชัน ---
             display_performance_report(person_data, 'hearing', all_person_history_df=all_person_history_df)
         elif page_to_show == 'lung_report':
             display_performance_report(person_data, 'lung')
         elif page_to_show == 'main_report':
             display_main_report(person_data, all_person_history_df)
 
-    # --- NEW COMPONENT FOR PRINTING ---
     if st.session_state.get("print_trigger", False):
         report_html_data = generate_printable_report(person_data)
         escaped_html = json.dumps(report_html_data)
@@ -1359,12 +1017,10 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             (function() {{
                 const iframe = document.getElementById('print-iframe');
                 if (!iframe) return;
-
                 const iframeDoc = iframe.contentWindow.document;
                 iframeDoc.open();
                 iframeDoc.write({escaped_html});
                 iframeDoc.close();
-                
                 iframe.onload = function() {{
                     setTimeout(function() {{
                         try {{
@@ -1379,9 +1035,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
             }})();
         </script>
         """
-        
         st.components.v1.html(print_component, height=0, width=0)
         st.session_state.print_trigger = False
-
 else:
     st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
