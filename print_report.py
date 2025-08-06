@@ -10,7 +10,7 @@ from print_performance_report import generate_performance_report_html
 
 # ==============================================================================
 # หมายเหตุ: ไฟล์นี้ถูกปรับปรุงเพื่อเรียกใช้โมดูล print_performance_report.py
-# ในการสร้างรายงานผลตรวจสมรรถภาพ
+# และได้นำส่วนแสดงผลตารางผลตรวจสุขภาพพื้นฐานกลับมาครบถ้วนแล้ว
 # ==============================================================================
 
 
@@ -19,6 +19,29 @@ from print_performance_report import generate_performance_report_html
 def is_empty(val):
     """Check if a value is empty, null, or whitespace."""
     return pd.isna(val) or str(val).strip().lower() in ["", "-", "none", "nan", "null"]
+
+def get_float(person_data, key):
+    """Safely gets a float value from person_data dictionary."""
+    val = person_data.get(key)
+    if is_empty(val): return None
+    try:
+        return float(str(val).replace(",", "").strip())
+    except (ValueError, TypeError):
+        return None
+
+def flag(val, low=None, high=None, higher_is_better=False):
+    try:
+        val_float = float(str(val).replace(",", "").strip())
+    except (ValueError, TypeError):
+        return "-", False
+    formatted_val = f"{int(val_float):,}" if val_float == int(val_float) else f"{val_float:,.1f}"
+    is_abn = False
+    if higher_is_better:
+        if low is not None and val_float < low: is_abn = True
+    else:
+        if low is not None and val_float < low: is_abn = True
+        if high is not None and val_float > high: is_abn = True
+    return formatted_val, is_abn
 
 def interpret_bp(sbp, dbp):
     try:
@@ -91,6 +114,67 @@ def render_personal_info(person):
     </div>
     """
 
+# --- ฟังก์ชันสำหรับสร้างตารางผลตรวจพื้นฐาน (นำกลับมา) ---
+def render_lab_detail_tables(person):
+    sex = person.get("เพศ", "ชาย")
+    
+    # CBC Configuration
+    hb_low, hct_low = (12, 36) if sex == "หญิง" else (13, 39)
+    cbc_config = [
+        ("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12", hb_low, None),
+        ("ฮีมาโตคริต (Hct)", "HCT", "ชาย > 39, หญิง > 36", hct_low, None),
+        ("เม็ดเลือดขาว (WBC)", "WBC (cumm)", "4,000-10,000", 4000, 10000),
+        ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150,000-500,000", 150000, 500000),
+    ]
+    
+    # Blood Chemistry Configuration
+    blood_config = [
+        ("น้ำตาลในเลือด (FBS)", "FBS", "74-106", 74, 106),
+        ("ไขมันคอเลสเตอรอล (CHOL)", "CHOL", "< 200", None, 199),
+        ("ไขมันไตรกลีเซอไรด์ (TGL)", "TGL", "< 150", None, 149),
+        ("ไขมันดี (HDL)", "HDL", "> 40", 40, None, True),
+        ("ไขมันเลว (LDL)", "LDL", "< 130", None, 129),
+        ("กรดยูริก (Uric Acid)", "Uric Acid", "2.6-7.2", 2.6, 7.2),
+        ("การทำงานของไต (BUN)", "BUN", "7.9-20", 7.9, 20),
+        ("การทำงานของไต (Cr)", "Cr", "0.5-1.17", 0.5, 1.17),
+        ("ประสิทธิภาพไต (GFR)", "GFR", "> 60", 60, None, True),
+        ("เอนไซม์ตับ (SGOT)", "SGOT", "< 37", None, 36),
+        ("เอนไซม์ตับ (SGPT)", "SGPT", "< 41", None, 40),
+    ]
+
+    # Build CBC Rows
+    cbc_rows = ""
+    for label, key, norm, low, high, *opt in cbc_config:
+        val = get_float(person, key)
+        result, is_abn = flag(val, low, high, *opt)
+        row_class = "class='status-abn'" if is_abn else ""
+        cbc_rows += f"<tr {row_class}><td>{label}</td><td>{result}</td><td>{norm}</td></tr>"
+
+    # Build Blood Chemistry Rows
+    blood_rows = ""
+    for label, key, norm, low, high, *opt in blood_config:
+        val = get_float(person, key)
+        result, is_abn = flag(val, low, high, *opt)
+        row_class = "class='status-abn'" if is_abn else ""
+        blood_rows += f"<tr {row_class}><td>{label}</td><td>{result}</td><td>{norm}</td></tr>"
+
+    return f"""
+    <div class="lab-details-section">
+        <div class="lab-column">
+            <table class="lab-table">
+                <thead><tr><th>CBC</th><th>ผล</th><th>ค่าปกติ</th></tr></thead>
+                <tbody>{cbc_rows}</tbody>
+            </table>
+        </div>
+        <div class="lab-column">
+            <table class="lab-table">
+                <thead><tr><th>Blood Chemistry</th><th>ผล</th><th>ค่าปกติ</th></tr></thead>
+                <tbody>{blood_rows}</tbody>
+            </table>
+        </div>
+    </div>
+    """
+
 # --- Main Report Generator ---
 
 def generate_printable_report(person):
@@ -101,13 +185,16 @@ def generate_printable_report(person):
     header_html = render_html_header(person)
     personal_info_html = render_personal_info(person)
     
+    # --- ใหม่: เรียกใช้ฟังก์ชันสร้างตารางผลตรวจพื้นฐาน ---
+    lab_details_html = render_lab_detail_tables(person)
+    
     # Generate recommendations and split for two-column layout
     recommendations_html_full = generate_comprehensive_recommendations(person)
     rec_parts = recommendations_html_full.split("<!-- SPLIT -->")
     rec_left_html = rec_parts[0]
     rec_right_html = rec_parts[1] if len(rec_parts) > 1 else ""
 
-    # --- NEW: Call the new module to get performance report HTML ---
+    # Call the module to get performance report HTML
     performance_section_html = generate_performance_report_html(person)
 
     # --- Assemble the final HTML page ---
@@ -133,6 +220,16 @@ def generate_printable_report(person):
 
             .info-table td {{ padding: 2px 5px; }}
             
+            .lab-details-section {{
+                display: flex; flex-wrap: nowrap; gap: 15px;
+                margin-top: 1rem; page-break-inside: avoid;
+            }}
+            .lab-column {{ flex: 1; }}
+            .lab-table {{ width: 100%; font-size: 8px; }}
+            .lab-table th, .lab-table td {{ border: 1px solid #ddd; padding: 2px 4px; text-align: center; }}
+            .lab-table th {{ background-color: #f2f2f2; }}
+            .lab-table td:first-child {{ text-align: left; }}
+
             .recommendation-section {{
                 page-break-inside: avoid;
                 margin-top: 1rem;
@@ -167,6 +264,9 @@ def generate_printable_report(person):
     <body>
         {header_html}
         {personal_info_html}
+        
+        {lab_details_html}
+        
         {render_section_header("สรุปผลตรวจและคำแนะนำ (Summary & Recommendations)")}
         <div class="recommendation-section">
             <div class="rec-columns">
