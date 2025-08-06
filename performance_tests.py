@@ -248,14 +248,43 @@ def generate_comprehensive_recommendations(person_data):
         for item in set(issues['low']): html_parts.append(f"<li>{item}</li>")
         html_parts.append("</ul></div>")
 
-    # --- แก้ไข: ปรับรูปแบบคำแนะนำทั่วไป ---
-    if any(issues.values()): # แสดงคำแนะนำทั่วไปก็ต่อเมื่อมีประเด็นอื่นๆ
+    # --- NEW: Build Personalized General Recommendations ---
+    if any(issues.values()):
+        all_issue_text = " ".join(issues['high'] + issues['medium'] + issues['low'])
+        general_advice_items = []
+
+        # Diet Advice
+        diet_advice_str = "<li><b>อาหาร:</b>"
+        diet_points = []
+        if any(k in all_issue_text for k in ["เบาหวาน", "น้ำตาล"]):
+            diet_points.append("ลดอาหารหวานและแป้ง")
+        if any(k in all_issue_text for k in ["ไขมัน", "ตับ", "อ้วน", "น้ำหนัก"]):
+            diet_points.append("ลดอาหารมันและของทอด")
+        if any(k in all_issue_text for k in ["ความดัน", "ไต"]):
+            diet_points.append("ลดอาหารเค็ม")
+        if "ยูริก" in all_issue_text:
+            diet_points.append("ลดอาหารที่มีพิวรีนสูง (เครื่องในสัตว์, ยอดผัก)")
+        
+        if diet_points:
+            diet_advice_str += " " + ", ".join(list(set(diet_points))) + " และเน้นทานผักผลไม้ให้มากขึ้น"
+        else:
+            diet_advice_str += " ทานอาหารให้หลากหลายครบ 5 หมู่, ลดหวาน มัน เค็ม, เพิ่มผักและผลไม้"
+        diet_advice_str += "</li>"
+        general_advice_items.append(diet_advice_str)
+
+        # Exercise Advice
+        if any(k in all_issue_text for k in ["อ้วน", "น้ำหนัก", "ความดัน", "เบาหวาน", "ไขมัน"]):
+            general_advice_items.append("<li><b>การออกกำลังกาย:</b> ควรออกกำลังกายแบบแอโรบิก (เช่น เดินเร็ว, วิ่ง, ว่ายน้ำ) อย่างน้อย 150 นาทีต่อสัปดาห์เพื่อควบคุมน้ำหนักและลดความเสี่ยงของโรค</li>")
+        else:
+             general_advice_items.append("<li><b>การออกกำลังกาย:</b> เคลื่อนไหวร่างกายอย่างสม่ำเสมอ อย่างน้อย 3-4 วันต่อสัปดาห์ เพื่อสุขภาพที่แข็งแรง</li>")
+
+        # Universal Advice
+        general_advice_items.append("<li><b>การพักผ่อน:</b> นอนหลับให้เพียงพอ 7-8 ชั่วโมงต่อคืน และจัดการความเครียดอย่างเหมาะสม</li>")
+        general_advice_items.append("<li><b>ตรวจสุขภาพ:</b> ควรมาตรวจสุขภาพประจำปีอย่างสม่ำเสมอเพื่อติดตามผล</li>")
+
         html_parts.append("<div style='border-left: 5px solid #607d8b; padding-left: 15px; margin-top: 2rem;'>")
         html_parts.append("<h5 style='color: #607d8b; margin-top:0;'>คำแนะนำการปฏิบัติตัวโดยทั่วไป</h5><ul>")
-        html_parts.append("<li><b>อาหาร:</b> ลดอาหารหวาน มัน เค็มจัด เพิ่มการทานผักและผลไม้หลากสี และดื่มน้ำสะอาดให้เพียงพอ</li>")
-        html_parts.append("<li><b>การออกกำลังกาย:</b> ออกกำลังกายแบบแอโรบิก (เช่น เดินเร็ว, วิ่ง) อย่างน้อย 150 นาทีต่อสัปดาห์</li>")
-        html_parts.append("<li><b>การพักผ่อน:</b> นอนหลับให้เพียงพอ 7-8 ชั่วโมงต่อคืน และจัดการความเครียดอย่างเหมาะสม</li>")
-        html_parts.append("<li><b>ตรวจสุขภาพ:</b> ควรตรวจสุขภาพประจำปีอย่างสม่ำเสมอเพื่อติดตามการเปลี่ยนแปลงของร่างกาย</li>")
+        html_parts.extend(general_advice_items)
         html_parts.append("</ul></div>")
 
     if not any(issues.values()):
