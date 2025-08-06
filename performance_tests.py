@@ -134,12 +134,11 @@ def generate_comprehensive_recommendations(person_data):
     สร้างสรุปและคำแนะนำการปฏิบัติตัวแบบองค์รวมจากข้อมูลสุขภาพทั้งหมด
     โดยจัดลำดับความสำคัญของแต่ละประเด็น
     """
-    # --- เพิ่ม: ตรวจสอบว่ามีข้อมูลสุขภาพพื้นฐานหรือไม่ ---
     key_indicators = ['FBS', 'CHOL', 'HCT', 'Cr', 'WBC (cumm)', 'น้ำหนัก', 'ส่วนสูง', 'SBP']
     has_data = any(not is_empty(person_data.get(key)) for key in key_indicators)
 
     if not has_data:
-        return "" # คืนค่าว่าง ถ้าไม่มีข้อมูล
+        return "" 
 
     issues = {'high': [], 'medium': [], 'low': []}
     conditions = set()
@@ -180,18 +179,44 @@ def generate_comprehensive_recommendations(person_data):
             issues['medium'].append(f"<b>ภาวะเสี่ยงเบาหวาน ({int(fbs)} mg/dL):</b> ควรควบคุมอาหารและออกกำลังกายอย่างจริงจัง")
             conditions.add('prediabetes')
 
+    # --- แก้ไข: เพิ่มความละเอียดในการแปลผลไขมัน ---
     chol = get_float(person_data, "CHOL")
     tgl = get_float(person_data, "TGL")
     ldl = get_float(person_data, "LDL")
     hdl = get_float(person_data, "HDL")
-    lipid_issues = []
-    if chol and chol >= 200: lipid_issues.append("Cholesterol สูง")
-    if tgl and tgl >= 150: lipid_issues.append("Triglyceride สูง")
-    if ldl and ldl >= 130: lipid_issues.append("LDL (ไขมันเลว) สูง")
-    if hdl and hdl < 40: lipid_issues.append("HDL (ไขมันดี) ต่ำ")
-    if lipid_issues:
-        issues['medium'].append(f"<b>ภาวะไขมันในเลือดผิดปกติ ({', '.join(lipid_issues)}):</b> เพิ่มความเสี่ยงโรคหัวใจและหลอดเลือด")
+    lipid_issues_text = []
+    is_lipid_high_risk = False
+    
+    if chol:
+        if chol >= 240:
+            lipid_issues_text.append("คอเลสเตอรอลสูงมาก")
+            is_lipid_high_risk = True
+        elif chol >= 200:
+            lipid_issues_text.append("คอเลสเตอรอลสูง")
+    if tgl:
+        if tgl >= 500:
+            lipid_issues_text.append("ไตรกลีเซอไรด์สูงมาก")
+            is_lipid_high_risk = True
+        elif tgl >= 200:
+            lipid_issues_text.append("ไตรกลีเซอไรด์สูง")
+        elif tgl >= 150:
+            lipid_issues_text.append("ไตรกลีเซอไรด์เริ่มสูง")
+    if ldl:
+        if ldl >= 190:
+            lipid_issues_text.append("LDL (ไขมันเลว) สูงมาก")
+            is_lipid_high_risk = True
+        elif ldl >= 160:
+            lipid_issues_text.append("LDL (ไขมันเลว) สูง")
+        elif ldl >= 130:
+            lipid_issues_text.append("LDL (ไขมันเลว) เริ่มสูง")
+    if hdl and hdl < 40:
+        lipid_issues_text.append("HDL (ไขมันดี) ต่ำ")
+
+    if lipid_issues_text:
+        risk_level = 'high' if is_lipid_high_risk else 'medium'
+        issues[risk_level].append(f"<b>ภาวะไขมันในเลือดผิดปกติ ({', '.join(lipid_issues_text)}):</b> เพิ่มความเสี่ยงโรคหัวใจและหลอดเลือด")
         conditions.add('dyslipidemia')
+
 
     gfr = get_float(person_data, "GFR")
     if gfr:
@@ -205,16 +230,26 @@ def generate_comprehensive_recommendations(person_data):
              issues['low'].append("<b>การทำงานของไตลดลงเล็กน้อย (ระยะ 2):</b> ควรดื่มน้ำให้เพียงพอและหลีกเลี่ยงยาที่มีผลต่อไต")
              conditions.add('kidney_disease')
 
+    # --- แก้ไข: เพิ่มความละเอียดในการแปลผลเอนไซม์ตับ ---
     sgot = get_float(person_data, "SGOT")
     sgpt = get_float(person_data, "SGPT")
-    if (sgot and sgot > 37) or (sgpt and sgpt > 41):
-        issues['medium'].append("<b>ค่าเอนไซม์ตับสูง:</b> อาจเกิดจากไขมันพอกตับ หรือตับอักเสบ ควรลดของมัน แอลกอฮอล์")
+    sgot_upper, sgpt_upper = 37, 41
+    if (sgot and sgot > sgot_upper) or (sgpt and sgpt > sgpt_upper):
+        if (sgot and sgot > sgot_upper * 3) or (sgpt and sgpt > sgpt_upper * 3):
+            issues['high'].append("<b>ค่าเอนไซม์ตับสูงมาก:</b> บ่งชี้ภาวะตับอักเสบ ควรพบแพทย์โดยเร็ว")
+        else:
+            issues['medium'].append("<b>ค่าเอนไซม์ตับสูง:</b> อาจเกิดจากไขมันพอกตับ ควรลดของมัน แอลกอฮอล์")
         conditions.add('liver')
 
+    # --- แก้ไข: เพิ่มความละเอียดในการแปลผลกรดยูริก ---
     uric = get_float(person_data, "Uric Acid")
-    if uric and uric > 7.2:
-        issues['low'].append("<b>กรดยูริกสูง:</b> เสี่ยงต่อโรคเกาต์ ควรลดการทานเครื่องในสัตว์ สัตว์ปีก และยอดผัก")
-        conditions.add('uric_acid')
+    if uric:
+        if uric > 9.0:
+            issues['medium'].append("<b>กรดยูริกสูงมาก:</b> มีความเสี่ยงสูงต่อโรคเกาต์ ควรปรึกษาแพทย์")
+            conditions.add('uric_acid')
+        elif uric > 7.2:
+            issues['low'].append("<b>กรดยูริกสูง:</b> เสี่ยงต่อโรคเกาต์ ควรลดการทานเครื่องในสัตว์ สัตว์ปีก")
+            conditions.add('uric_acid')
 
     # --- 3. Complete Blood Count (CBC) ---
     sex = person_data.get("เพศ", "ชาย")
