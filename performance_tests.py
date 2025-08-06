@@ -229,22 +229,7 @@ def generate_comprehensive_recommendations(person_data):
     # --- Build the final HTML output ---
     html_parts = []
     
-    # Overall Status
-    overall_status = ""
-    status_color = "#2e7d32" # Green
-    if issues['high']:
-        overall_status = "ควรพบแพทย์เพื่อประเมิน/รักษาเพิ่มเติม"
-        status_color = "#c62828" # Red
-    elif issues['medium']:
-        overall_status = "พบความเสี่ยง ควรปรับพฤติกรรมและตรวจติดตาม"
-        status_color = "#f9a825" # Yellow
-    elif issues['low']:
-        overall_status = "สุขภาพโดยรวมดี แต่มีประเด็นควรเฝ้าระวัง"
-        status_color = "#1976d2" # Blue
-    else:
-        overall_status = "สุขภาพโดยรวมอยู่ในเกณฑ์ดีมาก"
-    
-    html_parts.append(f"<div style='background-color: {status_color}; color: white; padding: 1rem; border-radius: 8px; text-align: center; margin-bottom: 1.5rem;'><h4 style='color: white; margin:0;'>สรุปภาพรวม: {overall_status}</h4></div>")
+    # --- ลบส่วน "สรุปภาพรวม" ที่เป็นแถบสีออก ---
     
     # Detailed Issues
     if issues['high']:
