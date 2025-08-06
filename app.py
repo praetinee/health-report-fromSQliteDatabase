@@ -711,6 +711,60 @@ def display_performance_report_lung(person_data):
         df_details = pd.DataFrame(detail_data)
         st.markdown(df_details.to_html(escape=False, index=False, classes="styled-df-table"), unsafe_allow_html=True)
 
+# --- แก้ไข: สร้างฟังก์ชันใหม่สำหรับแสดงผลการมองเห็นโดยเฉพาะ ---
+def display_performance_report_vision(person_data):
+    """
+    แสดงผลรายงานสมรรถภาพการมองเห็นในรูปแบบที่ปรับปรุงใหม่
+    """
+    st.markdown("<h2 style='text-align: center;'>รายงานผลการตรวจสมรรถภาพการมองเห็น (Vision Test Report)</h2>", unsafe_allow_html=True)
+    
+    if not has_vision_data(person_data):
+        st.warning("ไม่พบข้อมูลผลการตรวจสมรรถภาพการมองเห็นโดยละเอียดในปีนี้")
+        # ยังคงแสดงข้อมูลสรุปเก่า หากมี
+        vision_advice_summary = person_data.get('สรุปเหมาะสมกับงาน')
+        doctor_advice = person_data.get('แนะนำABN EYE')
+        if not is_empty(vision_advice_summary) or not is_empty(doctor_advice):
+            st.info("หมายเหตุ: ข้อมูลสรุปที่แสดงอาจมาจากผลการตรวจในปีอื่น")
+            if not is_empty(vision_advice_summary):
+                 st.markdown(f"""
+                 <div style='background-color: rgba(64, 128, 255, 0.1); border: 1px solid rgba(64, 128, 255, 0.3); padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
+                    <div style='flex-shrink: 0;'><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4080FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div>
+                    <div><h5 style='margin-top: 0; margin-bottom: 0.25rem; color: #A6C8FF;'>สรุปความเหมาะสมกับงาน</h5><p style='margin:0; color: var(--text-color);'>{vision_advice_summary}</p></div>
+                 </div>""", unsafe_allow_html=True)
+            if not is_empty(doctor_advice):
+                 st.markdown(f"""
+                 <div style='background-color: rgba(255, 229, 100, 0.1); border: 1px solid rgba(255, 229, 100, 0.3); padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
+                    <div style='flex-shrink: 0;'><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFE564" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg></div>
+                    <div><h5 style='margin-top: 0; margin-bottom: 0.25rem; color: #FFE564;'>คำแนะนำเพิ่มเติมจากแพทย์</h5><p style='margin:0; color: var(--text-color);'>{doctor_advice}</p></div>
+                 </div>""", unsafe_allow_html=True)
+        return
+
+    # แสดงสรุปและความเห็นแพทย์ก่อน
+    vision_advice_summary = person_data.get('สรุปเหมาะสมกับงาน')
+    if not is_empty(vision_advice_summary):
+        st.markdown(f"""
+         <div style='background-color: rgba(64, 128, 255, 0.1); border: 1px solid rgba(64, 128, 255, 0.3); padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
+            <div style='flex-shrink: 0;'><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4080FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div>
+            <div><h5 style='margin-top: 0; margin-bottom: 0.25rem; color: #A6C8FF;'>สรุปความเหมาะสมกับงาน</h5><p style='margin:0; color: var(--text-color);'>{vision_advice_summary}</p></div>
+         </div>""", unsafe_allow_html=True)
+
+    abnormality_fields = OrderedDict([('ผ.สายตาเขซ่อนเร้น', 'สายตาเขซ่อนเร้น'), ('ผ.การรวมภาพ', 'การรวมภาพ'), ('ผ.ความชัดของภาพระยะไกล', 'ความชัดของภาพระยะไกล'), ('ผ.การกะระยะและมองความชัดลึกของภาพ', 'การกะระยะ/ความชัดลึก'), ('ผ.การจำแนกสี', 'การจำแนกสี'), ('ผ.ความชัดของภาพระยะใกล้', 'ความชัดของภาพระยะใกล้'), ('ผ.ลานสายตา', 'ลานสายตา')])
+    abnormal_topics = [name for col, name in abnormality_fields.items() if not is_empty(person_data.get(col))]
+    doctor_advice = person_data.get('แนะนำABN EYE')
+
+    if abnormal_topics or not is_empty(doctor_advice):
+        summary_parts = []
+        if abnormal_topics: summary_parts.append(f"<b>พบความผิดปกติเกี่ยวกับ:</b> {', '.join(abnormal_topics)}")
+        if not is_empty(doctor_advice): summary_parts.append(f"<b>คำแนะนำเพิ่มเติมจากแพทย์:</b> {doctor_advice}")
+        st.markdown(f"""
+        <div style='background-color: rgba(255, 229, 100, 0.1); border: 1px solid rgba(255, 229, 100, 0.3); padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
+            <div style='flex-shrink: 0;'><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFE564" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg></div>
+            <div><h5 style='margin-top: 0; margin-bottom: 0.25rem; color: #FFE564;'>สรุปความผิดปกติและคำแนะนำ</h5><p style='margin:0; color: var(--text-color);'>{"<br>".join(summary_parts)}</p></div>
+        </div>""", unsafe_allow_html=True)
+
+    st.markdown("<hr>", unsafe_allow_html=True)
+    st.markdown("<h5><b>ผลการตรวจโดยละเอียด</b></h5>", unsafe_allow_html=True)
+    st.markdown(render_vision_details_table(person_data), unsafe_allow_html=True)
 
 def display_performance_report(person_data, report_type, all_person_history_df=None):
     """Displays various performance test reports (lung, vision, hearing)."""
@@ -719,54 +773,9 @@ def display_performance_report(person_data, report_type, all_person_history_df=N
     with main_col:
         if report_type == 'lung':
             display_performance_report_lung(person_data)
+        # --- แก้ไข: ย้าย logic การแสดงผลการมองเห็นไปฟังก์ชันใหม่ ---
         elif report_type == 'vision':
-            st.markdown("<h2 style='text-align: center;'>รายงานผลการตรวจสมรรถภาพการมองเห็น (Vision Test Report)</h2>", unsafe_allow_html=True)
-            if not has_vision_data(person_data):
-                st.warning("ไม่พบข้อมูลผลการตรวจสมรรถภาพการมองเห็นโดยละเอียดในปีนี้")
-                vision_advice_summary = person_data.get('สรุปเหมาะสมกับงาน')
-                doctor_advice = person_data.get('แนะนำABN EYE')
-                if not is_empty(vision_advice_summary) or not is_empty(doctor_advice):
-                    st.info("หมายเหตุ: ข้อมูลสรุปที่แสดงอาจมาจากผลการตรวจในปีอื่น")
-                    if not is_empty(vision_advice_summary):
-                         st.markdown(f"""
-                         <div style='background-color: rgba(64, 128, 255, 0.1); border: 1px solid rgba(64, 128, 255, 0.3); padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
-                            <div style='flex-shrink: 0;'><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4080FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div>
-                            <div><h5 style='margin-top: 0; margin-bottom: 0.25rem; color: #A6C8FF;'>สรุปความเหมาะสมกับงาน</h5><p style='margin:0; color: var(--text-color);'>{vision_advice_summary}</p></div>
-                         </div>""", unsafe_allow_html=True)
-                    if not is_empty(doctor_advice):
-                         st.markdown(f"""
-                         <div style='background-color: rgba(255, 229, 100, 0.1); border: 1px solid rgba(255, 229, 100, 0.3); padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
-                            <div style='flex-shrink: 0;'><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFE564" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg></div>
-                            <div><h5 style='margin-top: 0; margin-bottom: 0.25rem; color: #FFE564;'>คำแนะนำเพิ่มเติมจากแพทย์</h5><p style='margin:0; color: var(--text-color);'>{doctor_advice}</p></div>
-                         </div>""", unsafe_allow_html=True)
-                return
-
-            vision_advice_summary = person_data.get('สรุปเหมาะสมกับงาน')
-            if not is_empty(vision_advice_summary):
-                st.markdown(f"""
-                 <div style='background-color: rgba(64, 128, 255, 0.1); border: 1px solid rgba(64, 128, 255, 0.3); padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
-                    <div style='flex-shrink: 0;'><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4080FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div>
-                    <div><h5 style='margin-top: 0; margin-bottom: 0.25rem; color: #A6C8FF;'>สรุปความเหมาะสมกับงาน</h5><p style='margin:0; color: var(--text-color);'>{vision_advice_summary}</p></div>
-                 </div>""", unsafe_allow_html=True)
-
-            abnormality_fields = OrderedDict([('ผ.สายตาเขซ่อนเร้น', 'สายตาเขซ่อนเร้น'), ('ผ.การรวมภาพ', 'การรวมภาพ'), ('ผ.ความชัดของภาพระยะไกล', 'ความชัดของภาพระยะไกล'), ('ผ.การกะระยะและมองความชัดลึกของภาพ', 'การกะระยะ/ความชัดลึก'), ('ผ.การจำแนกสี', 'การจำแนกสี'), ('ผ.ความชัดของภาพระยะใกล้', 'ความชัดของภาพระยะใกล้'), ('ผ.ลานสายตา', 'ลานสายตา')])
-            abnormal_topics = [name for col, name in abnormality_fields.items() if not is_empty(person_data.get(col))]
-            doctor_advice = person_data.get('แนะนำABN EYE')
-
-            if abnormal_topics or not is_empty(doctor_advice):
-                summary_parts = []
-                if abnormal_topics: summary_parts.append(f"<b>พบความผิดปกติเกี่ยวกับ:</b> {', '.join(abnormal_topics)}")
-                if not is_empty(doctor_advice): summary_parts.append(f"<b>คำแนะนำเพิ่มเติมจากแพทย์:</b> {doctor_advice}")
-                st.markdown(f"""
-                <div style='background-color: rgba(255, 229, 100, 0.1); border: 1px solid rgba(255, 229, 100, 0.3); padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
-                    <div style='flex-shrink: 0;'><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFE564" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg></div>
-                    <div><h5 style='margin-top: 0; margin-bottom: 0.25rem; color: #FFE564;'>สรุปความผิดปกติของสายตา</h5><p style='margin:0; color: var(--text-color);'>{"<br>".join(summary_parts)}</p></div>
-                </div>""", unsafe_allow_html=True)
-
-            st.markdown("<hr>", unsafe_allow_html=True)
-            st.markdown("<h5><b>ผลการตรวจโดยละเอียด</b></h5>", unsafe_allow_html=True)
-            st.markdown(render_vision_details_table(person_data), unsafe_allow_html=True)
-            
+            display_performance_report_vision(person_data)
         elif report_type == 'hearing':
             display_performance_report_hearing(person_data, all_person_history_df)
 
