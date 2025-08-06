@@ -122,6 +122,13 @@ def generate_comprehensive_recommendations(person_data):
     สร้างสรุปและคำแนะนำการปฏิบัติตัวแบบองค์รวมจากข้อมูลสุขภาพทั้งหมด
     โดยจัดลำดับความสำคัญของแต่ละประเด็น
     """
+    # --- เพิ่ม: ตรวจสอบว่ามีข้อมูลสุขภาพพื้นฐานหรือไม่ ---
+    key_indicators = ['FBS', 'CHOL', 'HCT', 'Cr', 'WBC (cumm)', 'น้ำหนัก', 'ส่วนสูง', 'SBP']
+    has_data = any(not is_empty(person_data.get(key)) for key in key_indicators)
+
+    if not has_data:
+        return "" # คืนค่าว่าง ถ้าไม่มีข้อมูล
+
     issues = {'high': [], 'medium': [], 'low': []}
     conditions = set()
     
