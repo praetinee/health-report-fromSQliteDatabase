@@ -229,8 +229,6 @@ def generate_comprehensive_recommendations(person_data):
     # --- Build the final HTML output ---
     html_parts = []
     
-    # --- ลบส่วน "สรุปภาพรวม" ที่เป็นแถบสีออก ---
-    
     # Detailed Issues
     if issues['high']:
         html_parts.append("<div style='border-left: 5px solid #c62828; padding-left: 15px; margin-bottom: 1rem;'>")
@@ -250,16 +248,15 @@ def generate_comprehensive_recommendations(person_data):
         for item in set(issues['low']): html_parts.append(f"<li>{item}</li>")
         html_parts.append("</ul></div>")
 
-    # General Recommendations
-    html_parts.append("""
-    <div style='margin-top: 2rem; background-color: #f5f5f5; padding: 1rem; border-radius: 8px;'>
-        <h5 style='margin-top:0;'>คำแนะนำการปฏิบัติตัวโดยทั่วไป</h5>
-        <p><b>อาหาร:</b> ลดอาหารหวาน มัน เค็มจัด เพิ่มการทานผักและผลไม้หลากสี ดื่มน้ำสะอาดให้เพียงพอ 8-10 แก้วต่อวัน</p>
-        <p><b>การออกกำลังกาย:</b> ควรออกกำลังกายแบบแอโรบิก (เช่น เดินเร็ว, วิ่ง, ปั่นจักรยาน) อย่างน้อย 150 นาทีต่อสัปดาห์</p>
-        <p><b>การพักผ่อน:</b> นอนหลับให้เพียงพอ 7-8 ชั่วโมงต่อคืน และจัดการความเครียดอย่างเหมาะสม</p>
-        <p><b>ตรวจสุขภาพ:</b> ควรตรวจสุขภาพประจำปีอย่างสม่ำเสมอเพื่อติดตามการเปลี่ยนแปลงของร่างกาย</p>
-    </div>
-    """)
+    # --- แก้ไข: ปรับรูปแบบคำแนะนำทั่วไป ---
+    if any(issues.values()): # แสดงคำแนะนำทั่วไปก็ต่อเมื่อมีประเด็นอื่นๆ
+        html_parts.append("<div style='border-left: 5px solid #607d8b; padding-left: 15px; margin-top: 2rem;'>")
+        html_parts.append("<h5 style='color: #607d8b; margin-top:0;'>คำแนะนำการปฏิบัติตัวโดยทั่วไป</h5><ul>")
+        html_parts.append("<li><b>อาหาร:</b> ลดอาหารหวาน มัน เค็มจัด เพิ่มการทานผักและผลไม้หลากสี และดื่มน้ำสะอาดให้เพียงพอ</li>")
+        html_parts.append("<li><b>การออกกำลังกาย:</b> ออกกำลังกายแบบแอโรบิก (เช่น เดินเร็ว, วิ่ง) อย่างน้อย 150 นาทีต่อสัปดาห์</li>")
+        html_parts.append("<li><b>การพักผ่อน:</b> นอนหลับให้เพียงพอ 7-8 ชั่วโมงต่อคืน และจัดการความเครียดอย่างเหมาะสม</li>")
+        html_parts.append("<li><b>ตรวจสุขภาพ:</b> ควรตรวจสุขภาพประจำปีอย่างสม่ำเสมอเพื่อติดตามการเปลี่ยนแปลงของร่างกาย</li>")
+        html_parts.append("</ul></div>")
 
     if not any(issues.values()):
         return """
@@ -270,7 +267,7 @@ def generate_comprehensive_recommendations(person_data):
         """
 
     return "".join(html_parts)
-
+    
 def interpret_vision(vision_raw, color_blindness_raw):
     """
     แปลผลตรวจสมรรถภาพการมองเห็นและตาบอดสี
