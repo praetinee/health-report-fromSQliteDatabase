@@ -109,11 +109,6 @@ def render_lab_table_html(title, subtitle, headers, rows, table_class="lab-table
     html_content += "</tbody></table></div>"
     return html_content
 
-# --- ลบฟังก์ชันคำแนะนำย่อยๆ ที่ไม่ใช้แล้ว ---
-# kidney_summary_gfr_only, kidney_advice_from_summary, fbs_advice, summarize_liver,
-# liver_advice, uric_acid_advice, summarize_lipids, lipids_advice, cbc_advice,
-# merge_final_advice_grouped, advice_urine
-
 def safe_text(val): return "-" if str(val).strip().lower() in ["", "none", "nan", "-"] else str(val).strip()
 def safe_value(val):
     val = str(val or "").strip()
@@ -315,28 +310,7 @@ def interpret_bp(sbp, dbp):
         return "ความดันค่อนข้างสูง"
     except: return "-"
 
-def combined_health_advice(bmi, sbp, dbp):
-    """Generates combined advice for BMI and blood pressure."""
-    if is_empty(bmi) and is_empty(sbp) and is_empty(dbp): return ""
-    try: bmi = float(bmi)
-    except: bmi = None
-    try: sbp, dbp = float(sbp), float(dbp)
-    except: sbp = dbp = None
-    bmi_text, bp_text = "", ""
-    if bmi is not None:
-        if bmi > 30: bmi_text = "น้ำหนักเกินมาตรฐานมาก"
-        elif bmi >= 25: bmi_text = "น้ำหนักเกินมาตรฐาน"
-        elif bmi < 18.5: bmi_text = "น้ำหนักน้อยกว่ามาตรฐาน"
-        else: bmi_text = "น้ำหนักอยู่ในเกณฑ์ปกติ"
-    if sbp is not None and dbp is not None:
-        if sbp >= 160 or dbp >= 100: bp_text = "ความดันโลหิตอยู่ในระดับสูงมาก"
-        elif sbp >= 140 or dbp >= 90: bp_text = "ความดันโลหิตอยู่ในระดับสูง"
-        elif sbp >= 120 or dbp >= 80: bp_text = "ความดันโลหิตเริ่มสูง"
-    if bmi is not None and "ปกติ" in bmi_text and not bp_text: return "น้ำหนักอยู่ในเกณฑ์ดี ควรรักษาพฤติกรรมสุขภาพนี้ต่อไป"
-    if not bmi_text and bp_text: return f"{bp_text} แนะนำให้ดูแลสุขภาพ และติดตามค่าความดันอย่างสม่ำเสมอ"
-    if bmi_text and bp_text: return f"{bmi_text} และ {bp_text} แนะนำให้ปรับพฤติกรรมด้านอาหารและการออกกำลังกาย"
-    if bmi_text and not bp_text: return f"{bmi_text} แนะนำให้ดูแลเรื่องโภชนาการและการออกกำลังกายอย่างเหมาะสม"
-    return ""
+# --- ลบฟังก์ชัน combined_health_advice ที่ไม่ได้ใช้งานแล้ว ---
     
 def interpret_cxr(val):
     val = str(val or "").strip()
@@ -356,11 +330,6 @@ def display_common_header(person_data):
     </div>""", unsafe_allow_html=True)
     
     try:
-        weight_val = float(str(person_data.get("น้ำหนัก", "-")).replace("กก.", "").strip())
-        height_val = float(str(person_data.get("ส่วนสูง", "-")).replace("ซม.", "").strip())
-        bmi_val = weight_val / ((height_val / 100) ** 2) if height_val > 0 else None
-    except: bmi_val = None
-    try:
         sbp_int, dbp_int = int(float(person_data.get("SBP", ""))), int(float(person_data.get("DBP", "")))
         bp_val = f"{sbp_int}/{dbp_int} ม.ม.ปรอท"
     except: sbp_int = dbp_int = None; bp_val = "-"
@@ -372,7 +341,6 @@ def display_common_header(person_data):
     weight_display = f"{person_data.get('น้ำหนัก', '-')} กก." if not is_empty(person_data.get('น้ำหนัก', '-')) else "-"
     height_display = f"{person_data.get('ส่วนสูง', '-')} ซม." if not is_empty(person_data.get('ส่วนสูง', '-')) else "-"
     waist_display = f"{person_data.get('รอบเอว', '-')} ซม." if not is_empty(person_data.get('รอบเอว', '-')) else "-"
-    summary_advice = html.escape(combined_health_advice(bmi_val, person_data.get("SBP", ""), person_data.get("DBP", "")))
     
     html_parts = []
     html_parts.append('<div class="personal-info-container">')
@@ -391,8 +359,7 @@ def display_common_header(person_data):
     html_parts.append(f"<div><b>ความดันโลหิต:</b> {bp_full}</div>")
     html_parts.append(f"<div><b>ชีพจร:</b> {pulse}</div>")
     html_parts.append('</div>')
-    if summary_advice:
-        html_parts.append(f"<div style='margin-top: 1rem; text-align: center;'><b>คำแนะนำ:</b> {summary_advice}</div>")
+    # --- นำบรรทัดคำแนะนำในส่วนหัวออก ---
     html_parts.append('</div>')
     
     st.markdown("".join(html_parts), unsafe_allow_html=True)
@@ -819,13 +786,10 @@ def display_main_report(person_data, all_person_history_df):
     with col1: st.markdown(render_lab_table_html("ผลตรวจ CBC (Complete Blood Count)", None, ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows), unsafe_allow_html=True)
     with col2: st.markdown(render_lab_table_html("ผลตรวจเลือด (Blood Chemistry)", None, ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows), unsafe_allow_html=True)
     
-    # --- ลบส่วนคำแนะนำย่อยๆ ที่กระจัดกระจาย ---
-    
     selected_year = person.get("Year", datetime.now().year + 543)
     with st.container():
         left_spacer_ua, col_ua_left, col_ua_right, right_spacer_ua = st.columns([0.5, 3, 3, 0.5])
         with col_ua_left:
-            # --- แก้ไข: ไม่ต้องแสดงคำแนะนำปัสสาวะแยก ---
             has_urine_result = render_urine_section(person, sex, selected_year)
             st.markdown(render_section_header("ผลตรวจอุจจาระ (Stool Examination)"), unsafe_allow_html=True)
             st.markdown(render_stool_html_table(interpret_stool_exam(person.get("Stool exam", "")), interpret_stool_cs(person.get("Stool C/S", ""))), unsafe_allow_html=True)
