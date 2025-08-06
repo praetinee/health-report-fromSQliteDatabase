@@ -48,6 +48,10 @@ def interpret_ekg(val):
 
 def interpret_urine(person_data):
     """แปลผลตรวจปัสสาวะทั้งหมดและคืนค่าสรุป"""
+    # --- แก้ไข: ตรวจสอบก่อนว่ามีการตรวจปัสสาวะจริงหรือไม่ ---
+    if is_empty(person_data.get("Color")) and is_empty(person_data.get("pH")) and is_empty(person_data.get("Spgr")):
+        return {} # ถ้าไม่มีข้อมูลหลัก ให้ถือว่าไม่ได้ตรวจ
+
     results = {}
     sex = person_data.get("เพศ", "ชาย")
     
@@ -58,7 +62,7 @@ def interpret_urine(person_data):
 
     # Sugar
     sugar = str(person_data.get("sugar", "")).strip().lower()
-    if sugar not in ["negative", "trace", ""] and sugar is not None:
+    if sugar not in ["negative", "trace", "", " "]:
         results['น้ำตาลในปัสสาวะ'] = ('พบน้ำตาลในปัสสาวะ', 'high')
 
     # RBC
@@ -89,6 +93,10 @@ def interpret_urine(person_data):
 
 def interpret_stool(person_data):
     """แปลผลตรวจอุจจาระ"""
+    # --- แก้ไข: ตรวจสอบก่อนว่ามีการตรวจอุจจาระจริงหรือไม่ ---
+    if is_empty(person_data.get("Stool exam")) and is_empty(person_data.get("Stool C/S")):
+        return {}
+
     results = {}
     exam = str(person_data.get("Stool exam", "")).strip().lower()
     culture = str(person_data.get("Stool C/S", "")).strip().lower()
@@ -103,6 +111,10 @@ def interpret_stool(person_data):
 
 def interpret_hepatitis(person_data):
     """แปลผลตรวจไวรัสตับอักเสบ"""
+    # --- แก้ไข: ตรวจสอบก่อนว่ามีการตรวจ Hepatitis จริงหรือไม่ ---
+    if is_empty(person_data.get("HbsAg")) and is_empty(person_data.get("HbsAb")):
+        return {}
+
     results = {}
     hbsag = str(person_data.get("HbsAg", "")).strip().lower()
     hbsab = str(person_data.get("HbsAb", "")).strip().lower()
