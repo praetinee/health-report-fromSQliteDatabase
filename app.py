@@ -10,12 +10,13 @@ from collections import OrderedDict
 from datetime import datetime
 import re
 import os
-import base64
 import json
 from streamlit_js_eval import streamlit_js_eval
 # --- แก้ไข: Import ฟังก์ชันใหม่ และลบ import ที่ไม่ใช้แล้ว ---
 from performance_tests import interpret_audiogram, interpret_lung_capacity, generate_comprehensive_recommendations
 from print_report import generate_printable_report
+from print_performance_report import generate_performance_report_html
+
 
 # --- Helper Functions (ที่ยังคงใช้งาน) ---
 def is_empty(val):
@@ -900,6 +901,9 @@ if 'selected_year' not in st.session_state: st.session_state.selected_year = Non
 if 'selected_date' not in st.session_state: st.session_state.selected_date = None
 if 'page' not in st.session_state: st.session_state.page = 'main_report'
 if 'print_trigger' not in st.session_state: st.session_state.print_trigger = False
+# --- แก้ไข: เพิ่ม session state สำหรับปุ่มพิมพ์ใหม่ ---
+if 'print_performance_trigger' not in st.session_state: st.session_state.print_performance_trigger = False
+
 
 st.subheader("ค้นหาและเลือกผลตรวจ")
 menu_cols = st.columns([3, 1, 2])
@@ -937,11 +941,14 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     person_data = st.session_state.person_row
     all_person_history_df = st.session_state.search_result
 
-    available_reports = {}
+    available_reports = OrderedDict()
     if has_basic_health_data(person_data): available_reports['main_report'] = "สุขภาพพื้นฐาน"
     if has_vision_data(person_data): available_reports['vision_report'] = "สมรรถภาพการมองเห็น"
     if has_hearing_data(person_data): available_reports['hearing_report'] = "สมรรถภาพการได้ยิน"
     if has_lung_data(person_data): available_reports['lung_report'] = "สมรรถภาพปอด"
+    
+    # --- แก้ไข: ตรวจสอบว่ามีรายงานสมรรถภาพหรือไม่ ---
+    has_performance_report = any(k in ['vision_report', 'hearing_report', 'lung_report'] for k in available_reports)
 
     if not available_reports:
         display_common_header(person_data)
@@ -950,16 +957,31 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         if st.session_state.page not in available_reports:
             st.session_state.page = list(available_reports.keys())[0]
 
-        btn_cols = st.columns(len(available_reports) + 1)
-        for i, (page_key, page_title) in enumerate(available_reports.items()):
-            with btn_cols[i]:
+        # --- แก้ไข: จัดการจำนวนคอลัมน์ของปุ่มแบบไดนามิก ---
+        num_buttons = len(available_reports) + 1
+        if has_performance_report:
+            num_buttons += 1
+        
+        btn_cols = st.columns(num_buttons)
+        
+        col_idx = 0
+        for page_key, page_title in available_reports.items():
+            with btn_cols[col_idx]:
                 if st.button(page_title, use_container_width=True, key=f"btn_{page_key}"):
                     st.session_state.page = page_key
                     st.rerun()
+            col_idx += 1
         
-        with btn_cols[len(available_reports)]:
-            if st.button("📄 พิมพ์รายงาน", use_container_width=True):
+        # --- แก้ไข: เพิ่มปุ่มพิมพ์และเงื่อนไขการแสดงผล ---
+        with btn_cols[col_idx]:
+            if st.button("📄 พิมพ์รายงานสุขภาพ", use_container_width=True):
                 st.session_state.print_trigger = True
+        col_idx += 1
+
+        if has_performance_report:
+            with btn_cols[col_idx]:
+                if st.button("🖨️ พิมพ์รายงานสมรรถภาพ", use_container_width=True):
+                    st.session_state.print_performance_trigger = True
 
         display_common_header(person_data)
         
@@ -973,8 +995,9 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         elif page_to_show == 'main_report':
             display_main_report(person_data, all_person_history_df)
 
+    # --- แก้ไข: เพิ่ม Logic การพิมพ์รายงานสมรรถภาพ ---
     if st.session_state.get("print_trigger", False):
-        report_html_data = generate_printable_report(person_data)
+        report_html_data = generate_printable_report(person_data, all_person_history_df)
         escaped_html = json.dumps(report_html_data)
         
         print_component = f"""
@@ -1003,5 +1026,37 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         """
         st.components.v1.html(print_component, height=0, width=0)
         st.session_state.print_trigger = False
+
+    if st.session_state.get("print_performance_trigger", False):
+        report_html_data = generate_performance_report_html(person_data, all_person_history_df)
+        escaped_html = json.dumps(report_html_data)
+        
+        print_component = f"""
+        <iframe id="print-perf-iframe" style="display:none;"></iframe>
+        <script>
+            (function() {{
+                const iframe = document.getElementById('print-perf-iframe');
+                if (!iframe) return;
+                const iframeDoc = iframe.contentWindow.document;
+                iframeDoc.open();
+                iframeDoc.write({escaped_html});
+                iframeDoc.close();
+                iframe.onload = function() {{
+                    setTimeout(function() {{
+                        try {{
+                            iframe.contentWindow.focus();
+                            iframe.contentWindow.print();
+                        }} catch (e) {{
+                            console.error("Printing performance report failed:", e);
+                            alert("Could not open print dialog for performance report.");
+                        }}
+                    }}, 500);
+                }};
+            }})();
+        </script>
+        """
+        st.components.v1.html(print_component, height=0, width=0)
+        st.session_state.print_performance_trigger = False
+
 else:
     st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
