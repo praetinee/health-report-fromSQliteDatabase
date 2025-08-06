@@ -18,11 +18,24 @@ def is_empty(val):
     """Check if a value is empty, null, or whitespace."""
     return pd.isna(val) or str(val).strip().lower() in ["", "-", "none", "nan", "null"]
 
+# --- แก้ไข: ใช้ฟังก์ชันตรวจสอบข้อมูลที่ครอบคลุมเหมือนใน app.py ---
 def has_vision_data(person_data):
-    """Check for any vision test data."""
+    """Check for any ACTUAL vision test data, ignoring summary/advice fields."""
     detailed_keys = [
-        'ป.การรวมภาพ', 'ผ.การรวมภาพ', 'ป.ความชัดของภาพระยะไกล', 
-        'การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)', 'ป.การจำแนกสี'
+        'ป.การรวมภาพ', 'ผ.การรวมภาพ',
+        'ป.ความชัดของภาพระยะไกล', 'ผ.ความชัดของภาพระยะไกล',
+        'การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)',
+        'การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)',
+        'ป.การกะระยะและมองความชัดลึกของภาพ', 'ผ.การกะระยะและมองความชัดลึกของภาพ',
+        'ป.การจำแนกสี', 'ผ.การจำแนกสี',
+        'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง',
+        'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน',
+        'ป.ความชัดของภาพระยะใกล้', 'ผ.ความชัดของภาพระยะใกล้',
+        'การมองภาพระยะใกล้ด้วยตาขวา (Near vision – Right)',
+        'การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision – Left)',
+        'ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน',
+        'ป.ลานสายตา', 'ผ.ลานสายตา',
+        'ผ.สายตาเขซ่อนเร้น'
     ]
     return any(not is_empty(person_data.get(key)) for key in detailed_keys)
 
