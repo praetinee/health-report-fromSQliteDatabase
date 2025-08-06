@@ -1,106 +1,536 @@
 import pandas as pd
 from datetime import datetime
+import re
 import html
 from collections import OrderedDict
+import json
 
-# --- แก้ไข: import ฟังก์ชันที่จำเป็นสำหรับการตรวจสมรรถภาพ ---
-from performance_tests import (
-    generate_comprehensive_recommendations, 
-    interpret_audiogram, 
-    interpret_lung_capacity
-)
+# --- แก้ไข: import ฟังก์ชัน generate_holistic_advice ---
+from performance_tests import generate_holistic_advice
 
 # ==============================================================================
-# หมายเหตุ: ไฟล์นี้ถูกปรับปรุงใหม่เพื่อรองรับการพิมพ์ผลตรวจสมรรถภาพ (ตา, หู, ปอด)
-# โดยจะตรวจสอบข้อมูลและแสดงผลเฉพาะรายการที่มีการตรวจในปีนั้นๆ รวมอยู่ในหน้าเดียว
+# หมายเหตุ: ไฟล์นี้มีฟังก์ชันที่จำเป็นสำหรับการสร้างรายงานในรูปแบบ HTML
+# ฟังก์ชันส่วนใหญ่ถูกคัดลอกมาจาก app.py และปรับเปลี่ยนเพื่อสร้างผลลัพธ์เป็นสตริง HTML
+# แทนการแสดงผลบน Streamlit โดยตรง
 # ==============================================================================
 
 
-# --- Helper & Data Availability Functions ---
+# --- Helper Functions (คัดลอกมาจาก app.py) ---
 
 def is_empty(val):
     """Check if a value is empty, null, or whitespace."""
     return pd.isna(val) or str(val).strip().lower() in ["", "-", "none", "nan", "null"]
 
-def get_float(person_data, key):
+
+THAI_MONTHS_GLOBAL = {
+    1: "มกราคม", 2: "กุมภาพันธ์", 3: "มีนาคม", 4: "เมษายน",
+    5: "พฤษภาคม", 6: "มิถุนายน", 7: "กรกฎาคม", 8: "สิงหาคม",
+    9: "กันยายน", 10: "ตุลาคม", 11: "พฤศจิกายน", 12: "ธันวาคม"
+}
+
+def get_float(col, person_data):
     """Safely gets a float value from person_data dictionary."""
-    val = person_data.get(key)
-    if is_empty(val): return None
     try:
+        val = person_data.get(col, "")
+        if is_empty(val):
+            return None
         return float(str(val).replace(",", "").strip())
-    except (ValueError, TypeError):
+    except:
         return None
 
-def has_vision_data(person_data):
-    """Check for any vision test data."""
-    detailed_keys = [
-        'ป.การรวมภาพ', 'ผ.การรวมภาพ', 'ป.ความชัดของภาพระยะไกล', 
-        'การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)', 'ป.การจำแนกสี'
-    ]
-    return any(not is_empty(person_data.get(key)) for key in detailed_keys)
-
-def has_hearing_data(person_data):
-    """Check for detailed hearing (audiogram) data."""
-    hearing_keys = ['R500', 'L500', 'R1k', 'L1k', 'R4k', 'L4k']
-    return any(not is_empty(person_data.get(key)) for key in hearing_keys)
-
-def has_lung_data(person_data):
-    """Check for lung capacity test data."""
-    key_indicators = ['FVC เปอร์เซ็นต์', 'FEV1เปอร์เซ็นต์', 'FEV1/FVC%']
-    return any(not is_empty(person_data.get(key)) for key in key_indicators)
-
-
-# --- Core Interpretation & Formatting Functions (from app.py) ---
-# (ส่วนนี้เป็นฟังก์ชันพื้นฐานที่จำเป็นสำหรับการแสดงผลตารางผลเลือดและข้อมูลส่วนตัว)
-
 def flag(val, low=None, high=None, higher_is_better=False):
+    """
+    ตรวจสอบค่าและจัดรูปแบบตัวเลขสำหรับตารางผลตรวจ
+    - ตัวเลขจำนวนเต็มจะใส่ comma แต่ไม่มีทศนิยม
+    - ตัวเลขทศนิยมจะใส่ comma และมีทศนิยม 1 ตำแหน่ง
+    """
     try:
         val_float = float(str(val).replace(",", "").strip())
     except (ValueError, TypeError):
         return "-", False
-    formatted_val = f"{int(val_float):,}" if val_float == int(val_float) else f"{val_float:,.1f}"
+
+    # Smart formatting
+    if val_float == int(val_float):
+        # เป็นจำนวนเต็ม, จัดรูปแบบด้วย comma
+        formatted_val = f"{int(val_float):,}"
+    else:
+        # เป็นทศนิยม, จัดรูปแบบด้วย comma และทศนิยม 1 ตำแหน่ง
+        formatted_val = f"{val_float:,.1f}"
+
     is_abn = False
     if higher_is_better:
-        if low is not None and val_float < low: is_abn = True
+        if low is not None and val_float < low:
+            is_abn = True
     else:
-        if low is not None and val_float < low: is_abn = True
-        if high is not None and val_float > high: is_abn = True
+        if low is not None and val_float < low:
+            is_abn = True
+        if high is not None and val_float > high:
+            is_abn = True
+
     return formatted_val, is_abn
 
-def interpret_bp(sbp, dbp):
-    try:
-        sbp, dbp = float(sbp), float(dbp)
-        if sbp == 0 or dbp == 0: return "-"
-        if sbp >= 160 or dbp >= 100: return "ความดันสูง"
-        elif sbp >= 140 or dbp >= 90: return "ความดันสูงเล็กน้อย"
-        elif sbp < 120 and dbp < 80: return "ความดันปกติ"
-        else: return "ความดันค่อนข้างสูง"
-    except: return "-"
+def safe_text(val):
+    return "-" if str(val).strip().lower() in ["", "none", "nan", "-"] else str(val).strip()
 
+def safe_value(val):
+    val = str(val or "").strip()
+    if val.lower() in ["", "nan", "none", "-"]:
+        return "-"
+    return val
+
+def kidney_summary_gfr_only(gfr_raw):
+    """Generates a summary for kidney function based on GFR."""
+    try:
+        gfr = float(str(gfr_raw).replace(",", "").strip())
+        if gfr == 0:
+            return ""
+        elif gfr < 60:
+            return "การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย"
+        else:
+            return "ปกติ"
+    except:
+        return ""
+
+def kidney_advice_from_summary(summary_text):
+    """Generates advice based on kidney summary."""
+    if summary_text == "การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย":
+        return (
+            "การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย "
+            "ลดอาหารเค็ม อาหารโปรตีนสูงย่อยยาก ดื่มน้ำ 8-10 แก้วต่อวัน "
+            "และไม่ควรกลั้นปัสสาวะ มีอาการบวมผิดปกติให้พบแพทย์"
+        )
+    return ""
+
+def fbs_advice(fbs_raw):
+    """Generates advice based on Fasting Blood Sugar (FBS) level."""
+    if is_empty(fbs_raw):
+        return ""
+    try:
+        value = float(str(fbs_raw).replace(",", "").strip())
+        if value == 0:
+            return ""
+        elif 100 <= value < 106:
+            return "ระดับน้ำตาลเริ่มสูงเล็กน้อย ควรปรับพฤติกรรมการบริโภคอาหารหวาน แป้ง และออกกำลังกาย"
+        elif 106 <= value < 126:
+            return "ระดับน้ำตาลสูงเล็กน้อย ควรลดอาหารหวาน แป้ง ของมัน ตรวจติดตามน้ำตาลซ้ำ และออกกำลังกายสม่ำเสมอ"
+        elif value >= 126:
+            return "ระดับน้ำตาลสูง ควรพบแพทย์เพื่อตรวจยืนยันเบาหวาน และติดตามอาการ"
+        else:
+            return ""
+    except:
+        return ""
+
+def summarize_liver(alp_val, sgot_val, sgpt_val):
+    """Summarizes liver function based on ALP, SGOT, and SGPT."""
+    try:
+        alp = float(alp_val)
+        sgot = float(sgot_val)
+        sgpt = float(sgpt_val)
+        if alp == 0 or sgot == 0 or sgpt == 0:
+            return "-"
+        if alp > 120 or sgot > 36 or sgpt > 40:
+            return "การทำงานของตับสูงกว่าเกณฑ์ปกติเล็กน้อย"
+        return "ปกติ"
+    except:
+        return ""
+
+def liver_advice(summary_text):
+    """Generates advice based on liver function summary."""
+    if summary_text == "การทำงานของตับสูงกว่าเกณฑ์ปกติเล็กน้อย":
+        return "ควรลดอาหารไขมันสูงและตรวจติดตามการทำงานของตับซ้ำ"
+    return ""
+
+def uric_acid_advice(value_raw):
+    """Generates advice based on Uric Acid level."""
+    try:
+        value = float(value_raw)
+        if value > 7.2:
+            return "ควรลดอาหารที่มีพิวรีนสูง เช่น เครื่องในสัตว์ อาหารทะเล และพบแพทย์หากมีอาการปวดข้อ"
+        return ""
+    except:
+        return ""
+
+def summarize_lipids(chol_raw, tgl_raw, ldl_raw):
+    """Summarizes lipid profile."""
+    try:
+        chol = float(str(chol_raw).replace(",", "").strip())
+        tgl = float(str(tgl_raw).replace(",", "").strip())
+        ldl = float(str(ldl_raw).replace(",", "").strip())
+        if chol == 0 and tgl == 0:
+            return ""
+        if chol >= 250 or tgl >= 250 or ldl >= 180:
+            return "ไขมันในเลือดสูง"
+        elif chol <= 200 and tgl <= 150:
+            return "ปกติ"
+        else:
+            return "ไขมันในเลือดสูงเล็กน้อย"
+    except:
+        return ""
+
+def lipids_advice(summary_text):
+    """Generates advice based on lipid summary."""
+    if summary_text == "ไขมันในเลือดสูง":
+        return (
+            "ไขมันในเลือดสูง ควรลดอาหารที่มีไขมันอิ่มตัว เช่น ของทอด หนังสัตว์ "
+            "ออกกำลังกายสม่ำเสมอ และพิจารณาพบแพทย์เพื่อตรวจติดตาม"
+        )
+    elif summary_text == "ไขมันในเลือดสูงเล็กน้อย":
+        return (
+            "ไขมันในเลือดสูงเล็กน้อย ควรปรับพฤติกรรมการบริโภค ลดของมัน "
+            "และออกกำลังกายเพื่อควบคุมระดับไขมัน"
+        )
+    return ""
+
+def cbc_advice(hb, hct, wbc, plt, sex="ชาย"):
+    """Generates advice based on Complete Blood Count (CBC) results."""
+    advice_parts = []
+    try:
+        hb_val = float(hb)
+        hb_ref = 13 if sex == "ชาย" else 12
+        if hb_val < hb_ref:
+            advice_parts.append("ระดับฮีโมโกลบินต่ำ ควรตรวจหาภาวะโลหิตจางและติดตามซ้ำ")
+    except: pass
+    try:
+        hct_val = float(hct)
+        hct_ref = 39 if sex == "ชาย" else 36
+        if hct_val < hct_ref:
+            advice_parts.append("ค่าฮีมาโตคริตต่ำ ควรตรวจหาภาวะเลือดจางและตรวจติดตาม")
+    except: pass
+    try:
+        wbc_val = float(wbc)
+        if wbc_val < 4000:
+            advice_parts.append("เม็ดเลือดขาวต่ำ อาจเกิดจากภูมิคุ้มกันลด ควรติดตาม")
+        elif wbc_val > 10000:
+            advice_parts.append("เม็ดเลือดขาวสูง อาจมีการอักเสบ ติดเชื้อ หรือความผิดปกติ ควรพบแพทย์")
+    except: pass
+    try:
+        plt_val = float(plt)
+        if plt_val < 150000:
+            advice_parts.append("เกล็ดเลือดต่ำ อาจมีภาวะเลือดออกง่าย ควรตรวจยืนยันซ้ำ")
+        elif plt_val > 500000:
+            advice_parts.append("เกล็ดเลือดสูง ควรพบแพทย์เพื่อตรวจหาสาเหตุเพิ่มเติม")
+    except: pass
+    return " ".join(advice_parts)
+
+def interpret_bp(sbp, dbp):
+    """Interprets blood pressure readings."""
+    try:
+        sbp = float(sbp)
+        dbp = float(dbp)
+        if sbp == 0 or dbp == 0:
+            return "-"
+        if sbp >= 160 or dbp >= 100:
+            return "ความดันสูง"
+        elif sbp >= 140 or dbp >= 90:
+            return "ความดันสูงเล็กน้อย"
+        elif sbp < 120 and dbp < 80:
+            return "ความดันปกติ"
+        else:
+            return "ความดันค่อนข้างสูง"
+    except:
+        return "-"
+
+def combined_health_advice(bmi, sbp, dbp):
+    """Generates combined advice for BMI and blood pressure."""
+    if is_empty(bmi) and is_empty(sbp) and is_empty(dbp):
+        return ""
+    try:
+        bmi = float(bmi)
+    except:
+        bmi = None
+    try:
+        sbp = float(sbp)
+        dbp = float(dbp)
+    except:
+        sbp = dbp = None
+    
+    bmi_text = ""
+    bp_text = ""
+    
+    if bmi is not None:
+        if bmi > 30:
+            bmi_text = "น้ำหนักเกินมาตรฐานมาก"
+        elif bmi >= 25:
+            bmi_text = "น้ำหนักเกินมาตรฐาน"
+        elif bmi < 18.5:
+            bmi_text = "น้ำหนักน้อยกว่ามาตรฐาน"
+        else:
+            bmi_text = "น้ำหนักอยู่ในเกณฑ์ปกติ"
+    
+    if sbp is not None and dbp is not None:
+        if sbp >= 160 or dbp >= 100:
+            bp_text = "ความดันโลหิตอยู่ในระดับสูงมาก"
+        elif sbp >= 140 or dbp >= 90:
+            bp_text = "ความดันโลหิตอยู่ในระดับสูง"
+        elif sbp >= 120 or dbp >= 80:
+            bp_text = "ความดันโลหิตเริ่มสูง"
+    
+    if bmi is not None and "ปกติ" in bmi_text and not bp_text:
+        return "น้ำหนักอยู่ในเกณฑ์ดี ควรรักษาพฤติกรรมสุขภาพนี้ต่อไป"
+    if not bmi_text and bp_text:
+        return f"{bp_text} แนะนำให้ดูแลสุขภาพ และติดตามค่าความดันอย่างสม่ำเสมอ"
+    if bmi_text and bp_text:
+        return f"{bmi_text} และ {bp_text} แนะนำให้ปรับพฤติกรรมด้านอาหารและการออกกำลังกาย"
+    if bmi_text and not bp_text:
+        return f"{bmi_text} แนะนำให้ดูแลเรื่องโภชนาการและการออกกำลังกายอย่างเหมาะสม"
+    return ""
+
+def merge_final_advice_grouped(messages):
+    """Merges and groups final advice messages."""
+    groups = {
+        "FBS": [], "ไต": [], "ตับ": [], "ยูริค": [], "ไขมัน": [], "อื่นๆ": []
+    }
+    for msg in messages:
+        if not msg or msg.strip() in ["-", ""]:
+            continue
+        if "น้ำตาล" in msg: groups["FBS"].append(msg)
+        elif "ไต" in msg: groups["ไต"].append(msg)
+        elif "ตับ" in msg: groups["ตับ"].append(msg)
+        elif "พิวรีน" in msg or "ยูริค" in msg: groups["ยูริค"].append(msg)
+        elif "ไขมัน" in msg: groups["ไขมัน"].append(msg)
+        else: groups["อื่นๆ"].append(msg)
+        
+    output = []
+    for title, msgs in groups.items():
+        if msgs:
+            unique_msgs = list(OrderedDict.fromkeys(msgs))
+            output.append(f"<b>{title}:</b> {' '.join(unique_msgs)}")
+            
+    if not output:
+        return "ไม่พบคำแนะนำเพิ่มเติมจากผลตรวจ"
+    return "<br>".join(output)
+    
+def interpret_alb(value):
+    val = str(value).strip().lower()
+    if val == "negative":
+        return "ไม่พบ"
+    elif val in ["trace", "1+", "2+"]:
+        return "พบโปรตีนในปัสสาวะเล็กน้อย"
+    elif val in ["3+", "4+"]:
+        return "พบโปรตีนในปัสสาวะ"
+    return "-"
+    
+def interpret_sugar(value):
+    val = str(value).strip().lower()
+    if val == "negative":
+        return "ไม่พบ"
+    elif val == "trace":
+        return "พบน้ำตาลในปัสสาวะเล็กน้อย"
+    elif val in ["1+", "2+", "3+", "4+", "5+", "6+"]:
+        return "พบน้ำตาลในปัสสาวะ"
+    return "-"
+    
+def parse_range_or_number(val):
+    val = val.replace("cell/hpf", "").replace("cells/hpf", "").replace("cell", "").strip().lower()
+    try:
+        if "-" in val:
+            low, high = map(float, val.split("-"))
+            return low, high
+        else:
+            num = float(val)
+            return num, num
+    except:
+        return None, None
+    
+def interpret_rbc(value):
+    val = str(value or "").strip().lower()
+    if val in ["-", "", "none", "nan"]:
+        return "-"
+    low, high = parse_range_or_number(val)
+    if high is None:
+        return value
+    if high <= 2:
+        return "ปกติ"
+    elif high <= 5:
+        return "พบเม็ดเลือดแดงในปัสสาวะเล็กน้อย"
+    else:
+        return "พบเม็ดเลือดแดงในปัสสาวะ"
+    
+def interpret_wbc(value):
+    val = str(value or "").strip().lower()
+    if val in ["-", "", "none", "nan"]:
+        return "-"
+    low, high = parse_range_or_number(val)
+    if high is None:
+        return value
+    if high <= 5:
+        return "ปกติ"
+    elif high <= 10:
+        return "พบเม็ดเลือดขาวในปัสสาวะเล็กน้อย"
+    else:
+        return "พบเม็ดเลือดขาวในปัสสาวะ"
+    
+def advice_urine(sex, alb, sugar, rbc, wbc):
+    alb_t = interpret_alb(alb)
+    sugar_t = interpret_sugar(sugar)
+    rbc_t = interpret_rbc(rbc)
+    wbc_t = interpret_wbc(wbc)
+    
+    if all(x in ["-", "ปกติ", "ไม่พบ", "พบโปรตีนในปัสสาวะเล็กน้อย", "พบน้ำตาลในปัสสาวะเล็กน้อย"]
+                       for x in [alb_t, sugar_t, rbc_t, wbc_t]):
+        return ""
+    
+    if "พบน้ำตาลในปัสสาวะ" in sugar_t and "เล็กน้อย" not in sugar_t:
+        return "ควรลดการบริโภคน้ำตาล และตรวจระดับน้ำตาลในเลือดเพิ่มเติม"
+    
+    if sex == "หญิง" and "พบเม็ดเลือดแดง" in rbc_t and "ปกติ" in wbc_t:
+        return "อาจมีปนเปื้อนจากประจำเดือน แนะนำให้ตรวจซ้ำ"
+    
+    if sex == "ชาย" and "พบเม็ดเลือดแดง" in rbc_t and "ปกติ" in wbc_t:
+        return "พบเม็ดเลือดแดงในปัสสาวะ ควรตรวจทางเดินปัสสาวะเพิ่มเติม"
+    
+    if "พบเม็ดเลือดขาว" in wbc_t and "เล็กน้อย" not in wbc_t:
+        return "อาจมีการอักเสบของระบบทางเดินปัสสาวะ แนะนำให้ตรวจซ้ำ"
+    
+    return "ควรตรวจปัสสาวะซ้ำเพื่อติดตามผล"
+    
+def is_urine_abnormal(test_name, value, normal_range):
+    val = str(value or "").strip().lower()
+    if val in ["", "-", "none", "nan", "null"]:
+        return False
+    
+    if test_name == "กรด-ด่าง (pH)":
+        try:
+            return not (5.0 <= float(val) <= 8.0)
+        except:
+            return True
+    
+    if test_name == "ความถ่วงจำเพาะ (Sp.gr)":
+        try:
+            return not (1.003 <= float(val) <= 1.030)
+        except:
+            return True
+    
+    if test_name == "เม็ดเลือดแดง (RBC)":
+        return "พบ" in interpret_rbc(val).lower()
+    
+    if test_name == "เม็ดเลือดขาว (WBC)":
+        return "พบ" in interpret_wbc(val).lower()
+    
+    if test_name == "น้ำตาล (Sugar)":
+        return val.lower() not in ["negative"]
+    
+    if test_name == "โปรตีน (Albumin)":
+        return val.lower() not in ["negative", "trace"]
+    
+    if test_name == "สี (Colour)":
+        return val not in ["yellow", "pale yellow", "colorless", "paleyellow", "light yellow"]
+    
+    return False
+
+def interpret_stool_exam(val):
+    if is_empty(val):
+        return "ไม่ได้เข้ารับการตรวจ"
+    val_lower = str(val).strip().lower()
+    if val_lower == "normal":
+        return "ไม่พบเม็ดเลือดขาวในอุจจาระ ถือว่าปกติ"
+    elif "wbc" in val_lower or "เม็ดเลือดขาว" in val_lower:
+        return "พบเม็ดเลือดขาวในอุจจาระ นัดตรวจซ้ำ"
+    return val
+
+def interpret_stool_cs(value):
+    if is_empty(value):
+        return "ไม่ได้เข้ารับการตรวจ"
+    val_strip = str(value).strip()
+    if "ไม่พบ" in val_strip or "ปกติ" in val_strip:
+        return "ไม่พบการติดเชื้อ"
+    return "พบการติดเชื้อในอุจจาระ ให้พบแพทย์เพื่อตรวจรักษาเพิ่มเติม"
+
+def interpret_cxr(val):
+    val = str(val or "").strip()
+    if is_empty(val):
+        return "ไม่ได้เข้ารับการตรวจเอกซเรย์"
+    if any(keyword in val.lower() for keyword in ["ผิดปกติ", "ฝ้า", "รอย", "abnormal", "infiltrate", "lesion"]):
+        return f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
+    return val
+
+def get_ekg_col_name(year):
+    current_thai_year = datetime.now().year + 543
+    return "EKG" if year == current_thai_year else f"EKG{str(year)[-2:]}"
+
+def interpret_ekg(val):
+    val = str(val or "").strip()
+    if is_empty(val):
+        return "ไม่ได้เข้ารับการตรวจคลื่นไฟฟ้าหัวใจ"
+    if any(x in val.lower() for x in ["ผิดปกติ", "abnormal", "arrhythmia"]):
+        return f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
+    return val
+
+def hepatitis_b_advice(hbsag, hbsab, hbcab):
+    """
+    ให้คำแนะนำเกี่ยวกับไวรัสตับอักเสบบี และคืนค่าสถานะเพื่อใช้ในการไฮไลต์
+    Returns: (advice_string, status_flag)
+    status_flag: 'infection', 'no_immunity', 'normal'
+    """
+    hbsag = hbsag.lower()
+    hbsab = hbsab.lower()
+    hbcab = hbcab.lower()
+    
+    if "positive" in hbsag:
+        return "ติดเชื้อไวรัสตับอักเสบบี", "infection"
+    elif all(x == "negative" for x in [hbsag, hbsab, hbcab]):
+        return "ไม่มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี ควรปรึกษาแพทย์เพื่อรับวัคซีน", "no_immunity"
+    elif "positive" in hbsab and "positive" not in hbsag:
+        return "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี", "normal"
+    elif "positive" in hbcab and "positive" not in hbsab:
+        return "เคยติดเชื้อแต่ไม่มีภูมิคุ้มกันในปัจจุบัน", "normal"
+    
+    return "ไม่สามารถสรุปผลชัดเจน แนะนำให้พบแพทย์เพื่อประเมินซ้ำ", "normal"
 
 # --- HTML Rendering Functions ---
 
-def render_section_header(title, subtitle=None, is_sub_header=False):
-    bg_color = "#555" if is_sub_header else "#333"
-    font_size = "10px" if is_sub_header else "11px"
-    margin_top = "0.8rem" if is_sub_header else "1.5rem"
-    
-    full_title = f"{title} <span style='font-weight: normal;'>({subtitle})</span>" if subtitle else title
+def render_section_header(title, subtitle=None):
+    if subtitle:
+        full_title = f"{title} <span style='font-weight: normal;'>({subtitle})</span>"
+    else:
+        full_title = title
+
     return f"""
     <div style='
-        background-color: {bg_color};
-        color: white;
+        background-color: #f0f2f6;
+        color: #333;
         text-align: center;
         padding: 0.2rem 0.4rem;
         font-weight: bold;
         border-radius: 6px;
-        margin-top: {margin_top};
-        margin-bottom: 0.5rem;
-        font-size: {font_size};
+        margin-top: 1rem;
+        margin-bottom: 0.4rem;
+        font-size: 11px;
+        border: 1px solid #ddd;
     '>
         {full_title}
     </div>
     """
+
+def render_lab_table_html(title, subtitle, headers, rows, table_class="print-lab-table"):
+    header_html = render_section_header(title, subtitle)
+    
+    html_content = f"{header_html}<table class='{table_class}'>"
+    html_content += """
+        <colgroup>
+            <col style="width: 40%;">
+            <col style="width: 20%;">
+            <col style="width: 40%;">
+        </colgroup>
+    """
+    html_content += "<thead><tr>"
+    for i, h in enumerate(headers):
+        align = "left" if i == 0 or i == 2 else "center"
+        html_content += f"<th style='text-align: {align};'>{h}</th>"
+    html_content += "</tr></thead><tbody>"
+    
+    for row in rows:
+        is_abn = any(flag for _, flag in row)
+        row_class = f"{table_class}-abn" if is_abn else ""
+        
+        html_content += f"<tr class='{row_class}'>"
+        html_content += f"<td style='text-align: left;'>{row[0][0]}</td>"
+        html_content += f"<td>{row[1][0]}</td>"
+        html_content += f"<td style='text-align: left;'>{row[2][0]}</td>"
+        html_content += f"</tr>"
+    html_content += "</tbody></table>"
+    return html_content
+
 
 def render_html_header(person):
     check_date = person.get("วันที่ตรวจ", "-")
@@ -116,178 +546,274 @@ def render_html_header(person):
 def render_personal_info(person):
     sbp = person.get("SBP", "")
     dbp = person.get("DBP", "")
+    weight_raw = person.get("น้ำหนัก", "-")
+    height_raw = person.get("ส่วนสูง", "-")
+
+    try:
+        weight_val = float(str(weight_raw).replace("กก.", "").strip())
+        height_val = float(str(height_raw).replace("ซม.", "").strip())
+        bmi_val = weight_val / ((height_val / 100) ** 2) if height_val > 0 else None
+    except:
+        bmi_val = None
+
+    try:
+        sbp_int = int(float(sbp))
+        dbp_int = int(float(dbp))
+        bp_val = f"{sbp_int}/{dbp_int} ม.ม.ปรอท"
+    except:
+        sbp_int = dbp_int = None
+        bp_val = "-"
+    
+    # จัดการค่าชีพจร (Pulse) ให้เป็นเลขจำนวนเต็ม
     pulse_raw = person.get("pulse", "-")
-    pulse_val = str(int(float(pulse_raw))) if not is_empty(pulse_raw) else "-"
+    pulse_val = "-"
+    if not is_empty(pulse_raw):
+        try:
+            # แปลงเป็น float ก่อนเพื่อรองรับค่าเช่น "75.0" แล้วจึงแปลงเป็น int
+            pulse_val = str(int(float(pulse_raw)))
+        except (ValueError, TypeError):
+            pulse_val = safe_text(pulse_raw) # ใช้ค่าเดิมหากแปลงไม่ได้
+
     bp_desc = interpret_bp(sbp, dbp)
-    bp_val = f"{int(float(sbp))}/{int(float(dbp))} ม.ม.ปรอท" if not is_empty(sbp) and not is_empty(dbp) else "-"
-    bp_full = f"{bp_val} ({bp_desc})" if bp_desc != "-" else bp_val
+    bp_full = f"{bp_val} - {bp_desc}" if bp_desc != "-" else bp_val
+    
+    advice_text = combined_health_advice(bmi_val, sbp, dbp)
+    summary_advice = html.escape(advice_text) if advice_text else ""
 
     return f"""
     <div class="personal-info-container">
         <hr style="margin-top: 0.5rem; margin-bottom: 0.5rem;">
-        <table class="info-table">
-            <tr>
-                <td><b>ชื่อ-สกุล:</b> {person.get('ชื่อ-สกุล', '-')}</td>
-                <td><b>อายุ:</b> {str(int(float(person.get('อายุ')))) if not is_empty(person.get('อายุ')) else '-'} ปี</td>
-                <td><b>เพศ:</b> {person.get('เพศ', '-')}</td>
-                <td><b>HN:</b> {str(int(float(person.get('HN')))) if not is_empty(person.get('HN')) else '-'}</td>
-            </tr>
-            <tr>
-                <td><b>น้ำหนัก:</b> {person.get("น้ำหนัก", "-")} กก.</td>
-                <td><b>ส่วนสูง:</b> {person.get("ส่วนสูง", "-")} ซม.</td>
-                <td><b>ความดันโลหิต:</b> {bp_full}</td>
-                <td><b>ชีพจร:</b> {pulse_val} ครั้ง/นาที</td>
-            </tr>
-        </table>
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 0.2rem; text-align: center;">
+            <span><b>ชื่อ-สกุล:</b> {person.get('ชื่อ-สกุล', '-')}</span>
+            <span><b>อายุ:</b> {str(int(float(person.get('อายุ')))) if str(person.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')} ปี</span>
+            <span><b>เพศ:</b> {person.get('เพศ', '-')}</span>
+            <span><b>HN:</b> {str(int(float(person.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person.get('HN', '-')}</span>
+            <span><b>หน่วยงาน:</b> {person.get('หน่วยงาน', '-')}</span>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 0.5rem; text-align: center;">
+            <span><b>น้ำหนัก:</b> {person.get("น้ำหนัก", "-")} กก.</span>
+            <span><b>ส่วนสูง:</b> {person.get("ส่วนสูง", "-")} ซม.</span>
+            <span><b>รอบเอว:</b> {person.get("รอบเอว", "-")} ซม.</span>
+            <span><b>ความดันโลหิต:</b> {bp_full}</span>
+            <span><b>ชีพจร:</b> {pulse_val} ครั้ง/นาที</span>
+        </div>
+        {f"<div style='margin-top: 0.5rem; text-align: center; border: 1px solid #ddd; padding: 3px; border-radius: 5px; background-color: #f8f9fa;'><b>คำแนะนำทั่วไป:</b> {summary_advice}</div>" if summary_advice else ""}
     </div>
     """
 
-# --- NEW: Performance Test Print Renderers ---
+def render_lab_section(person, sex):
+    # CBC Data
+    hb_low, hct_low = (12, 36) if sex == "หญิง" else (13, 39)
 
-def render_print_vision(person_data):
-    vision_advice = person_data.get('สรุปเหมาะสมกับงาน', 'ไม่มีข้อมูลสรุป')
-    
-    # Logic from app.py's render_vision_details_table
-    tests = [
-        {'d': 'การมองด้วย 2 ตา', 'c': 'ป.การรวมภาพ', 'nk': ['ปกติ']},
-        {'d': 'การมองภาพ 3 มิติ', 'c': 'ป.การกะระยะและมองความชัดลึกของภาพ', 'nk': ['ปกติ']},
-        {'d': 'การมองจำแนกสี', 'c': 'ป.การจำแนกสี', 'nk': ['ปกติ']},
-        {'d': 'การมองไกล (ตาขวา)', 'c': 'การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)', 'nk': ['ชัดเจน', 'ปกติ']},
-        {'d': 'การมองไกล (ตาซ้าย)', 'c': 'การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)', 'nk': ['ชัดเจน', 'ปกติ']},
-        {'d': 'การมองใกล้ (ตาขวา)', 'c': 'การมองภาพระยะใกล้ด้วยตาขวา (Near vision – Right)', 'nk': ['ชัดเจน', 'ปกติ']},
-        {'d': 'การมองใกล้ (ตาซ้าย)', 'c': 'การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision – Left)', 'nk': ['ชัดเจน', 'ปกติ']},
+    cbc_config = [
+        ("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None),
+        ("ฮีมาโตคริต (Hct)", "HCT", "ชาย > 39%, หญิง > 36%", hct_low, None),
+        ("เม็ดเลือดขาว (wbc)", "WBC (cumm)", "4,000 - 10,000 /cu.mm", 4000, 10000),
+        ("นิวโทรฟิล (Neutrophil)", "Ne (%)", "43 - 70%", 43, 70),
+        ("ลิมโฟไซต์ (Lymphocyte)", "Ly (%)", "20 - 44%", 20, 44),
+        ("โมโนไซต์ (Monocyte)", "M", "3 - 9%", 3, 9),
+        ("อีโอซิโนฟิล (Eosinophil)", "Eo", "0 - 9%", 0, 9),
+        ("เบโซฟิล (Basophil)", "BA", "0 - 3%", 0, 3),
+        ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150,000 - 500,000 /cu.mm", 150000, 500000),
     ]
+    cbc_rows = []
+    for label, col, norm, low, high in cbc_config:
+        val = get_float(col, person)
+        result, is_abn = flag(val, low, high)
+        cbc_rows.append([(label, is_abn), (result, is_abn), (norm, is_abn)])
     
-    rows_html = ""
-    for test in tests:
-        val = str(person_data.get(test['c'], '')).strip()
-        status = "ไม่ได้ตรวจ"
-        status_class = "status-nt"
-        if not is_empty(val):
-            if any(k.lower() in val.lower() for k in test['nk']):
-                status = "ปกติ"
-                status_class = "status-ok"
-            else:
-                status = "ผิดปกติ"
-                status_class = "status-abn"
-        rows_html += f"<tr><td>{test['d']}</td><td class='{status_class}'>{status}</td></tr>"
+    # Blood Chemistry Data
+    blood_config = [
+        ("น้ำตาลในเลือด (FBS)", "FBS", "74 - 106 mg/dl", 74, 106),
+        ("กรดยูริก (Uric Acid)", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2),
+        ("การทำงานของเอนไซม์ตับ (ALK)", "ALP", "30 - 120 U/L", 30, 120),
+        ("การทำงานของเอนไซม์ตับ (SGOT)", "SGOT", "< 37 U/L", None, 37),
+        ("การทำงานของเอนไซม์ตับ (SGPT)", "SGPT", "< 41 U/L", None, 41),
+        ("คลอเรสเตอรอล (CHOL)", "CHOL", "150 - 200 mg/dl", 150, 200),
+        ("ไตรกลีเซอไรด์ (TGL)", "TGL", "35 - 150 mg/dl", 35, 150),
+        ("ไขมันดี (HDL)", "HDL", "> 40 mg/dl", 40, None, True),
+        ("ไขมันเลว (LDL)", "LDL", "0 - 160 mg/dl", 0, 160),
+        ("การทำงานของไต (BUN)", "BUN", "7.9 - 20 mg/dl", 7.9, 20),
+        ("การทำงานของไต (Cr)", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17),
+        ("ประสิทธิภาพการกรองของไต (GFR)", "GFR", "> 60 mL/min", 60, None, True)
+    ]
+    blood_rows = []
+    for label, col, norm, low, high, *opt in blood_config:
+        higher = opt[0] if opt else False
+        val = get_float(col, person)
+        result, is_abn = flag(val, low, high, higher)
+        blood_rows.append([(label, is_abn), (result, is_abn), (norm, is_abn)])
 
+    cbc_html = render_lab_table_html("ผลตรวจ CBC (Complete Blood Count)", None, ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows, "print-lab-table")
+    blood_html = render_lab_table_html("ผลตรวจเลือด (Blood Chemistry)", None, ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows, "print-lab-table")
+    
     return f"""
-    <div class="perf-section">
-        {render_section_header("ผลการตรวจสมรรถภาพการมองเห็น (Vision)", is_sub_header=True)}
-        <div class="perf-columns">
-            <div class="perf-col-summary">
-                <b>สรุปความเหมาะสมกับงาน:</b>
-                <div class="summary-box">{vision_advice}</div>
-            </div>
-            <div class="perf-col-details">
-                <table class="perf-table">
-                    <thead><tr><th>รายการตรวจ</th><th>ผล</th></tr></thead>
-                    <tbody>{rows_html}</tbody>
-                </table>
-            </div>
+    <table style="width: 100%; border-collapse: collapse; page-break-inside: avoid;">
+        <tr>
+            <td style="width: 50%; vertical-align: top; padding-right: 5px;">{cbc_html}</td>
+            <td style="width: 50%; vertical-align: top; padding-left: 5px;">{blood_html}</td>
+        </tr>
+    </table>
+    """
+
+def render_other_results_html(person, sex):
+    # Urinalysis
+    urine_data = [
+        ("สี (Colour)", "Color", "Yellow, Pale Yellow"),
+        ("น้ำตาล (Sugar)", "sugar", "Negative"),
+        ("โปรตีน (Albumin)", "Alb", "Negative, trace"),
+        ("กรด-ด่าง (pH)", "pH", "5.0 - 8.0"),
+        ("ความถ่วงจำเพาะ (Sp.gr)", "Spgr", "1.003 - 1.030"),
+        ("เม็ดเลือดแดง (RBC)", "RBC1", "0 - 2 cell/HPF"),
+        ("เม็ดเลือดขาว (WBC)", "WBC1", "0 - 5 cell/HPF"),
+        ("เซลล์เยื่อบุผิว (Squam.epit.)", "SQ-epi", "0 - 10 cell/HPF"),
+        ("อื่นๆ", "ORTER", "-"),
+    ]
+    urine_rows = []
+    for label, key, norm in urine_data:
+        val = person.get(key, "-")
+        is_abn = is_urine_abnormal(label, val, norm)
+        urine_rows.append([(label, is_abn), (safe_value(val), is_abn), (norm, is_abn)])
+    urine_html = render_lab_table_html("ผลการตรวจปัสสาวะ", "Urinalysis", ["การตรวจ", "ผลตรวจ", "ค่าปกติ"], urine_rows, "print-lab-table")
+
+    # Urine Advice Box
+    urine_summary = advice_urine(sex, person.get("Alb", "-"), person.get("sugar", "-"), person.get("RBC1", "-"), person.get("WBC1", "-"))
+    urine_advice_box_html = ""
+    if urine_summary:
+        urine_advice_box_html = f"""
+        <div style="
+            background-color: #fff8e1;
+            width: 100%;
+            box-sizing: border-box;
+            margin-top: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            line-height: 1.5;
+            font-size: 11px;
+            padding: 0.4rem 1.5rem;
+            ">
+            <b>คำแนะนำผลตรวจปัสสาวะ:</b> {urine_summary}
         </div>
+        """
+
+    # Stool
+    stool_exam_raw = person.get("Stool exam", "")
+    stool_cs_raw = person.get("Stool C/S", "")
+    stool_exam_text = interpret_stool_exam(stool_exam_raw)
+    stool_cs_text = interpret_stool_cs(stool_cs_raw)
+    stool_html = f"""
+    {render_section_header("ผลตรวจอุจจาระ (Stool Examination)")}
+    <table class="print-lab-table">
+        <tr><td style="text-align: left; width: 40%;"><b>ผลตรวจอุจจาระทั่วไป</b></td><td style="text-align: left;">{stool_exam_text}</td></tr>
+        <tr><td style="text-align: left; width: 40%;"><b>ผลตรวจอุจจาระเพาะเชื้อ</b></td><td style="text-align: left;">{stool_cs_text}</td></tr>
+    </table>
+    """
+
+    # Other tests
+    year = person.get("Year", datetime.now().year + 543)
+    cxr_result = interpret_cxr(person.get(f"CXR{str(year)[-2:]}" if year != (datetime.now().year+543) else "CXR", ""))
+    ekg_result = interpret_ekg(person.get(get_ekg_col_name(year), ""))
+    other_tests_html = f"""
+    {render_section_header("ผลตรวจอื่นๆ")}
+    <table class="print-lab-table">
+        <tr><td style="text-align: left; width: 40%;"><b>ผลเอกซเรย์ (Chest X-ray)</b></td><td style="text-align: left;">{cxr_result}</td></tr>
+        <tr><td style="text-align: left; width: 40%;"><b>ผลคลื่นไฟฟ้าหัวใจ (EKG)</b></td><td style="text-align: left;">{ekg_result}</td></tr>
+    </table>
+    """
+
+    # Hepatitis
+    hep_a_value = person.get("Hepatitis A")
+    hep_a_display_text = "ไม่ได้เข้ารับการตรวจไวรัสตับอักเสบเอ" if is_empty(hep_a_value) else safe_text(hep_a_value)
+    hbsag_raw = safe_text(person.get("HbsAg"))
+    hbsab_raw = safe_text(person.get("HbsAb"))
+    hbcab_raw = safe_text(person.get("HBcAB"))
+    hep_b_advice, hep_b_status = hepatitis_b_advice(hbsag_raw, hbsab_raw, hbcab_raw)
+
+    advice_bg_color = "#f8f9fa"  # default gray
+    if hep_b_status == 'infection':
+        advice_bg_color = '#ffdddd'  # red highlight
+    elif hep_b_status == 'no_immunity':
+        advice_bg_color = '#fff8e1'  # yellow highlight
+
+    hepatitis_html = f"""
+    {render_section_header("ผลตรวจไวรัสตับอักเสบ (Viral Hepatitis)")}
+    <table class="print-lab-table">
+        <tr><td style="text-align: left; width: 40%;"><b>ไวรัสตับอักเสบ เอ</b></td><td style="text-align: left;">{hep_a_display_text}</td></tr>
+        <tr><td style="text-align: left; width: 40%;"><b>ไวรัสตับอักเสบ บี (HBsAg)</b></td><td style="text-align: left;">{hbsag_raw}</td></tr>
+        <tr><td style="text-align: left; width: 40%;"><b>ภูมิคุ้มกัน (HBsAb)</b></td><td style="text-align: left;">{hbsab_raw}</td></tr>
+        <tr><td style="text-align: left; width: 40%;"><b>การติดเชื้อ (HBcAb)</b></td><td style="text-align: left;">{hbcab_raw}</td></tr>
+        <tr><td colspan="2" style="text-align: left; background-color: {advice_bg_color};"><b>คำแนะนำ:</b> {hep_b_advice}</td></tr>
+    </table>
+    """
+
+    # --- แก้ไข: เรียกใช้ฟังก์ชัน generate_holistic_advice เพื่อให้ข้อมูลตรงกัน ---
+    doctor_suggestion = generate_holistic_advice(person)
+    doctor_suggestion_html = f"""
+    <div style="background-color: #e8f5e9; color: #1b5e20; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; margin-top: 1rem; font-size: 11px; border: 1px solid #a5d6a7;">
+        <b>สรุปความเห็นของแพทย์:</b><br> {doctor_suggestion}
     </div>
     """
 
-def render_print_hearing(person_data):
-    results = interpret_audiogram(person_data) # No history needed for basic print
-    if results['summary'].get('overall') == "ไม่ได้เข้ารับการตรวจ": return ""
-
-    summary_r = person_data.get('ผลตรวจการได้ยินหูขวา', 'N/A')
-    summary_l = person_data.get('ผลตรวจการได้ยินหูซ้าย', 'N/A')
-    advice = results.get('advice', 'ไม่มีคำแนะนำ')
-
-    raw_data = results.get('raw_values', {})
-    rows_html = ""
-    for freq, values in raw_data.items():
-        r_val = values.get('right', '-')
-        l_val = values.get('left', '-')
-        rows_html += f"<tr><td>{freq}</td><td>{r_val}</td><td>{l_val}</td></tr>"
-
+    # จัดเรียง Layout ใหม่
     return f"""
-    <div class="perf-section">
-        {render_section_header("ผลการตรวจสมรรถภาพการได้ยิน (Hearing)", is_sub_header=True)}
-        <div class="perf-columns">
-            <div class="perf-col-summary">
-                <b>สรุปผล:</b>
-                <div class="summary-box">
-                    <b>หูขวา:</b> {summary_r}<br>
-                    <b>หูซ้าย:</b> {summary_l}
-                </div>
-                <b>คำแนะนำ:</b>
-                <div class="summary-box">{advice}</div>
-            </div>
-            <div class="perf-col-details">
-                <table class="perf-table">
-                    <thead><tr><th>ความถี่ (Hz)</th><th>หูขวา (dB)</th><th>หูซ้าย (dB)</th></tr></thead>
-                    <tbody>{rows_html}</tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+    <table style="width: 100%; border-collapse: collapse; page-break-inside: avoid;">
+        <tr>
+            <td style="width: 50%; vertical-align: top; padding-right: 5px;">
+                {urine_html}
+                {urine_advice_box_html}
+                {stool_html}
+            </td>
+            <td style="width: 50%; vertical-align: top; padding-left: 5px;">
+                {other_tests_html}
+                {hepatitis_html}
+                {doctor_suggestion_html}
+            </td>
+        </tr>
+    </table>
     """
-
-def render_print_lung(person_data):
-    summary, advice, raw = interpret_lung_capacity(person_data)
-    if summary == "ไม่ได้เข้ารับการตรวจ": return ""
-
-    def format_val(key):
-        val = raw.get(key)
-        return f"{val:.1f}" if val is not None else "-"
-
-    return f"""
-    <div class="perf-section">
-        {render_section_header("ผลการตรวจสมรรถภาพปอด (Lung Function)", is_sub_header=True)}
-        <table class="info-table lung-table">
-            <tr>
-                <th>FVC (% Pred)</th><th>FEV1 (% Pred)</th><th>FEV1/FVC Ratio (%)</th>
-            </tr>
-            <tr>
-                <td>{format_val('FVC %')}</td><td>{format_val('FEV1 %')}</td><td>{format_val('FEV1/FVC %')}</td>
-            </tr>
-        </table>
-        <div class="perf-columns" style="margin-top: 0.5rem;">
-             <div class="perf-col-summary">
-                <b>สรุปผล:</b>
-                <div class="summary-box">{summary}</div>
-            </div>
-             <div class="perf-col-summary">
-                <b>คำแนะนำ:</b>
-                <div class="summary-box">{advice}</div>
-            </div>
-        </div>
-    </div>
-    """
-
-
-# --- Main Report Generator ---
 
 def generate_printable_report(person):
     """
-    Generates a full, self-contained HTML string for the health report,
-    including performance tests if available.
+    Generates a full, self-contained HTML string for the health report.
     """
-    # --- Generate all HTML parts for the main report ---
+    sex = str(person.get("เพศ", "")).strip()
+    if sex not in ["ชาย", "หญิง"]: sex = "ไม่ระบุ"
+    
+    # --- Generate all HTML parts ---
     header_html = render_html_header(person)
     personal_info_html = render_personal_info(person)
-    recommendations_html = generate_comprehensive_recommendations(person)
+    lab_section_html = render_lab_section(person, sex)
+    other_results_html = render_other_results_html(person, sex)
 
-    # --- NEW: Generate Performance Test HTML (if data exists) ---
-    performance_html_parts = []
-    if has_vision_data(person):
-        performance_html_parts.append(render_print_vision(person))
-    if has_hearing_data(person):
-        performance_html_parts.append(render_print_hearing(person))
-    if has_lung_data(person):
-        performance_html_parts.append(render_print_lung(person))
+    # --- Blood Advice Box ---
+    blood_advice_list = [
+        kidney_advice_from_summary(kidney_summary_gfr_only(person.get("GFR", ""))),
+        fbs_advice(person.get("FBS", "")),
+        liver_advice(summarize_liver(person.get("ALP", ""), person.get("SGOT", ""), person.get("SGPT", ""))),
+        uric_acid_advice(person.get("Uric Acid", "")),
+        lipids_advice(summarize_lipids(person.get("CHOL", ""), person.get("TGL", ""), person.get("LDL", ""))),
+        cbc_advice(person.get("Hb(%)", ""), person.get("HCT", ""), person.get("WBC (cumm)", ""), person.get("Plt (/mm)", ""), sex=sex),
+    ]
+    final_blood_advice_html = merge_final_advice_grouped(blood_advice_list)
+    has_blood_advice = "ไม่พบคำแนะนำเพิ่มเติม" not in final_blood_advice_html
+    bg_color_blood_advice = "#fff8e1" if has_blood_advice else "#e8f5e9"
     
-    performance_section_html = ""
-    if performance_html_parts:
-        performance_section_html = (
-            render_section_header("ผลการตรวจสมรรถภาพพิเศษ (Performance Tests)") +
-            "".join(performance_html_parts)
-        )
+    blood_advice_box_html = f"""
+    <div style="background-color: {bg_color_blood_advice}; padding: 0.4rem 1.5rem; border-radius: 8px; line-height: 1.5; font-size: 11px; margin-top: 0.5rem; border: 1px solid #ddd;">
+        {final_blood_advice_html}
+    </div>
+    """
+
+    # --- Signature ---
+    signature_html = """
+    <div style="margin-top: 2rem; text-align: right; padding-right: 1rem; page-break-inside: avoid;">
+        <div style="display: inline-block; text-align: center; width: 280px;">
+            <div style="border-bottom: 1px dotted #333; margin-bottom: 0.4rem; width: 100%;"></div>
+            <div style="white-space: nowrap;">นายแพทย์นพรัตน์ รัชฎาพร</div>
+            <div style="white-space: nowrap;">เลขที่ใบอนุญาตผู้ประกอบวิชาชีพเวชกรรม ว.26674</div>
+        </div>
+    </div>
+    """
 
     # --- Assemble the final HTML page ---
     final_html = f"""
@@ -306,38 +832,16 @@ def generate_printable_report(person):
             }}
             p, div, span, td, th {{ line-height: 1.4; }}
             table {{ border-collapse: collapse; width: 100%; }}
-            hr {{ border: 0; border-top: 1px solid #ccc; }}
-            ul {{ padding-left: 15px; margin: 0.2rem 0; }}
-            li {{ margin-bottom: 2px; }}
-
-            .info-table td {{ padding: 2px 5px; }}
-            
-            .recommendation-section {{
-                page-break-inside: avoid;
-                margin-top: 1rem;
+            .print-lab-table td, .print-lab-table th {{
+                padding: 1px 3px;
+                border: 1px solid #ccc;
+                text-align: center;
+                vertical-align: middle;
             }}
-            .rec-columns {{ display: flex; flex-wrap: nowrap; gap: 20px; align-items: flex-start; }}
-            .rec-col {{ flex: 1; min-width: 0; }}
-            
-            .perf-section {{ page-break-inside: avoid; margin-top: 0.5rem; }}
-            .perf-columns {{ display: flex; flex-wrap: nowrap; gap: 15px; align-items: flex-start; }}
-            .perf-col-summary {{ flex: 1; }}
-            .perf-col-details {{ flex: 1.2; }}
-            .summary-box {{ 
-                border: 1px solid #eee; background-color: #fcfcfc; 
-                padding: 5px; border-radius: 4px; margin-top: 2px; 
-                min-height: 3em;
-            }}
-            .perf-table {{ width: 100%; font-size: 8px; }}
-            .perf-table th, .perf-table td {{ border: 1px solid #ddd; padding: 2px 4px; text-align: center; }}
-            .perf-table th {{ background-color: #f2f2f2; }}
-            .perf-table td:first-child {{ text-align: left; }}
-            .lung-table th, .lung-table td {{ text-align: center; border: 1px solid #ddd; padding: 3px; }}
-            
-            .status-ok {{ background-color: #e8f5e9; color: #2e7d32; }}
-            .status-abn {{ background-color: #ffcdd2; color: #c62828; font-weight: bold; }}
-            .status-nt {{ color: #757575; }}
-
+            .print-lab-table th {{ background-color: #f2f2f2; font-weight: bold; }}
+            .print-lab-table-abn {{ background-color: #ffdddd !important; }}
+            ul {{ padding-left: 20px; margin: 0; }}
+            li {{ margin-bottom: 4px; }}
             @media print {{
                 body {{ -webkit-print-color-adjust: exact; margin: 0; }}
             }}
@@ -346,278 +850,11 @@ def generate_printable_report(person):
     <body>
         {header_html}
         {personal_info_html}
-        {render_section_header("สรุปผลตรวจและคำแนะนำ (Summary & Recommendations)")}
-        <div class="recommendation-section">
-            <div class="rec-columns">
-                <div class="rec-col">
-                    {recommendations_html.split("<!-- SPLIT -->")[0]}
-                </div>
-                <div class="rec-col">
-                    {recommendations_html.split("<!-- SPLIT -->")[1]}
-                </div>
-            </div>
-        </div>
-        
-        {performance_section_html}
-
+        {lab_section_html}
+        {blood_advice_box_html}
+        {other_results_html}
+        {signature_html}
     </body>
     </html>
     """
-    # Quick fix for splitting recommendations into two columns in the print layout
-    # by splitting the generated HTML.
-    # A more robust solution would be to generate left and right columns separately.
-    # This is a temporary solution to meet the request.
-    
-    # Let's refine the split logic. I'll inject a split point in the generator.
-    
-    # Re-generate recommendations with a split point
-    recommendations_html_full = generate_comprehensive_recommendations(person)
-    
-    # Split the HTML for two-column layout
-    rec_parts = recommendations_html_full.split("<!-- SPLIT -->")
-    rec_left_html = rec_parts[0]
-    rec_right_html = rec_parts[1] if len(rec_parts) > 1 else ""
-
-    # Re-assemble the final HTML with the correct split
-    final_html = final_html.replace(
-        '<div class="rec-col">', 
-        f'<div class="rec-col">{rec_left_html}</div><div class="rec-col">{rec_right_html}</div><!--', 
-        1
-    ).replace(
-        '</div>',
-        '-->',
-        1
-    )
-
-
     return final_html
-
-# --- แก้ไข generate_comprehensive_recommendations ให้รองรับการแบ่งคอลัมน์ ---
-def generate_comprehensive_recommendations(person_data):
-    """
-    สร้างสรุปและคำแนะนำฯ และแทรกจุดแบ่งคอลัมน์สำหรับหน้าพิมพ์
-    """
-    key_indicators = ['FBS', 'CHOL', 'HCT', 'Cr', 'WBC (cumm)', 'น้ำหนัก', 'ส่วนสูง', 'SBP']
-    has_data = any(not is_empty(person_data.get(key)) for key in key_indicators)
-
-    if not has_data:
-        return "" 
-
-    issues = {'high': [], 'medium': [], 'low': []}
-    conditions = set()
-    
-    # ... (โค้ดการแปลผลทั้งหมดเหมือนเดิม) ...
-    # --- 1. Vital Signs & BMI ---
-    weight = get_float(person_data, "น้ำหนัก")
-    height = get_float(person_data, "ส่วนสูง")
-    sbp = get_float(person_data, "SBP")
-    dbp = get_float(person_data, "DBP")
-
-    if weight and height and height > 0:
-        bmi = weight / ((height / 100) ** 2)
-        if bmi >= 30:
-            issues['medium'].append(f"<b>ภาวะอ้วน (BMI ≥ 30):</b> เป็นความเสี่ยงหลักต่อโรคเรื้อรังต่างๆ")
-            conditions.add('obesity')
-        elif bmi >= 25:
-            issues['low'].append(f"<b>น้ำหนักเกินเกณฑ์ (BMI 25-29.9):</b> ควรเริ่มควบคุมอาหารและออกกำลังกาย")
-            conditions.add('overweight')
-    
-    if sbp and dbp:
-        if sbp >= 160 or dbp >= 100:
-            issues['high'].append(f"<b>ความดันโลหิตสูงรุนแรง ({int(sbp)}/{int(dbp)} mmHg):</b> มีความเสี่ยงอันตราย ควรพบแพทย์โดยเร็ว")
-            conditions.add('hypertension')
-        elif sbp >= 140 or dbp >= 90:
-            issues['medium'].append(f"<b>ความดันโลหิตสูง ({int(sbp)}/{int(dbp)} mmHg):</b> ควรปรับเปลี่ยนพฤติกรรมและติดตามใกล้ชิด")
-            conditions.add('hypertension')
-        elif sbp >= 120 or dbp >= 80:
-            issues['low'].append(f"<b>ความดันโลหิตเริ่มสูง ({int(sbp)}/{int(dbp)} mmHg):</b> เป็นสัญญาณเตือนให้เริ่มดูแลสุขภาพ")
-            conditions.add('prehypertension')
-
-    # --- 2. Blood Chemistry ---
-    fbs = get_float(person_data, "FBS")
-    if fbs:
-        if fbs >= 126:
-            issues['high'].append(f"<b>ระดับน้ำตาลในเลือดสูง ({int(fbs)} mg/dL):</b> เข้าเกณฑ์เบาหวาน ควรพบแพทย์เพื่อยืนยันและรักษา")
-            conditions.add('diabetes')
-        elif fbs >= 100:
-            issues['medium'].append(f"<b>ภาวะเสี่ยงเบาหวาน ({int(fbs)} mg/dL):</b> ควรควบคุมอาหารและออกกำลังกายอย่างจริงจัง")
-            conditions.add('prediabetes')
-
-    chol = get_float(person_data, "CHOL")
-    tgl = get_float(person_data, "TGL")
-    ldl = get_float(person_data, "LDL")
-    hdl = get_float(person_data, "HDL")
-    lipid_issues_text = []
-    is_lipid_high_risk = False
-    
-    if chol:
-        if chol >= 240:
-            lipid_issues_text.append("คอเลสเตอรอลสูงมาก")
-            is_lipid_high_risk = True
-        elif chol >= 200:
-            lipid_issues_text.append("คอเลสเตอรอลสูง")
-    if tgl:
-        if tgl >= 500:
-            lipid_issues_text.append("ไตรกลีเซอไรด์สูงมาก")
-            is_lipid_high_risk = True
-        elif tgl >= 200:
-            lipid_issues_text.append("ไตรกลีเซอไรด์สูง")
-        elif tgl >= 150:
-            lipid_issues_text.append("ไตรกลีเซอไรด์เริ่มสูง")
-    if ldl:
-        if ldl >= 190:
-            lipid_issues_text.append("LDL (ไขมันเลว) สูงมาก")
-            is_lipid_high_risk = True
-        elif ldl >= 160:
-            lipid_issues_text.append("LDL (ไขมันเลว) สูง")
-        elif ldl >= 130:
-            lipid_issues_text.append("LDL (ไขมันเลว) เริ่มสูง")
-    if hdl and hdl < 40:
-        lipid_issues_text.append("HDL (ไขมันดี) ต่ำ")
-
-    if lipid_issues_text:
-        risk_level = 'high' if is_lipid_high_risk else 'medium'
-        issues[risk_level].append(f"<b>ภาวะไขมันในเลือดผิดปกติ ({', '.join(lipid_issues_text)}):</b> เพิ่มความเสี่ยงโรคหัวใจและหลอดเลือด")
-        conditions.add('dyslipidemia')
-
-    gfr = get_float(person_data, "GFR")
-    if gfr:
-        if gfr < 30:
-            issues['high'].append("<b>การทำงานของไตลดลงมาก (ระยะ 4-5):</b> ควรพบแพทย์ผู้เชี่ยวชาญโรคไตโดยด่วน")
-            conditions.add('kidney_disease')
-        elif gfr < 60:
-            issues['medium'].append("<b>การทำงานของไตเริ่มเสื่อม (ระยะ 3):</b> ควรลดอาหารเค็มและโปรตีนสูง ปรึกษาแพทย์")
-            conditions.add('kidney_disease')
-        elif gfr < 90:
-             issues['low'].append("<b>การทำงานของไตลดลงเล็กน้อย (ระยะ 2):</b> ควรดื่มน้ำให้เพียงพอและหลีกเลี่ยงยาที่มีผลต่อไต")
-             conditions.add('kidney_disease')
-
-    sgot = get_float(person_data, "SGOT")
-    sgpt = get_float(person_data, "SGPT")
-    sgot_upper, sgpt_upper = 37, 41
-    if (sgot and sgot > sgot_upper) or (sgpt and sgpt > sgpt_upper):
-        if (sgot and sgot > sgot_upper * 3) or (sgpt and sgpt > sgpt_upper * 3):
-            issues['high'].append("<b>ค่าเอนไซม์ตับสูงมาก:</b> บ่งชี้ภาวะตับอักเสบ ควรพบแพทย์โดยเร็ว")
-        else:
-            issues['medium'].append("<b>ค่าเอนไซม์ตับสูง:</b> อาจเกิดจากไขมันพอกตับ ควรลดของมัน แอลกอฮอล์")
-        conditions.add('liver')
-
-    uric = get_float(person_data, "Uric Acid")
-    if uric:
-        if uric > 9.0:
-            issues['medium'].append("<b>กรดยูริกสูงมาก:</b> มีความเสี่ยงสูงต่อโรคเกาต์ ควรปรึกษาแพทย์")
-            conditions.add('uric_acid')
-        elif uric > 7.2:
-            issues['low'].append("<b>กรดยูริกสูง:</b> เสี่ยงต่อโรคเกาต์ ควรลดการทานเครื่องในสัตว์ สัตว์ปีก")
-            conditions.add('uric_acid')
-
-    # --- 3. Complete Blood Count (CBC) ---
-    sex = person_data.get("เพศ", "ชาย")
-    hb = get_float(person_data, "Hb(%)")
-    wbc = get_float(person_data, "WBC (cumm)")
-    platelet = get_float(person_data, "Plt (/mm)")
-    
-    hb_limit = 12 if sex == "หญิง" else 13
-    if hb and hb < hb_limit:
-        issues['medium'].append("<b>ภาวะโลหิตจาง:</b> ควรทานอาหารที่มีธาตุเหล็กสูงและตรวจหาสาเหตุเพิ่มเติม")
-        conditions.add('anemia')
-        
-    if wbc:
-        if wbc > 10000: issues['medium'].append("<b>เม็ดเลือดขาวสูง:</b> อาจมีการอักเสบหรือติดเชื้อในร่างกาย ควรตรวจหาสาเหตุ")
-        if wbc < 4000: issues['low'].append("<b>เม็ดเลือดขาวต่ำ:</b> อาจส่งผลต่อภูมิคุ้มกัน ควรพักผ่อนให้เพียงพอ")
-        
-    if platelet:
-        if platelet < 150000: issues['medium'].append("<b>เกล็ดเลือดต่ำ:</b> อาจเสี่ยงเลือดออกง่าย ควรระมัดระวังอุบัติเหตุและปรึกษาแพทย์")
-        if platelet > 500000: issues['medium'].append("<b>เกล็ดเลือดสูง:</b> ควรพบแพทย์เพื่อตรวจหาสาเหตุ")
-
-    # --- 4. Urinalysis, Stool, X-ray, EKG, Hepatitis ---
-    urine_issues = interpret_urine(person_data)
-    for issue, (text, level) in urine_issues.items():
-        issues[level].append(f"<b>{issue}:</b> {text}")
-
-    stool_issues = interpret_stool(person_data)
-    for issue, (text, level) in stool_issues.items():
-        issues[level].append(f"<b>{issue}:</b> {text}")
-        
-    hep_issues = interpret_hepatitis(person_data)
-    for issue, (text, level) in hep_issues.items():
-        issues[level].append(f"<b>{issue}:</b> {text}")
-
-    year = person_data.get("Year", "")
-    cxr_col = f"CXR{str(year)[-2:]}" if str(year) != "" and str(year) != str(np.datetime64('now', 'Y').astype(int) + 1970 + 543) else "CXR"
-    cxr_result, cxr_status = interpret_cxr(person_data.get(cxr_col, ''))
-    if cxr_status == 'abnormal':
-        issues['high'].append(f"<b>ผลเอกซเรย์ทรวงอกผิดปกติ ({cxr_result}):</b> ควรพบแพทย์เพื่อตรวจวินิจฉัยเพิ่มเติม")
-
-    ekg_col = f"EKG{str(year)[-2:]}" if str(year) != "" and str(year) != str(np.datetime64('now', 'Y').astype(int) + 1970 + 543) else "EKG"
-    ekg_result, ekg_status = interpret_ekg(person_data.get(ekg_col, ''))
-    if ekg_status == 'abnormal':
-        issues['high'].append(f"<b>ผลคลื่นไฟฟ้าหัวใจผิดปกติ ({ekg_result}):</b> ควรพบแพทย์โรคหัวใจ")
-
-    # --- Build Left Column (Issues) ---
-    left_column_parts = []
-    if issues['high']:
-        left_column_parts.append("<div style='border-left: 5px solid #c62828; padding-left: 15px; margin-bottom: 1.5rem;'>")
-        left_column_parts.append("<h5 style='color: #c62828; margin-top:0;'>ควรพบแพทย์เพื่อประเมินเพิ่มเติม</h5><ul>")
-        for item in set(issues['high']): left_column_parts.append(f"<li>{item}</li>")
-        left_column_parts.append("</ul></div>")
-    if issues['medium']:
-        left_column_parts.append("<div style='border-left: 5px solid #f9a825; padding-left: 15px; margin-bottom: 1.5rem;'>")
-        left_column_parts.append("<h5 style='color: #f9a825; margin-top:0;'>ประเด็นสุขภาพที่ควรปรับพฤติกรรม</h5><ul>")
-        for item in set(issues['medium']): left_column_parts.append(f"<li>{item}</li>")
-        left_column_parts.append("</ul></div>")
-    if issues['low']:
-        left_column_parts.append("<div style='border-left: 5px solid #1976d2; padding-left: 15px; margin-bottom: 1.5rem;'>")
-        left_column_parts.append("<h5 style='color: #1976d2; margin-top:0;'>ข้อควรระวังและการเฝ้าติดตาม</h5><ul>")
-        for item in set(issues['low']): left_column_parts.append(f"<li>{item}</li>")
-        left_column_parts.append("</ul></div>")
-
-    # --- Build Right Column (Health Plan) ---
-    right_column_parts = []
-    health_plan = {'nutrition': set(), 'exercise': set(), 'monitoring': set()}
-    
-    if 'diabetes' in conditions or 'prediabetes' in conditions:
-        health_plan['nutrition'].add("ควบคุมอาหารประเภทแป้งและน้ำตาลอย่างจริงจัง")
-        health_plan['monitoring'].add("ตรวจติดตามระดับน้ำตาลในเลือดสม่ำเสมอ")
-    if 'hypertension' in conditions or 'prehypertension' in conditions:
-        health_plan['nutrition'].add("ลดอาหารเค็มและโซเดียมสูง")
-        health_plan['monitoring'].add("วัดความดันโลหิตที่บ้านอย่างสม่ำเสมอ")
-    if 'dyslipidemia' in conditions:
-        health_plan['nutrition'].add("ลดอาหารมัน ของทอด และไขมันอิ่มตัว")
-    if 'obesity' in conditions or 'overweight' in conditions:
-        health_plan['nutrition'].add("ควบคุมปริมาณอาหารและเลือกทานอาหารแคลอรี่ต่ำ")
-    if 'kidney_disease' in conditions:
-        health_plan['nutrition'].add("ลดอาหารเค็มจัดและโปรตีนสูงบางชนิด (ปรึกษาแพทย์)")
-        health_plan['monitoring'].add("ดื่มน้ำให้เพียงพอและหลีกเลี่ยงยาที่มีผลต่อไต")
-    if 'liver' in conditions:
-        health_plan['nutrition'].add("งดเครื่องดื่มแอลกอฮอล์และลดอาหารไขมันสูง")
-    if 'uric_acid' in conditions:
-        health_plan['nutrition'].add("ลดการทานเครื่องในสัตว์, สัตว์ปีก, และยอดผัก")
-    if 'anemia' in conditions:
-        health_plan['nutrition'].add("ทานอาหารที่มีธาตุเหล็กและวิตามินซีสูง เช่น ตับ, เนื้อแดง, ผักใบเขียว")
-
-    if any(c in conditions for c in ['obesity', 'overweight', 'hypertension', 'diabetes', 'prediabetes', 'dyslipidemia']):
-        health_plan['exercise'].add("ออกกำลังกายแบบแอโรบิก (เดินเร็ว, วิ่ง, ว่ายน้ำ) อย่างน้อย 150 นาที/สัปดาห์")
-    else:
-        health_plan['exercise'].add("เคลื่อนไหวร่างกายอย่างสม่ำเสมอ 3-4 วัน/สัปดาห์")
-
-    health_plan['monitoring'].add("นอนหลับพักผ่อนให้เพียงพอ 7-8 ชั่วโมง/คืน")
-    health_plan['monitoring'].add("มาตรวจสุขภาพประจำปีเพื่อติดตามผล")
-
-    right_column_parts.append("<div style='border-left: 5px solid #4caf50; padding-left: 15px;'>")
-    right_column_parts.append("<h5 style='color: #4caf50; margin-top:0;'>แผนการดูแลสุขภาพเบื้องต้น (Your Health Plan)</h5>")
-    if health_plan['nutrition']:
-        right_column_parts.append("<b>ด้านโภชนาการ:</b><ul>")
-        for item in sorted(list(health_plan['nutrition'])): right_column_parts.append(f"<li>{item}</li>")
-        right_column_parts.append("</ul>")
-    if health_plan['exercise']:
-        right_column_parts.append("<b>ด้านการออกกำลังกาย:</b><ul>")
-        for item in sorted(list(health_plan['exercise'])): right_column_parts.append(f"<li>{item}</li>")
-        right_column_parts.append("</ul>")
-    if health_plan['monitoring']:
-        right_column_parts.append("<b>การติดตามและดูแลทั่วไป:</b><ul>")
-        for item in sorted(list(health_plan['monitoring'])): right_column_parts.append(f"<li>{item}</li>")
-        right_column_parts.append("</ul>")
-    right_column_parts.append("</div>")
-
-    return "".join(left_column_parts) + "<!-- SPLIT -->" + "".join(right_column_parts)
