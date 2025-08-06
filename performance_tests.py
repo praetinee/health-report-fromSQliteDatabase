@@ -241,7 +241,6 @@ def generate_comprehensive_recommendations(person_data):
         issues['high'].append(f"<b>ผลคลื่นไฟฟ้าหัวใจผิดปกติ ({ekg_result}):</b> ควรพบแพทย์โรคหัวใจ")
 
     # --- Build the final HTML output ---
-    html_parts = []
     
     if not any(issues.values()):
         return """
@@ -251,29 +250,30 @@ def generate_comprehensive_recommendations(person_data):
         </div>
         """
 
-    # Detailed Issues
+    # --- Build Left Column (Issues) ---
+    left_column_parts = []
     if issues['high']:
-        html_parts.append("<div style='border-left: 5px solid #c62828; padding-left: 15px; margin-bottom: 1.5rem;'>")
-        html_parts.append("<h5 style='color: #c62828; margin-top:0;'>ควรพบแพทย์เพื่อประเมินเพิ่มเติม</h5><ul>")
-        for item in set(issues['high']): html_parts.append(f"<li>{item}</li>")
-        html_parts.append("</ul></div>")
+        left_column_parts.append("<div style='border-left: 5px solid #c62828; padding-left: 15px; margin-bottom: 1.5rem;'>")
+        left_column_parts.append("<h5 style='color: #c62828; margin-top:0;'>ควรพบแพทย์เพื่อประเมินเพิ่มเติม</h5><ul>")
+        for item in set(issues['high']): left_column_parts.append(f"<li>{item}</li>")
+        left_column_parts.append("</ul></div>")
 
     if issues['medium']:
-        html_parts.append("<div style='border-left: 5px solid #f9a825; padding-left: 15px; margin-bottom: 1.5rem;'>")
-        html_parts.append("<h5 style='color: #f9a825; margin-top:0;'>ประเด็นสุขภาพที่ควรปรับพฤติกรรม</h5><ul>")
-        for item in set(issues['medium']): html_parts.append(f"<li>{item}</li>")
-        html_parts.append("</ul></div>")
+        left_column_parts.append("<div style='border-left: 5px solid #f9a825; padding-left: 15px; margin-bottom: 1.5rem;'>")
+        left_column_parts.append("<h5 style='color: #f9a825; margin-top:0;'>ประเด็นสุขภาพที่ควรปรับพฤติกรรม</h5><ul>")
+        for item in set(issues['medium']): left_column_parts.append(f"<li>{item}</li>")
+        left_column_parts.append("</ul></div>")
 
     if issues['low']:
-        html_parts.append("<div style='border-left: 5px solid #1976d2; padding-left: 15px; margin-bottom: 1.5rem;'>")
-        html_parts.append("<h5 style='color: #1976d2; margin-top:0;'>ข้อควรระวังและการเฝ้าติดตาม</h5><ul>")
-        for item in set(issues['low']): html_parts.append(f"<li>{item}</li>")
-        html_parts.append("</ul></div>")
+        left_column_parts.append("<div style='border-left: 5px solid #1976d2; padding-left: 15px; margin-bottom: 1.5rem;'>")
+        left_column_parts.append("<h5 style='color: #1976d2; margin-top:0;'>ข้อควรระวังและการเฝ้าติดตาม</h5><ul>")
+        for item in set(issues['low']): left_column_parts.append(f"<li>{item}</li>")
+        left_column_parts.append("</ul></div>")
 
-    # --- Build Personalized Health Plan ---
+    # --- Build Right Column (Health Plan) ---
+    right_column_parts = []
     health_plan = {'nutrition': set(), 'exercise': set(), 'monitoring': set()}
     
-    # Map conditions to advice
     if 'diabetes' in conditions or 'prediabetes' in conditions:
         health_plan['nutrition'].add("ควบคุมอาหารประเภทแป้งและน้ำตาลอย่างจริงจัง")
         health_plan['monitoring'].add("ตรวจติดตามระดับน้ำตาลในเลือดสม่ำเสมอ")
@@ -294,38 +294,50 @@ def generate_comprehensive_recommendations(person_data):
     if 'anemia' in conditions:
         health_plan['nutrition'].add("ทานอาหารที่มีธาตุเหล็กและวิตามินซีสูง เช่น ตับ, เนื้อแดง, ผักใบเขียว")
 
-    # General exercise advice based on NCD risk
     if any(c in conditions for c in ['obesity', 'overweight', 'hypertension', 'diabetes', 'prediabetes', 'dyslipidemia']):
         health_plan['exercise'].add("ออกกำลังกายแบบแอโรบิก (เดินเร็ว, วิ่ง, ว่ายน้ำ) อย่างน้อย 150 นาที/สัปดาห์")
     else:
         health_plan['exercise'].add("เคลื่อนไหวร่างกายอย่างสม่ำเสมอ 3-4 วัน/สัปดาห์")
 
-    # Universal advice
     health_plan['monitoring'].add("นอนหลับพักผ่อนให้เพียงพอ 7-8 ชั่วโมง/คืน")
     health_plan['monitoring'].add("มาตรวจสุขภาพประจำปีเพื่อติดตามผล")
 
-    # Build HTML for Health Plan
-    html_parts.append("<div style='border-left: 5px solid #4caf50; padding-left: 15px; margin-top: 2rem;'>")
-    html_parts.append("<h5 style='color: #4caf50; margin-top:0;'>แผนการดูแลสุขภาพเบื้องต้น (Your Health Plan)</h5>")
+    right_column_parts.append("<div style='border-left: 5px solid #4caf50; padding-left: 15px;'>")
+    right_column_parts.append("<h5 style='color: #4caf50; margin-top:0;'>แผนการดูแลสุขภาพเบื้องต้น (Your Health Plan)</h5>")
     
     if health_plan['nutrition']:
-        html_parts.append("<b>ด้านโภชนาการ:</b><ul>")
-        for item in sorted(list(health_plan['nutrition'])): html_parts.append(f"<li>{item}</li>")
-        html_parts.append("</ul>")
+        right_column_parts.append("<b>ด้านโภชนาการ:</b><ul>")
+        for item in sorted(list(health_plan['nutrition'])): right_column_parts.append(f"<li>{item}</li>")
+        right_column_parts.append("</ul>")
         
     if health_plan['exercise']:
-        html_parts.append("<b>ด้านการออกกำลังกาย:</b><ul>")
-        for item in sorted(list(health_plan['exercise'])): html_parts.append(f"<li>{item}</li>")
-        html_parts.append("</ul>")
+        right_column_parts.append("<b>ด้านการออกกำลังกาย:</b><ul>")
+        for item in sorted(list(health_plan['exercise'])): right_column_parts.append(f"<li>{item}</li>")
+        right_column_parts.append("</ul>")
 
     if health_plan['monitoring']:
-        html_parts.append("<b>การติดตามและดูแลทั่วไป:</b><ul>")
-        for item in sorted(list(health_plan['monitoring'])): html_parts.append(f"<li>{item}</li>")
-        html_parts.append("</ul>")
+        right_column_parts.append("<b>การติดตามและดูแลทั่วไป:</b><ul>")
+        for item in sorted(list(health_plan['monitoring'])): right_column_parts.append(f"<li>{item}</li>")
+        right_column_parts.append("</ul>")
 
-    html_parts.append("</div>")
+    right_column_parts.append("</div>")
 
-    return "".join(html_parts)
+    # --- Combine into a two-column layout ---
+    left_html = "".join(left_column_parts)
+    right_html = "".join(right_column_parts)
+
+    final_html = f"""
+    <div style="display: flex; flex-wrap: wrap; gap: 30px; align-items: flex-start;">
+        <div style="flex: 1; min-width: 300px;">
+            {left_html}
+        </div>
+        <div style="flex: 1; min-width: 300px;">
+            {right_html}
+        </div>
+    </div>
+    """
+    
+    return final_html
     
 def interpret_vision(vision_raw, color_blindness_raw):
     """
