@@ -843,7 +843,8 @@ def display_main_report(person_data, all_person_history_df):
     
     left_spacer3, main_col3, right_spacer3 = st.columns([0.5, 6, 0.5])
     with main_col3:
-        st.markdown(render_section_header("สรุปและคำแนะนำการปฏิบัติตัว (Summary & Recommendations)"), unsafe_allow_html=True)
+        # --- นำบรรทัดที่สร้างหัวข้อออก ---
+        # st.markdown(render_section_header("สรุปและคำแนะนำการปฏิบัติตัว (Summary & Recommendations)"), unsafe_allow_html=True)
         st.markdown(f"<div style='line-height: 1.7; font-size: 14px;'>{recommendations_html}</div>", unsafe_allow_html=True)
 
 
