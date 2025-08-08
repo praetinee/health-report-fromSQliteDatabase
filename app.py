@@ -976,7 +976,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         
         # --- แก้ไข: เพิ่มปุ่มพิมพ์และเงื่อนไขการแสดงผล ---
         with btn_cols[col_idx]:
-            if st.button("📄 พิมพ์รายงานสุขภาพ", use_container_width=True):
+            if st.button("📄 พิมพ์รายงานสุขภาพ", use_container_width=True, type="primary"):
                 st.session_state.print_trigger = True
         col_idx += 1
 
