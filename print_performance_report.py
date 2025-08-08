@@ -137,7 +137,6 @@ def render_print_vision(person_data):
     ]
 
     rows_html = ""
-    abnormal_details = []
     strabismus_val = str(person_data.get('ผ.สายตาเขซ่อนเร้น', '')).strip()
 
     for test in vision_tests:
@@ -176,22 +175,34 @@ def render_print_vision(person_data):
             status_text = "ปกติ"
         elif is_abnormal:
             status_text = "ผิดปกติ"
-            abnormal_details.append(test['display'].split('(')[0].strip())
         
         rows_html += f"<tr><td>{test['display']}</td><td>{status_text}</td></tr>"
 
     doctor_advice = person_data.get('แนะนำABN EYE', '')
     summary_advice = person_data.get('สรุปเหมาะสมกับงาน', '')
     
+    # --- New logic to match web page ---
+    abnormality_fields = OrderedDict([
+        ('ผ.การรวมภาพ', 'การรวมภาพ'),
+        ('ผ.ความชัดของภาพระยะไกล', 'ความชัดของภาพระยะไกล'),
+        ('ผ.การกะระยะและมองความชัดลึกของภาพ', 'การกะระยะ/ความชัดลึก'),
+        ('ผ.การจำแนกสี', 'การจำแนกสี'),
+        ('ผ.ความชัดของภาพระยะใกล้', 'ความชัดของภาพระยะใกล้'),
+        ('ผ.ลานสายตา', 'ลานสายตา'),
+        ('ผ.สายตาเขซ่อนเร้น', 'สายตาเขซ่อนเร้น')
+    ])
+    abnormal_topics = [name for col, name in abnormality_fields.items() if not is_empty(person_data.get(col))]
+    
     summary_section_html = ""
     advice_parts = []
     if not is_empty(summary_advice):
         advice_parts.append(f"<div class='advice-box'><b>สรุปความเหมาะสมกับงาน:</b> {html.escape(summary_advice)}</div>")
 
-    if abnormal_details or not is_empty(doctor_advice):
+    # --- Use new logic for displaying abnormalities ---
+    if abnormal_topics or not is_empty(doctor_advice):
         abnormal_summary_parts = []
-        if abnormal_details:
-            abnormal_summary_parts.append(f"<b>พบความผิดปกติ:</b> {', '.join(sorted(list(set(abnormal_details))))}")
+        if abnormal_topics:
+            abnormal_summary_parts.append(f"<b>พบความผิดปกติเกี่ยวกับ:</b> {', '.join(abnormal_topics)}")
         if not is_empty(doctor_advice):
             abnormal_summary_parts.append(f"<b>คำแนะนำแพทย์:</b> {html.escape(doctor_advice)}")
         advice_parts.append("<div class='advice-box'>" + "<br>".join(abnormal_summary_parts) + "</div>")
