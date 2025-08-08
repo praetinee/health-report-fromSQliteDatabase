@@ -354,7 +354,7 @@ def generate_comprehensive_recommendations(person_data):
         health_plan['exercise'].add("เคลื่อนไหวร่างกายอย่างสม่ำเสมอ 3-4 วัน/สัปดาห์")
 
     health_plan['monitoring'].add("นอนหลับพักผ่อนให้เพียงพอ 7-8 ชั่วโมง/คืน")
-    health_plan['monitoring'].add("มาตรวจสุขภาพประจำปีเพื่อติดตามผล")
+    health_plan['monitoring'].add("ตรวจสุขภาพประจำปีเพื่อติดตามผล")
 
     right_column_parts.append("<div style='border-left: 5px solid #4caf50; padding-left: 15px;'>")
     right_column_parts.append("<h5 style='color: #4caf50; margin-top:0;'>แผนการดูแลสุขภาพเบื้องต้น (Your Health Plan)</h5>")
