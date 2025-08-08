@@ -195,7 +195,6 @@ def render_print_vision(person_data):
 
     summary_section_html = "<div class='summary-container'>" + "".join(advice_parts) + "</div>"
 
-    # แก้ไข: เปลี่ยนเป็น Layout คอลัมน์เดียว
     return f"""
     <div class="report-section">
         {render_section_header("ผลการตรวจสมรรถภาพการมองเห็น (Vision Test)")}
@@ -242,7 +241,6 @@ def render_print_hearing(person_data, all_person_history_df):
     if results.get('sts_detected'):
         advice_box_html = f"<div class='advice-box warning-box'><b>⚠️ พบการเปลี่ยนแปลงระดับการได้ยินอย่างมีนัยสำคัญ (STS)</b><br>{html.escape(advice)}</div>"
 
-    # แก้ไข: สร้างตารางที่รวมผลปัจจุบันและ Baseline
     rows_html = ""
     has_baseline = results.get('baseline_source') != 'none'
     baseline_year = results.get('baseline_year')
@@ -289,7 +287,14 @@ def render_print_hearing(person_data, all_person_history_df):
     """
     
     data_table_html = f"""
-    <table class="data-table">
+    <table class="data-table hearing-table">
+        <colgroup>
+            <col style="width: 20%;">
+            <col style="width: 20%;">
+            <col style="width: 20%;">
+            <col style="width: 20%;">
+            <col style="width: 20%;">
+        </colgroup>
         {table_header_html}
         <tbody>{rows_html}</tbody>
     </table>
@@ -336,8 +341,19 @@ def render_print_lung(person_data):
         return f"{val:{spec}}" if val is not None else "-"
 
     def get_status_class(val, low_threshold):
-        if val is None: return "" # Return empty string instead of status-nt for cleaner look
+        if val is None: return "" 
         return "status-ok-text" if val >= low_threshold else "status-abn-text"
+    
+    summary_class = "status-ok-text" if "ปกติ" in summary else "status-abn-text"
+    if "ไม่ได้" in summary or "คลาดเคลื่อน" in summary:
+        summary_class = ""
+
+    # แก้ไข: ย้าย Summary มาไว้ด้านบน
+    summary_title_html = f"""
+    <div class="summary-title-lung {summary_class}">
+        {html.escape(summary)}
+    </div>
+    """
 
     metrics_html = f"""
     <div class="summary-cards">
@@ -355,10 +371,6 @@ def render_print_lung(person_data):
         </div>
     </div>
     """
-    
-    summary_class = "status-ok-text" if "ปกติ" in summary else "status-abn-text"
-    if "ไม่ได้" in summary or "คลาดเคลื่อน" in summary:
-        summary_class = ""
     
     advice_box_html = f"<div class='advice-box info-box'><b>คำแนะนำ:</b> {html.escape(advice)}</div>"
     
@@ -387,12 +399,8 @@ def render_print_lung(person_data):
     </table>
     """
 
-    # แก้ไข: จัด Layout ใหม่สำหรับส่วนของปอด
     summary_section_html = f"""
     <div class="summary-container-lung">
-        <div class="advice-box" style="text-align: center; font-weight: bold; margin-bottom: 10px;">
-            <span class="{summary_class}">{html.escape(summary)}</span>
-        </div>
         <div class="content-columns" style="align-items: stretch;">
             <div class="main-content">{cxr_html}</div>
             <div class="side-content">{advice_box_html}</div>
@@ -403,6 +411,7 @@ def render_print_lung(person_data):
     return f"""
     <div class="report-section">
         {render_section_header("ผลการตรวจสมรรถภาพปอด (Spirometry)")}
+        {summary_title_html}
         {metrics_html}
         <div class="main-content-full">
             {data_table_html}
@@ -446,21 +455,18 @@ def generate_performance_report_html(person_data, all_person_history_df):
             }}
 
             .content-columns {{ display: flex; gap: 15px; align-items: flex-start; }}
-            .main-content {{ flex: 1; min-width: 0; }} /* Changed from 2 to 1 */
+            .main-content {{ flex: 1; min-width: 0; }}
             .side-content {{ flex: 1; min-width: 0; }}
             .main-content-full {{ width: 100%; }}
 
             .data-table {{ width: 100%; font-size: 9.5px; border-collapse: collapse; }}
+            .data-table.hearing-table {{ table-layout: fixed; }}
             .data-table th, .data-table td {{
                 border: 1px solid #e0e0e0; padding: 4px 6px; text-align: center;
                 vertical-align: middle;
             }}
             .data-table th {{ background-color: #f5f5f5; font-weight: bold; }}
             .data-table td:first-child {{ text-align: left; }}
-            .table-title {{
-                font-size: 10px; display: block; margin-bottom: 5px; text-align: center;
-                font-weight: bold;
-            }}
 
             .summary-cards {{ display: flex; gap: 10px; margin-bottom: 0.8rem; }}
             .card {{ 
@@ -473,6 +479,12 @@ def generate_performance_report_html(person_data, all_person_history_df):
 
             .summary-container {{ margin-top: 10px; }}
             .summary-container-lung {{ margin-top: 10px; }}
+            .summary-title-lung {{
+                text-align: center;
+                font-weight: bold;
+                font-size: 12px;
+                margin-bottom: 10px;
+            }}
             .advice-box {{
                 border-radius: 6px; padding: 8px 12px; font-size: 9.5px;
                 line-height: 1.5; border: 1px solid;
@@ -484,8 +496,8 @@ def generate_performance_report_html(person_data, all_person_history_df):
             .info-box {{ background-color: #e3f2fd; border-color: #bbdefb; }}
             .warning-box {{ background-color: #fff8e1; border-color: #ffecb3; }}
             
-            .status-ok-text {{ color: #1b5e20; font-weight: bold; }}
-            .status-abn-text {{ color: #b71c1c; font-weight: bold; }}
+            .status-ok-text {{ color: #1b5e20; }}
+            .status-abn-text {{ color: #b71c1c; }}
             
             .signature-section {{
                 margin-top: 2rem;
