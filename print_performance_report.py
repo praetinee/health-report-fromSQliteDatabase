@@ -137,6 +137,7 @@ def render_print_vision(person_data):
     ]
 
     rows_html = ""
+    abnormal_details = []
     strabismus_val = str(person_data.get('ผ.สายตาเขซ่อนเร้น', '')).strip()
 
     for test in vision_tests:
@@ -175,34 +176,22 @@ def render_print_vision(person_data):
             status_text = "ปกติ"
         elif is_abnormal:
             status_text = "ผิดปกติ"
+            abnormal_details.append(test['display'].split('(')[0].strip())
         
         rows_html += f"<tr><td>{test['display']}</td><td>{status_text}</td></tr>"
 
     doctor_advice = person_data.get('แนะนำABN EYE', '')
     summary_advice = person_data.get('สรุปเหมาะสมกับงาน', '')
     
-    # --- New logic to match web page ---
-    abnormality_fields = OrderedDict([
-        ('ผ.การรวมภาพ', 'การรวมภาพ'),
-        ('ผ.ความชัดของภาพระยะไกล', 'ความชัดของภาพระยะไกล'),
-        ('ผ.การกะระยะและมองความชัดลึกของภาพ', 'การกะระยะ/ความชัดลึก'),
-        ('ผ.การจำแนกสี', 'การจำแนกสี'),
-        ('ผ.ความชัดของภาพระยะใกล้', 'ความชัดของภาพระยะใกล้'),
-        ('ผ.ลานสายตา', 'ลานสายตา'),
-        ('ผ.สายตาเขซ่อนเร้น', 'สายตาเขซ่อนเร้น')
-    ])
-    abnormal_topics = [name for col, name in abnormality_fields.items() if not is_empty(person_data.get(col))]
-    
     summary_section_html = ""
     advice_parts = []
     if not is_empty(summary_advice):
         advice_parts.append(f"<div class='advice-box'><b>สรุปความเหมาะสมกับงาน:</b> {html.escape(summary_advice)}</div>")
 
-    # --- Use new logic for displaying abnormalities ---
-    if abnormal_topics or not is_empty(doctor_advice):
+    if abnormal_details or not is_empty(doctor_advice):
         abnormal_summary_parts = []
-        if abnormal_topics:
-            abnormal_summary_parts.append(f"<b>พบความผิดปกติเกี่ยวกับ:</b> {', '.join(abnormal_topics)}")
+        if abnormal_details:
+            abnormal_summary_parts.append(f"<b>พบความผิดปกติ:</b> {', '.join(sorted(list(set(abnormal_details))))}")
         if not is_empty(doctor_advice):
             abnormal_summary_parts.append(f"<b>คำแนะนำแพทย์:</b> {html.escape(doctor_advice)}")
         advice_parts.append("<div class='advice-box'>" + "<br>".join(abnormal_summary_parts) + "</div>")
@@ -262,8 +251,6 @@ def render_print_hearing(person_data, all_person_history_df):
     if results.get('sts_detected'):
         advice_box_html = f"<div class='advice-box'><b>⚠️ พบการเปลี่ยนแปลงระดับการได้ยินอย่างมีนัยสำคัญ (STS)</b><br>{html.escape(advice)}</div>"
 
-    # <<< START OF MODIFICATION >>>
-    # Redesigned table structure for clarity
     rows_html = ""
     has_baseline = results.get('baseline_source') != 'none'
     baseline_year = results.get('baseline_year')
@@ -271,49 +258,40 @@ def render_print_hearing(person_data, all_person_history_df):
     
     for freq in freq_order:
         current_vals = results.get('raw_values', {}).get(freq, {})
-        base_vals = results.get('baseline_values', {}).get(freq, {})
-        shift_vals = results.get('shift_values', {}).get(freq, {})
-
         r_val = current_vals.get('right', '-')
         l_val = current_vals.get('left', '-')
         
-        r_base = base_vals.get('right', '-') if has_baseline else '-'
-        l_base = base_vals.get('left', '-') if has_baseline else '-'
-        
-        shift_r = shift_vals.get('right')
-        shift_l = shift_vals.get('left')
-        
-        # Format shift values to show '+' for positive numbers
-        shift_r_text = f"+{shift_r}" if shift_r is not None and shift_r > 0 else (str(shift_r) if shift_r is not None else "-")
-        shift_l_text = f"+{shift_l}" if shift_l is not None and shift_l > 0 else (str(shift_l) if shift_l is not None else "-")
+        shift_r_text = "-"
+        shift_l_text = "-"
+        if has_baseline:
+            shift_vals = results.get('shift_values', {}).get(freq, {})
+            shift_r = shift_vals.get('right')
+            shift_l = shift_vals.get('left')
+            shift_r_text = f"+{shift_r}" if shift_r is not None and shift_r > 0 else (str(shift_r) if shift_r is not None else "-")
+            shift_l_text = f"+{shift_l}" if shift_l is not None and shift_l > 0 else (str(shift_l) if shift_l is not None else "-")
 
         rows_html += f"""
         <tr>
             <td>{freq}</td>
             <td>{r_val}</td>
-            <td>{r_base}</td>
-            <td>{shift_r_text}</td>
             <td>{l_val}</td>
-            <td>{l_base}</td>
+            <td>{shift_r_text}</td>
             <td>{shift_l_text}</td>
         </tr>
         """
 
-    baseline_year_str = f" (พ.ศ. {baseline_year})" if has_baseline else ""
     table_header_html = f"""
     <thead>
         <tr>
             <th rowspan="2" style="vertical-align: middle;">ความถี่ (Hz)</th>
-            <th colspan="3">หูขวา (Right Ear)</th>
-            <th colspan="3">หูซ้าย (Left Ear)</th>
+            <th colspan="2">ผลการตรวจปัจจุบัน (dB)</th>
+            <th colspan="2">การเปลี่ยนแปลงเทียบกับ Baseline{' (พ.ศ. ' + str(baseline_year) + ')' if has_baseline else ''}</th>
         </tr>
         <tr>
-            <th>ปัจจุบัน (dB)</th>
-            <th>Baseline{baseline_year_str}</th>
-            <th>Shift</th>
-            <th>ปัจจุบัน (dB)</th>
-            <th>Baseline{baseline_year_str}</th>
-            <th>Shift</th>
+            <th>หูขวา</th>
+            <th>หูซ้าย</th>
+            <th>Shift ขวา</th>
+            <th>Shift ซ้าย</th>
         </tr>
     </thead>
     """
@@ -321,19 +299,16 @@ def render_print_hearing(person_data, all_person_history_df):
     data_table_html = f"""
     <table class="data-table hearing-table">
         <colgroup>
-            <col style="width: 16%;">
-            <col style="width: 14%;">
-            <col style="width: 14%;">
-            <col style="width: 14%;">
-            <col style="width: 14%;">
-            <col style="width: 14%;">
-            <col style="width: 14%;">
+            <col style="width: 20%;">
+            <col style="width: 20%;">
+            <col style="width: 20%;">
+            <col style="width: 20%;">
+            <col style="width: 20%;">
         </colgroup>
         {table_header_html}
         <tbody>{rows_html}</tbody>
     </table>
     """
-    # <<< END OF MODIFICATION >>>
     
     averages = results.get('averages', {})
     avg_r_speech = averages.get('right_500_2000')
@@ -475,7 +450,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
             body {{
                 font-family: 'Sarabun', sans-serif !important;
                 font-size: 10px;
-                margin: 1.5cm;
+                margin: 1cm;
                 color: #333;
                 background-color: #fff;
             }}
