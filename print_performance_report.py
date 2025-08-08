@@ -448,7 +448,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
                 background-color: #fff;
             }}
             hr {{ border: 0; border-top: 1px solid #e0e0e0; margin: 0.5rem 0; }}
-            .info-table {{ width: 100%; font-size: 9.5px; text-align: left; border-collapse: collapse; }}
+            .info-table {{ width: 100%; font-size: 10.5px; text-align: left; border-collapse: collapse; }}
             .info-table td {{ padding: 1px 5px; }}
             
             .header-grid {{ display: flex; align-items: flex-end; justify-content: space-between; }}
