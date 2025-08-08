@@ -78,6 +78,9 @@ def render_html_header_and_personal_info(person):
     pulse_raw = person.get("pulse", "-")
     pulse_val = str(int(float(pulse_raw))) if not is_empty(pulse_raw) and str(pulse_raw).replace('.', '', 1).isdigit() else "-"
 
+    waist_val = person.get("รอบเอว", "-")
+    waist_display = f"{waist_val} ซม." if not is_empty(waist_val) else "-"
+
     # แก้ไข: จัด Layout ของ Header ใหม่
     header_html = f"""
     <div class="header-grid">
@@ -98,7 +101,11 @@ def render_html_header_and_personal_info(person):
                     <td><b>หน่วยงาน:</b> {person.get('หน่วยงาน', '-')}</td>
                     <td><b>น้ำหนัก:</b> {person.get("น้ำหนัก", "-")} กก.</td>
                     <td><b>ส่วนสูง:</b> {person.get("ส่วนสูง", "-")} ซม.</td>
-                    <td><b>ความดัน:</b> {bp_val}</td>
+                    <td><b>รอบเอว:</b> {waist_display}</td>
+                </tr>
+                 <tr>
+                    <td colspan="2"><b>ความดันโลหิต:</b> {bp_val}</td>
+                    <td colspan="2"><b>ชีพจร:</b> {pulse_val} ครั้ง/นาที</td>
                 </tr>
             </table>
         </div>
@@ -448,7 +455,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
                 background-color: #fff;
             }}
             hr {{ border: 0; border-top: 1px solid #e0e0e0; margin: 0.5rem 0; }}
-            .info-table {{ width: 100%; font-size: 10.5px; text-align: left; border-collapse: collapse; }}
+            .info-table {{ width: 100%; font-size: 9.5px; text-align: left; border-collapse: collapse; }}
             .info-table td {{ padding: 1px 5px; }}
             
             .header-grid {{ display: flex; align-items: flex-end; justify-content: space-between; }}
