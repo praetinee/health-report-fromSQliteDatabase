@@ -421,7 +421,7 @@ def inject_custom_css():
             color: var(--text-color);
         }
         .styled-df-table th, .styled-df-table td {
-            border-bottom: 1px solid var(--secondary-background-color);
+            border: 1px solid var(--secondary-background-color);
             padding: 10px;
             text-align: left;
         }
@@ -1061,4 +1061,4 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         st.session_state.print_performance_trigger = False
 
 else:
-    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
+    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภา
