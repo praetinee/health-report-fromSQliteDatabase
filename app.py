@@ -967,7 +967,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                     st.rerun()
 
         # --- Section 2: Print Options in an Expander ---
-        with st.expander(label="🖨️ ตัวเลือกการพิมพ์ (Print Options)"):
+        with st.expander("🖨️ ตัวเลือกการพิมพ์ (Print Options)"):
             print_cols = st.columns(2)
             with print_cols[0]:
                 if st.button("📄 พิมพ์รายงานสุขภาพ (ฉบับเต็ม)", use_container_width=True):
