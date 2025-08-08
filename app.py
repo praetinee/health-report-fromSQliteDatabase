@@ -949,7 +949,6 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
     if has_hearing_data(person_data): available_reports['hearing_report'] = "สมรรถภาพการได้ยิน"
     if has_lung_data(person_data): available_reports['lung_report'] = "สมรรถภาพปอด"
     
-    # --- แก้ไข: ตรวจสอบว่ามีรายงานสมรรถภาพหรือไม่ ---
     has_performance_report = any(k in ['vision_report', 'hearing_report', 'lung_report'] for k in available_reports)
 
     if not available_reports:
@@ -968,10 +967,10 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                     st.rerun()
 
         # --- Section 2: Print Options in an Expander ---
-        with st.expander("🖨️ ตัวเลือกการพิมพ์ (Print Options)"):
+        with st.expander(label="🖨️ ตัวเลือกการพิมพ์ (Print Options)"):
             print_cols = st.columns(2)
             with print_cols[0]:
-                if st.button("� พิมพ์รายงานสุขภาพ (ฉบับเต็ม)", use_container_width=True):
+                if st.button("📄 พิมพ์รายงานสุขภาพ (ฉบับเต็ม)", use_container_width=True):
                     st.session_state.print_trigger = True
             
             if has_performance_report:
@@ -991,7 +990,7 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         elif page_to_show == 'main_report':
             display_main_report(person_data, all_person_history_df)
 
-    # --- แก้ไข: เพิ่ม Logic การพิมพ์รายงานสมรรถภาพ ---
+    # --- Print Logic ---
     if st.session_state.get("print_trigger", False):
         report_html_data = generate_printable_report(person_data, all_person_history_df)
         escaped_html = json.dumps(report_html_data)
