@@ -3,7 +3,8 @@ import html
 from collections import OrderedDict
 from datetime import datetime
 
-from performance_tests import interpret_audiogram, interpret_lung_capacity
+# แก้ไข: import ฟังก์ชัน interpret_audiogram, interpret_lung_capacity, และ interpret_cxr
+from performance_tests import interpret_audiogram, interpret_lung_capacity, interpret_cxr
 
 # ==============================================================================
 # Module: print_performance_report.py
@@ -109,61 +110,81 @@ def render_html_header_and_personal_info(person):
 
 
 def render_print_vision(person_data):
-    """Renders the Vision Test section for the print report."""
+    """Renders the Vision Test section for the print report with complete logic."""
     if not has_vision_data(person_data):
         return ""
 
-    # Define all vision tests and their corresponding data columns and normal keywords
+    # แก้ไข: ใช้รายการตรวจสายตาฉบับสมบูรณ์ 13 รายการ พร้อม Logic การแปลผลที่ซับซ้อนขึ้น
     vision_tests = [
-        {'d': '1. การมองด้วย 2 ตา (Binocular vision)', 'c': 'ป.การรวมภาพ', 'nk': ['ปกติ']},
-        {'d': '2. การมองภาพระยะไกลด้วยสองตา (Far vision - Both)', 'c': 'ป.ความชัดของภาพระยะไกล', 'nk': ['ชัดเจน', 'ปกติ']},
-        {'d': '3. การมองภาพระยะไกลด้วยตาขวา (Far vision - Right)', 'c': 'การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)', 'nk': ['ชัดเจน', 'ปกติ']},
-        {'d': '4. การมองภาพระยะไกลด้วยตาซ้าย (Far vision - Left)', 'c': 'การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)', 'nk': ['ชัดเจน', 'ปกติ']},
-        {'d': '5. การมองภาพ 3 มิติ (Stereo depth)', 'c': 'ป.การกะระยะและมองความชัดลึกของภาพ', 'nk': ['ปกติ']},
-        {'d': '6. การมองจำแนกสี (Color discrimination)', 'c': 'ป.การจำแนกสี', 'nk': ['ปกติ']},
-        {'d': '7. การมองภาพระยะใกล้ด้วยสองตา (Near vision - Both)', 'c': 'ป.ความชัดของภาพระยะใกล้', 'nk': ['ชัดเจน', 'ปกติ']},
-        {'d': '8. การมองภาพระยะใกล้ด้วยตาขวา (Near vision - Right)', 'c': 'การมองภาพระยะใกล้ด้วยตาขวา (Near vision – Right)', 'nk': ['ชัดเจน', 'ปกติ']},
-        {'d': '9. การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision - Left)', 'c': 'การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision – Left)', 'nk': ['ชัดเจน', 'ปกติ']},
-        {'d': '10. ลานสายตา (Visual field)', 'c': 'ป.ลานสายตา', 'nk': ['ปกติ']},
-        {'d': '11. ตาเข/ตาเหล่ซ่อนเร้น (Phoria)', 'c': 'ผ.สายตาเขซ่อนเร้น', 'nk': []} # Any value in this field is considered abnormal
+        {'display': '1. การมองด้วย 2 ตา (Binocular vision)', 'type': 'paired_value', 'normal_col': 'ป.การรวมภาพ', 'abnormal_col': 'ผ.การรวมภาพ'},
+        {'display': '2. การมองภาพระยะไกลด้วยสองตา (Far vision - Both)', 'type': 'paired_value', 'normal_col': 'ป.ความชัดของภาพระยะไกล', 'abnormal_col': 'ผ.ความชัดของภาพระยะไกล'},
+        {'display': '3. การมองภาพระยะไกลด้วยตาขวา (Far vision - Right)', 'type': 'value', 'col': 'การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)'},
+        {'display': '4. การมองภาพระยะไกลด้วยตาซ้าย (Far vision - Left)', 'type': 'value', 'col': 'การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)'},
+        {'display': '5. การมองภาพ 3 มิติ (Stereo depth)', 'type': 'paired_value', 'normal_col': 'ป.การกะระยะและมองความชัดลึกของภาพ', 'abnormal_col': 'ผ.การกะระยะและมองความชัดลึกของภาพ'},
+        {'display': '6. การมองจำแนกสี (Color discrimination)', 'type': 'paired_value', 'normal_col': 'ป.การจำแนกสี', 'abnormal_col': 'ผ.การจำแนกสี'},
+        {'display': '7. ความสมดุลกล้ามเนื้อตาแนวดิ่ง (Far vertical phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง', 'related_keyword': 'แนวตั้งระยะไกล'},
+        {'display': '8. ความสมดุลกล้ามเนื้อตาแนวนอน (Far lateral phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน', 'related_keyword': 'แนวนอนระยะไกล'},
+        {'display': '9. การมองภาพระยะใกล้ด้วยสองตา (Near vision - Both)', 'type': 'paired_value', 'normal_col': 'ป.ความชัดของภาพระยะใกล้', 'abnormal_col': 'ผ.ความชัดของภาพระยะใกล้'},
+        {'display': '10. การมองภาพระยะใกล้ด้วยตาขวา (Near vision - Right)', 'type': 'value', 'col': 'การมองภาพระยะใกล้ด้วยตาขวา (Near vision – Right)'},
+        {'display': '11. การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision - Left)', 'type': 'value', 'col': 'การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision – Left)'},
+        {'display': '12. ความสมดุลกล้ามเนื้อตาแนวนอน (Near lateral phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'related_keyword': 'แนวนอนระยะใกล้'},
+        {'display': '13. ลานสายตา (Visual field)', 'type': 'paired_value', 'normal_col': 'ป.ลานสายตา', 'abnormal_col': 'ผ.ลานสายตา'}
     ]
-    
+
     rows_html = ""
     abnormal_details = []
+    strabismus_val = str(person_data.get('ผ.สายตาเขซ่อนเร้น', '')).strip()
+
     for test in vision_tests:
-        val = str(person_data.get(test['c'], '')).strip()
-        status = "ไม่ได้ตรวจ"
-        status_class = "status-nt"
+        is_normal, is_abnormal = False, False
+        result_text = ""
+        status_text, status_class = "ไม่ได้ตรวจ", "status-nt"
+
+        if test['type'] == 'value':
+            val = str(person_data.get(test['col'], '')).strip()
+            if not is_empty(val):
+                is_abnormal = True # Assume abnormal unless it's explicitly normal-like
+                if any(k in val.lower() for k in ['ปกติ', 'ชัดเจน']):
+                    is_abnormal = False
+                result_text = val
         
-        # Logic to determine if the result is normal or abnormal
-        is_abnormal = False
-        if not is_empty(val):
-            # For Phoria, any value is abnormal
-            if test['c'] == 'ผ.สายตาเขซ่อนเร้น':
+        elif test['type'] == 'paired_value':
+            normal_val = str(person_data.get(test['normal_col'], '')).strip()
+            abnormal_val = str(person_data.get(test['abnormal_col'], '')).strip()
+            if not is_empty(normal_val):
+                is_normal = True
+                result_text = normal_val
+            elif not is_empty(abnormal_val):
                 is_abnormal = True
-            # For other tests, check against normal keywords
-            elif not any(k.lower() in val.lower() for k in test['nk']):
+                result_text = abnormal_val
+
+        elif test['type'] == 'phoria':
+            normal_val = str(person_data.get(test['normal_col'], '')).strip()
+            if not is_empty(normal_val):
+                is_normal = True
+                result_text = normal_val
+            elif not is_empty(strabismus_val) and test['related_keyword'] in strabismus_val:
                 is_abnormal = True
+                result_text = f"สายตาเขซ่อนเร้น ({test['related_keyword']})"
 
-            if is_abnormal:
-                status = f"ผิดปกติ ({html.escape(val)})"
-                status_class = "status-abn"
-                abnormal_details.append(test['d'].split('(')[0].strip())
-            else:
-                status = "ปกติ"
-                status_class = "status-ok"
-
-        rows_html += f"<tr><td>{test['d']}</td><td class='{status_class}'>{status}</td></tr>"
+        if is_normal or (result_text and not is_abnormal):
+            status_text = f"ปกติ ({html.escape(result_text)})" if result_text != "ปกติ" else "ปกติ"
+            status_class = 'status-ok'
+        elif is_abnormal:
+            status_text = f"ผิดปกติ ({html.escape(result_text)})"
+            status_class = 'status-abn'
+            abnormal_details.append(test['display'].split('(')[0].strip())
+        
+        rows_html += f"<tr><td>{test['display']}</td><td class='{status_class}'>{status_text}</td></tr>"
 
     doctor_advice = person_data.get('แนะนำABN EYE', '')
     summary_advice = person_data.get('สรุปเหมาะสมกับงาน', '')
     
-    # Build the advice and summary boxes for the side content
     advice_html = ""
     if abnormal_details or not is_empty(doctor_advice):
         advice_parts = []
         if abnormal_details:
-            advice_parts.append(f"<b>พบความผิดปกติ:</b> {', '.join(abnormal_details)}")
+            advice_parts.append(f"<b>พบความผิดปกติ:</b> {', '.join(sorted(list(set(abnormal_details))))}")
         if not is_empty(doctor_advice):
             advice_parts.append(f"<b>คำแนะนำแพทย์:</b> {html.escape(doctor_advice)}")
         advice_html = "<div class='advice-box warning-box'>" + "<br>".join(advice_parts) + "</div>"
@@ -172,7 +193,6 @@ def render_print_vision(person_data):
     if not is_empty(summary_advice):
          summary_html = f"<div class='advice-box info-box'><b>สรุปความเหมาะสมกับงาน:</b> {html.escape(summary_advice)}</div>"
 
-    # Combine all parts into the final section HTML
     return f"""
     <div class="report-section">
         {render_section_header("ผลการตรวจสมรรถภาพการมองเห็น (Vision Test)")}
@@ -198,7 +218,6 @@ def render_print_hearing(person_data, all_person_history_df):
         
     results = interpret_audiogram(person_data, all_person_history_df)
     
-    # Summary Cards for Right and Left Ear
     summary_r_raw = person_data.get('ผลตรวจการได้ยินหูขวา', 'N/A')
     summary_l_raw = person_data.get('ผลตรวจการได้ยินหูซ้าย', 'N/A')
     
@@ -220,13 +239,11 @@ def render_print_hearing(person_data, all_person_history_df):
     </div>
     """
 
-    # Advice Box with STS warning if detected
     advice = results.get('advice', 'ไม่มีคำแนะนำเพิ่มเติม')
     advice_box_html = f"<div class='advice-box info-box'><b>คำแนะนำ:</b> {html.escape(advice)}</div>"
     if results.get('sts_detected'):
         advice_box_html = f"<div class='advice-box warning-box'><b>⚠️ พบการเปลี่ยนแปลงระดับการได้ยินอย่างมีนัยสำคัญ (STS)</b><br>{html.escape(advice)}</div>"
 
-    # Main data table for audiogram results
     raw_data = results.get('raw_values', {})
     rows_html = ""
     for freq, values in raw_data.items():
@@ -240,7 +257,6 @@ def render_print_hearing(person_data, all_person_history_df):
     </table>
     """
     
-    # Baseline comparison table (if available)
     baseline_html = ""
     if results.get('baseline_source') != 'none':
         baseline_year = results.get('baseline_year')
@@ -248,10 +264,10 @@ def render_print_hearing(person_data, all_person_history_df):
         for freq, values in results.get('raw_values', {}).items():
             shift_r = results['shift_values'][freq].get('right', '-')
             shift_l = results['shift_values'][freq].get('left', '-')
-            baseline_rows_html += f"<tr><td>{freq}</td><td>{shift_r}</td><td>{shift_l}</td></tr>"
+            baseline_rows_html += f"<tr><td>{freq}</td><td>{shift_r if shift_r is not None else '-'}</td><td>{shift_l if shift_l is not None else '-'}</td></tr>"
         
         baseline_html = f"""
-        <div class='side-content' style='margin-top: 10px;'>
+        <div class='baseline-comparison'>
             <b>การเปลี่ยนแปลงเทียบกับผลตรวจพื้นฐาน (พ.ศ. {baseline_year})</b>
             <table class='data-table'>
                 <thead><tr><th>ความถี่ (Hz)</th><th>Shift ขวา (dB)</th><th>Shift ซ้าย (dB)</th></tr></thead>
@@ -259,8 +275,23 @@ def render_print_hearing(person_data, all_person_history_df):
             </table>
         </div>
         """
+    
+    # แก้ไข: เพิ่มส่วนค่าเฉลี่ยการได้ยิน
+    averages = results.get('averages', {})
+    avg_r_speech = averages.get('right_500_2000')
+    avg_l_speech = averages.get('left_500_2000')
+    avg_r_high = averages.get('right_3000_6000')
+    avg_l_high = averages.get('left_3000_6000')
+    averages_html = f"""
+    <div class="advice-box info-box" style="margin-top: 10px;">
+        <b>ค่าเฉลี่ยการได้ยิน (dB)</b>
+        <ul style="margin: 5px 0 0 0; padding-left: 20px; list-style-type: square;">
+            <li>ความถี่เสียงพูด (500-2k Hz): ขวา={avg_r_speech if avg_r_speech is not None else 'N/A'}, ซ้าย={avg_l_speech if avg_l_speech is not None else 'N/A'}</li>
+            <li>ความถี่สูง (3k-6k Hz): ขวา={avg_r_high if avg_r_high is not None else 'N/A'}, ซ้าย={avg_l_high if avg_l_high is not None else 'N/A'}</li>
+        </ul>
+    </div>
+    """
 
-    # Combine all parts into the final section HTML
     return f"""
     <div class="report-section">
         {render_section_header("ผลการตรวจสมรรถภาพการได้ยิน (Audiometry)")}
@@ -272,6 +303,7 @@ def render_print_hearing(person_data, all_person_history_df):
             </div>
             <div class="side-content">
                 {advice_box_html}
+                {averages_html}
             </div>
         </div>
     </div>
@@ -288,48 +320,74 @@ def render_print_lung(person_data):
         val = raw.get(key)
         return f"{val:{spec}}" if val is not None else "-"
 
-    def get_status_class(summary_text):
-        if "ปกติ" in summary_text: return "status-ok"
-        if "ไม่ได้" in summary_text or "คลาดเคลื่อน" in summary_text: return "status-nt"
-        return "status-abn"
+    def get_status_class(val, low_threshold):
+        if val is None: return "status-nt"
+        return "status-ok" if val >= low_threshold else "status-abn"
 
-    # Main summary card
-    summary_card_html = f"""
+    # แก้ไข: เพิ่ม Metric cards ด้านบน
+    metrics_html = f"""
     <div class="summary-cards">
-        <div class="card {get_status_class(summary)}">
-            <div class="card-title">ผลการแปลความหมาย</div>
-            <div class="card-body">{html.escape(summary)}</div>
+        <div class="card {get_status_class(raw.get('FVC %'), 80)}">
+            <div class="card-title">FVC %Pred</div>
+            <div class="card-body">{format_val('FVC %')}%</div>
+        </div>
+        <div class="card {get_status_class(raw.get('FEV1 %'), 80)}">
+            <div class="card-title">FEV1 %Pred</div>
+            <div class="card-body">{format_val('FEV1 %')}%</div>
+        </div>
+        <div class="card {get_status_class(raw.get('FEV1/FVC %'), 70)}">
+            <div class="card-title">FEV1/FVC Ratio</div>
+            <div class="card-body">{format_val('FEV1/FVC %')}%</div>
         </div>
     </div>
     """
     
+    summary_class = "status-ok" if "ปกติ" in summary else "status-abn"
+    if "ไม่ได้" in summary or "คลาดเคลื่อน" in summary:
+        summary_class = "status-nt"
+    
     advice_box_html = f"<div class='advice-box info-box'><b>คำแนะนำ:</b> {html.escape(advice)}</div>"
     
-    # Detailed results table
+    # แก้ไข: เพิ่มผล CXR ในส่วน side-content
+    year = person_data.get("Year")
+    cxr_result_text = "ไม่มีข้อมูล"
+    if year:
+        cxr_col = f"CXR{str(year)[-2:]}" if year != (datetime.now().year + 543) else "CXR"
+        cxr_result, cxr_status = interpret_cxr(person_data.get(cxr_col, ''))
+        cxr_result_text = cxr_result
+    cxr_html = f"""
+    <div class="advice-box info-box" style="margin-top: 10px;">
+        <b>ผลเอกซเรย์ทรวงอก (CXR):</b><br>{html.escape(cxr_result_text)}
+    </div>
+    """
+    
     data_table_html = f"""
     <table class="data-table">
         <thead>
-            <tr><th>การทดสอบ</th><th>ค่าที่วัดได้</th><th>ค่ามาตรฐาน</th><th>% เทียบค่ามาตรฐาน</th></tr>
+            <tr><th>การทดสอบ</th><th>ค่าที่วัดได้ (Actual)</th><th>ค่ามาตรฐาน (Pred)</th><th>% เทียบค่ามาตรฐาน (%Pred)</th></tr>
         </thead>
         <tbody>
-            <tr><td>FVC (L)</td><td>{format_val('FVC', '.2f')}</td><td>{format_val('FVC predic', '.2f')}</td><td class='{get_status_class("ปกติ" if (raw.get("FVC %") or 100) >= 80 else "ผิดปกติ")}'>{format_val('FVC %')} %</td></tr>
-            <tr><td>FEV1 (L)</td><td>{format_val('FEV1', '.2f')}</td><td>{format_val('FEV1 predic', '.2f')}</td><td class='{get_status_class("ปกติ" if (raw.get("FEV1 %") or 100) >= 80 else "ผิดปกติ")}'>{format_val('FEV1 %')} %</td></tr>
-            <tr><td>FEV1/FVC (%)</td><td class='{get_status_class("ปกติ" if (raw.get("FEV1/FVC %") or 100) >= 70 else "ผิดปกติ")}'>{format_val('FEV1/FVC %')} %</td><td>{format_val('FEV1/FVC % pre')} %</td><td>-</td></tr>
+            <tr><td>FVC (L)</td><td>{format_val('FVC', '.2f')}</td><td>{format_val('FVC predic', '.2f')}</td><td class='{get_status_class(raw.get("FVC %"), 80)}'>{format_val('FVC %')} %</td></tr>
+            <tr><td>FEV1 (L)</td><td>{format_val('FEV1', '.2f')}</td><td>{format_val('FEV1 predic', '.2f')}</td><td class='{get_status_class(raw.get("FEV1 %"), 80)}'>{format_val('FEV1 %')} %</td></tr>
+            <tr><td>FEV1/FVC (%)</td><td class='{get_status_class(raw.get("FEV1/FVC %"), 70)}'>{format_val('FEV1/FVC %')} %</td><td>{format_val('FEV1/FVC % pre')} %</td><td>-</td></tr>
         </tbody>
     </table>
     """
 
-    # Combine all parts into the final section HTML
     return f"""
     <div class="report-section">
         {render_section_header("ผลการตรวจสมรรถภาพปอด (Spirometry)")}
-        {summary_card_html}
+        {metrics_html}
         <div class="content-columns">
             <div class="main-content">
+                <div class="advice-box {summary_class}" style="text-align: center; margin-bottom: 10px;">
+                    <b>ผลการแปลความหมาย:</b> {html.escape(summary)}
+                </div>
                 {data_table_html}
             </div>
             <div class="side-content">
                 {advice_box_html}
+                {cxr_html}
             </div>
         </div>
     </div>
@@ -356,14 +414,14 @@ def generate_performance_report_html(person_data, all_person_history_df):
                 color: #333;
                 background-color: #fff;
             }}
-            hr {{ border: 0; border-top: 1px solid #ccc; margin: 0.5rem 0; }}
+            hr {{ border: 0; border-top: 1px solid #e0e0e0; margin: 0.5rem 0; }}
             .info-table {{ width: 100%; font-size: 10px; text-align: left; border-collapse: collapse; }}
             .info-table td {{ padding: 2px 5px; border: none; }}
             
             .report-section {{ margin-bottom: 1.5rem; page-break-inside: avoid; }}
             .section-header {{
-                background-color: #333; color: white; text-align: center;
-                padding: 0.3rem; font-weight: bold; border-radius: 8px;
+                background-color: #4CAF50; color: white; text-align: center;
+                padding: 0.4rem; font-weight: bold; border-radius: 8px;
                 margin-bottom: 0.8rem; font-size: 12px;
             }}
 
@@ -375,24 +433,27 @@ def generate_performance_report_html(person_data, all_person_history_df):
             .data-table th, .data-table td {{
                 border: 1px solid #e0e0e0; padding: 4px 6px; text-align: center;
             }}
-            .data-table th {{ background-color: #f2f2f2; font-weight: bold; }}
+            .data-table th {{ background-color: #f5f5f5; font-weight: bold; }}
             .data-table td:first-child {{ text-align: left; }}
 
             .summary-cards {{ display: flex; gap: 10px; margin-bottom: 0.8rem; }}
-            .card {{ flex: 1; border-radius: 6px; padding: 8px; text-align: center; border: 1px solid; }}
-            .card-title {{ font-weight: bold; font-size: 10px; margin-bottom: 4px;}}
-            .card-body {{ font-size: 11px; font-weight: bold; }}
+            .card {{ flex: 1; border-radius: 6px; padding: 8px; text-align: center; border: 1px solid #e0e0e0; background-color: #f9f9f9; }}
+            .card-title {{ font-weight: bold; font-size: 10px; margin-bottom: 4px; color: #555;}}
+            .card-body {{ font-size: 12px; font-weight: bold; }}
 
             .advice-box {{
                 border-radius: 6px; padding: 8px 12px; font-size: 9.5px;
-                line-height: 1.5; border: 1px solid; margin-top: 5px;
+                line-height: 1.5; border: 1px solid;
             }}
             .info-box {{ background-color: #e3f2fd; border-color: #bbdefb; }}
             .warning-box {{ background-color: #fff8e1; border-color: #ffecb3; }}
+            
+            .baseline-comparison {{ margin-top: 10px; }}
+            .baseline-comparison b {{ font-size: 10px; display: block; margin-bottom: 4px; text-align: center;}}
 
             .status-ok {{ background-color: #e8f5e9; color: #1b5e20; }}
             .status-abn {{ background-color: #ffcdd2; color: #b71c1c; }}
-            .status-nt {{ background-color: #f5f5f5; color: #616161; }}
+            .status-nt {{ background-color: #f0f0f0; color: #616161; }}
             
             .signature-section {{
                 margin-top: 2rem;
