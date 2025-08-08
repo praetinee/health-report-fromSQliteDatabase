@@ -82,7 +82,7 @@ def render_html_header_and_personal_info(person):
     header_html = f"""
     <div class="header-grid">
         <div class="header-left">
-            <h1 style="font-size: 1.5rem; margin:0;">รายงานผลการตรวจสมรรถภาพ</h1>
+            <h1 style="font-size: 1.5rem; margin:0; text-align: center;">รายงานผลการตรวจสมรรถภาพ</h1>
             <p style="font-size: 0.8rem; margin:0;">คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย</p>
             <p style="font-size: 0.8rem; margin:0;"><b>วันที่ตรวจ:</b> {check_date or "-"}</p>
         </div>
@@ -179,7 +179,7 @@ def render_print_vision(person_data):
     summary_section_html = ""
     advice_parts = []
     if not is_empty(summary_advice):
-        advice_parts.append(f"<div class='advice-box warning-box'><b>สรุปความเหมาะสมกับงาน:</b> {html.escape(summary_advice)}</div>")
+        advice_parts.append(f"<div class='advice-box'><b>สรุปความเหมาะสมกับงาน:</b> {html.escape(summary_advice)}</div>")
 
     if abnormal_details or not is_empty(doctor_advice):
         abnormal_summary_parts = []
@@ -187,10 +187,10 @@ def render_print_vision(person_data):
             abnormal_summary_parts.append(f"<b>พบความผิดปกติ:</b> {', '.join(sorted(list(set(abnormal_details))))}")
         if not is_empty(doctor_advice):
             abnormal_summary_parts.append(f"<b>คำแนะนำแพทย์:</b> {html.escape(doctor_advice)}")
-        advice_parts.append("<div class='advice-box warning-box'>" + "<br>".join(abnormal_summary_parts) + "</div>")
+        advice_parts.append("<div class='advice-box'>" + "<br>".join(abnormal_summary_parts) + "</div>")
     
     if not advice_parts:
-        advice_parts.append("<div class='advice-box warning-box'>ผลการตรวจโดยรวมปกติ ไม่มีคำแนะนำเพิ่มเติม</div>")
+        advice_parts.append("<div class='advice-box'>ผลการตรวจโดยรวมปกติ ไม่มีคำแนะนำเพิ่มเติม</div>")
 
     summary_section_html = "<div class='summary-container'>" + "".join(advice_parts) + "</div>"
 
@@ -240,9 +240,9 @@ def render_print_hearing(person_data, all_person_history_df):
     """
 
     advice = results.get('advice', 'ไม่มีคำแนะนำเพิ่มเติม')
-    advice_box_html = f"<div class='advice-box warning-box'><b>คำแนะนำ:</b> {html.escape(advice)}</div>"
+    advice_box_html = f"<div class='advice-box'><b>คำแนะนำ:</b> {html.escape(advice)}</div>"
     if results.get('sts_detected'):
-        advice_box_html = f"<div class='advice-box warning-box'><b>⚠️ พบการเปลี่ยนแปลงระดับการได้ยินอย่างมีนัยสำคัญ (STS)</b><br>{html.escape(advice)}</div>"
+        advice_box_html = f"<div class='advice-box'><b>⚠️ พบการเปลี่ยนแปลงระดับการได้ยินอย่างมีนัยสำคัญ (STS)</b><br>{html.escape(advice)}</div>"
 
     rows_html = ""
     has_baseline = results.get('baseline_source') != 'none'
@@ -309,7 +309,7 @@ def render_print_hearing(person_data, all_person_history_df):
     avg_r_high = averages.get('right_3000_6000')
     avg_l_high = averages.get('left_3000_6000')
     averages_html = f"""
-    <div class="advice-box warning-box">
+    <div class="advice-box">
         <b>ค่าเฉลี่ยการได้ยิน (dB)</b>
         <ul style="margin: 5px 0 0 0; padding-left: 20px; list-style-type: square;">
             <li>ความถี่เสียงพูด (500-2k Hz): ขวา={avg_r_speech if avg_r_speech is not None else 'N/A'}, ซ้าย={avg_l_speech if avg_l_speech is not None else 'N/A'}</li>
@@ -374,7 +374,7 @@ def render_print_lung(person_data):
     </div>
     """
     
-    advice_box_html = f"<div class='advice-box warning-box'><b>คำแนะนำ:</b> {html.escape(advice)}</div>"
+    advice_box_html = f"<div class='advice-box'><b>คำแนะนำ:</b> {html.escape(advice)}</div>"
     
     year = person_data.get("Year")
     cxr_result_text = "ไม่มีข้อมูล"
@@ -383,7 +383,7 @@ def render_print_lung(person_data):
         cxr_result, cxr_status = interpret_cxr(person_data.get(cxr_col, ''))
         cxr_result_text = cxr_result
     cxr_html = f"""
-    <div class="advice-box warning-box">
+    <div class="advice-box">
         <b>ผลเอกซเรย์ทรวงอก (CXR):</b><br>{html.escape(cxr_result_text)}
     </div>
     """
@@ -439,7 +439,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
             body {{
                 font-family: 'Sarabun', sans-serif !important;
                 font-size: 10px;
-                margin: 10mm;
+                margin: 1cm;
                 color: #333;
                 background-color: #fff;
             }}
