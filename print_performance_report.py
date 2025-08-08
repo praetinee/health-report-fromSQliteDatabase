@@ -168,7 +168,7 @@ def render_print_vision(person_data):
         if is_normal or (result_text and not is_abnormal):
             status_text = "ปกติ"
         elif is_abnormal:
-            status_text = f"ผิดปกติ ({html.escape(result_text)})"
+            status_text = "ผิดปกติ"
             abnormal_details.append(test['display'].split('(')[0].strip())
         
         rows_html += f"<tr><td>{test['display']}</td><td>{status_text}</td></tr>"
@@ -179,7 +179,7 @@ def render_print_vision(person_data):
     summary_section_html = ""
     advice_parts = []
     if not is_empty(summary_advice):
-        advice_parts.append(f"<div class='advice-box info-box'><b>สรุปความเหมาะสมกับงาน:</b> {html.escape(summary_advice)}</div>")
+        advice_parts.append(f"<div class='advice-box warning-box'><b>สรุปความเหมาะสมกับงาน:</b> {html.escape(summary_advice)}</div>")
 
     if abnormal_details or not is_empty(doctor_advice):
         abnormal_summary_parts = []
@@ -190,19 +190,23 @@ def render_print_vision(person_data):
         advice_parts.append("<div class='advice-box warning-box'>" + "<br>".join(abnormal_summary_parts) + "</div>")
     
     if not advice_parts:
-        advice_parts.append("<div class='advice-box info-box'>ผลการตรวจโดยรวมปกติ ไม่มีคำแนะนำเพิ่มเติม</div>")
+        advice_parts.append("<div class='advice-box warning-box'>ผลการตรวจโดยรวมปกติ ไม่มีคำแนะนำเพิ่มเติม</div>")
 
     summary_section_html = "<div class='summary-container'>" + "".join(advice_parts) + "</div>"
 
     return f"""
     <div class="report-section">
         {render_section_header("ผลการตรวจสมรรถภาพการมองเห็น (Vision Test)")}
-        <div class="main-content-full">
-            <table class="data-table">
-                <thead><tr><th>รายการตรวจ</th><th>ผลการตรวจ</th></tr></thead>
-                <tbody>{rows_html}</tbody>
-            </table>
-            {summary_section_html}
+        <div class="content-columns">
+            <div class="main-content">
+                <table class="data-table">
+                    <thead><tr><th>รายการตรวจ</th><th>ผลการตรวจ</th></tr></thead>
+                    <tbody>{rows_html}</tbody>
+                </table>
+            </div>
+            <div class="side-content">
+                {summary_section_html}
+            </div>
         </div>
     </div>
     """
@@ -236,7 +240,7 @@ def render_print_hearing(person_data, all_person_history_df):
     """
 
     advice = results.get('advice', 'ไม่มีคำแนะนำเพิ่มเติม')
-    advice_box_html = f"<div class='advice-box info-box'><b>คำแนะนำ:</b> {html.escape(advice)}</div>"
+    advice_box_html = f"<div class='advice-box warning-box'><b>คำแนะนำ:</b> {html.escape(advice)}</div>"
     if results.get('sts_detected'):
         advice_box_html = f"<div class='advice-box warning-box'><b>⚠️ พบการเปลี่ยนแปลงระดับการได้ยินอย่างมีนัยสำคัญ (STS)</b><br>{html.escape(advice)}</div>"
 
@@ -305,7 +309,7 @@ def render_print_hearing(person_data, all_person_history_df):
     avg_r_high = averages.get('right_3000_6000')
     avg_l_high = averages.get('left_3000_6000')
     averages_html = f"""
-    <div class="advice-box info-box">
+    <div class="advice-box warning-box">
         <b>ค่าเฉลี่ยการได้ยิน (dB)</b>
         <ul style="margin: 5px 0 0 0; padding-left: 20px; list-style-type: square;">
             <li>ความถี่เสียงพูด (500-2k Hz): ขวา={avg_r_speech if avg_r_speech is not None else 'N/A'}, ซ้าย={avg_l_speech if avg_l_speech is not None else 'N/A'}</li>
@@ -347,7 +351,6 @@ def render_print_lung(person_data):
     if "ไม่ได้" in summary or "คลาดเคลื่อน" in summary:
         summary_class = ""
 
-    # แก้ไข: ย้าย Summary มาไว้ด้านบน
     summary_title_html = f"""
     <div class="summary-title-lung {summary_class}">
         {html.escape(summary)}
@@ -371,7 +374,7 @@ def render_print_lung(person_data):
     </div>
     """
     
-    advice_box_html = f"<div class='advice-box info-box'><b>คำแนะนำ:</b> {html.escape(advice)}</div>"
+    advice_box_html = f"<div class='advice-box warning-box'><b>คำแนะนำ:</b> {html.escape(advice)}</div>"
     
     year = person_data.get("Year")
     cxr_result_text = "ไม่มีข้อมูล"
@@ -380,7 +383,7 @@ def render_print_lung(person_data):
         cxr_result, cxr_status = interpret_cxr(person_data.get(cxr_col, ''))
         cxr_result_text = cxr_result
     cxr_html = f"""
-    <div class="advice-box info-box">
+    <div class="advice-box warning-box">
         <b>ผลเอกซเรย์ทรวงอก (CXR):</b><br>{html.escape(cxr_result_text)}
     </div>
     """
@@ -492,12 +495,12 @@ def generate_performance_report_html(person_data, all_person_history_df):
                 border-radius: 6px; padding: 8px 12px; font-size: 9.5px;
                 line-height: 1.5; border: 1px solid;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-                margin-bottom: 0; /* remove margin-bottom */
+                margin-bottom: 0; 
                 height: 100%;
                 box-sizing: border-box;
+                background-color: #fff8e1; 
+                border-color: #ffecb3;
             }}
-            .info-box {{ background-color: #e3f2fd; border-color: #bbdefb; }}
-            .warning-box {{ background-color: #fff8e1; border-color: #ffecb3; }}
             
             .status-ok-text {{ color: #1b5e20; }}
             .status-abn-text {{ color: #b71c1c; }}
