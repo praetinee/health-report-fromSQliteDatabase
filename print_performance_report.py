@@ -450,7 +450,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
             body {{
                 font-family: 'Sarabun', sans-serif !important;
                 font-size: 10px;
-                margin: 1cm;
+                margin: 1.5cm;
                 color: #333;
                 background-color: #fff;
             }}
