@@ -369,7 +369,7 @@ def render_print_lung(person_data):
         cxr_result, cxr_status = interpret_cxr(person_data.get(cxr_col, ''))
         cxr_result_text = cxr_result
     cxr_html = f"""
-    <div class="advice-box info-box" style="margin-top: 5px;">
+    <div class="advice-box info-box">
         <b>ผลเอกซเรย์ทรวงอก (CXR):</b><br>{html.escape(cxr_result_text)}
     </div>
     """
@@ -387,15 +387,19 @@ def render_print_lung(person_data):
     </table>
     """
 
+    # แก้ไข: จัด Layout ใหม่สำหรับส่วนของปอด
     summary_section_html = f"""
-    <div class="advice-box" style="text-align: center; font-weight: bold;">
-        <span class="{summary_class}">{html.escape(summary)}</span>
+    <div class="summary-container-lung">
+        <div class="advice-box" style="text-align: center; font-weight: bold; margin-bottom: 10px;">
+            <span class="{summary_class}">{html.escape(summary)}</span>
+        </div>
+        <div class="content-columns" style="align-items: stretch;">
+            <div class="main-content">{cxr_html}</div>
+            <div class="side-content">{advice_box_html}</div>
+        </div>
     </div>
-    {advice_box_html}
-    {cxr_html}
     """
 
-    # แก้ไข: เปลี่ยนเป็น Layout คอลัมน์เดียว
     return f"""
     <div class="report-section">
         {render_section_header("ผลการตรวจสมรรถภาพปอด (Spirometry)")}
@@ -442,7 +446,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
             }}
 
             .content-columns {{ display: flex; gap: 15px; align-items: flex-start; }}
-            .main-content {{ flex: 2; min-width: 0; }}
+            .main-content {{ flex: 1; min-width: 0; }} /* Changed from 2 to 1 */
             .side-content {{ flex: 1; min-width: 0; }}
             .main-content-full {{ width: 100%; }}
 
@@ -468,6 +472,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
             .card-body {{ font-size: 12px; font-weight: bold; }}
 
             .summary-container {{ margin-top: 10px; }}
+            .summary-container-lung {{ margin-top: 10px; }}
             .advice-box {{
                 border-radius: 6px; padding: 8px 12px; font-size: 9.5px;
                 line-height: 1.5; border: 1px solid;
