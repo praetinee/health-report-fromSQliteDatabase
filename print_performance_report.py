@@ -322,12 +322,14 @@ def render_print_hearing(person_data, all_person_history_df):
     <div class="report-section">
         {render_section_header("ผลการตรวจสมรรถภาพการได้ยิน (Audiometry)")}
         {summary_cards_html}
-        <div class="main-content-full" style="margin-bottom: 10px;">
-            {data_table_html}
-        </div>
-        <div class="content-columns" style="align-items: stretch;">
-            <div class="main-content">{averages_html}</div>
-            <div class="side-content">{advice_box_html}</div>
+        <div class="content-columns">
+            <div class="main-content">
+                {data_table_html}
+            </div>
+            <div class="side-content">
+                {averages_html}
+                {advice_box_html}
+            </div>
         </div>
     </div>
     """
