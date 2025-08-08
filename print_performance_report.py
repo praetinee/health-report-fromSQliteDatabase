@@ -461,7 +461,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
             }}
 
             .content-columns {{ display: flex; gap: 15px; align-items: flex-start; }}
-            .main-content {{ flex: 1; min-width: 0; }}
+            .main-content {{ flex: 2; min-width: 0; }}
             .side-content {{ flex: 1; min-width: 0; }}
             .main-content-full {{ width: 100%; }}
 
@@ -483,7 +483,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
             .card-title {{ font-weight: bold; font-size: 10px; margin-bottom: 4px; color: #555;}}
             .card-body {{ font-size: 12px; font-weight: bold; }}
 
-            .summary-container {{ margin-top: 10px; }}
+            .summary-container {{ margin-top: 0; }}
             .summary-container-lung {{ margin-top: 10px; }}
             .summary-title-lung {{
                 text-align: center;
