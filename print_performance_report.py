@@ -385,7 +385,7 @@ def render_print_lung(person_data):
         cxr_result, cxr_status = interpret_cxr(person_data.get(cxr_col, ''))
         cxr_result_text = cxr_result
     cxr_html = f"""
-    <div class="advice-box">
+    <div class="advice-box" style="margin-bottom: 5px;">
         <b>ผลเอกซเรย์ทรวงอก (CXR):</b><br>{html.escape(cxr_result_text)}
     </div>
     """
@@ -403,23 +403,25 @@ def render_print_lung(person_data):
     </table>
     """
 
-    summary_section_html = f"""
-    <div class="summary-container-lung">
-        <div class="content-columns" style="align-items: stretch;">
-            <div class="main-content">{cxr_html}</div>
-            <div class="side-content">{advice_box_html}</div>
-        </div>
-    </div>
+    # --- แก้ไข: รวม cxr_html และ advice_box_html เข้าด้วยกันสำหรับคอลัมน์ด้านขวา ---
+    side_content_html = f"""
+    {cxr_html}
+    {advice_box_html}
     """
 
+    # --- แก้ไข: ปรับโครงสร้าง HTML หลักให้เป็น 2 คอลัมน์ ---
     return f"""
     <div class="report-section">
         {render_section_header("ผลการตรวจสมรรถภาพปอด (Spirometry)")}
         {summary_title_html}
         {metrics_html}
-        <div class="main-content-full">
-            {data_table_html}
-            {summary_section_html}
+        <div class="content-columns">
+            <div class="main-content">
+                {data_table_html}
+            </div>
+            <div class="side-content">
+                {side_content_html}
+            </div>
         </div>
     </div>
     """
