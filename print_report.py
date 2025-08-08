@@ -511,8 +511,8 @@ def generate_printable_report(person_data, all_person_history_df=None):
     </div>
     """
 
-    # --- ส่วนของรายงานสมรรถภาพ ---
-    performance_report_html = generate_performance_report_html_for_main_report(person_data, all_person_history_df)
+    # --- ส่วนของรายงานสมรรถภาพ (ถูกลบออก) ---
+    # performance_report_html = generate_performance_report_html_for_main_report(person_data, all_person_history_df)
 
 
     # --- Signature ---
@@ -610,7 +610,6 @@ def generate_printable_report(person_data, all_person_history_df=None):
         {personal_info_html}
         {lab_section_html}
         {other_results_html}
-        {performance_report_html}
         {doctor_suggestion_html}
         {signature_html}
     </body>
