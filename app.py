@@ -617,7 +617,7 @@ def display_performance_report_hearing(person_data, all_person_history_df):
     
     st.markdown("<hr>", unsafe_allow_html=True)
 
-    # --- NEW TABLE LOGIC ---
+    # --- FIXED TABLE LOGIC ---
     data_col, avg_col = st.columns([3, 2])
     with data_col:
         st.markdown("<h5><b>ผลการตรวจวัดระดับการได้ยิน (หน่วย: dB)</b></h5>", unsafe_allow_html=True)
@@ -625,28 +625,8 @@ def display_performance_report_hearing(person_data, all_person_history_df):
         has_baseline = hearing_results.get('baseline_source') != 'none'
         baseline_year = hearing_results.get('baseline_year')
         
-        table_html = "<table class='styled-df-table'>"
-        
-        # Header
-        header_baseline_title = f"การเปลี่ยนแปลงเทียบกับ Baseline{' (พ.ศ. ' + str(baseline_year) + ')' if has_baseline else ''}"
-        table_html += f"""
-        <thead>
-            <tr>
-                <th rowspan="2">ความถี่ (Hz)</th>
-                <th colspan="2">ผลการตรวจปัจจุบัน (dB)</th>
-                <th colspan="2">{header_baseline_title}</th>
-            </tr>
-            <tr>
-                <th>หูขวา</th>
-                <th>หูซ้าย</th>
-                <th>Shift ขวา</th>
-                <th>Shift ซ้าย</th>
-            </tr>
-        </thead>
-        """
-        
-        # Body
-        table_html += "<tbody>"
+        # Build rows first
+        rows_html_list = []
         freq_order = ['500 Hz', '1000 Hz', '2000 Hz', '3000 Hz', '4000 Hz', '6000 Hz', '8000 Hz']
         for freq in freq_order:
             current_vals = hearing_results.get('raw_values', {}).get(freq, {})
@@ -662,7 +642,7 @@ def display_performance_report_hearing(person_data, all_person_history_df):
                 shift_r_text = f"+{shift_r}" if shift_r is not None and shift_r > 0 else (str(shift_r) if shift_r is not None else "-")
                 shift_l_text = f"+{shift_l}" if shift_l is not None and shift_l > 0 else (str(shift_l) if shift_l is not None else "-")
 
-            table_html += f"""
+            rows_html_list.append(f"""
             <tr>
                 <td>{freq}</td>
                 <td>{r_val}</td>
@@ -670,9 +650,33 @@ def display_performance_report_hearing(person_data, all_person_history_df):
                 <td>{shift_r_text}</td>
                 <td>{shift_l_text}</td>
             </tr>
-            """
-        table_html += "</tbody></table>"
-        st.markdown(table_html, unsafe_allow_html=True)
+            """)
+        
+        rows_html_str = "".join(rows_html_list)
+        
+        # Build full table with header and body
+        header_baseline_title = f"การเปลี่ยนแปลงเทียบกับ Baseline{' (พ.ศ. ' + str(baseline_year) + ')' if has_baseline else ''}"
+        full_table_html = f"""
+        <table class='styled-df-table'>
+            <thead>
+                <tr>
+                    <th rowspan="2">ความถี่ (Hz)</th>
+                    <th colspan="2">ผลการตรวจปัจจุบัน (dB)</th>
+                    <th colspan="2">{header_baseline_title}</th>
+                </tr>
+                <tr>
+                    <th>หูขวา</th>
+                    <th>หูซ้าย</th>
+                    <th>Shift ขวา</th>
+                    <th>Shift ซ้าย</th>
+                </tr>
+            </thead>
+            <tbody>
+                {rows_html_str}
+            </tbody>
+        </table>
+        """
+        st.markdown(full_table_html, unsafe_allow_html=True)
 
 
     with avg_col:
