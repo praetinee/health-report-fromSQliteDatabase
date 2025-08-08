@@ -166,7 +166,6 @@ def render_print_vision(person_data):
                 is_abnormal = True
                 result_text = f"สายตาเขซ่อนเร้น ({test['related_keyword']})"
 
-        # แก้ไข: ปรับ Logic การแสดงผลตามคำขอ
         if is_normal or (result_text and not is_abnormal):
             status_text = "ปกติ"
             status_class = 'status-ok'
@@ -180,33 +179,35 @@ def render_print_vision(person_data):
     doctor_advice = person_data.get('แนะนำABN EYE', '')
     summary_advice = person_data.get('สรุปเหมาะสมกับงาน', '')
     
-    advice_html = ""
-    if abnormal_details or not is_empty(doctor_advice):
-        advice_parts = []
-        if abnormal_details:
-            advice_parts.append(f"<b>พบความผิดปกติ:</b> {', '.join(sorted(list(set(abnormal_details))))}")
-        if not is_empty(doctor_advice):
-            advice_parts.append(f"<b>คำแนะนำแพทย์:</b> {html.escape(doctor_advice)}")
-        advice_html = "<div class='advice-box warning-box'>" + "<br>".join(advice_parts) + "</div>"
-    
-    summary_html = ""
+    # แก้ไข: จัดการส่วนสรุปและคำแนะนำใหม่
+    summary_section_html = ""
+    advice_parts = []
     if not is_empty(summary_advice):
-         summary_html = f"<div class='advice-box info-box'><b>สรุปความเหมาะสมกับงาน:</b> {html.escape(summary_advice)}</div>"
+        advice_parts.append(f"<div class='advice-box info-box'><b>สรุปความเหมาะสมกับงาน:</b> {html.escape(summary_advice)}</div>")
+
+    if abnormal_details or not is_empty(doctor_advice):
+        abnormal_summary_parts = []
+        if abnormal_details:
+            abnormal_summary_parts.append(f"<b>พบความผิดปกติ:</b> {', '.join(sorted(list(set(abnormal_details))))}")
+        if not is_empty(doctor_advice):
+            abnormal_summary_parts.append(f"<b>คำแนะนำแพทย์:</b> {html.escape(doctor_advice)}")
+        advice_parts.append("<div class='advice-box warning-box'>" + "<br>".join(abnormal_summary_parts) + "</div>")
+    
+    # ถ้าไม่มีคำแนะนำใดๆ เลย ให้แสดงว่าปกติ
+    if not advice_parts:
+        advice_parts.append("<div class='advice-box info-box'>ผลการตรวจโดยรวมปกติ ไม่มีคำแนะนำเพิ่มเติม</div>")
+
+    summary_section_html = "<div class='summary-container'>" + "".join(advice_parts) + "</div>"
 
     return f"""
     <div class="report-section">
         {render_section_header("ผลการตรวจสมรรถภาพการมองเห็น (Vision Test)")}
-        <div class="content-columns">
-            <div class="main-content">
-                <table class="data-table">
-                    <thead><tr><th>รายการตรวจ</th><th>ผลการตรวจ</th></tr></thead>
-                    <tbody>{rows_html}</tbody>
-                </table>
-            </div>
-            <div class="side-content">
-                {summary_html}
-                {advice_html}
-            </div>
+        <div class="main-content-full">
+            <table class="data-table">
+                <thead><tr><th>รายการตรวจ</th><th>ผลการตรวจ</th></tr></thead>
+                <tbody>{rows_html}</tbody>
+            </table>
+            {summary_section_html}
         </div>
     </div>
     """
@@ -257,19 +258,12 @@ def render_print_hearing(person_data, all_person_history_df):
     </table>
     """
     
-    # แก้ไข: ปรับปรุงการแสดงผล Baseline Comparison ใหม่ทั้งหมด
+    # แก้ไข: ปรับปรุงการแสดงผล Baseline Comparison กลับเป็นตาราง
     baseline_html = ""
     if results.get('baseline_source') != 'none':
         baseline_year = results.get('baseline_year')
         
-        def get_shift_class(shift):
-            if shift is None: return "shift-nt"
-            if shift >= 10: return "shift-worse"
-            if shift > 0: return "shift-worse-minor"
-            if shift < 0: return "shift-improve"
-            return "shift-stable"
-
-        baseline_items_html = ""
+        baseline_rows_html = ""
         freq_order = ['500 Hz', '1000 Hz', '2000 Hz', '3000 Hz', '4000 Hz', '6000 Hz', '8000 Hz']
         for freq in freq_order:
             if freq not in results['shift_values']: continue
@@ -277,26 +271,18 @@ def render_print_hearing(person_data, all_person_history_df):
             shift_r = results['shift_values'][freq].get('right')
             shift_l = results['shift_values'][freq].get('left')
             
-            shift_r_text = f"+{shift_r}" if shift_r is not None and shift_r > 0 else (shift_r if shift_r is not None else "-")
-            shift_l_text = f"+{shift_l}" if shift_l is not None and shift_l > 0 else (shift_l if shift_l is not None else "-")
+            shift_r_text = f"+{shift_r}" if shift_r is not None and shift_r > 0 else (str(shift_r) if shift_r is not None else "-")
+            shift_l_text = f"+{shift_l}" if shift_l is not None and shift_l > 0 else (str(shift_l) if shift_l is not None else "-")
 
-            baseline_items_html += f"""
-            <div class="baseline-item">
-                <div class="freq-label">{freq.replace(' Hz','')}</div>
-                <div class="shift-val {get_shift_class(shift_r)}">{shift_r_text}</div>
-                <div class="shift-val {get_shift_class(shift_l)}">{shift_l_text}</div>
-            </div>
-            """
+            baseline_rows_html += f"<tr><td>{freq}</td><td>{shift_r_text}</td><td>{shift_l_text}</td></tr>"
         
         baseline_html = f"""
         <div class='baseline-comparison'>
-            <b>การเปลี่ยนแปลงเทียบกับผลตรวจพื้นฐาน (พ.ศ. {baseline_year})</b>
-            <div class="baseline-grid-header">
-                <div>ความถี่</div><div>ขวา</div><div>ซ้าย</div>
-            </div>
-            <div class="baseline-grid">
-                {baseline_items_html}
-            </div>
+            <b>การเปลี่ยนแปลง (dB) เทียบกับผลตรวจพื้นฐาน (พ.ศ. {baseline_year})</b>
+            <table class='data-table'>
+                <thead><tr><th>ความถี่ (Hz)</th><th>Shift ขวา</th><th>Shift ซ้าย</th></tr></thead>
+                <tbody>{baseline_rows_html}</tbody>
+            </table>
         </div>
         """
     
@@ -322,11 +308,11 @@ def render_print_hearing(person_data, all_person_history_df):
         <div class="content-columns">
             <div class="main-content">
                 {data_table_html}
+                {baseline_html if baseline_html else ""}
             </div>
             <div class="side-content">
                 {advice_box_html}
                 {averages_html}
-                {baseline_html if baseline_html else ""}
             </div>
         </div>
     </div>
@@ -395,21 +381,24 @@ def render_print_lung(person_data):
     </table>
     """
 
+    # แก้ไข: จัด Layout ใหม่สำหรับส่วนของปอด
+    summary_section_html = f"""
+    <div class="summary-container">
+        <div class="advice-box {summary_class}" style="text-align: center; margin-bottom: 10px;">
+            {html.escape(summary)}
+        </div>
+        {advice_box_html}
+        {cxr_html}
+    </div>
+    """
+
     return f"""
     <div class="report-section">
         {render_section_header("ผลการตรวจสมรรถภาพปอด (Spirometry)")}
         {metrics_html}
-        <div class="content-columns">
-            <div class="main-content">
-                <div class="advice-box {summary_class}" style="text-align: center; margin-bottom: 10px;">
-                    <b>ผลการแปลความหมาย:</b> {html.escape(summary)}
-                </div>
-                {data_table_html}
-            </div>
-            <div class="side-content">
-                {advice_box_html}
-                {cxr_html}
-            </div>
+        <div class="main-content-full">
+            {data_table_html}
+            {summary_section_html}
         </div>
     </div>
     """
@@ -451,6 +440,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
             .content-columns {{ display: flex; gap: 15px; align-items: flex-start; }}
             .main-content {{ flex: 2; min-width: 0; }}
             .side-content {{ flex: 1; min-width: 0; }}
+            .main-content-full {{ flex: 1; }} /* For single column sections */
 
             .data-table {{ width: 100%; font-size: 9.5px; border-collapse: collapse; }}
             .data-table th, .data-table td {{
@@ -468,10 +458,12 @@ def generate_performance_report_html(person_data, all_person_history_df):
             .card-title {{ font-weight: bold; font-size: 10px; margin-bottom: 4px; color: #555;}}
             .card-body {{ font-size: 12px; font-weight: bold; }}
 
+            .summary-container {{ margin-top: 10px; }}
             .advice-box {{
                 border-radius: 6px; padding: 8px 12px; font-size: 9.5px;
                 line-height: 1.5; border: 1px solid;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                margin-bottom: 5px;
             }}
             .info-box {{ background-color: #e3f2fd; border-color: #bbdefb; }}
             .warning-box {{ background-color: #fff8e1; border-color: #ffecb3; }}
@@ -481,45 +473,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
                 font-size: 10px; display: block; margin-bottom: 5px; text-align: center;
                 font-weight: bold;
             }}
-            .baseline-grid-header {{
-                display: grid;
-                grid-template-columns: 1fr 1fr 1fr;
-                text-align: center;
-                font-weight: bold;
-                font-size: 9px;
-                color: #555;
-                padding: 2px 0;
-                border-bottom: 1px solid #e0e0e0;
-            }}
-            .baseline-grid {{
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 5px;
-                margin-top: 5px;
-            }}
-            .baseline-item {{
-                display: grid;
-                grid-template-columns: 1fr 1fr 1fr;
-                align-items: center;
-                text-align: center;
-                background-color: #f9f9f9;
-                border-radius: 4px;
-                padding: 3px;
-                font-size: 9.5px;
-            }}
-            .baseline-item .freq-label {{
-                font-weight: bold;
-            }}
-            .baseline-item .shift-val {{
-                font-weight: bold;
-                padding: 1px 3px;
-                border-radius: 3px;
-            }}
-            .shift-worse {{ background-color: #ffcdd2; color: #b71c1c; }}
-            .shift-worse-minor {{ background-color: #fff8e1; color: #f57f17; }}
-            .shift-improve {{ background-color: #e8f5e9; color: #1b5e20; }}
-            .shift-stable, .shift-nt {{ background-color: #f0f0f0; color: #616161; }}
-
+            
             .status-ok, .status-abn, .status-nt {{
                 padding: 3px 8px;
                 border-radius: 12px;
