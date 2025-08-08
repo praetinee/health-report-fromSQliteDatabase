@@ -262,6 +262,8 @@ def render_print_hearing(person_data, all_person_history_df):
     if results.get('sts_detected'):
         advice_box_html = f"<div class='advice-box'><b>⚠️ พบการเปลี่ยนแปลงระดับการได้ยินอย่างมีนัยสำคัญ (STS)</b><br>{html.escape(advice)}</div>"
 
+    # <<< START OF MODIFICATION >>>
+    # Redesigned table structure for clarity
     rows_html = ""
     has_baseline = results.get('baseline_source') != 'none'
     baseline_year = results.get('baseline_year')
@@ -269,40 +271,49 @@ def render_print_hearing(person_data, all_person_history_df):
     
     for freq in freq_order:
         current_vals = results.get('raw_values', {}).get(freq, {})
+        base_vals = results.get('baseline_values', {}).get(freq, {})
+        shift_vals = results.get('shift_values', {}).get(freq, {})
+
         r_val = current_vals.get('right', '-')
         l_val = current_vals.get('left', '-')
         
-        shift_r_text = "-"
-        shift_l_text = "-"
-        if has_baseline:
-            shift_vals = results.get('shift_values', {}).get(freq, {})
-            shift_r = shift_vals.get('right')
-            shift_l = shift_vals.get('left')
-            shift_r_text = f"+{shift_r}" if shift_r is not None and shift_r > 0 else (str(shift_r) if shift_r is not None else "-")
-            shift_l_text = f"+{shift_l}" if shift_l is not None and shift_l > 0 else (str(shift_l) if shift_l is not None else "-")
+        r_base = base_vals.get('right', '-') if has_baseline else '-'
+        l_base = base_vals.get('left', '-') if has_baseline else '-'
+        
+        shift_r = shift_vals.get('right')
+        shift_l = shift_vals.get('left')
+        
+        # Format shift values to show '+' for positive numbers
+        shift_r_text = f"+{shift_r}" if shift_r is not None and shift_r > 0 else (str(shift_r) if shift_r is not None else "-")
+        shift_l_text = f"+{shift_l}" if shift_l is not None and shift_l > 0 else (str(shift_l) if shift_l is not None else "-")
 
         rows_html += f"""
         <tr>
             <td>{freq}</td>
             <td>{r_val}</td>
-            <td>{l_val}</td>
+            <td>{r_base}</td>
             <td>{shift_r_text}</td>
+            <td>{l_val}</td>
+            <td>{l_base}</td>
             <td>{shift_l_text}</td>
         </tr>
         """
 
+    baseline_year_str = f" (พ.ศ. {baseline_year})" if has_baseline else ""
     table_header_html = f"""
     <thead>
         <tr>
             <th rowspan="2" style="vertical-align: middle;">ความถี่ (Hz)</th>
-            <th colspan="2">ผลการตรวจปัจจุบัน (dB)</th>
-            <th colspan="2">การเปลี่ยนแปลงเทียบกับ Baseline{' (พ.ศ. ' + str(baseline_year) + ')' if has_baseline else ''}</th>
+            <th colspan="3">หูขวา (Right Ear)</th>
+            <th colspan="3">หูซ้าย (Left Ear)</th>
         </tr>
         <tr>
-            <th>หูขวา</th>
-            <th>หูซ้าย</th>
-            <th>Shift ขวา</th>
-            <th>Shift ซ้าย</th>
+            <th>ปัจจุบัน (dB)</th>
+            <th>Baseline{baseline_year_str}</th>
+            <th>Shift</th>
+            <th>ปัจจุบัน (dB)</th>
+            <th>Baseline{baseline_year_str}</th>
+            <th>Shift</th>
         </tr>
     </thead>
     """
@@ -310,16 +321,19 @@ def render_print_hearing(person_data, all_person_history_df):
     data_table_html = f"""
     <table class="data-table hearing-table">
         <colgroup>
-            <col style="width: 20%;">
-            <col style="width: 20%;">
-            <col style="width: 20%;">
-            <col style="width: 20%;">
-            <col style="width: 20%;">
+            <col style="width: 16%;">
+            <col style="width: 14%;">
+            <col style="width: 14%;">
+            <col style="width: 14%;">
+            <col style="width: 14%;">
+            <col style="width: 14%;">
+            <col style="width: 14%;">
         </colgroup>
         {table_header_html}
         <tbody>{rows_html}</tbody>
     </table>
     """
+    # <<< END OF MODIFICATION >>>
     
     averages = results.get('averages', {})
     avg_r_speech = averages.get('right_500_2000')
