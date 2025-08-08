@@ -423,15 +423,11 @@ def inject_custom_css():
         .styled-df-table th, .styled-df-table td {
             border-bottom: 1px solid var(--secondary-background-color);
             padding: 10px;
-            text-align: center; /* Center align all cells */
-        }
-        .styled-df-table td:first-child {
-            text-align: left; /* Left align the first column */
+            text-align: left;
         }
         .styled-df-table thead th {
             background-color: var(--secondary-background-color);
             font-weight: bold;
-            vertical-align: middle;
         }
         .styled-df-table tbody tr:hover {
             background-color: rgba(255, 255, 255, 0.1);
@@ -617,67 +613,12 @@ def display_performance_report_hearing(person_data, all_person_history_df):
     
     st.markdown("<hr>", unsafe_allow_html=True)
 
-    # --- FIXED TABLE LOGIC ---
     data_col, avg_col = st.columns([3, 2])
     with data_col:
         st.markdown("<h5><b>ผลการตรวจวัดระดับการได้ยิน (หน่วย: dB)</b></h5>", unsafe_allow_html=True)
-        
-        has_baseline = hearing_results.get('baseline_source') != 'none'
-        baseline_year = hearing_results.get('baseline_year')
-        
-        # Build rows first
-        rows_html_list = []
-        freq_order = ['500 Hz', '1000 Hz', '2000 Hz', '3000 Hz', '4000 Hz', '6000 Hz', '8000 Hz']
-        for freq in freq_order:
-            current_vals = hearing_results.get('raw_values', {}).get(freq, {})
-            r_val = current_vals.get('right', '-')
-            l_val = current_vals.get('left', '-')
-            
-            shift_r_text = "-"
-            shift_l_text = "-"
-            if has_baseline:
-                shift_vals = hearing_results.get('shift_values', {}).get(freq, {})
-                shift_r = shift_vals.get('right')
-                shift_l = shift_vals.get('left')
-                shift_r_text = f"+{shift_r}" if shift_r is not None and shift_r > 0 else (str(shift_r) if shift_r is not None else "-")
-                shift_l_text = f"+{shift_l}" if shift_l is not None and shift_l > 0 else (str(shift_l) if shift_l is not None else "-")
-
-            rows_html_list.append(f"""
-            <tr>
-                <td>{freq}</td>
-                <td>{r_val}</td>
-                <td>{l_val}</td>
-                <td>{shift_r_text}</td>
-                <td>{shift_l_text}</td>
-            </tr>
-            """)
-        
-        rows_html_str = "".join(rows_html_list)
-        
-        # Build full table with header and body
-        header_baseline_title = f"การเปลี่ยนแปลงเทียบกับ Baseline{' (พ.ศ. ' + str(baseline_year) + ')' if has_baseline else ''}"
-        full_table_html = f"""
-        <table class='styled-df-table'>
-            <thead>
-                <tr>
-                    <th rowspan="2">ความถี่ (Hz)</th>
-                    <th colspan="2">ผลการตรวจปัจจุบัน (dB)</th>
-                    <th colspan="2">{header_baseline_title}</th>
-                </tr>
-                <tr>
-                    <th>หูขวา</th>
-                    <th>หูซ้าย</th>
-                    <th>Shift ขวา</th>
-                    <th>Shift ซ้าย</th>
-                </tr>
-            </thead>
-            <tbody>
-                {rows_html_str}
-            </tbody>
-        </table>
-        """
-        st.markdown(full_table_html, unsafe_allow_html=True)
-
+        raw_data = hearing_results.get('raw_values', {})
+        df_data = [{"ความถี่": freq, "หูขวา (dB)": v.get('right', '-'), "หูซ้าย (dB)": v.get('left', '-')} for freq, v in raw_data.items()]
+        st.markdown(pd.DataFrame(df_data).to_html(escape=False, index=False, classes="styled-df-table"), unsafe_allow_html=True)
 
     with avg_col:
         st.markdown("<h5><b>ค่าเฉลี่ยการได้ยิน (dB)</b></h5>", unsafe_allow_html=True)
@@ -698,9 +639,23 @@ def display_performance_report_hearing(person_data, all_person_history_df):
             </ul>
         </div>
         """, unsafe_allow_html=True)
+
+    st.markdown("<hr>", unsafe_allow_html=True)
+    baseline_source = hearing_results.get('baseline_source', 'none')
+    if baseline_source != 'none':
+        baseline_year = hearing_results.get('baseline_year')
+        st.markdown(f"<h5><b>การเปรียบเทียบกับผลตรวจ{'ครั้งแรก' if baseline_source == 'first_year' else 'พื้นฐาน'} (พ.ศ. {baseline_year})</b></h5>", unsafe_allow_html=True)
         if hearing_results.get('sts_detected'):
             st.warning("⚠️ **พบการเปลี่ยนแปลงระดับการได้ยินอย่างมีนัยสำคัญ (Standard Threshold Shift - STS)**")
-
+        baseline_df_data = [
+            {"ความถี่": freq, "ปัจจุบัน (ขวา)": v.get('right', '-'), "Baseline (ขวา)": hearing_results['baseline_values'][freq].get('right', '-'), "Shift (ขวา)": hearing_results['shift_values'][freq].get('right', '-'),
+             "ปัจจุบัน (ซ้าย)": v.get('left', '-'), "Baseline (ซ้าย)": hearing_results['baseline_values'][freq].get('left', '-'), "Shift (ซ้าย)": hearing_results['shift_values'][freq].get('left', '-')}
+            for freq, v in hearing_results.get('raw_values', {}).items()
+        ]
+        st.markdown(pd.DataFrame(baseline_df_data).to_html(escape=False, index=False, classes="styled-df-table"), unsafe_allow_html=True)
+    else:
+        st.markdown("<h5><b>การเปรียบเทียบกับผลตรวจพื้นฐาน (Baseline)</b></h5>", unsafe_allow_html=True)
+        st.info("ไม่สามารถเปรียบเทียบผลได้ เนื่องจากการตรวจนี้เป็นการตรวจครั้งแรก หรือไม่พบข้อมูลการตรวจในปีก่อนหน้า")
 
     if hearing_results.get('other_data'):
         st.markdown("<hr>", unsafe_allow_html=True)
@@ -773,13 +728,13 @@ def display_performance_report_vision(person_data):
             if not is_empty(vision_advice_summary):
                  st.markdown(f"""
                  <div style='background-color: rgba(64, 128, 255, 0.1); border: 1px solid rgba(64, 128, 255, 0.3); padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
-                    <div style='flex-shrink: 0;'><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="#4080FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div>
+                    <div style='flex-shrink: 0;'><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4080FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div>
                     <div><h5 style='margin-top: 0; margin-bottom: 0.25rem; color: #A6C8FF;'>สรุปความเหมาะสมกับงาน</h5><p style='margin:0; color: var(--text-color);'>{vision_advice_summary}</p></div>
                  </div>""", unsafe_allow_html=True)
             if not is_empty(doctor_advice):
                  st.markdown(f"""
                  <div style='background-color: rgba(255, 229, 100, 0.1); border: 1px solid rgba(255, 229, 100, 0.3); padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
-                    <div style='flex-shrink: 0;'><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="#FFE564" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg></div>
+                    <div style='flex-shrink: 0;'><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFE564" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg></div>
                     <div><h5 style='margin-top: 0; margin-bottom: 0.25rem; color: #FFE564;'>คำแนะนำเพิ่มเติมจากแพทย์</h5><p style='margin:0; color: var(--text-color);'>{doctor_advice}</p></div>
                  </div>""", unsafe_allow_html=True)
         return
@@ -789,7 +744,7 @@ def display_performance_report_vision(person_data):
     if not is_empty(vision_advice_summary):
         st.markdown(f"""
          <div style='background-color: rgba(64, 128, 255, 0.1); border: 1px solid rgba(64, 128, 255, 0.3); padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
-            <div style='flex-shrink: 0;'><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="#4080FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div>
+            <div style='flex-shrink: 0;'><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4080FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div>
             <div><h5 style='margin-top: 0; margin-bottom: 0.25rem; color: #A6C8FF;'>สรุปความเหมาะสมกับงาน</h5><p style='margin:0; color: var(--text-color);'>{vision_advice_summary}</p></div>
          </div>""", unsafe_allow_html=True)
 
@@ -803,7 +758,7 @@ def display_performance_report_vision(person_data):
         if not is_empty(doctor_advice): summary_parts.append(f"<b>คำแนะนำเพิ่มเติมจากแพทย์:</b> {doctor_advice}")
         st.markdown(f"""
         <div style='background-color: rgba(255, 229, 100, 0.1); border: 1px solid rgba(255, 229, 100, 0.3); padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
-            <div style='flex-shrink: 0;'><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="#FFE564" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg></div>
+            <div style='flex-shrink: 0;'><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFE564" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg></div>
             <div><h5 style='margin-top: 0; margin-bottom: 0.25rem; color: #FFE564;'>สรุปความผิดปกติและคำแนะนำ</h5><p style='margin:0; color: var(--text-color);'>{"<br>".join(summary_parts)}</p></div>
         </div>""", unsafe_allow_html=True)
 
