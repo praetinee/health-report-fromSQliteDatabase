@@ -78,35 +78,34 @@ def render_html_header_and_personal_info(person):
     pulse_raw = person.get("pulse", "-")
     pulse_val = str(int(float(pulse_raw))) if not is_empty(pulse_raw) and str(pulse_raw).replace('.', '', 1).isdigit() else "-"
 
-    header = f"""
-    <div class="report-header-container">
-        <h1 style="font-size: 1.5rem; margin:0;">รายงานผลการตรวจสมรรถภาพ</h1>
-        <p style="font-size: 0.8rem; margin:0;">คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย</p>
-        <p style="font-size: 0.8rem; margin:0;"><b>วันที่ตรวจ:</b> {check_date or "-"}</p>
+    # แก้ไข: จัด Layout ของ Header ใหม่
+    header_html = f"""
+    <div class="header-grid">
+        <div class="header-left">
+            <h1 style="font-size: 1.5rem; margin:0;">รายงานผลการตรวจสมรรถภาพ</h1>
+            <p style="font-size: 0.8rem; margin:0;">คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย</p>
+            <p style="font-size: 0.8rem; margin:0;"><b>วันที่ตรวจ:</b> {check_date or "-"}</p>
+        </div>
+        <div class="header-right">
+            <table class="info-table">
+                <tr>
+                    <td><b>ชื่อ-สกุล:</b> {person.get('ชื่อ-สกุล', '-')}</td>
+                    <td><b>อายุ:</b> {str(int(float(person.get('อายุ')))) if str(person.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')} ปี</td>
+                    <td><b>เพศ:</b> {person.get('เพศ', '-')}</td>
+                    <td><b>HN:</b> {str(int(float(person.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person.get('HN', '-')}</td>
+                </tr>
+                <tr>
+                    <td><b>หน่วยงาน:</b> {person.get('หน่วยงาน', '-')}</td>
+                    <td><b>น้ำหนัก:</b> {person.get("น้ำหนัก", "-")} กก.</td>
+                    <td><b>ส่วนสูง:</b> {person.get("ส่วนสูง", "-")} ซม.</td>
+                    <td><b>ความดัน:</b> {bp_val}</td>
+                </tr>
+            </table>
+        </div>
     </div>
+    <hr>
     """
-    
-    personal_info = f"""
-    <div class="personal-info-container">
-        <hr>
-        <table class="info-table">
-            <tr>
-                <td><b>ชื่อ-สกุล:</b> {person.get('ชื่อ-สกุล', '-')}</td>
-                <td><b>อายุ:</b> {str(int(float(person.get('อายุ')))) if str(person.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')} ปี</td>
-                <td><b>เพศ:</b> {person.get('เพศ', '-')}</td>
-                <td><b>HN:</b> {str(int(float(person.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person.get('HN', '-')}</td>
-            </tr>
-            <tr>
-                <td><b>หน่วยงาน:</b> {person.get('หน่วยงาน', '-')}</td>
-                <td><b>น้ำหนัก:</b> {person.get("น้ำหนัก", "-")} กก.</td>
-                <td><b>ส่วนสูง:</b> {person.get("ส่วนสูง", "-")} ซม.</td>
-                <td><b>ความดัน:</b> {bp_val}</td>
-            </tr>
-        </table>
-        <hr>
-    </div>
-    """
-    return header + personal_info
+    return header_html
 
 
 def render_print_vision(person_data):
@@ -442,9 +441,13 @@ def generate_performance_report_html(person_data, all_person_history_df):
                 background-color: #fff;
             }}
             hr {{ border: 0; border-top: 1px solid #e0e0e0; margin: 0.5rem 0; }}
-            .info-table {{ width: 100%; font-size: 10px; text-align: left; border-collapse: collapse; }}
-            .info-table td {{ padding: 2px 5px; border: none; }}
+            .info-table {{ width: 100%; font-size: 9.5px; text-align: left; border-collapse: collapse; }}
+            .info-table td {{ padding: 1px 5px; }}
             
+            .header-grid {{ display: flex; align-items: flex-end; justify-content: space-between; }}
+            .header-left {{ text-align: left; }}
+            .header-right {{ text-align: right; }}
+
             .report-section {{ margin-bottom: 1.5rem; page-break-inside: avoid; }}
             .section-header {{
                 background-color: #00796B; 
@@ -462,7 +465,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
             .data-table {{ width: 100%; font-size: 9.5px; border-collapse: collapse; }}
             .data-table.hearing-table {{ table-layout: fixed; }}
             .data-table th, .data-table td {{
-                border: 1px solid #e0e0e0; padding: 4px 6px; text-align: center;
+                border: 1px solid #e0e0e0; padding: 4px; text-align: center;
                 vertical-align: middle;
             }}
             .data-table th {{ background-color: #f5f5f5; font-weight: bold; }}
@@ -489,7 +492,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
                 border-radius: 6px; padding: 8px 12px; font-size: 9.5px;
                 line-height: 1.5; border: 1px solid;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-                margin-bottom: 5px;
+                margin-bottom: 0; /* remove margin-bottom */
                 height: 100%;
                 box-sizing: border-box;
             }}
