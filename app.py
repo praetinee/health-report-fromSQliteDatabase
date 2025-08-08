@@ -428,9 +428,20 @@ def inject_custom_css():
         .styled-df-table thead th {
             background-color: var(--secondary-background-color);
             font-weight: bold;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .styled-df-table tbody td {
+            text-align: center;
+        }
+        .styled-df-table tbody td:first-child {
+            text-align: left;
         }
         .styled-df-table tbody tr:hover {
             background-color: rgba(255, 255, 255, 0.1);
+        }
+        .hearing-table {
+            table-layout: fixed;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -524,7 +535,7 @@ def render_vision_details_table(person_data):
 
 def display_performance_report_hearing(person_data, all_person_history_df):
     """
-    แสดงผลรายงานสมรรถภาพการได้ยิน (Audiogram) ในรูปแบบใหม่
+    แสดงผลรายงานสมรรถภาพการได้ยิน (Audiogram) ในรูปแบบใหม่ที่รวมตาราง
     """
     st.markdown("<h2 style='text-align: center;'>รายงานผลการตรวจสมรรถภาพการได้ยิน (Audiometry Report)</h2>", unsafe_allow_html=True)
     
@@ -534,53 +545,9 @@ def display_performance_report_hearing(person_data, all_person_history_df):
         st.warning("ไม่ได้เข้ารับการตรวจสมรรถภาพการได้ยินในปีนี้")
         return
 
-    def format_hearing_summary(summary_text, severity_text):
-        if is_empty(summary_text) or "N/A" in summary_text:
-            return f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">N/A</p>'
-        
-        if "ปกติ" in summary_text:
-            return f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">{summary_text}</p>'
-
-        main_status = severity_text if not is_empty(severity_text) and "ข้อมูลไม่เพียงพอ" not in severity_text else "การได้ยินลดลง"
-        freq_str = ""
-        if "ที่ระดับความถี่" in summary_text:
-            parts = summary_text.split(',', 1)
-            freq_str = parts[1].strip() if len(parts) > 1 else ""
-        elif "การได้ยินลดลง" in summary_text:
-             parts = summary_text.split(',', 1)
-             freq_str = parts[1].strip() if len(parts) > 1 else ""
-
-        if not freq_str:
-            return f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0; color: var(--text-color);">{main_status}</p>'
-
-        freqs = [f.strip().lower() for f in freq_str.split(',') if f.strip()]
-        low_tones, speech_tones, high_tones = [], [], []
-
-        for f in freqs:
-            if '500' in f: low_tones.append('500 Hz')
-            elif '1k' in f: speech_tones.append('1 kHz')
-            elif '2k' in f: speech_tones.append('2 kHz')
-            elif '3k' in f: high_tones.append('3 kHz')
-            elif '4k' in f: high_tones.append('4 kHz')
-            elif '6k' in f: high_tones.append('6 kHz')
-            elif '8k' in f: high_tones.append('8 kHz')
-
-        html_output = f'<p style="font-size: 1.2rem; font-weight: bold; margin: 0; color: var(--text-color);">{main_status}</p>'
-        details_parts = []
-        if speech_tones: details_parts.append(f'เสียงพูด ({", ".join(speech_tones)})')
-        if high_tones: details_parts.append(f'เสียงแหลม ({", ".join(high_tones)})')
-        if low_tones: details_parts.append(f'เสียงทุ้ม ({", ".join(low_tones)})')
-
-        if details_parts:
-            html_output += f'<p style="font-size: 0.8rem; margin: 0.25rem 0 0 0; color: var(--text-color);">กระทบความถี่: {", ".join(details_parts)}</p>'
-
-        return html_output.strip()
-
-    st.markdown("<h5><b>สรุปผลการตรวจ</b></h5>", unsafe_allow_html=True)
+    # --- ส่วนสรุปผล (Summary Cards) ---
     summary_r_raw = person_data.get('ผลตรวจการได้ยินหูขวา', 'N/A')
     summary_l_raw = person_data.get('ผลตรวจการได้ยินหูซ้าย', 'N/A')
-    severity_r = person_data.get('ระดับการได้ยินหูขวา', 'N/A')
-    severity_l = person_data.get('ระดับการได้ยินหูซ้าย', 'N/A')
 
     def get_summary_color(summary_text):
         if "ปกติ" in summary_text: return "rgba(46, 125, 50, 0.2)"
@@ -591,34 +558,93 @@ def display_performance_report_hearing(person_data, all_person_history_df):
     with col1:
         st.markdown(f"""
         <div style="background-color: {get_summary_color(summary_r_raw)}; padding: 1rem; border-radius: 8px; text-align: center; height: 100%;">
-            <p style="font-size: 0.9rem; font-weight: bold; margin: 0; color: var(--text-color);">ระดับการได้ยินหูขวา</p>
-            {format_hearing_summary(summary_r_raw, severity_r)}
+            <p style="font-size: 1rem; font-weight: bold; margin: 0; color: var(--text-color);">หูขวา (Right Ear)</p>
+            <p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">{html.escape(summary_r_raw)}</p>
         </div>
         """, unsafe_allow_html=True)
 
     with col2:
         st.markdown(f"""
         <div style="background-color: {get_summary_color(summary_l_raw)}; padding: 1rem; border-radius: 8px; text-align: center; height: 100%;">
-            <p style="font-size: 0.9rem; font-weight: bold; margin: 0; color: var(--text-color);">ระดับการได้ยินหูซ้าย</p>
-            {format_hearing_summary(summary_l_raw, severity_l)}
+            <p style="font-size: 1rem; font-weight: bold; margin: 0; color: var(--text-color);">หูซ้าย (Left Ear)</p>
+            <p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">{html.escape(summary_l_raw)}</p>
         </div>
         """, unsafe_allow_html=True)
 
-    st.markdown("<br><h5><b>คำแนะนำ</b></h5>", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # --- ส่วนคำแนะนำ (Advice) ---
     advice = hearing_results.get('advice', 'ไม่มีคำแนะนำเพิ่มเติม')
-    if "ผิดปกติ" in hearing_results['summary'].get('overall', ''):
-        st.error(f"**คำแนะนำ:** {advice}")
+    if hearing_results.get('sts_detected'):
+        st.error(f"**⚠️ พบการเปลี่ยนแปลงระดับการได้ยินอย่างมีนัยสำคัญ (STS):** {advice}")
+    elif "ผิดปกติ" in hearing_results['summary'].get('overall', ''):
+        st.warning(f"**คำแนะนำ:** {advice}")
     else:
         st.success(f"**คำแนะนำ:** {advice}")
     
     st.markdown("<hr>", unsafe_allow_html=True)
 
+    # --- ส่วนตารางผลตรวจและค่าเฉลี่ย ---
     data_col, avg_col = st.columns([3, 2])
+    
     with data_col:
-        st.markdown("<h5><b>ผลการตรวจวัดระดับการได้ยิน (หน่วย: dB)</b></h5>", unsafe_allow_html=True)
-        raw_data = hearing_results.get('raw_values', {})
-        df_data = [{"ความถี่": freq, "หูขวา (dB)": v.get('right', '-'), "หูซ้าย (dB)": v.get('left', '-')} for freq, v in raw_data.items()]
-        st.markdown(pd.DataFrame(df_data).to_html(escape=False, index=False, classes="styled-df-table"), unsafe_allow_html=True)
+        st.markdown("<h5><b>ผลการตรวจโดยละเอียด</b></h5>", unsafe_allow_html=True)
+        
+        # --- สร้างตาราง HTML ที่รวมผลปัจจุบันและผลเปรียบเทียบ ---
+        has_baseline = hearing_results.get('baseline_source') != 'none'
+        baseline_year = hearing_results.get('baseline_year')
+        freq_order = ['500 Hz', '1000 Hz', '2000 Hz', '3000 Hz', '4000 Hz', '6000 Hz', '8000 Hz']
+        
+        rows_html = ""
+        for freq in freq_order:
+            current_vals = hearing_results.get('raw_values', {}).get(freq, {})
+            r_val = current_vals.get('right', '-')
+            l_val = current_vals.get('left', '-')
+            
+            shift_r_text, shift_l_text = "-", "-"
+            if has_baseline:
+                shift_vals = hearing_results.get('shift_values', {}).get(freq, {})
+                shift_r, shift_l = shift_vals.get('right'), shift_vals.get('left')
+                shift_r_text = f"+{shift_r}" if shift_r is not None and shift_r > 0 else (str(shift_r) if shift_r is not None else "-")
+                shift_l_text = f"+{shift_l}" if shift_l is not None and shift_l > 0 else (str(shift_l) if shift_l is not None else "-")
+
+            rows_html += f"""
+            <tr>
+                <td style="text-align: left;">{freq}</td>
+                <td>{r_val}</td>
+                <td>{l_val}</td>
+                <td>{shift_r_text}</td>
+                <td>{shift_l_text}</td>
+            </tr>
+            """
+
+        baseline_header = f" (พ.ศ. {baseline_year})" if has_baseline else " (ไม่มี Baseline)"
+        table_html = f"""
+        <table class="styled-df-table hearing-table">
+            <colgroup>
+                <col style="width: 20%;">
+                <col style="width: 20%;">
+                <col style="width: 20%;">
+                <col style="width: 20%;">
+                <col style="width: 20%;">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th rowspan="2">ความถี่ (Hz)</th>
+                    <th colspan="2">ผลตรวจปัจจุบัน (dB)</th>
+                    <th colspan="2">การเปลี่ยนแปลง{baseline_header}</th>
+                </tr>
+                <tr>
+                    <th>หูขวา</th>
+                    <th>หูซ้าย</th>
+                    <th>Shift ขวา</th>
+                    <th>Shift ซ้าย</th>
+                </tr>
+            </thead>
+            <tbody>{rows_html}</tbody>
+        </table>
+        """
+        st.markdown(table_html, unsafe_allow_html=True)
 
     with avg_col:
         st.markdown("<h5><b>ค่าเฉลี่ยการได้ยิน (dB)</b></h5>", unsafe_allow_html=True)
@@ -626,7 +652,7 @@ def display_performance_report_hearing(person_data, all_person_history_df):
         avg_r_speech, avg_l_speech = averages.get('right_500_2000'), averages.get('left_500_2000')
         avg_r_high, avg_l_high = averages.get('right_3000_6000'), averages.get('left_3000_6000')
         st.markdown(f"""
-        <div style='background-color: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px; line-height: 1.8;'>
+        <div style='background-color: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px; line-height: 1.8; height: 100%;'>
             <b>ความถี่เสียงพูด (500-2000 Hz):</b>
             <ul>
                 <li>หูขวา: {f'{avg_r_speech:.1f}' if avg_r_speech is not None else 'N/A'}</li>
@@ -639,23 +665,6 @@ def display_performance_report_hearing(person_data, all_person_history_df):
             </ul>
         </div>
         """, unsafe_allow_html=True)
-
-    st.markdown("<hr>", unsafe_allow_html=True)
-    baseline_source = hearing_results.get('baseline_source', 'none')
-    if baseline_source != 'none':
-        baseline_year = hearing_results.get('baseline_year')
-        st.markdown(f"<h5><b>การเปรียบเทียบกับผลตรวจ{'ครั้งแรก' if baseline_source == 'first_year' else 'พื้นฐาน'} (พ.ศ. {baseline_year})</b></h5>", unsafe_allow_html=True)
-        if hearing_results.get('sts_detected'):
-            st.warning("⚠️ **พบการเปลี่ยนแปลงระดับการได้ยินอย่างมีนัยสำคัญ (Standard Threshold Shift - STS)**")
-        baseline_df_data = [
-            {"ความถี่": freq, "ปัจจุบัน (ขวา)": v.get('right', '-'), "Baseline (ขวา)": hearing_results['baseline_values'][freq].get('right', '-'), "Shift (ขวา)": hearing_results['shift_values'][freq].get('right', '-'),
-             "ปัจจุบัน (ซ้าย)": v.get('left', '-'), "Baseline (ซ้าย)": hearing_results['baseline_values'][freq].get('left', '-'), "Shift (ซ้าย)": hearing_results['shift_values'][freq].get('left', '-')}
-            for freq, v in hearing_results.get('raw_values', {}).items()
-        ]
-        st.markdown(pd.DataFrame(baseline_df_data).to_html(escape=False, index=False, classes="styled-df-table"), unsafe_allow_html=True)
-    else:
-        st.markdown("<h5><b>การเปรียบเทียบกับผลตรวจพื้นฐาน (Baseline)</b></h5>", unsafe_allow_html=True)
-        st.info("ไม่สามารถเปรียบเทียบผลได้ เนื่องจากการตรวจนี้เป็นการตรวจครั้งแรก หรือไม่พบข้อมูลการตรวจในปีก่อนหน้า")
 
     if hearing_results.get('other_data'):
         st.markdown("<hr>", unsafe_allow_html=True)
