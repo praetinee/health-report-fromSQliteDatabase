@@ -9,6 +9,9 @@ from performance_tests import interpret_audiogram, interpret_lung_capacity
 # Module: print_performance_report.py
 # Purpose: Contains functions to generate HTML for performance test reports
 # (Vision, Hearing, Lung) for the standalone printable version.
+#
+# NOTE: This file has been completely redesigned for a more modern,
+# informative, and doctor-friendly printable layout.
 # ==============================================================================
 
 
@@ -18,7 +21,6 @@ def is_empty(val):
     """Check if a value is empty, null, or whitespace."""
     return pd.isna(val) or str(val).strip().lower() in ["", "-", "none", "nan", "null"]
 
-# --- แก้ไข: ใช้ฟังก์ชันตรวจสอบข้อมูลที่ครอบคลุมเหมือนใน app.py ---
 def has_vision_data(person_data):
     """Check for any ACTUAL vision test data, ignoring summary/advice fields."""
     detailed_keys = [
@@ -52,6 +54,7 @@ def has_lung_data(person_data):
 # --- HTML Rendering Functions for Standalone Report ---
 
 def render_section_header(title, subtitle=None):
+    """Renders a styled section header for the print report."""
     full_title = f"{title} <span style='font-weight: normal;'>({subtitle})</span>" if subtitle else title
     return f"""
     <div class='section-header'>
@@ -60,9 +63,10 @@ def render_section_header(title, subtitle=None):
     """
 
 def render_html_header_and_personal_info(person):
+    """Renders the main header and personal info table for the print report."""
     check_date = person.get("วันที่ตรวจ", "-")
     
-    # Vital Signs
+    # Vital Signs Formatting
     sbp = person.get("SBP", "")
     dbp = person.get("DBP", "")
     try:
@@ -105,10 +109,11 @@ def render_html_header_and_personal_info(person):
 
 
 def render_print_vision(person_data):
+    """Renders the Vision Test section for the print report."""
     if not has_vision_data(person_data):
         return ""
 
-    # --- แก้ไข: ดึงข้อมูลทั้งหมดมาแสดงในตาราง ---
+    # Define all vision tests and their corresponding data columns and normal keywords
     vision_tests = [
         {'d': '1. การมองด้วย 2 ตา (Binocular vision)', 'c': 'ป.การรวมภาพ', 'nk': ['ปกติ']},
         {'d': '2. การมองภาพระยะไกลด้วยสองตา (Far vision - Both)', 'c': 'ป.ความชัดของภาพระยะไกล', 'nk': ['ชัดเจน', 'ปกติ']},
@@ -120,7 +125,7 @@ def render_print_vision(person_data):
         {'d': '8. การมองภาพระยะใกล้ด้วยตาขวา (Near vision - Right)', 'c': 'การมองภาพระยะใกล้ด้วยตาขวา (Near vision – Right)', 'nk': ['ชัดเจน', 'ปกติ']},
         {'d': '9. การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision - Left)', 'c': 'การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision – Left)', 'nk': ['ชัดเจน', 'ปกติ']},
         {'d': '10. ลานสายตา (Visual field)', 'c': 'ป.ลานสายตา', 'nk': ['ปกติ']},
-        {'d': '11. ตาเข/ตาเหล่ซ่อนเร้น (Phoria)', 'c': 'ผ.สายตาเขซ่อนเร้น', 'nk': []} # หากมีค่าถือว่าผิดปกติ
+        {'d': '11. ตาเข/ตาเหล่ซ่อนเร้น (Phoria)', 'c': 'ผ.สายตาเขซ่อนเร้น', 'nk': []} # Any value in this field is considered abnormal
     ]
     
     rows_html = ""
@@ -130,18 +135,18 @@ def render_print_vision(person_data):
         status = "ไม่ได้ตรวจ"
         status_class = "status-nt"
         
-        # Logic for normal/abnormal check
+        # Logic to determine if the result is normal or abnormal
         is_abnormal = False
         if not is_empty(val):
             # For Phoria, any value is abnormal
             if test['c'] == 'ผ.สายตาเขซ่อนเร้น':
                 is_abnormal = True
-            # For others, check against normal keywords
+            # For other tests, check against normal keywords
             elif not any(k.lower() in val.lower() for k in test['nk']):
                 is_abnormal = True
 
             if is_abnormal:
-                status = f"ผิดปกติ ({val})"
+                status = f"ผิดปกติ ({html.escape(val)})"
                 status_class = "status-abn"
                 abnormal_details.append(test['d'].split('(')[0].strip())
             else:
@@ -153,20 +158,21 @@ def render_print_vision(person_data):
     doctor_advice = person_data.get('แนะนำABN EYE', '')
     summary_advice = person_data.get('สรุปเหมาะสมกับงาน', '')
     
+    # Build the advice and summary boxes for the side content
     advice_html = ""
     if abnormal_details or not is_empty(doctor_advice):
         advice_parts = []
         if abnormal_details:
             advice_parts.append(f"<b>พบความผิดปกติ:</b> {', '.join(abnormal_details)}")
         if not is_empty(doctor_advice):
-            advice_parts.append(f"<b>คำแนะนำแพทย์:</b> {doctor_advice}")
+            advice_parts.append(f"<b>คำแนะนำแพทย์:</b> {html.escape(doctor_advice)}")
         advice_html = "<div class='advice-box warning-box'>" + "<br>".join(advice_parts) + "</div>"
     
     summary_html = ""
     if not is_empty(summary_advice):
-         summary_html = f"<div class='advice-box info-box'><b>สรุปความเหมาะสมกับงาน:</b> {summary_advice}</div>"
+         summary_html = f"<div class='advice-box info-box'><b>สรุปความเหมาะสมกับงาน:</b> {html.escape(summary_advice)}</div>"
 
-
+    # Combine all parts into the final section HTML
     return f"""
     <div class="report-section">
         {render_section_header("ผลการตรวจสมรรถภาพการมองเห็น (Vision Test)")}
@@ -186,12 +192,13 @@ def render_print_vision(person_data):
     """
 
 def render_print_hearing(person_data, all_person_history_df):
+    """Renders the Hearing Test (Audiometry) section for the print report."""
     if not has_hearing_data(person_data):
         return ""
         
     results = interpret_audiogram(person_data, all_person_history_df)
     
-    # Summary Cards
+    # Summary Cards for Right and Left Ear
     summary_r_raw = person_data.get('ผลตรวจการได้ยินหูขวา', 'N/A')
     summary_l_raw = person_data.get('ผลตรวจการได้ยินหูซ้าย', 'N/A')
     
@@ -204,22 +211,22 @@ def render_print_hearing(person_data, all_person_history_df):
     <div class="summary-cards">
         <div class="card {get_summary_class(summary_r_raw)}">
             <div class="card-title">หูขวา (Right Ear)</div>
-            <div class="card-body">{summary_r_raw}</div>
+            <div class="card-body">{html.escape(summary_r_raw)}</div>
         </div>
         <div class="card {get_summary_class(summary_l_raw)}">
             <div class="card-title">หูซ้าย (Left Ear)</div>
-            <div class="card-body">{summary_l_raw}</div>
+            <div class="card-body">{html.escape(summary_l_raw)}</div>
         </div>
     </div>
     """
 
-    # Advice Box
+    # Advice Box with STS warning if detected
     advice = results.get('advice', 'ไม่มีคำแนะนำเพิ่มเติม')
-    advice_box_html = f"<div class='advice-box info-box'><b>คำแนะนำ:</b> {advice}</div>"
+    advice_box_html = f"<div class='advice-box info-box'><b>คำแนะนำ:</b> {html.escape(advice)}</div>"
     if results.get('sts_detected'):
-        advice_box_html = f"<div class='advice-box warning-box'><b>⚠️ พบการเปลี่ยนแปลงระดับการได้ยินอย่างมีนัยสำคัญ (STS)</b><br>{advice}</div>"
+        advice_box_html = f"<div class='advice-box warning-box'><b>⚠️ พบการเปลี่ยนแปลงระดับการได้ยินอย่างมีนัยสำคัญ (STS)</b><br>{html.escape(advice)}</div>"
 
-    # Data Table
+    # Main data table for audiogram results
     raw_data = results.get('raw_values', {})
     rows_html = ""
     for freq, values in raw_data.items():
@@ -233,7 +240,7 @@ def render_print_hearing(person_data, all_person_history_df):
     </table>
     """
     
-    # --- แก้ไข: เพิ่มตาราง Baseline ---
+    # Baseline comparison table (if available)
     baseline_html = ""
     if results.get('baseline_source') != 'none':
         baseline_year = results.get('baseline_year')
@@ -253,7 +260,7 @@ def render_print_hearing(person_data, all_person_history_df):
         </div>
         """
 
-
+    # Combine all parts into the final section HTML
     return f"""
     <div class="report-section">
         {render_section_header("ผลการตรวจสมรรถภาพการได้ยิน (Audiometry)")}
@@ -261,7 +268,7 @@ def render_print_hearing(person_data, all_person_history_df):
         <div class="content-columns">
             <div class="main-content">
                 {data_table_html}
-                {baseline_html}
+                {baseline_html if baseline_html else ""}
             </div>
             <div class="side-content">
                 {advice_box_html}
@@ -271,6 +278,7 @@ def render_print_hearing(person_data, all_person_history_df):
     """
 
 def render_print_lung(person_data):
+    """Renders the Lung Capacity (Spirometry) section for the print report."""
     if not has_lung_data(person_data):
         return ""
         
@@ -285,17 +293,19 @@ def render_print_lung(person_data):
         if "ไม่ได้" in summary_text or "คลาดเคลื่อน" in summary_text: return "status-nt"
         return "status-abn"
 
+    # Main summary card
     summary_card_html = f"""
     <div class="summary-cards">
         <div class="card {get_status_class(summary)}">
             <div class="card-title">ผลการแปลความหมาย</div>
-            <div class="card-body">{summary}</div>
+            <div class="card-body">{html.escape(summary)}</div>
         </div>
     </div>
     """
     
-    advice_box_html = f"<div class='advice-box info-box'><b>คำแนะนำ:</b> {advice}</div>"
+    advice_box_html = f"<div class='advice-box info-box'><b>คำแนะนำ:</b> {html.escape(advice)}</div>"
     
+    # Detailed results table
     data_table_html = f"""
     <table class="data-table">
         <thead>
@@ -309,6 +319,7 @@ def render_print_lung(person_data):
     </table>
     """
 
+    # Combine all parts into the final section HTML
     return f"""
     <div class="report-section">
         {render_section_header("ผลการตรวจสมรรถภาพปอด (Spirometry)")}
@@ -326,7 +337,8 @@ def render_print_lung(person_data):
 
 def generate_performance_report_html(person_data, all_person_history_df):
     """
-    Checks for available performance tests and generates the combined HTML for standalone performance report.
+    Checks for available performance tests and generates the combined HTML for the standalone performance report.
+    This is the main function called to create the printable page.
     """
     # --- Assemble the final HTML page ---
     final_html = f"""
@@ -345,7 +357,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
                 background-color: #fff;
             }}
             hr {{ border: 0; border-top: 1px solid #ccc; margin: 0.5rem 0; }}
-            .info-table {{ width: 100%; font-size: 10px; text-align: left; }}
+            .info-table {{ width: 100%; font-size: 10px; text-align: left; border-collapse: collapse; }}
             .info-table td {{ padding: 2px 5px; border: none; }}
             
             .report-section {{ margin-bottom: 1.5rem; page-break-inside: avoid; }}
@@ -363,7 +375,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
             .data-table th, .data-table td {{
                 border: 1px solid #e0e0e0; padding: 4px 6px; text-align: center;
             }}
-            .data-table th {{ background-color: #f2f2f2; }}
+            .data-table th {{ background-color: #f2f2f2; font-weight: bold; }}
             .data-table td:first-child {{ text-align: left; }}
 
             .summary-cards {{ display: flex; gap: 10px; margin-bottom: 0.8rem; }}
@@ -381,6 +393,27 @@ def generate_performance_report_html(person_data, all_person_history_df):
             .status-ok {{ background-color: #e8f5e9; color: #1b5e20; }}
             .status-abn {{ background-color: #ffcdd2; color: #b71c1c; }}
             .status-nt {{ background-color: #f5f5f5; color: #616161; }}
+            
+            .signature-section {{
+                margin-top: 2rem;
+                text-align: right;
+                padding-right: 1rem;
+                page-break-inside: avoid;
+            }}
+            .signature-line {{
+                display: inline-block;
+                text-align: center;
+                width: 280px;
+            }}
+            .signature-line .line {{
+                border-bottom: 1px dotted #333;
+                margin-bottom: 0.4rem;
+                width: 100%;
+            }}
+            .signature-line .name, .signature-line .title, .signature-line .license {{
+                white-space: nowrap;
+                font-size: 10px;
+            }}
 
             @media print {{
                 body {{ -webkit-print-color-adjust: exact; margin: 0; }}
@@ -392,17 +425,24 @@ def generate_performance_report_html(person_data, all_person_history_df):
         {render_print_vision(person_data)}
         {render_print_hearing(person_data, all_person_history_df)}
         {render_print_lung(person_data)}
+        
+        <div class="signature-section">
+            <div class="signature-line">
+                <div class="line"></div>
+                <div class="name">นายแพทย์นพรัตน์ รัชฎาพร</div>
+                <div class="title">แพทย์อาชีวเวชศาสตร์</div>
+                <div class="license">เลขที่ใบอนุญาตฯ ว.26674</div>
+            </div>
+        </div>
     </body>
     </html>
     """
     return final_html
 
-# --- HTML Rendering Functions for Main Report Integration ---
-
 def generate_performance_report_html_for_main_report(person_data, all_person_history_df):
     """
     Generates a compact version of performance reports to be embedded
-    into the main health report.
+    into the main health report. This function remains for compatibility with the main report print.
     """
     parts = []
     
@@ -411,7 +451,7 @@ def generate_performance_report_html_for_main_report(person_data, all_person_his
         vision_advice = person_data.get('สรุปเหมาะสมกับงาน', 'ไม่มีข้อมูลสรุป')
         parts.append(f"""
         <div class="perf-section">
-            <b>การมองเห็น:</b> <span class="summary-box">{vision_advice}</span>
+            <b>การมองเห็น:</b> <span class="summary-box">{html.escape(vision_advice)}</span>
         </div>
         """)
 
@@ -422,7 +462,7 @@ def generate_performance_report_html_for_main_report(person_data, all_person_his
         advice = results.get('advice', 'ไม่มีคำแนะนำ')
         parts.append(f"""
         <div class="perf-section">
-            <b>การได้ยิน:</b> <span class="summary-box">สรุป: {summary} | คำแนะนำ: {advice}</span>
+            <b>การได้ยิน:</b> <span class="summary-box">สรุป: {html.escape(summary)} | คำแนะนำ: {html.escape(advice)}</span>
         </div>
         """)
 
@@ -431,7 +471,7 @@ def generate_performance_report_html_for_main_report(person_data, all_person_his
         summary, advice, _ = interpret_lung_capacity(person_data)
         parts.append(f"""
         <div class="perf-section">
-            <b>สมรรถภาพปอด:</b> <span class="summary-box">สรุป: {summary} | คำแนะนำ: {advice}</span>
+            <b>สมรรถภาพปอด:</b> <span class="summary-box">สรุป: {html.escape(summary)} | คำแนะนำ: {html.escape(advice)}</span>
         </div>
         """)
 
