@@ -959,31 +959,25 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         if st.session_state.page not in available_reports:
             st.session_state.page = list(available_reports.keys())[0]
 
-        # --- แก้ไข: จัดการจำนวนคอลัมน์ของปุ่มแบบไดนามิก ---
-        num_buttons = len(available_reports) + 1
-        if has_performance_report:
-            num_buttons += 1
-        
-        btn_cols = st.columns(num_buttons)
-        
-        col_idx = 0
-        for page_key, page_title in available_reports.items():
-            with btn_cols[col_idx]:
+        # --- Section 1: Navigation Buttons ---
+        nav_cols = st.columns(len(available_reports))
+        for i, (page_key, page_title) in enumerate(available_reports.items()):
+            with nav_cols[i]:
                 if st.button(page_title, use_container_width=True, key=f"btn_{page_key}"):
                     st.session_state.page = page_key
                     st.rerun()
-            col_idx += 1
-        
-        # --- แก้ไข: เพิ่มปุ่มพิมพ์และเงื่อนไขการแสดงผล ---
-        with btn_cols[col_idx]:
-            if st.button("📄 พิมพ์รายงานสุขภาพ", use_container_width=True, type="primary"):
-                st.session_state.print_trigger = True
-        col_idx += 1
 
-        if has_performance_report:
-            with btn_cols[col_idx]:
-                if st.button("🖨️ พิมพ์รายงานสมรรถภาพ", use_container_width=True):
-                    st.session_state.print_performance_trigger = True
+        # --- Section 2: Print Options in an Expander ---
+        with st.expander("🖨️ ตัวเลือกการพิมพ์ (Print Options)"):
+            print_cols = st.columns(2)
+            with print_cols[0]:
+                if st.button("� พิมพ์รายงานสุขภาพ (ฉบับเต็ม)", use_container_width=True):
+                    st.session_state.print_trigger = True
+            
+            if has_performance_report:
+                with print_cols[1]:
+                    if st.button("📊 พิมพ์เฉพาะรายงานสมรรถภาพ", use_container_width=True):
+                        st.session_state.print_performance_trigger = True
 
         display_common_header(person_data)
         
@@ -1061,4 +1055,4 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         st.session_state.print_performance_trigger = False
 
 else:
-    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
+    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภา�
