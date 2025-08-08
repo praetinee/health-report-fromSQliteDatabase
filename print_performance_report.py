@@ -495,11 +495,14 @@ def generate_performance_report_html(person_data, all_person_history_df):
                 border-radius: 6px; padding: 8px 12px; font-size: 9.5px;
                 line-height: 1.5; border: 1px solid;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-                margin-bottom: 0; 
+                margin-bottom: 5px; 
                 height: 100%;
                 box-sizing: border-box;
                 background-color: #fff8e1; 
                 border-color: #ffecb3;
+            }}
+            .summary-container .advice-box:last-child {{
+                margin-bottom: 0;
             }}
             
             .status-ok-text {{ color: #1b5e20; }}
