@@ -656,12 +656,6 @@ def display_performance_report_hearing(person_data, all_person_history_df):
         </div>
         """, unsafe_allow_html=True)
 
-    if hearing_results.get('other_data'):
-        st.markdown("<hr>", unsafe_allow_html=True)
-        st.markdown("<h5><b>ข้อมูลเพิ่มเติม</b></h5>", unsafe_allow_html=True)
-        for key, value in hearing_results['other_data'].items():
-            st.markdown(f"**{key.replace('_', ' ')}:** {value}")
-
 
 def display_performance_report_lung(person_data):
     """
@@ -1067,4 +1061,4 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         st.session_state.print_performance_trigger = False
 
 else:
-    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
+    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภา
