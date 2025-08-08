@@ -179,7 +179,6 @@ def render_print_vision(person_data):
     doctor_advice = person_data.get('แนะนำABN EYE', '')
     summary_advice = person_data.get('สรุปเหมาะสมกับงาน', '')
     
-    # แก้ไข: จัดการส่วนสรุปและคำแนะนำใหม่
     summary_section_html = ""
     advice_parts = []
     if not is_empty(summary_advice):
@@ -193,21 +192,25 @@ def render_print_vision(person_data):
             abnormal_summary_parts.append(f"<b>คำแนะนำแพทย์:</b> {html.escape(doctor_advice)}")
         advice_parts.append("<div class='advice-box warning-box'>" + "<br>".join(abnormal_summary_parts) + "</div>")
     
-    # ถ้าไม่มีคำแนะนำใดๆ เลย ให้แสดงว่าปกติ
     if not advice_parts:
         advice_parts.append("<div class='advice-box info-box'>ผลการตรวจโดยรวมปกติ ไม่มีคำแนะนำเพิ่มเติม</div>")
 
     summary_section_html = "<div class='summary-container'>" + "".join(advice_parts) + "</div>"
 
+    # แก้ไข: เปลี่ยนกลับไปใช้ Layout 2 คอลัมน์สำหรับ Vision
     return f"""
     <div class="report-section">
         {render_section_header("ผลการตรวจสมรรถภาพการมองเห็น (Vision Test)")}
-        <div class="main-content-full">
-            <table class="data-table">
-                <thead><tr><th>รายการตรวจ</th><th>ผลการตรวจ</th></tr></thead>
-                <tbody>{rows_html}</tbody>
-            </table>
-            {summary_section_html}
+        <div class="content-columns">
+            <div class="main-content">
+                <table class="data-table">
+                    <thead><tr><th>รายการตรวจ</th><th>ผลการตรวจ</th></tr></thead>
+                    <tbody>{rows_html}</tbody>
+                </table>
+            </div>
+            <div class="side-content">
+                {summary_section_html}
+            </div>
         </div>
     </div>
     """
@@ -252,13 +255,15 @@ def render_print_hearing(person_data, all_person_history_df):
         l_val = values.get('left', '-')
         rows_html += f"<tr><td>{freq}</td><td>{r_val}</td><td>{l_val}</td></tr>"
     data_table_html = f"""
-    <table class="data-table">
-        <thead><tr><th>ความถี่ (Hz)</th><th>หูขวา (dB)</th><th>หูซ้าย (dB)</th></tr></thead>
-        <tbody>{rows_html}</tbody>
-    </table>
+    <div class="main-content">
+        <b class="table-title">ผลการตรวจปัจจุบัน (dB)</b>
+        <table class="data-table">
+            <thead><tr><th>ความถี่ (Hz)</th><th>หูขวา</th><th>หูซ้าย</th></tr></thead>
+            <tbody>{rows_html}</tbody>
+        </table>
+    </div>
     """
     
-    # แก้ไข: ปรับปรุงการแสดงผล Baseline Comparison กลับเป็นตาราง
     baseline_html = ""
     if results.get('baseline_source') != 'none':
         baseline_year = results.get('baseline_year')
@@ -277,8 +282,8 @@ def render_print_hearing(person_data, all_person_history_df):
             baseline_rows_html += f"<tr><td>{freq}</td><td>{shift_r_text}</td><td>{shift_l_text}</td></tr>"
         
         baseline_html = f"""
-        <div class='baseline-comparison'>
-            <b>การเปลี่ยนแปลง (dB) เทียบกับผลตรวจพื้นฐาน (พ.ศ. {baseline_year})</b>
+        <div class="side-content">
+            <b class="table-title">การเปลี่ยนแปลงเทียบกับ Baseline (พ.ศ. {baseline_year})</b>
             <table class='data-table'>
                 <thead><tr><th>ความถี่ (Hz)</th><th>Shift ขวา</th><th>Shift ซ้าย</th></tr></thead>
                 <tbody>{baseline_rows_html}</tbody>
@@ -292,28 +297,29 @@ def render_print_hearing(person_data, all_person_history_df):
     avg_r_high = averages.get('right_3000_6000')
     avg_l_high = averages.get('left_3000_6000')
     averages_html = f"""
-    <div class="advice-box info-box" style="margin-top: 10px;">
-        <b>ค่าเฉลี่ยการได้ยิน (dB)</b>
-        <ul style="margin: 5px 0 0 0; padding-left: 20px; list-style-type: square;">
-            <li>ความถี่เสียงพูด (500-2k Hz): ขวา={avg_r_speech if avg_r_speech is not None else 'N/A'}, ซ้าย={avg_l_speech if avg_l_speech is not None else 'N/A'}</li>
-            <li>ความถี่สูง (3k-6k Hz): ขวา={avg_r_high if avg_r_high is not None else 'N/A'}, ซ้าย={avg_l_high if avg_l_high is not None else 'N/A'}</li>
-        </ul>
+    <div class="main-content">
+        <div class="advice-box info-box">
+            <b>ค่าเฉลี่ยการได้ยิน (dB)</b>
+            <ul style="margin: 5px 0 0 0; padding-left: 20px; list-style-type: square;">
+                <li>ความถี่เสียงพูด (500-2k Hz): ขวา={avg_r_speech if avg_r_speech is not None else 'N/A'}, ซ้าย={avg_l_speech if avg_l_speech is not None else 'N/A'}</li>
+                <li>ความถี่สูง (3k-6k Hz): ขวา={avg_r_high if avg_r_high is not None else 'N/A'}, ซ้าย={avg_l_high if avg_l_high is not None else 'N/A'}</li>
+            </ul>
+        </div>
     </div>
     """
-
+    
+    # แก้ไข: จัด Layout ของส่วน Hearing ใหม่ทั้งหมด
     return f"""
     <div class="report-section">
         {render_section_header("ผลการตรวจสมรรถภาพการได้ยิน (Audiometry)")}
         {summary_cards_html}
         <div class="content-columns">
-            <div class="main-content">
-                {data_table_html}
-                {baseline_html if baseline_html else ""}
-            </div>
-            <div class="side-content">
-                {advice_box_html}
-                {averages_html}
-            </div>
+            {data_table_html}
+            {baseline_html if baseline_html else "<div class='side-content'></div>"}
+        </div>
+        <div class="content-columns" style="margin-top: 10px; align-items: stretch;">
+            <div class="main-content">{averages_html}</div>
+            <div class="side-content">{advice_box_html}</div>
         </div>
     </div>
     """
@@ -381,24 +387,26 @@ def render_print_lung(person_data):
     </table>
     """
 
-    # แก้ไข: จัด Layout ใหม่สำหรับส่วนของปอด
     summary_section_html = f"""
-    <div class="summary-container">
-        <div class="advice-box {summary_class}" style="text-align: center; margin-bottom: 10px;">
-            {html.escape(summary)}
-        </div>
-        {advice_box_html}
-        {cxr_html}
+    <div class="advice-box {summary_class}" style="text-align: center; font-weight: bold;">
+        {html.escape(summary)}
     </div>
+    {advice_box_html}
+    {cxr_html}
     """
 
+    # แก้ไข: เปลี่ยนกลับไปใช้ Layout 2 คอลัมน์สำหรับ Lung
     return f"""
     <div class="report-section">
         {render_section_header("ผลการตรวจสมรรถภาพปอด (Spirometry)")}
         {metrics_html}
-        <div class="main-content-full">
-            {data_table_html}
-            {summary_section_html}
+        <div class="content-columns">
+            <div class="main-content">
+                {data_table_html}
+            </div>
+            <div class="side-content">
+                {summary_section_html}
+            </div>
         </div>
     </div>
     """
@@ -440,7 +448,6 @@ def generate_performance_report_html(person_data, all_person_history_df):
             .content-columns {{ display: flex; gap: 15px; align-items: flex-start; }}
             .main-content {{ flex: 2; min-width: 0; }}
             .side-content {{ flex: 1; min-width: 0; }}
-            .main-content-full {{ flex: 1; }} /* For single column sections */
 
             .data-table {{ width: 100%; font-size: 9.5px; border-collapse: collapse; }}
             .data-table th, .data-table td {{
@@ -448,6 +455,10 @@ def generate_performance_report_html(person_data, all_person_history_df):
             }}
             .data-table th {{ background-color: #f5f5f5; font-weight: bold; }}
             .data-table td:first-child {{ text-align: left; }}
+            .table-title {{
+                font-size: 10px; display: block; margin-bottom: 5px; text-align: center;
+                font-weight: bold;
+            }}
 
             .summary-cards {{ display: flex; gap: 10px; margin-bottom: 0.8rem; }}
             .card {{ 
@@ -458,21 +469,19 @@ def generate_performance_report_html(person_data, all_person_history_df):
             .card-title {{ font-weight: bold; font-size: 10px; margin-bottom: 4px; color: #555;}}
             .card-body {{ font-size: 12px; font-weight: bold; }}
 
-            .summary-container {{ margin-top: 10px; }}
+            .summary-container {{ margin-top: 0; }} /* Adjusted from 10px to 0 */
             .advice-box {{
                 border-radius: 6px; padding: 8px 12px; font-size: 9.5px;
                 line-height: 1.5; border: 1px solid;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.05);
                 margin-bottom: 5px;
+                height: 100%;
+                box-sizing: border-box;
             }}
             .info-box {{ background-color: #e3f2fd; border-color: #bbdefb; }}
             .warning-box {{ background-color: #fff8e1; border-color: #ffecb3; }}
             
-            .baseline-comparison {{ margin-top: 10px; }}
-            .baseline-comparison b {{ 
-                font-size: 10px; display: block; margin-bottom: 5px; text-align: center;
-                font-weight: bold;
-            }}
+            .baseline-comparison {{ margin-top: 0; }} /* Adjusted from 10px to 0 */
             
             .status-ok, .status-abn, .status-nt {{
                 padding: 3px 8px;
