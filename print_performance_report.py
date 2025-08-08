@@ -114,7 +114,6 @@ def render_print_vision(person_data):
     if not has_vision_data(person_data):
         return ""
 
-    # แก้ไข: ใช้รายการตรวจสายตาฉบับสมบูรณ์ 13 รายการ พร้อม Logic การแปลผลที่ซับซ้อนขึ้น
     vision_tests = [
         {'display': '1. การมองด้วย 2 ตา (Binocular vision)', 'type': 'paired_value', 'normal_col': 'ป.การรวมภาพ', 'abnormal_col': 'ผ.การรวมภาพ'},
         {'display': '2. การมองภาพระยะไกลด้วยสองตา (Far vision - Both)', 'type': 'paired_value', 'normal_col': 'ป.ความชัดของภาพระยะไกล', 'abnormal_col': 'ผ.ความชัดของภาพระยะไกล'},
@@ -143,7 +142,7 @@ def render_print_vision(person_data):
         if test['type'] == 'value':
             val = str(person_data.get(test['col'], '')).strip()
             if not is_empty(val):
-                is_abnormal = True # Assume abnormal unless it's explicitly normal-like
+                is_abnormal = True 
                 if any(k in val.lower() for k in ['ปกติ', 'ชัดเจน']):
                     is_abnormal = False
                 result_text = val
@@ -167,8 +166,9 @@ def render_print_vision(person_data):
                 is_abnormal = True
                 result_text = f"สายตาเขซ่อนเร้น ({test['related_keyword']})"
 
+        # แก้ไข: ปรับ Logic การแสดงผลตามคำขอ
         if is_normal or (result_text and not is_abnormal):
-            status_text = f"ปกติ ({html.escape(result_text)})" if result_text != "ปกติ" else "ปกติ"
+            status_text = "ปกติ"
             status_class = 'status-ok'
         elif is_abnormal:
             status_text = f"ผิดปกติ ({html.escape(result_text)})"
@@ -257,26 +257,49 @@ def render_print_hearing(person_data, all_person_history_df):
     </table>
     """
     
+    # แก้ไข: ปรับปรุงการแสดงผล Baseline Comparison ใหม่ทั้งหมด
     baseline_html = ""
     if results.get('baseline_source') != 'none':
         baseline_year = results.get('baseline_year')
-        baseline_rows_html = ""
-        for freq, values in results.get('raw_values', {}).items():
-            shift_r = results['shift_values'][freq].get('right', '-')
-            shift_l = results['shift_values'][freq].get('left', '-')
-            baseline_rows_html += f"<tr><td>{freq}</td><td>{shift_r if shift_r is not None else '-'}</td><td>{shift_l if shift_l is not None else '-'}</td></tr>"
+        
+        def get_shift_class(shift):
+            if shift is None: return "shift-nt"
+            if shift >= 10: return "shift-worse"
+            if shift > 0: return "shift-worse-minor"
+            if shift < 0: return "shift-improve"
+            return "shift-stable"
+
+        baseline_items_html = ""
+        freq_order = ['500 Hz', '1000 Hz', '2000 Hz', '3000 Hz', '4000 Hz', '6000 Hz', '8000 Hz']
+        for freq in freq_order:
+            if freq not in results['shift_values']: continue
+            
+            shift_r = results['shift_values'][freq].get('right')
+            shift_l = results['shift_values'][freq].get('left')
+            
+            shift_r_text = f"+{shift_r}" if shift_r is not None and shift_r > 0 else (shift_r if shift_r is not None else "-")
+            shift_l_text = f"+{shift_l}" if shift_l is not None and shift_l > 0 else (shift_l if shift_l is not None else "-")
+
+            baseline_items_html += f"""
+            <div class="baseline-item">
+                <div class="freq-label">{freq.replace(' Hz','')}</div>
+                <div class="shift-val {get_shift_class(shift_r)}">{shift_r_text}</div>
+                <div class="shift-val {get_shift_class(shift_l)}">{shift_l_text}</div>
+            </div>
+            """
         
         baseline_html = f"""
         <div class='baseline-comparison'>
             <b>การเปลี่ยนแปลงเทียบกับผลตรวจพื้นฐาน (พ.ศ. {baseline_year})</b>
-            <table class='data-table'>
-                <thead><tr><th>ความถี่ (Hz)</th><th>Shift ขวา (dB)</th><th>Shift ซ้าย (dB)</th></tr></thead>
-                <tbody>{baseline_rows_html}</tbody>
-            </table>
+            <div class="baseline-grid-header">
+                <div>ความถี่</div><div>ขวา</div><div>ซ้าย</div>
+            </div>
+            <div class="baseline-grid">
+                {baseline_items_html}
+            </div>
         </div>
         """
     
-    # แก้ไข: เพิ่มส่วนค่าเฉลี่ยการได้ยิน
     averages = results.get('averages', {})
     avg_r_speech = averages.get('right_500_2000')
     avg_l_speech = averages.get('left_500_2000')
@@ -299,11 +322,11 @@ def render_print_hearing(person_data, all_person_history_df):
         <div class="content-columns">
             <div class="main-content">
                 {data_table_html}
-                {baseline_html if baseline_html else ""}
             </div>
             <div class="side-content">
                 {advice_box_html}
                 {averages_html}
+                {baseline_html if baseline_html else ""}
             </div>
         </div>
     </div>
@@ -324,7 +347,6 @@ def render_print_lung(person_data):
         if val is None: return "status-nt"
         return "status-ok" if val >= low_threshold else "status-abn"
 
-    # แก้ไข: เพิ่ม Metric cards ด้านบน
     metrics_html = f"""
     <div class="summary-cards">
         <div class="card {get_status_class(raw.get('FVC %'), 80)}">
@@ -348,7 +370,6 @@ def render_print_lung(person_data):
     
     advice_box_html = f"<div class='advice-box info-box'><b>คำแนะนำ:</b> {html.escape(advice)}</div>"
     
-    # แก้ไข: เพิ่มผล CXR ในส่วน side-content
     year = person_data.get("Year")
     cxr_result_text = "ไม่มีข้อมูล"
     if year:
@@ -420,9 +441,11 @@ def generate_performance_report_html(person_data, all_person_history_df):
             
             .report-section {{ margin-bottom: 1.5rem; page-break-inside: avoid; }}
             .section-header {{
-                background-color: #4CAF50; color: white; text-align: center;
+                background-color: #00796B; 
+                color: white; text-align: center;
                 padding: 0.4rem; font-weight: bold; border-radius: 8px;
-                margin-bottom: 0.8rem; font-size: 12px;
+                margin-bottom: 1rem;
+                font-size: 12px;
             }}
 
             .content-columns {{ display: flex; gap: 15px; align-items: flex-start; }}
@@ -437,23 +460,77 @@ def generate_performance_report_html(person_data, all_person_history_df):
             .data-table td:first-child {{ text-align: left; }}
 
             .summary-cards {{ display: flex; gap: 10px; margin-bottom: 0.8rem; }}
-            .card {{ flex: 1; border-radius: 6px; padding: 8px; text-align: center; border: 1px solid #e0e0e0; background-color: #f9f9f9; }}
+            .card {{ 
+                flex: 1; border-radius: 6px; padding: 8px; text-align: center; 
+                border: 1px solid #e0e0e0; background-color: #f9f9f9;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            }}
             .card-title {{ font-weight: bold; font-size: 10px; margin-bottom: 4px; color: #555;}}
             .card-body {{ font-size: 12px; font-weight: bold; }}
 
             .advice-box {{
                 border-radius: 6px; padding: 8px 12px; font-size: 9.5px;
                 line-height: 1.5; border: 1px solid;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             }}
             .info-box {{ background-color: #e3f2fd; border-color: #bbdefb; }}
             .warning-box {{ background-color: #fff8e1; border-color: #ffecb3; }}
             
             .baseline-comparison {{ margin-top: 10px; }}
-            .baseline-comparison b {{ font-size: 10px; display: block; margin-bottom: 4px; text-align: center;}}
+            .baseline-comparison b {{ 
+                font-size: 10px; display: block; margin-bottom: 5px; text-align: center;
+                font-weight: bold;
+            }}
+            .baseline-grid-header {{
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr;
+                text-align: center;
+                font-weight: bold;
+                font-size: 9px;
+                color: #555;
+                padding: 2px 0;
+                border-bottom: 1px solid #e0e0e0;
+            }}
+            .baseline-grid {{
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 5px;
+                margin-top: 5px;
+            }}
+            .baseline-item {{
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr;
+                align-items: center;
+                text-align: center;
+                background-color: #f9f9f9;
+                border-radius: 4px;
+                padding: 3px;
+                font-size: 9.5px;
+            }}
+            .baseline-item .freq-label {{
+                font-weight: bold;
+            }}
+            .baseline-item .shift-val {{
+                font-weight: bold;
+                padding: 1px 3px;
+                border-radius: 3px;
+            }}
+            .shift-worse {{ background-color: #ffcdd2; color: #b71c1c; }}
+            .shift-worse-minor {{ background-color: #fff8e1; color: #f57f17; }}
+            .shift-improve {{ background-color: #e8f5e9; color: #1b5e20; }}
+            .shift-stable, .shift-nt {{ background-color: #f0f0f0; color: #616161; }}
 
-            .status-ok {{ background-color: #e8f5e9; color: #1b5e20; }}
-            .status-abn {{ background-color: #ffcdd2; color: #b71c1c; }}
-            .status-nt {{ background-color: #f0f0f0; color: #616161; }}
+            .status-ok, .status-abn, .status-nt {{
+                padding: 3px 8px;
+                border-radius: 12px;
+                font-weight: bold;
+                font-size: 9px;
+                display: inline-block;
+                border: 1px solid transparent;
+            }}
+            .status-ok {{ background-color: #e8f5e9; color: #1b5e20; border-color: #c8e6c9; }}
+            .status-abn {{ background-color: #ffcdd2; color: #b71c1c; border-color: #ef9a9a; }}
+            .status-nt {{ background-color: #f0f0f0; color: #616161; border-color: #e0e0e0; }}
             
             .signature-section {{
                 margin-top: 2rem;
