@@ -137,7 +137,7 @@ def render_print_vision(person_data):
     for test in vision_tests:
         is_normal, is_abnormal = False, False
         result_text = ""
-        status_text, status_class = "ไม่ได้ตรวจ", "status-nt"
+        status_text = "ไม่ได้ตรวจ"
 
         if test['type'] == 'value':
             val = str(person_data.get(test['col'], '')).strip()
@@ -168,13 +168,11 @@ def render_print_vision(person_data):
 
         if is_normal or (result_text and not is_abnormal):
             status_text = "ปกติ"
-            status_class = 'status-ok'
         elif is_abnormal:
             status_text = f"ผิดปกติ ({html.escape(result_text)})"
-            status_class = 'status-abn'
             abnormal_details.append(test['display'].split('(')[0].strip())
         
-        rows_html += f"<tr><td>{test['display']}</td><td class='{status_class}'>{status_text}</td></tr>"
+        rows_html += f"<tr><td>{test['display']}</td><td>{status_text}</td></tr>"
 
     doctor_advice = person_data.get('แนะนำABN EYE', '')
     summary_advice = person_data.get('สรุปเหมาะสมกับงาน', '')
@@ -197,20 +195,16 @@ def render_print_vision(person_data):
 
     summary_section_html = "<div class='summary-container'>" + "".join(advice_parts) + "</div>"
 
-    # แก้ไข: เปลี่ยนกลับไปใช้ Layout 2 คอลัมน์สำหรับ Vision
+    # แก้ไข: เปลี่ยนเป็น Layout คอลัมน์เดียว
     return f"""
     <div class="report-section">
         {render_section_header("ผลการตรวจสมรรถภาพการมองเห็น (Vision Test)")}
-        <div class="content-columns">
-            <div class="main-content">
-                <table class="data-table">
-                    <thead><tr><th>รายการตรวจ</th><th>ผลการตรวจ</th></tr></thead>
-                    <tbody>{rows_html}</tbody>
-                </table>
-            </div>
-            <div class="side-content">
-                {summary_section_html}
-            </div>
+        <div class="main-content-full">
+            <table class="data-table">
+                <thead><tr><th>รายการตรวจ</th><th>ผลการตรวจ</th></tr></thead>
+                <tbody>{rows_html}</tbody>
+            </table>
+            {summary_section_html}
         </div>
     </div>
     """
@@ -248,48 +242,58 @@ def render_print_hearing(person_data, all_person_history_df):
     if results.get('sts_detected'):
         advice_box_html = f"<div class='advice-box warning-box'><b>⚠️ พบการเปลี่ยนแปลงระดับการได้ยินอย่างมีนัยสำคัญ (STS)</b><br>{html.escape(advice)}</div>"
 
-    raw_data = results.get('raw_values', {})
+    # แก้ไข: สร้างตารางที่รวมผลปัจจุบันและ Baseline
     rows_html = ""
-    for freq, values in raw_data.items():
-        r_val = values.get('right', '-')
-        l_val = values.get('left', '-')
-        rows_html += f"<tr><td>{freq}</td><td>{r_val}</td><td>{l_val}</td></tr>"
-    data_table_html = f"""
-    <div class="main-content">
-        <b class="table-title">ผลการตรวจปัจจุบัน (dB)</b>
-        <table class="data-table">
-            <thead><tr><th>ความถี่ (Hz)</th><th>หูขวา</th><th>หูซ้าย</th></tr></thead>
-            <tbody>{rows_html}</tbody>
-        </table>
-    </div>
-    """
+    has_baseline = results.get('baseline_source') != 'none'
+    baseline_year = results.get('baseline_year')
+    freq_order = ['500 Hz', '1000 Hz', '2000 Hz', '3000 Hz', '4000 Hz', '6000 Hz', '8000 Hz']
     
-    baseline_html = ""
-    if results.get('baseline_source') != 'none':
-        baseline_year = results.get('baseline_year')
+    for freq in freq_order:
+        current_vals = results.get('raw_values', {}).get(freq, {})
+        r_val = current_vals.get('right', '-')
+        l_val = current_vals.get('left', '-')
         
-        baseline_rows_html = ""
-        freq_order = ['500 Hz', '1000 Hz', '2000 Hz', '3000 Hz', '4000 Hz', '6000 Hz', '8000 Hz']
-        for freq in freq_order:
-            if freq not in results['shift_values']: continue
-            
-            shift_r = results['shift_values'][freq].get('right')
-            shift_l = results['shift_values'][freq].get('left')
-            
+        shift_r_text = "-"
+        shift_l_text = "-"
+        if has_baseline:
+            shift_vals = results.get('shift_values', {}).get(freq, {})
+            shift_r = shift_vals.get('right')
+            shift_l = shift_vals.get('left')
             shift_r_text = f"+{shift_r}" if shift_r is not None and shift_r > 0 else (str(shift_r) if shift_r is not None else "-")
             shift_l_text = f"+{shift_l}" if shift_l is not None and shift_l > 0 else (str(shift_l) if shift_l is not None else "-")
 
-            baseline_rows_html += f"<tr><td>{freq}</td><td>{shift_r_text}</td><td>{shift_l_text}</td></tr>"
-        
-        baseline_html = f"""
-        <div class="side-content">
-            <b class="table-title">การเปลี่ยนแปลงเทียบกับ Baseline (พ.ศ. {baseline_year})</b>
-            <table class='data-table'>
-                <thead><tr><th>ความถี่ (Hz)</th><th>Shift ขวา</th><th>Shift ซ้าย</th></tr></thead>
-                <tbody>{baseline_rows_html}</tbody>
-            </table>
-        </div>
+        rows_html += f"""
+        <tr>
+            <td>{freq}</td>
+            <td>{r_val}</td>
+            <td>{l_val}</td>
+            <td>{shift_r_text}</td>
+            <td>{shift_l_text}</td>
+        </tr>
         """
+
+    table_header_html = f"""
+    <thead>
+        <tr>
+            <th rowspan="2" style="vertical-align: middle;">ความถี่ (Hz)</th>
+            <th colspan="2">ผลการตรวจปัจจุบัน (dB)</th>
+            <th colspan="2">การเปลี่ยนแปลงเทียบกับ Baseline{' (พ.ศ. ' + str(baseline_year) + ')' if has_baseline else ''}</th>
+        </tr>
+        <tr>
+            <th>หูขวา</th>
+            <th>หูซ้าย</th>
+            <th>Shift ขวา</th>
+            <th>Shift ซ้าย</th>
+        </tr>
+    </thead>
+    """
+    
+    data_table_html = f"""
+    <table class="data-table">
+        {table_header_html}
+        <tbody>{rows_html}</tbody>
+    </table>
+    """
     
     averages = results.get('averages', {})
     avg_r_speech = averages.get('right_500_2000')
@@ -297,27 +301,23 @@ def render_print_hearing(person_data, all_person_history_df):
     avg_r_high = averages.get('right_3000_6000')
     avg_l_high = averages.get('left_3000_6000')
     averages_html = f"""
-    <div class="main-content">
-        <div class="advice-box info-box">
-            <b>ค่าเฉลี่ยการได้ยิน (dB)</b>
-            <ul style="margin: 5px 0 0 0; padding-left: 20px; list-style-type: square;">
-                <li>ความถี่เสียงพูด (500-2k Hz): ขวา={avg_r_speech if avg_r_speech is not None else 'N/A'}, ซ้าย={avg_l_speech if avg_l_speech is not None else 'N/A'}</li>
-                <li>ความถี่สูง (3k-6k Hz): ขวา={avg_r_high if avg_r_high is not None else 'N/A'}, ซ้าย={avg_l_high if avg_l_high is not None else 'N/A'}</li>
-            </ul>
-        </div>
+    <div class="advice-box info-box">
+        <b>ค่าเฉลี่ยการได้ยิน (dB)</b>
+        <ul style="margin: 5px 0 0 0; padding-left: 20px; list-style-type: square;">
+            <li>ความถี่เสียงพูด (500-2k Hz): ขวา={avg_r_speech if avg_r_speech is not None else 'N/A'}, ซ้าย={avg_l_speech if avg_l_speech is not None else 'N/A'}</li>
+            <li>ความถี่สูง (3k-6k Hz): ขวา={avg_r_high if avg_r_high is not None else 'N/A'}, ซ้าย={avg_l_high if avg_l_high is not None else 'N/A'}</li>
+        </ul>
     </div>
     """
     
-    # แก้ไข: จัด Layout ของส่วน Hearing ใหม่ทั้งหมด
     return f"""
     <div class="report-section">
         {render_section_header("ผลการตรวจสมรรถภาพการได้ยิน (Audiometry)")}
         {summary_cards_html}
-        <div class="content-columns">
+        <div class="main-content-full" style="margin-bottom: 10px;">
             {data_table_html}
-            {baseline_html if baseline_html else "<div class='side-content'></div>"}
         </div>
-        <div class="content-columns" style="margin-top: 10px; align-items: stretch;">
+        <div class="content-columns" style="align-items: stretch;">
             <div class="main-content">{averages_html}</div>
             <div class="side-content">{advice_box_html}</div>
         </div>
@@ -336,29 +336,29 @@ def render_print_lung(person_data):
         return f"{val:{spec}}" if val is not None else "-"
 
     def get_status_class(val, low_threshold):
-        if val is None: return "status-nt"
-        return "status-ok" if val >= low_threshold else "status-abn"
+        if val is None: return "" # Return empty string instead of status-nt for cleaner look
+        return "status-ok-text" if val >= low_threshold else "status-abn-text"
 
     metrics_html = f"""
     <div class="summary-cards">
-        <div class="card {get_status_class(raw.get('FVC %'), 80)}">
+        <div class="card">
             <div class="card-title">FVC %Pred</div>
-            <div class="card-body">{format_val('FVC %')}%</div>
+            <div class="card-body {get_status_class(raw.get('FVC %'), 80)}">{format_val('FVC %')}%</div>
         </div>
-        <div class="card {get_status_class(raw.get('FEV1 %'), 80)}">
+        <div class="card">
             <div class="card-title">FEV1 %Pred</div>
-            <div class="card-body">{format_val('FEV1 %')}%</div>
+            <div class="card-body {get_status_class(raw.get('FEV1 %'), 80)}">{format_val('FEV1 %')}%</div>
         </div>
-        <div class="card {get_status_class(raw.get('FEV1/FVC %'), 70)}">
+        <div class="card">
             <div class="card-title">FEV1/FVC Ratio</div>
-            <div class="card-body">{format_val('FEV1/FVC %')}%</div>
+            <div class="card-body {get_status_class(raw.get('FEV1/FVC %'), 70)}">{format_val('FEV1/FVC %')}%</div>
         </div>
     </div>
     """
     
-    summary_class = "status-ok" if "ปกติ" in summary else "status-abn"
+    summary_class = "status-ok-text" if "ปกติ" in summary else "status-abn-text"
     if "ไม่ได้" in summary or "คลาดเคลื่อน" in summary:
-        summary_class = "status-nt"
+        summary_class = ""
     
     advice_box_html = f"<div class='advice-box info-box'><b>คำแนะนำ:</b> {html.escape(advice)}</div>"
     
@@ -369,7 +369,7 @@ def render_print_lung(person_data):
         cxr_result, cxr_status = interpret_cxr(person_data.get(cxr_col, ''))
         cxr_result_text = cxr_result
     cxr_html = f"""
-    <div class="advice-box info-box" style="margin-top: 10px;">
+    <div class="advice-box info-box" style="margin-top: 5px;">
         <b>ผลเอกซเรย์ทรวงอก (CXR):</b><br>{html.escape(cxr_result_text)}
     </div>
     """
@@ -388,25 +388,21 @@ def render_print_lung(person_data):
     """
 
     summary_section_html = f"""
-    <div class="advice-box {summary_class}" style="text-align: center; font-weight: bold;">
-        {html.escape(summary)}
+    <div class="advice-box" style="text-align: center; font-weight: bold;">
+        <span class="{summary_class}">{html.escape(summary)}</span>
     </div>
     {advice_box_html}
     {cxr_html}
     """
 
-    # แก้ไข: เปลี่ยนกลับไปใช้ Layout 2 คอลัมน์สำหรับ Lung
+    # แก้ไข: เปลี่ยนเป็น Layout คอลัมน์เดียว
     return f"""
     <div class="report-section">
         {render_section_header("ผลการตรวจสมรรถภาพปอด (Spirometry)")}
         {metrics_html}
-        <div class="content-columns">
-            <div class="main-content">
-                {data_table_html}
-            </div>
-            <div class="side-content">
-                {summary_section_html}
-            </div>
+        <div class="main-content-full">
+            {data_table_html}
+            {summary_section_html}
         </div>
     </div>
     """
@@ -448,10 +444,12 @@ def generate_performance_report_html(person_data, all_person_history_df):
             .content-columns {{ display: flex; gap: 15px; align-items: flex-start; }}
             .main-content {{ flex: 2; min-width: 0; }}
             .side-content {{ flex: 1; min-width: 0; }}
+            .main-content-full {{ width: 100%; }}
 
             .data-table {{ width: 100%; font-size: 9.5px; border-collapse: collapse; }}
             .data-table th, .data-table td {{
                 border: 1px solid #e0e0e0; padding: 4px 6px; text-align: center;
+                vertical-align: middle;
             }}
             .data-table th {{ background-color: #f5f5f5; font-weight: bold; }}
             .data-table td:first-child {{ text-align: left; }}
@@ -469,7 +467,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
             .card-title {{ font-weight: bold; font-size: 10px; margin-bottom: 4px; color: #555;}}
             .card-body {{ font-size: 12px; font-weight: bold; }}
 
-            .summary-container {{ margin-top: 0; }} /* Adjusted from 10px to 0 */
+            .summary-container {{ margin-top: 10px; }}
             .advice-box {{
                 border-radius: 6px; padding: 8px 12px; font-size: 9.5px;
                 line-height: 1.5; border: 1px solid;
@@ -481,19 +479,8 @@ def generate_performance_report_html(person_data, all_person_history_df):
             .info-box {{ background-color: #e3f2fd; border-color: #bbdefb; }}
             .warning-box {{ background-color: #fff8e1; border-color: #ffecb3; }}
             
-            .baseline-comparison {{ margin-top: 0; }} /* Adjusted from 10px to 0 */
-            
-            .status-ok, .status-abn, .status-nt {{
-                padding: 3px 8px;
-                border-radius: 12px;
-                font-weight: bold;
-                font-size: 9px;
-                display: inline-block;
-                border: 1px solid transparent;
-            }}
-            .status-ok {{ background-color: #e8f5e9; color: #1b5e20; border-color: #c8e6c9; }}
-            .status-abn {{ background-color: #ffcdd2; color: #b71c1c; border-color: #ef9a9a; }}
-            .status-nt {{ background-color: #f0f0f0; color: #616161; border-color: #e0e0e0; }}
+            .status-ok-text {{ color: #1b5e20; font-weight: bold; }}
+            .status-abn-text {{ color: #b71c1c; font-weight: bold; }}
             
             .signature-section {{
                 margin-top: 2rem;
