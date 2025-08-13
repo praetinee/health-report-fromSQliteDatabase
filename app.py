@@ -907,24 +907,23 @@ if 'print_trigger' not in st.session_state: st.session_state.print_trigger = Fal
 if 'print_performance_trigger' not in st.session_state: st.session_state.print_performance_trigger = False
 
 
-st.subheader("ค้นหาและเลือกผลตรวจ")
-menu_cols = st.columns([3, 1, 2])
-with menu_cols[0]:
-    st.text_input("กรอก HN หรือ ชื่อ-สกุล", key="search_input", on_change=perform_search, placeholder="HN หรือ ชื่อ-สกุล", label_visibility="collapsed")
-with menu_cols[1]:
-    st.button("ค้นหา", use_container_width=True, on_click=perform_search)
+# --- Sidebar Controls ---
+st.sidebar.title("เมนูควบคุม")
+
+st.sidebar.subheader("ค้นหาและเลือกผลตรวจ")
+st.sidebar.text_input("กรอก HN หรือ ชื่อ-สกุล", key="search_input", on_change=perform_search, placeholder="HN หรือ ชื่อ-สกุล")
+st.sidebar.button("ค้นหา", use_container_width=True, on_click=perform_search)
 
 results_df = st.session_state.search_result
 if not results_df.empty:
     available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
     if not available_years:
-        st.warning("ไม่พบข้อมูลปีที่ตรวจสำหรับบุคคลนี้")
+        st.sidebar.warning("ไม่พบข้อมูลปีที่ตรวจ")
     else:
         if st.session_state.selected_year not in available_years:
             st.session_state.selected_year = available_years[0]
         year_idx = available_years.index(st.session_state.selected_year)
-        with menu_cols[2]:
-            st.selectbox("ปี พ.ศ.", options=available_years, index=year_idx, format_func=lambda y: f"พ.ศ. {y}", key="year_select", on_change=handle_year_change, label_visibility="collapsed")
+        st.sidebar.selectbox("เลือกปี พ.ศ.", options=available_years, index=year_idx, format_func=lambda y: f"พ.ศ. {y}", key="year_select", on_change=handle_year_change)
         
         person_year_df = results_df[results_df["Year"] == st.session_state.selected_year]
 
@@ -937,9 +936,10 @@ if not results_df.empty:
             st.session_state.person_row = merged_series.to_dict()
             st.session_state.selected_row_found = True
 
-st.markdown("<hr>", unsafe_allow_html=True)
-
-if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
+# --- Main Page ---
+if "person_row" not in st.session_state or not st.session_state.get("selected_row_found", False):
+    st.info("กรุณาค้นหาและเลือกผลตรวจจากเมนูด้านข้าง")
+else:
     person_data = st.session_state.person_row
     all_person_history_df = st.session_state.search_result
 
@@ -958,26 +958,24 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         if st.session_state.page not in available_reports:
             st.session_state.page = list(available_reports.keys())[0]
 
-        # --- Section 1: Navigation Buttons ---
-        nav_cols = st.columns(len(available_reports))
-        for i, (page_key, page_title) in enumerate(available_reports.items()):
-            with nav_cols[i]:
-                if st.button(page_title, use_container_width=True, key=f"btn_{page_key}"):
-                    st.session_state.page = page_key
-                    st.rerun()
+        # --- Sidebar Navigation and Print ---
+        st.sidebar.divider()
+        st.sidebar.subheader("เลือกรายงาน")
+        for page_key, page_title in available_reports.items():
+            if st.sidebar.button(page_title, use_container_width=True, key=f"btn_{page_key}"):
+                st.session_state.page = page_key
+                st.rerun()
+        
+        st.sidebar.divider()
+        st.sidebar.subheader("ตัวเลือกการพิมพ์")
+        if st.sidebar.button("พิมพ์รายงานฉบับสมบูรณ์", use_container_width=True):
+            st.session_state.print_trigger = True
+        
+        if has_performance_report:
+            if st.sidebar.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True):
+                st.session_state.print_performance_trigger = True
 
-        # --- Section 2: Print Options in an Expander ---
-        with st.expander("ตัวเลือกการพิมพ์"):
-            print_cols = st.columns(2)
-            with print_cols[0]:
-                if st.button("พิมพ์รายงานฉบับสมบูรณ์", use_container_width=True):
-                    st.session_state.print_trigger = True
-            
-            if has_performance_report:
-                with print_cols[1]:
-                    if st.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True):
-                        st.session_state.print_performance_trigger = True
-
+        # --- Display Report on Main Page ---
         display_common_header(person_data)
         
         page_to_show = st.session_state.page
@@ -1052,6 +1050,3 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
         """
         st.components.v1.html(print_component, height=0, width=0)
         st.session_state.print_performance_trigger = False
-
-else:
-    st.info("กรอก ชื่อ-สกุล หรือ HN เพื่อค้นหาผลการตรวจสุขภาพ")
