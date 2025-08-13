@@ -859,12 +859,24 @@ if df is None:
 
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide", initial_sidebar_state="expanded")
 inject_custom_css()
+# --- START OF CHANGE: Make sidebar sticky ---
+# โค้ดส่วนนี้จะเพิ่ม CSS เพื่อทำให้แถบเมนูด้านซ้าย (Sidebar) คงที่อยู่กับที่
+# ในขณะที่ผู้ใช้เลื่อนดูเนื้อหารายงานหลัก
 st.markdown("""<style>
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
     html, body, div, span, p, td, th, li, ul, ol, table, h1, h2, h3, h4, h5, h6, label, button, input, select, option, .stButton>button, .stTextInput>div>div>input, .stSelectbox>div>div>div { font-family: 'Sarabun', sans-serif !important; }
     div[data-testid="stSidebarNav"], button[data-testid="stSidebarNavCollapseButton"] { display: none; }
     .stDownloadButton button { width: 100%; }
+
+    /* This CSS makes the sidebar sticky */
+    div[data-testid="stSidebar"] > div:first-child {
+        position: -webkit-sticky; /* For Safari */
+        position: sticky;
+        top: 0;
+        height: 100vh;
+    }
 </style>""", unsafe_allow_html=True)
+# --- END OF CHANGE ---
 
 def perform_search():
     st.session_state.search_query = st.session_state.search_input
@@ -1048,3 +1060,5 @@ else:
         """
         st.components.v1.html(print_component, height=0, width=0)
         st.session_state.print_performance_trigger = False
+
+}
