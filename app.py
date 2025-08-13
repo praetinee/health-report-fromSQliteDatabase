@@ -967,15 +967,15 @@ if "person_row" in st.session_state and st.session_state.get("selected_row_found
                     st.rerun()
 
         # --- Section 2: Print Options in an Expander ---
-        with st.expander("🖨️ ตัวเลือกการพิมพ์"):
+        with st.expander("ตัวเลือกการพิมพ์"):
             print_cols = st.columns(2)
             with print_cols[0]:
-                if st.button("📄 พิมพ์รายงานฉบับสมบูรณ์", use_container_width=True):
+                if st.button("พิมพ์รายงานฉบับสมบูรณ์", use_container_width=True):
                     st.session_state.print_trigger = True
             
             if has_performance_report:
                 with print_cols[1]:
-                    if st.button("📊 พิมพ์รายงานสมรรถภาพ", use_container_width=True):
+                    if st.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True):
                         st.session_state.print_performance_trigger = True
 
         display_common_header(person_data)
