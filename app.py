@@ -857,7 +857,7 @@ df = load_sqlite_data()
 if df is None:
     st.stop()
 
-st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
+st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide", initial_sidebar_state="expanded")
 inject_custom_css()
 st.markdown("""<style>
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
@@ -908,8 +908,6 @@ if 'print_performance_trigger' not in st.session_state: st.session_state.print_p
 
 
 # --- Sidebar Controls ---
-st.sidebar.title("เมนูควบคุม")
-
 st.sidebar.subheader("ค้นหาและเลือกผลตรวจ")
 st.sidebar.text_input("กรอก HN หรือ ชื่อ-สกุล", key="search_input", on_change=perform_search, placeholder="HN หรือ ชื่อ-สกุล")
 st.sidebar.button("ค้นหา", use_container_width=True, on_click=perform_search)
