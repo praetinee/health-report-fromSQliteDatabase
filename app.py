@@ -874,6 +874,7 @@ st.markdown("""<style>
         position: sticky;
         top: 0;
         height: 100vh;
+        overflow-y: auto; /* Add scroll for sidebar content if it's too long */
     }
 </style>""", unsafe_allow_html=True)
 # --- END OF CHANGE ---
