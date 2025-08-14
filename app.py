@@ -857,19 +857,29 @@ df = load_sqlite_data()
 if df is None:
     st.stop()
 
-st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
-
-# --- START OF CHANGE: New UI with Tabs ---
+st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide", initial_sidebar_state="collapsed")
+inject_custom_css()
+# --- START OF CHANGE: Force hide the sidebar collapse button ---
 st.markdown("""<style>
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
+    
     html, body, div, span, p, td, th, li, ul, ol, table, h1, h2, h3, h4, h5, h6, label, button, input, select, option, .stButton>button, .stTextInput>div>div>input, .stSelectbox>div>div>div { 
         font-family: 'Sarabun', sans-serif !important; 
     }
-    /* Hide the default sidebar */
-    div[data-testid="stSidebar"] {
-        display: none;
+    
+    /* Hide the multi-page app navigation */
+    div[data-testid="stSidebarNav"] { 
+        display: none; 
     }
+
+    /* Force-hide the sidebar collapse button */
+    button[data-testid="stSidebarCollapseButton"] {
+        display: none !important;
+    }
+    
+    .stDownloadButton button { width: 100%; }
 </style>""", unsafe_allow_html=True)
+# --- END OF CHANGE ---
 
 def perform_search():
     st.session_state.search_query = st.session_state.search_input
@@ -877,6 +887,7 @@ def perform_search():
     st.session_state.selected_date = None
     st.session_state.pop("person_row", None)
     st.session_state.pop("selected_row_found", None)
+    st.session_state.page = 'main_report' 
     raw_search_term = st.session_state.search_query.strip()
     search_term = re.sub(r'\s+', ' ', raw_search_term)
     if search_term:
@@ -898,13 +909,16 @@ def handle_year_change():
     st.session_state.selected_date = None
     st.session_state.pop("person_row", None)
     st.session_state.pop("selected_row_found", None)
+    st.session_state.page = 'main_report'
 
 if 'search_query' not in st.session_state: st.session_state.search_query = ""
 if 'search_input' not in st.session_state: st.session_state.search_input = ""
 if 'search_result' not in st.session_state: st.session_state.search_result = pd.DataFrame()
 if 'selected_year' not in st.session_state: st.session_state.selected_year = None
 if 'selected_date' not in st.session_state: st.session_state.selected_date = None
+if 'page' not in st.session_state: st.session_state.page = 'main_report'
 if 'print_trigger' not in st.session_state: st.session_state.print_trigger = False
+# --- แก้ไข: เพิ่ม session state สำหรับปุ่มพิมพ์ใหม่ ---
 if 'print_performance_trigger' not in st.session_state: st.session_state.print_performance_trigger = False
 
 
@@ -949,10 +963,7 @@ else:
     with print_col2:
         if st.button("พิมพ์สมรรถภาพ", use_container_width=True):
             st.session_state.print_performance_trigger = True
-    
-    st.divider()
-    display_common_header(person_data)
-    
+
     available_reports = OrderedDict()
     if has_basic_health_data(person_data): available_reports['สุขภาพพื้นฐาน'] = 'main_report'
     if has_vision_data(person_data): available_reports['สมรรถภาพการมองเห็น'] = 'vision_report'
