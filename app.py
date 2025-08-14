@@ -859,13 +859,17 @@ if df is None:
 
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide", initial_sidebar_state="expanded")
 inject_custom_css()
-# --- START OF CHANGE: Make sidebar sticky ---
-# โค้ดส่วนนี้จะเพิ่ม CSS เพื่อทำให้แถบเมนูด้านซ้าย (Sidebar) คงที่อยู่กับที่
-# ในขณะที่ผู้ใช้เลื่อนดูเนื้อหารายงานหลัก
+# --- START OF CHANGE: Make sidebar sticky and hide collapse button ---
 st.markdown("""<style>
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
     html, body, div, span, p, td, th, li, ul, ol, table, h1, h2, h3, h4, h5, h6, label, button, input, select, option, .stButton>button, .stTextInput>div>div>input, .stSelectbox>div>div>div { font-family: 'Sarabun', sans-serif !important; }
-    div[data-testid="stSidebarNav"], button[data-testid="stSidebarNavCollapseButton"] { display: none; }
+    
+    /* Hide the multi-page app navigation and the main sidebar collapse button */
+    div[data-testid="stSidebarNav"], 
+    button[data-testid="stSidebarCollapseButton"] { 
+        display: none; 
+    }
+    
     .stDownloadButton button { width: 100%; }
 
     /* This CSS makes the sidebar sticky */
@@ -874,7 +878,6 @@ st.markdown("""<style>
         position: sticky;
         top: 0;
         height: 100vh;
-        overflow-y: auto; /* Add scroll for sidebar content if it's too long */
     }
 </style>""", unsafe_allow_html=True)
 # --- END OF CHANGE ---
