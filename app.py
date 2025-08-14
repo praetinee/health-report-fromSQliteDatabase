@@ -909,7 +909,7 @@ if 'print_performance_trigger' not in st.session_state: st.session_state.print_p
 
 
 # --- Top Controls ---
-st.title("ระบบรายงานผลการตรวจสุขภาพ")
+# st.title("ระบบรายงานผลการตรวจสุขภาพ") # --- REMOVED TITLE ---
 search_col, year_col, print_col1, print_col2 = st.columns([3, 2, 1, 1])
 
 with search_col:
@@ -951,26 +951,31 @@ else:
             st.session_state.print_performance_trigger = True
     
     st.divider()
-    display_common_header(person_data)
     
+    # --- TABS AND CONTENT SECTION ---
     available_reports = OrderedDict()
     if has_basic_health_data(person_data): available_reports['สุขภาพพื้นฐาน'] = 'main_report'
     if has_vision_data(person_data): available_reports['สมรรถภาพการมองเห็น'] = 'vision_report'
     if has_hearing_data(person_data): available_reports['สมรรถภาพการได้ยิน'] = 'hearing_report'
     if has_lung_data(person_data): available_reports['สมรรถภาพปอด'] = 'lung_report'
     
-    tabs = st.tabs(list(available_reports.keys()))
+    if not available_reports:
+        display_common_header(person_data)
+        st.warning("ไม่พบข้อมูลการตรวจใดๆ สำหรับวันที่และปีที่เลือก")
+    else:
+        tabs = st.tabs(list(available_reports.keys()))
     
-    for i, (tab_title, page_key) in enumerate(available_reports.items()):
-        with tabs[i]:
-            if page_key == 'vision_report':
-                display_performance_report(person_data, 'vision')
-            elif page_key == 'hearing_report':
-                display_performance_report(person_data, 'hearing', all_person_history_df=all_person_history_df)
-            elif page_key == 'lung_report':
-                display_performance_report(person_data, 'lung')
-            elif page_key == 'main_report':
-                display_main_report(person_data, all_person_history_df)
+        for i, (tab_title, page_key) in enumerate(available_reports.items()):
+            with tabs[i]:
+                display_common_header(person_data)
+                if page_key == 'vision_report':
+                    display_performance_report(person_data, 'vision')
+                elif page_key == 'hearing_report':
+                    display_performance_report(person_data, 'hearing', all_person_history_df=all_person_history_df)
+                elif page_key == 'lung_report':
+                    display_performance_report(person_data, 'lung')
+                elif page_key == 'main_report':
+                    display_main_report(person_data, all_person_history_df)
 
     # --- Print Logic ---
     if st.session_state.get("print_trigger", False):
