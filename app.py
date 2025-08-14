@@ -857,7 +857,7 @@ df = load_sqlite_data()
 if df is None:
     st.stop()
 
-st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide", initial_sidebar_state="collapsed")
 inject_custom_css()
 # --- START OF CHANGE: Force hide the sidebar collapse button ---
 st.markdown("""<style>
@@ -878,14 +878,6 @@ st.markdown("""<style>
     }
     
     .stDownloadButton button { width: 100%; }
-
-    /* This CSS makes the sidebar sticky */
-    div[data-testid="stSidebar"] > div:first-child {
-        position: -webkit-sticky; /* For Safari */
-        position: sticky;
-        top: 0;
-        height: 100vh;
-    }
 </style>""", unsafe_allow_html=True)
 # --- END OF CHANGE ---
 
@@ -930,84 +922,66 @@ if 'print_trigger' not in st.session_state: st.session_state.print_trigger = Fal
 if 'print_performance_trigger' not in st.session_state: st.session_state.print_performance_trigger = False
 
 
-# --- Sidebar Controls ---
-st.sidebar.subheader("ค้นหาและเลือกผลตรวจ")
-st.sidebar.text_input("กรอก HN หรือ ชื่อ-สกุล", key="search_input", on_change=perform_search, placeholder="HN หรือ ชื่อ-สกุล")
-st.sidebar.button("ค้นหา", use_container_width=True, on_click=perform_search)
+# --- Top Controls ---
+st.title("ระบบรายงานผลการตรวจสุขภาพ")
+search_col, year_col, print_col1, print_col2 = st.columns([3, 2, 1, 1])
+
+with search_col:
+    st.text_input("กรอก HN หรือ ชื่อ-สกุล", key="search_input", on_change=perform_search, placeholder="HN หรือ ชื่อ-สกุล")
+    st.button("ค้นหา", use_container_width=True, on_click=perform_search)
 
 results_df = st.session_state.search_result
 if not results_df.empty:
-    available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
-    if not available_years:
-        st.sidebar.warning("ไม่พบข้อมูลปีที่ตรวจ")
-    else:
-        if st.session_state.selected_year not in available_years:
-            st.session_state.selected_year = available_years[0]
-        year_idx = available_years.index(st.session_state.selected_year)
-        st.sidebar.selectbox("เลือกปี พ.ศ.", options=available_years, index=year_idx, format_func=lambda y: f"พ.ศ. {y}", key="year_select", on_change=handle_year_change)
+    with year_col:
+        available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
+        if available_years:
+            if st.session_state.selected_year not in available_years:
+                st.session_state.selected_year = available_years[0]
+            year_idx = available_years.index(st.session_state.selected_year)
+            st.selectbox("เลือกปี พ.ศ.", options=available_years, index=year_idx, format_func=lambda y: f"พ.ศ. {y}", key="year_select", on_change=handle_year_change)
         
-        person_year_df = results_df[results_df["Year"] == st.session_state.selected_year]
+            person_year_df = results_df[results_df["Year"] == st.session_state.selected_year]
 
-        if person_year_df.empty:
-            st.warning(f"ไม่พบข้อมูลการตรวจสำหรับปี พ.ศ. {st.session_state.selected_year}")
-            st.session_state.pop("person_row", None)
-            st.session_state.pop("selected_row_found", None)
-        else:
-            merged_series = person_year_df.bfill().ffill().iloc[0]
-            st.session_state.person_row = merged_series.to_dict()
-            st.session_state.selected_row_found = True
+            if not person_year_df.empty:
+                merged_series = person_year_df.bfill().ffill().iloc[0]
+                st.session_state.person_row = merged_series.to_dict()
+                st.session_state.selected_row_found = True
+            else:
+                 st.session_state.pop("person_row", None)
+                 st.session_state.pop("selected_row_found", None)
 
 # --- Main Page ---
 if "person_row" not in st.session_state or not st.session_state.get("selected_row_found", False):
-    st.info("กรุณาค้นหาและเลือกผลตรวจจากเมนูด้านข้าง")
+    st.info("กรุณาค้นหาและเลือกผลตรวจจากเมนูด้านบน")
 else:
     person_data = st.session_state.person_row
     all_person_history_df = st.session_state.search_result
 
+    with print_col1:
+        if st.button("พิมพ์รายงาน", use_container_width=True):
+             st.session_state.print_trigger = True
+    with print_col2:
+        if st.button("พิมพ์สมรรถภาพ", use_container_width=True):
+            st.session_state.print_performance_trigger = True
+
     available_reports = OrderedDict()
-    if has_basic_health_data(person_data): available_reports['main_report'] = "สุขภาพพื้นฐาน"
-    if has_vision_data(person_data): available_reports['vision_report'] = "สมรรถภาพการมองเห็น"
-    if has_hearing_data(person_data): available_reports['hearing_report'] = "สมรรถภาพการได้ยิน"
-    if has_lung_data(person_data): available_reports['lung_report'] = "สมรรถภาพปอด"
+    if has_basic_health_data(person_data): available_reports['สุขภาพพื้นฐาน'] = 'main_report'
+    if has_vision_data(person_data): available_reports['สมรรถภาพการมองเห็น'] = 'vision_report'
+    if has_hearing_data(person_data): available_reports['สมรรถภาพการได้ยิน'] = 'hearing_report'
+    if has_lung_data(person_data): available_reports['สมรรถภาพปอด'] = 'lung_report'
     
-    has_performance_report = any(k in ['vision_report', 'hearing_report', 'lung_report'] for k in available_reports)
-
-    if not available_reports:
-        display_common_header(person_data)
-        st.warning("ไม่พบข้อมูลการตรวจใดๆ สำหรับวันที่และปีที่เลือก")
-    else:
-        if st.session_state.page not in available_reports:
-            st.session_state.page = list(available_reports.keys())[0]
-
-        # --- Sidebar Navigation and Print ---
-        st.sidebar.divider()
-        st.sidebar.subheader("เลือกรายงาน")
-        for page_key, page_title in available_reports.items():
-            if st.sidebar.button(page_title, use_container_width=True, key=f"btn_{page_key}"):
-                st.session_state.page = page_key
-                st.rerun()
-        
-        st.sidebar.divider()
-        st.sidebar.subheader("ตัวเลือกการพิมพ์")
-        if st.sidebar.button("พิมพ์รายงานฉบับสมบูรณ์", use_container_width=True):
-            st.session_state.print_trigger = True
-        
-        if has_performance_report:
-            if st.sidebar.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True):
-                st.session_state.print_performance_trigger = True
-
-        # --- Display Report on Main Page ---
-        display_common_header(person_data)
-        
-        page_to_show = st.session_state.page
-        if page_to_show == 'vision_report':
-            display_performance_report(person_data, 'vision')
-        elif page_to_show == 'hearing_report':
-            display_performance_report(person_data, 'hearing', all_person_history_df=all_person_history_df)
-        elif page_to_show == 'lung_report':
-            display_performance_report(person_data, 'lung')
-        elif page_to_show == 'main_report':
-            display_main_report(person_data, all_person_history_df)
+    tabs = st.tabs(list(available_reports.keys()))
+    
+    for i, (tab_title, page_key) in enumerate(available_reports.items()):
+        with tabs[i]:
+            if page_key == 'vision_report':
+                display_performance_report(person_data, 'vision')
+            elif page_key == 'hearing_report':
+                display_performance_report(person_data, 'hearing', all_person_history_df=all_person_history_df)
+            elif page_key == 'lung_report':
+                display_performance_report(person_data, 'lung')
+            elif page_key == 'main_report':
+                display_main_report(person_data, all_person_history_df)
 
     # --- Print Logic ---
     if st.session_state.get("print_trigger", False):
