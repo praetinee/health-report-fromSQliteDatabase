@@ -870,6 +870,7 @@ st.markdown("""<style>
         display: none;
     }
 </style>""", unsafe_allow_html=True)
+inject_custom_css() # --- ADDED THIS LINE BACK ---
 
 def perform_search():
     st.session_state.search_query = st.session_state.search_input
