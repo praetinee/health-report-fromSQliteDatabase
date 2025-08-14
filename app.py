@@ -862,12 +862,20 @@ inject_custom_css()
 # --- START OF CHANGE: Make sidebar sticky and hide collapse button ---
 st.markdown("""<style>
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
-    html, body, div, span, p, td, th, li, ul, ol, table, h1, h2, h3, h4, h5, h6, label, button, input, select, option, .stButton>button, .stTextInput>div>div>input, .stSelectbox>div>div>div { font-family: 'Sarabun', sans-serif !important; }
+    @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+
+    html, body, div, span, p, td, th, li, ul, ol, table, h1, h2, h3, h4, h5, h6, label, button, input, select, option, .stButton>button, .stTextInput>div>div>input, .stSelectbox>div>div>div { 
+        font-family: 'Sarabun', sans-serif !important; 
+    }
     
-    /* Hide the multi-page app navigation and the main sidebar collapse button */
-    div[data-testid="stSidebarNav"], 
-    button[data-testid="stSidebarCollapseButton"] { 
+    /* Hide the multi-page app navigation */
+    div[data-testid="stSidebarNav"] { 
         display: none; 
+    }
+
+    /* Target the collapse button specifically and apply the icon font */
+    button[data-testid="stSidebarCollapseButton"] {
+        font-family: 'Material Icons';
     }
     
     .stDownloadButton button { width: 100%; }
