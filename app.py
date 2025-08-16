@@ -321,6 +321,7 @@ def display_common_header(person_data):
         <div class="header-left">
             <h2>รายงานผลการตรวจสุขภาพ</h2>
             <p>คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย</p>
+            <p>ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167</p>
         </div>
         <div class="header-right">
             <div class="info-card">
@@ -1106,4 +1107,4 @@ else:
         </script>
         """
         st.components.v1.html(print_component, height=0, width=0)
-        st.session_state.print_performance_trigger = False
+        st.session_state.print_performance_trigger = Fa
