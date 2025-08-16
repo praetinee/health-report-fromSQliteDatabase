@@ -566,6 +566,9 @@ def inject_custom_css():
             color: var(--text-color);
             opacity: 0.7;
         }
+        .lab-table thead th {
+            background-color: rgba(128, 128, 128, 0.1);
+        }
         .lab-table td:nth-child(2) {
             text-align: center;
         }
@@ -974,8 +977,8 @@ def display_main_report(person_data, all_person_history_df):
             st.markdown("<h5 class='section-subtitle'>ผลการตรวจไวรัสตับอักเสบบี (Viral hepatitis B)</h5>", unsafe_allow_html=True)
             hbsag, hbsab, hbcab = safe_text(person.get("HbsAg")), safe_text(person.get("HbsAb")), safe_text(person.get("HBcAB"))
             st.markdown(f"""<div class="table-container"><table class='lab-table'>
-                <thead><tr><th>HBsAg</th><th>HBsAb</th><th>HBcAb</th></tr></thead>
-                <tbody><tr><td>{hbsag}</td><td>{hbsab}</td><td>{hbcab}</td></tr></tbody>
+                <thead><tr><th style='text-align: center;'>HBsAg</th><th style='text-align: center;'>HBsAb</th><th style='text-align: center;'>HBcAb</th></tr></thead>
+                <tbody><tr><td style='text-align: center;'>{hbsag}</td><td style='text-align: center;'>{hbsab}</td><td style='text-align: center;'>{hbcab}</td></tr></tbody>
             </table></div>""", unsafe_allow_html=True)
             
             if not (is_empty(hbsag) and is_empty(hbsab) and is_empty(hbcab)):
@@ -1166,4 +1169,4 @@ else:
         </script>
         """
         st.components.v1.html(print_component, height=0, width=0)
-        st.session_state.print_performance_trigger = False
+        st.session_state.print_performance_trigger = Fa
