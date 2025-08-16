@@ -288,6 +288,24 @@ def interpret_cxr(val):
     if any(keyword in val.lower() for keyword in ["ผิดปกติ", "ฝ้า", "รอย", "abnormal", "infiltrate", "lesion"]): return f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
     return val
 
+# --- START OF CHANGE: New function to interpret BMI ---
+def interpret_bmi(bmi):
+    """Interprets BMI value and returns a description string."""
+    if bmi is None:
+        return ""
+    if bmi < 18.5:
+        return "น้ำหนักน้อยกว่าเกณฑ์"
+    elif 18.5 <= bmi < 23:
+        return "น้ำหนักปกติ"
+    elif 23 <= bmi < 25:
+        return "น้ำหนักเกิน (ท้วม)"
+    elif 25 <= bmi < 30:
+        return "โรคอ้วนระดับที่ 1"
+    elif bmi >= 30:
+        return "โรคอ้วนระดับที่ 2"
+    return ""
+# --- END OF CHANGE ---
+
 # --- START OF CHANGE: New Header and Vitals Design ---
 def display_common_header(person_data):
     """Displays the new report header with integrated personal info and vitals cards."""
@@ -311,9 +329,20 @@ def display_common_header(person_data):
     try: pulse_val = f"{int(float(person_data.get('pulse', '-')))}"
     except: pulse_val = "-"
 
-    weight_val = f"{person_data.get('น้ำหนัก', '-')}"
-    height_val = f"{person_data.get('ส่วนสูง', '-')}"
+    weight = get_float('น้ำหนัก', person_data)
+    height = get_float('ส่วนสูง', person_data)
+    weight_val = f"{weight}" if weight is not None else "-"
+    height_val = f"{height}" if height is not None else "-"
     waist_val = f"{person_data.get('รอบเอว', '-')}"
+
+    # --- BMI Calculation and Interpretation ---
+    bmi_val_str = "-"
+    bmi_desc = ""
+    if weight is not None and height is not None and height > 0:
+        bmi = weight / ((height / 100) ** 2)
+        bmi_val_str = f"{bmi:.1f} kg/m²"
+        bmi_desc = interpret_bmi(bmi)
+
 
     # --- Render HTML ---
     st.markdown(f"""
@@ -343,6 +372,7 @@ def display_common_header(person_data):
             <div class="vital-data">
                 <span class="vital-label">น้ำหนัก / ส่วนสูง</span>
                 <span class="vital-value">{weight_val} kg / {height_val} cm</span>
+                <span class="vital-sub-value">BMI: {bmi_val_str} ({bmi_desc})</span>
             </div>
         </div>
         <div class="vital-card">
@@ -383,6 +413,14 @@ def inject_custom_css():
     st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap');
+        
+        /* --- Color Variables for Consistency --- */
+        :root {
+            --abnormal-bg-color: rgba(220, 53, 69, 0.1);
+            --abnormal-text-color: #C53030;
+            --normal-bg-color: rgba(40, 167, 69, 0.1);
+            --warning-bg-color: rgba(255, 193, 7, 0.1);
+        }
         
         /* --- General & Typography --- */
         html, body, [class*="st-"], .st-emotion-cache-10trblm, h1, h2, h3, h4, h5, h6 {
@@ -456,7 +494,7 @@ def inject_custom_css():
 
         .vitals-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 1rem;
             margin-bottom: 2rem;
         }
@@ -473,7 +511,7 @@ def inject_custom_css():
         .vital-icon svg { color: var(--primary-color); }
         .vital-data { display: flex; flex-direction: column; }
         .vital-label { font-size: 0.8rem; color: var(--text-color); opacity: 0.7; }
-        .vital-value { font-size: 1.5rem; font-weight: 700; color: var(--text-color); line-height: 1.2; }
+        .vital-value { font-size: 1.2rem; font-weight: 700; color: var(--text-color); line-height: 1.2; white-space: nowrap;}
         .vital-sub-value { font-size: 0.8rem; color: var(--text-color); opacity: 0.6; }
 
         /* --- Styled Tabs --- */
@@ -529,8 +567,8 @@ def inject_custom_css():
         .lab-table th:nth-child(2) { text-align: center; }
         .lab-table tbody tr:hover { background-color: rgba(128, 128, 128, 0.1); }
         .lab-table .abnormal-row {
-            background-color: rgba(229, 62, 62, 0.1);
-            color: #C53030;
+            background-color: var(--abnormal-bg-color);
+            color: var(--abnormal-text-color);
             font-weight: 600;
         }
         .info-detail-table th { width: 35%; }
@@ -546,6 +584,17 @@ def inject_custom_css():
         .recommendation-container li { margin-bottom: 0.5rem; }
 
         /* --- Performance Report Specific Styles --- */
+        .status-summary-card {
+            background-color: var(--status-bg-color); 
+            padding: 1rem; 
+            border-radius: 8px; 
+            text-align: center; 
+            height: 100%;
+        }
+        .status-summary-card p {
+            margin: 0;
+            color: var(--text-color);
+        }
         .vision-table {
             width: 100%; border-collapse: collapse; font-size: 14px;
             margin-top: 1.5rem;
@@ -673,25 +722,27 @@ def display_performance_report_hearing(person_data, all_person_history_df):
     summary_r_raw = person_data.get('ผลตรวจการได้ยินหูขวา', 'N/A')
     summary_l_raw = person_data.get('ผลตรวจการได้ยินหูซ้าย', 'N/A')
 
-    def get_summary_color(summary_text):
-        if "ปกติ" in summary_text: return "rgba(40, 167, 69, 0.1)"
-        elif "N/A" in summary_text or "ไม่ได้" in summary_text: return "rgba(108, 117, 125, 0.1)"
-        else: return "rgba(220, 53, 69, 0.1)"
+    # --- START OF CHANGE: Use CSS classes for consistent colors ---
+    def get_summary_class(summary_text):
+        if "ปกติ" in summary_text: return "status-normal-bg"
+        elif "N/A" in summary_text or "ไม่ได้" in summary_text: return "status-neutral-bg"
+        else: return "status-abnormal-bg"
+    # --- END OF CHANGE ---
 
     col1, col2 = st.columns(2)
     with col1:
         st.markdown(f"""
-        <div style="background-color: {get_summary_color(summary_r_raw)}; padding: 1rem; border-radius: 8px; text-align: center; height: 100%;">
-            <p style="font-size: 1rem; font-weight: bold; margin: 0; color: var(--text-color);">หูขวา (Right Ear)</p>
-            <p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">{summary_r_raw}</p>
+        <div class="status-summary-card {get_summary_class(summary_r_raw)}">
+            <p style="font-size: 1rem; font-weight: bold;">หูขวา (Right Ear)</p>
+            <p style="font-size: 1.2rem; font-weight: bold; margin-top: 0.25rem;">{summary_r_raw}</p>
         </div>
         """, unsafe_allow_html=True)
 
     with col2:
         st.markdown(f"""
-        <div style="background-color: {get_summary_color(summary_l_raw)}; padding: 1rem; border-radius: 8px; text-align: center; height: 100%;">
-            <p style="font-size: 1rem; font-weight: bold; margin: 0; color: var(--text-color);">หูซ้าย (Left Ear)</p>
-            <p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">{summary_l_raw}</p>
+        <div class="status-summary-card {get_summary_class(summary_l_raw)}">
+            <p style="font-size: 1rem; font-weight: bold;">หูซ้าย (Left Ear)</p>
+            <p style="font-size: 1.2rem; font-weight: bold; margin-top: 0.25rem;">{summary_l_raw}</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -978,7 +1029,8 @@ if 'print_performance_trigger' not in st.session_state: st.session_state.print_p
 with st.sidebar:
     st.markdown('<div class="sidebar-title">ค้นหาข้อมูล</div>', unsafe_allow_html=True)
     
-    st.text_input("HN หรือ ชื่อ-สกุล", key="search_input", on_change=perform_search, placeholder="ค้นหา...", label_visibility="collapsed")
+    st.text_input("HN หรือ ชื่อ-สกุล", key="search_input", placeholder="ค้นหา...", label_visibility="collapsed")
+    st.button("ค้นหา", on_click=perform_search, use_container_width=True) # Added search button
     
     results_df = st.session_state.search_result
     if results_df.empty and st.session_state.search_query:
@@ -1107,4 +1159,4 @@ else:
         </script>
         """
         st.components.v1.html(print_component, height=0, width=0)
-        st.session_state.print_performance_trigger = Fa
+        st.session_state.print_performance_trigger = False
