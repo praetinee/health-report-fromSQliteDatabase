@@ -288,7 +288,7 @@ def interpret_cxr(val):
     if any(keyword in val.lower() for keyword in ["ผิดปกติ", "ฝ้า", "รอย", "abnormal", "infiltrate", "lesion"]): return f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
     return val
 
-# --- START OF CHANGE: New function to interpret BMI ---
+# --- START OF CHANGE: New function to interpret BMI with updated terminology ---
 def interpret_bmi(bmi):
     """Interprets BMI value and returns a description string."""
     if bmi is None:
@@ -300,9 +300,9 @@ def interpret_bmi(bmi):
     elif 23 <= bmi < 25:
         return "น้ำหนักเกิน (ท้วม)"
     elif 25 <= bmi < 30:
-        return "โรคอ้วนระดับที่ 1"
+        return "เข้าเกณฑ์โรคอ้วน"
     elif bmi >= 30:
-        return "โรคอ้วนระดับที่ 2"
+        return "เข้าเกณฑ์โรคอ้วนอันตราย"
     return ""
 # --- END OF CHANGE ---
 
@@ -370,18 +370,9 @@ def display_common_header(person_data):
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="M12 6v6l4 2"></path></svg>
             </div>
             <div class="vital-data">
-                <span class="vital-label">น้ำหนัก / ส่วนสูง</span>
-                <span class="vital-value">{weight_val} kg / {height_val} cm</span>
+                <span class="vital-label">สัดส่วนร่างกาย</span>
+                <span class="vital-value">{weight_val} kg / {height_val} cm / {waist_val} cm</span>
                 <span class="vital-sub-value">BMI: {bmi_val_str} ({bmi_desc})</span>
-            </div>
-        </div>
-        <div class="vital-card">
-            <div class="vital-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="M12 6v6l4 2"></path></svg>
-            </div>
-            <div class="vital-data">
-                <span class="vital-label">รอบเอว</span>
-                <span class="vital-value">{waist_val} cm</span>
             </div>
         </div>
         <div class="vital-card">
@@ -420,6 +411,7 @@ def inject_custom_css():
             --abnormal-text-color: #C53030;
             --normal-bg-color: rgba(40, 167, 69, 0.1);
             --warning-bg-color: rgba(255, 193, 7, 0.1);
+            --neutral-bg-color: rgba(108, 117, 125, 0.1);
         }
         
         /* --- General & Typography --- */
@@ -494,7 +486,7 @@ def inject_custom_css():
 
         .vitals-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
             gap: 1rem;
             margin-bottom: 2rem;
         }
@@ -556,6 +548,7 @@ def inject_custom_css():
         }
         .lab-table th, .lab-table td, .info-detail-table th, .info-detail-table td {
             padding: 12px 15px;
+            border: 1px solid transparent;
             border-bottom: 1px solid var(--border-color);
         }
         .lab-table th, .info-detail-table th {
@@ -564,7 +557,9 @@ def inject_custom_css():
             color: var(--text-color);
             opacity: 0.7;
         }
-        .lab-table th:nth-child(2) { text-align: center; }
+        .lab-table td:nth-child(2) {
+            text-align: center;
+        }
         .lab-table tbody tr:hover { background-color: rgba(128, 128, 128, 0.1); }
         .lab-table .abnormal-row {
             background-color: var(--abnormal-bg-color);
@@ -585,12 +580,15 @@ def inject_custom_css():
 
         /* --- Performance Report Specific Styles --- */
         .status-summary-card {
-            background-color: var(--status-bg-color); 
             padding: 1rem; 
             border-radius: 8px; 
             text-align: center; 
             height: 100%;
         }
+        .status-normal-bg { background-color: var(--normal-bg-color); }
+        .status-abnormal-bg { background-color: var(--abnormal-bg-color); }
+        .status-neutral-bg { background-color: var(--neutral-bg-color); }
+
         .status-summary-card p {
             margin: 0;
             color: var(--text-color);
@@ -1160,3 +1158,4 @@ else:
         """
         st.components.v1.html(print_component, height=0, width=0)
         st.session_state.print_performance_trigger = False
+
