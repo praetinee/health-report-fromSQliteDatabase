@@ -377,7 +377,7 @@ def display_common_header(person_data):
 
 # --- END OF CHANGE ---
 
-# --- START OF CHANGE: New Centralized CSS ---
+# --- START OF CHANGE: New Centralized and Adaptive CSS ---
 def inject_custom_css():
     st.markdown("""
     <style>
@@ -388,37 +388,38 @@ def inject_custom_css():
             font-family: 'Sarabun', sans-serif !important; 
         }
         .main {
-             background-color: #F0F2F5; /* Light Gray Background */
-             color: #2D3748; /* Dark Gray-Blue Text */
+             background-color: var(--background-color);
+             color: var(--text-color);
         }
         h4 { /* For section headers */
             font-size: 1.25rem;
             font-weight: 600;
-            border-bottom: 2px solid #E2E8F0;
+            border-bottom: 2px solid var(--border-color);
             padding-bottom: 10px;
             margin-top: 40px;
             margin-bottom: 24px;
-            color: #1A202C;
+            color: var(--text-color);
         }
         h5.section-subtitle {
             font-weight: 600;
             margin-top: 1.5rem;
             margin-bottom: 0.75rem;
-            color: #4A5568;
+            color: var(--text-color);
+            opacity: 0.7;
         }
 
         /* --- Sidebar Controls --- */
         [data-testid="stSidebar"] {
-            background-color: #FFFFFF;
+            background-color: var(--secondary-background-color);
         }
         .sidebar-title {
             font-size: 1.5rem;
             font-weight: 700;
-            color: #007BFF;
+            color: var(--primary-color);
             margin-bottom: 1rem;
         }
         .stButton>button {
-            background-color: #007BFF; /* Blue Accent */
+            background-color: var(--primary-color);
             color: white;
             border-radius: 8px;
             border: none;
@@ -426,7 +427,7 @@ def inject_custom_css():
             width: 100%;
         }
         .stButton>button:hover {
-            background-color: #0056b3;
+            opacity: 0.8;
             color: white;
         }
 
@@ -437,20 +438,20 @@ def inject_custom_css():
             align-items: flex-start;
             margin-bottom: 2rem;
         }
-        .header-left h2 { color: #1A202C; font-size: 2rem; margin-bottom: 0.25rem;}
-        .header-left p { color: #718096; margin: 0; }
+        .header-left h2 { color: var(--text-color); font-size: 2rem; margin-bottom: 0.25rem;}
+        .header-left p { color: var(--text-color); opacity: 0.7; margin: 0; }
         .info-card {
-            background-color: #FFFFFF;
+            background-color: var(--secondary-background-color);
             border-radius: 8px;
             padding: 1rem;
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 0.5rem 1.5rem;
             min-width: 400px;
-            border: 1px solid #E2E8F0;
+            border: 1px solid var(--border-color);
         }
-        .info-card-item { font-size: 0.9rem; color: #2D3748; }
-        .info-card-item span { color: #718096; margin-right: 8px; }
+        .info-card-item { font-size: 0.9rem; color: var(--text-color); }
+        .info-card-item span { color: var(--text-color); opacity: 0.7; margin-right: 8px; }
 
         .vitals-grid {
             display: grid;
@@ -459,28 +460,29 @@ def inject_custom_css():
             margin-bottom: 2rem;
         }
         .vital-card {
-            background-color: #FFFFFF;
+            background-color: var(--secondary-background-color);
             border-radius: 12px;
             padding: 1rem;
             display: flex;
             align-items: center;
             gap: 1rem;
-            border: 1px solid #E2E8F0;
+            border: 1px solid var(--border-color);
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
         }
-        .vital-icon svg { color: #007BFF; }
+        .vital-icon svg { color: var(--primary-color); }
         .vital-data { display: flex; flex-direction: column; }
-        .vital-label { font-size: 0.8rem; color: #718096; }
-        .vital-value { font-size: 1.5rem; font-weight: 700; color: #1A202C; line-height: 1.2; }
-        .vital-sub-value { font-size: 0.8rem; color: #A0AEC0; }
+        .vital-label { font-size: 0.8rem; color: var(--text-color); opacity: 0.7; }
+        .vital-value { font-size: 1.5rem; font-weight: 700; color: var(--text-color); line-height: 1.2; }
+        .vital-sub-value { font-size: 0.8rem; color: var(--text-color); opacity: 0.6; }
 
         /* --- Styled Tabs --- */
         div[data-testid="stTabs"] {
-            border-bottom: 2px solid #E2E8F0;
+            border-bottom: 2px solid var(--border-color);
         }
         div[data-testid="stTabs"] button {
             background-color: transparent;
-            color: #718096;
+            color: var(--text-color);
+            opacity: 0.7;
             border-radius: 8px 8px 0 0;
             margin: 0;
             padding: 10px 20px;
@@ -488,18 +490,19 @@ def inject_custom_css():
             border-bottom: 2px solid transparent;
         }
         div[data-testid="stTabs"] button[aria-selected="true"] {
-            background-color: #FFFFFF;
-            color: #007BFF;
+            background-color: var(--secondary-background-color);
+            color: var(--primary-color);
             font-weight: 600;
-            border: 2px solid #E2E8F0;
-            border-bottom: 2px solid #FFFFFF;
+            opacity: 1;
+            border: 2px solid var(--border-color);
+            border-bottom: 2px solid var(--secondary-background-color);
             margin-bottom: -2px;
         }
         
         /* --- Containers for sections --- */
         div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] > div.st-emotion-cache-1jicfl2.e1f1d6gn3 > div {
-             background-color: #FFFFFF;
-             border: 1px solid #E2E8F0;
+             background-color: var(--secondary-background-color);
+             border: 1px solid var(--border-color);
              border-radius: 12px;
              padding: 24px;
              box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
@@ -514,17 +517,18 @@ def inject_custom_css():
         }
         .lab-table th, .lab-table td, .info-detail-table th, .info-detail-table td {
             padding: 12px 15px;
-            border-bottom: 1px solid #E2E8F0;
+            border-bottom: 1px solid var(--border-color);
         }
         .lab-table th, .info-detail-table th {
             font-weight: 600;
             text-align: left;
-            color: #718096;
+            color: var(--text-color);
+            opacity: 0.7;
         }
         .lab-table th:nth-child(2) { text-align: center; }
-        .lab-table tbody tr:hover { background-color: #F7FAFC; }
+        .lab-table tbody tr:hover { background-color: rgba(128, 128, 128, 0.1); }
         .lab-table .abnormal-row {
-            background-color: rgba(229, 62, 62, 0.05);
+            background-color: rgba(229, 62, 62, 0.1);
             color: #C53030;
             font-weight: 600;
         }
@@ -532,10 +536,10 @@ def inject_custom_css():
         
         /* --- Recommendation Container --- */
         .recommendation-container {
-            border-left: 5px solid #007BFF;
+            border-left: 5px solid var(--primary-color);
             padding: 1.5rem;
             border-radius: 0 8px 8px 0;
-            background-color: #F7FAFC;
+            background-color: var(--background-color);
         }
         .recommendation-container ul { padding-left: 20px; }
         .recommendation-container li { margin-bottom: 0.5rem; }
@@ -546,10 +550,10 @@ def inject_custom_css():
             margin-top: 1.5rem;
         }
         .vision-table th, .vision-table td {
-            border: 1px solid #E2E8F0; padding: 10px;
+            border: 1px solid var(--border-color); padding: 10px;
             text-align: left; vertical-align: middle;
         }
-        .vision-table th { background-color: #F7FAFC; font-weight: bold; }
+        .vision-table th { background-color: var(--secondary-background-color); opacity: 0.7; font-weight: bold; }
         .vision-table .result-cell { text-align: center; width: 180px; }
         .vision-result {
             display: inline-block; padding: 6px 16px; border-radius: 16px;
@@ -562,11 +566,11 @@ def inject_custom_css():
             width: 100%; border-collapse: collapse; font-family: 'Sarabun', sans-serif !important;
             font-size: 14px;
         }
-        .styled-df-table th, .styled-df-table td { border: 1px solid #E2E8F0; padding: 10px; text-align: left; }
-        .styled-df-table thead th { background-color: #F7FAFC; font-weight: bold; text-align: center; vertical-align: middle; }
+        .styled-df-table th, .styled-df-table td { border: 1px solid var(--border-color); padding: 10px; text-align: left; }
+        .styled-df-table thead th { background-color: var(--secondary-background-color); opacity: 0.7; font-weight: bold; text-align: center; vertical-align: middle; }
         .styled-df-table tbody td { text-align: center; }
         .styled-df-table tbody td:first-child { text-align: left; }
-        .styled-df-table tbody tr:hover { background-color: #F7FAFC; }
+        .styled-df-table tbody tr:hover { background-color: rgba(128, 128, 128, 0.1); }
         .hearing-table { table-layout: fixed; }
 
     </style>
@@ -677,16 +681,16 @@ def display_performance_report_hearing(person_data, all_person_history_df):
     with col1:
         st.markdown(f"""
         <div style="background-color: {get_summary_color(summary_r_raw)}; padding: 1rem; border-radius: 8px; text-align: center; height: 100%;">
-            <p style="font-size: 1rem; font-weight: bold; margin: 0; color: #2D3748;">หูขวา (Right Ear)</p>
-            <p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: #2D3748;">{summary_r_raw}</p>
+            <p style="font-size: 1rem; font-weight: bold; margin: 0; color: var(--text-color);">หูขวา (Right Ear)</p>
+            <p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">{summary_r_raw}</p>
         </div>
         """, unsafe_allow_html=True)
 
     with col2:
         st.markdown(f"""
         <div style="background-color: {get_summary_color(summary_l_raw)}; padding: 1rem; border-radius: 8px; text-align: center; height: 100%;">
-            <p style="font-size: 1rem; font-weight: bold; margin: 0; color: #2D3748;">หูซ้าย (Left Ear)</p>
-            <p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: #2D3748;">{summary_l_raw}</p>
+            <p style="font-size: 1rem; font-weight: bold; margin: 0; color: var(--text-color);">หูซ้าย (Left Ear)</p>
+            <p style="font-size: 1.2rem; font-weight: bold; margin: 0.25rem 0 0 0; color: var(--text-color);">{summary_l_raw}</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -700,7 +704,7 @@ def display_performance_report_hearing(person_data, all_person_history_df):
     else:
         st.success(f"**คำแนะนำ:** {advice}")
     
-    st.markdown("<hr style='border-color: #E2E8F0;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='border-color: var(--border-color);'>", unsafe_allow_html=True)
 
     data_col, avg_col = st.columns([3, 2])
     
@@ -745,7 +749,7 @@ def display_performance_report_hearing(person_data, all_person_history_df):
         avg_r_speech, avg_l_speech = averages.get('right_500_2000'), averages.get('left_500_2000')
         avg_r_high, avg_l_high = averages.get('right_3000_6000'), averages.get('left_3000_6000')
         st.markdown(f"""
-        <div style='background-color: #F7FAFC; padding: 1rem; border-radius: 8px; line-height: 1.8; height: 100%; border: 1px solid #E2E8F0;'>
+        <div style='background-color: var(--secondary-background-color); padding: 1rem; border-radius: 8px; line-height: 1.8; height: 100%; border: 1px solid var(--border-color);'>
             <b>ความถี่เสียงพูด (500-2000 Hz):</b>
             <ul>
                 <li>หูขวา: {f'{avg_r_speech:.1f}' if avg_r_speech is not None else 'N/A'}</li>
@@ -776,7 +780,7 @@ def display_performance_report_lung(person_data):
     col1.metric(label="FVC (% เทียบค่ามาตรฐาน)", value=format_val('FVC %'), help="ความจุของปอดเมื่อหายใจออกเต็มที่ (ควร > 80%)")
     col2.metric(label="FEV1 (% เทียบค่ามาตรฐาน)", value=format_val('FEV1 %'), help="ปริมาตรอากาศที่หายใจออกในวินาทีแรก (ควร > 80%)")
     col3.metric(label="FEV1/FVC Ratio (%)", value=format_val('FEV1/FVC %'), help="สัดส่วนของ FEV1 ต่อ FVC (ควร > 70%)")
-    st.markdown("<hr style='border-color: #E2E8F0;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='border-color: var(--border-color);'>", unsafe_allow_html=True)
 
     res_col1, res_col2 = st.columns([2, 3])
     with res_col1:
@@ -793,7 +797,7 @@ def display_performance_report_lung(person_data):
         if selected_year:
             cxr_col_name = f"CXR{str(selected_year)[-2:]}" if selected_year != (datetime.now().year + 543) else "CXR"
             cxr_result_interpreted = interpret_cxr(person_data.get(cxr_col_name, ''))
-        st.markdown(f'<div style="font-size: 14px; padding: 0.5rem; background-color: #F7FAFC; border-radius: 4px; border: 1px solid #E2E8F0;">{cxr_result_interpreted}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="font-size: 14px; padding: 0.5rem; background-color: var(--secondary-background-color); border-radius: 4px; border: 1px solid var(--border-color);">{cxr_result_interpreted}</div>', unsafe_allow_html=True)
     with res_col2:
         st.markdown("<h5 class='section-subtitle'>ตารางแสดงผลโดยละเอียด</h5>", unsafe_allow_html=True)
         def format_detail_val(key, format_spec, unit=""):
@@ -816,8 +820,8 @@ def display_performance_report_vision(person_data):
             if not is_empty(vision_advice_summary):
                  st.markdown(f"""
                  <div style='background-color: rgba(0, 123, 255, 0.1); border: 1px solid rgba(0, 123, 255, 0.2); padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
-                    <div style='flex-shrink: 0;'><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#007BFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div>
-                    <div><h5 style='margin-top: 0; margin-bottom: 0.25rem; color: #007BFF;'>สรุปความเหมาะสมกับงาน</h5><p style='margin:0;'>{vision_advice_summary}</p></div>
+                    <div style='flex-shrink: 0;'><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div>
+                    <div><h5 style='margin-top: 0; margin-bottom: 0.25rem; color: var(--primary-color);'>สรุปความเหมาะสมกับงาน</h5><p style='margin:0;'>{vision_advice_summary}</p></div>
                  </div>""", unsafe_allow_html=True)
             if not is_empty(doctor_advice):
                  st.markdown(f"""
@@ -831,8 +835,8 @@ def display_performance_report_vision(person_data):
     if not is_empty(vision_advice_summary):
         st.markdown(f"""
          <div style='background-color: rgba(0, 123, 255, 0.1); border: 1px solid rgba(0, 123, 255, 0.2); padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
-            <div style='flex-shrink: 0;'><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#007BFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div>
-            <div><h5 style='margin-top: 0; margin-bottom: 0.25rem; color: #007BFF;'>สรุปความเหมาะสมกับงาน</h5><p style='margin:0;'>{vision_advice_summary}</p></div>
+            <div style='flex-shrink: 0;'><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div>
+            <div><h5 style='margin-top: 0; margin-bottom: 0.25rem; color: var(--primary-color);'>สรุปความเหมาะสมกับงาน</h5><p style='margin:0;'>{vision_advice_summary}</p></div>
          </div>""", unsafe_allow_html=True)
 
     abnormality_fields = OrderedDict([('ผ.สายตาเขซ่อนเร้น', 'สายตาเขซ่อนเร้น'), ('ผ.การรวมภาพ', 'การรวมภาพ'), ('ผ.ความชัดของภาพระยะไกล', 'ความชัดของภาพระยะไกล'), ('ผ.การกะระยะและมองความชัดลึกของภาพ', 'การกะระยะ/ความชัดลึก'), ('ผ.การจำแนกสี', 'การจำแนกสี'), ('ผ.ความชัดของภาพระยะใกล้', 'ความชัดของภาพระยะใกล้'), ('ผ.ลานสายตา', 'ลานสายตา')])
@@ -849,7 +853,7 @@ def display_performance_report_vision(person_data):
             <div><h5 style='margin-top: 0; margin-bottom: 0.25rem; color: #FFC107;'>สรุปความผิดปกติและคำแนะนำ</h5><p style='margin:0;'>{"<br>".join(summary_parts)}</p></div>
         </div>""", unsafe_allow_html=True)
 
-    st.markdown("<hr style='border-color: #E2E8F0;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='border-color: var(--border-color);'>", unsafe_allow_html=True)
     st.markdown("<h5 class='section-subtitle'>ผลการตรวจโดยละเอียด</h5>", unsafe_allow_html=True)
     st.markdown(render_vision_details_table(person_data), unsafe_allow_html=True)
 
@@ -1103,3 +1107,15 @@ else:
         """
         st.components.v1.html(print_component, height=0, width=0)
         st.session_state.print_performance_trigger = False
+" code between  and  in the most up-to-date Canvas "app.py (ปรับปรุง UI)" document above and am asking a query about/based on this code below.
+Instructions to follow:
+  * Don't output/edit the document if the query is Direct/Simple. For example, if the query asks for a simple explanation, output a direct answer.
+  * Make sure to **edit** the document if the query shows the intent of editing the document, in which case output the entire edited document, **not just that section or the edits**.
+    * Don't output the same document/empty document and say that you have edited it.
+    * Don't change unrelated code in the document.
+  * Don't output  and  in your final response.
+  * Any references like "this" or "selected code" refers to the code between  and  tags.
+  * Just acknowledge my request in the introduction.
+  * Make sure to refer to the document as "Canvas" in your response.
+
+อธิบายโค้ดหน
