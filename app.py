@@ -370,9 +370,18 @@ def display_common_header(person_data):
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="M12 6v6l4 2"></path></svg>
             </div>
             <div class="vital-data">
-                <span class="vital-label">สัดส่วนร่างกาย</span>
-                <span class="vital-value">{weight_val} kg / {height_val} cm / {waist_val} cm</span>
+                <span class="vital-label">น้ำหนัก / ส่วนสูง</span>
+                <span class="vital-value">{weight_val} kg / {height_val} cm</span>
                 <span class="vital-sub-value">BMI: {bmi_val_str} ({bmi_desc})</span>
+            </div>
+        </div>
+        <div class="vital-card">
+            <div class="vital-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="M12 6v6l4 2"></path></svg>
+            </div>
+            <div class="vital-data">
+                <span class="vital-label">รอบเอว</span>
+                <span class="vital-value">{waist_val} cm</span>
             </div>
         </div>
         <div class="vital-card">
@@ -1158,4 +1167,3 @@ else:
         """
         st.components.v1.html(print_component, height=0, width=0)
         st.session_state.print_performance_trigger = False
-
