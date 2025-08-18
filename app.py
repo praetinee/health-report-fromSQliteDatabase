@@ -855,8 +855,9 @@ def display_performance_report_lung(person_data):
                 return f"{val:{format_spec}}{unit}"
             return "-"
 
-        # Build HTML string manually for consistency
-        table_html = """
+        # --- START OF FIX ---
+        # Build HTML string in a single f-string to prevent concatenation issues.
+        table_html = f"""
         <table class="styled-df-table">
             <thead>
                 <tr>
@@ -867,8 +868,6 @@ def display_performance_report_lung(person_data):
                 </tr>
             </thead>
             <tbody>
-        """
-        table_html += f"""
                 <tr>
                     <td>FVC</td>
                     <td>{format_detail_val('FVC', '.2f', ' L')}</td>
@@ -887,12 +886,11 @@ def display_performance_report_lung(person_data):
                     <td>{format_detail_val('FEV1/FVC % pre', '.1f', ' %')}</td>
                     <td>-</td>
                 </tr>
-        """
-        table_html += """
             </tbody>
         </table>
         """
         st.markdown(table_html, unsafe_allow_html=True)
+        # --- END OF FIX ---
 
     with side_col:
         st.markdown("<h5 class='section-subtitle'>ผลการแปลความหมาย</h5>", unsafe_allow_html=True)
