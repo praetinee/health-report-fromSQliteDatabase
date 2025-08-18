@@ -274,13 +274,23 @@ def generate_printable_report(person_data, all_person_history_df=None):
     lab_section_html = render_lab_section(person_data, sex)
     other_results_html = render_other_results_html(person_data, sex)
     doctor_suggestion = generate_holistic_advice(person_data)
+    
+    # Adjust summary text for better layout
+    doctor_suggestion = doctor_suggestion.replace(
+        "ผลตรวจสุขภาพโดยรวมพบประเด็นที่ควรให้ความสำคัญดังนี้:",
+        "ผลตรวจสุขภาพโดยรวมพบประเด็นที่ควรให้ความสำคัญดังนี้:<br>"
+    )
+
     doctor_suggestion_html = f"""
     <div class="advice-box" style="background-color: #e8f5e9; border-color: #a5d6a7;">
         <div class="advice-title" style="color: #1b5e20;">สรุปและคำแนะนำจากแพทย์ (Doctor's Summary & Recommendations)</div>
         <div class="advice-content">{doctor_suggestion}</div>
     </div>
     """
-    performance_report_html = generate_performance_report_html_for_main_report(person_data, all_person_history_df)
+    
+    # Remove the performance report section
+    # performance_report_html = generate_performance_report_html_for_main_report(person_data, all_person_history_df)
+
     signature_html = """
     <div style="margin-top: 2rem; text-align: right; padding-right: 1rem; page-break-inside: avoid;">
         <div style="display: inline-block; text-align: center; width: 280px;">
@@ -326,7 +336,6 @@ def generate_printable_report(person_data, all_person_history_df=None):
         {header_vitals_html}
         {lab_section_html}
         {other_results_html}
-        {performance_report_html}
         {doctor_suggestion_html}
         {signature_html}
     </body>
