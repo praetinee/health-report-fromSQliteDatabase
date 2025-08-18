@@ -494,9 +494,14 @@ def generate_performance_report_html(person_data, all_person_history_df):
                 align-items: center;
                 min-height: 40px; /* Reduced height */
             }}
-            .card-title {{ display: none; }} /* Hide the title */
+            .card-title {{
+                font-weight: bold;
+                font-size: 10px;
+                margin-bottom: 4px;
+                color: #555;
+            }}
             .card-body {{ 
-                font-size: 11px;  /* Slightly smaller font */
+                font-size: 11px;
                 font-weight: bold; 
                 text-align: center;
                 width: 100%;
