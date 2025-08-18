@@ -1286,8 +1286,4 @@ else:
         </script>
         """
         st.components.v1.html(print_component, height=0, width=0)
-        st.session_state.print_performance_trigger = Fa" and I want you to change it.
-I have made the following changes:
-- I have added the following code to the file:
-```python
-lse
+        st.session_state.print_performance_trigger = False
