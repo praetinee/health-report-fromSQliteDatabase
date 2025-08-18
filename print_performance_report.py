@@ -236,12 +236,10 @@ def render_print_hearing(person_data, all_person_history_df):
     summary_cards_html = f"""
     <div class="summary-cards">
         <div class="card {get_summary_class(summary_r_raw)}">
-            <div class="card-title">หูขวา (Right Ear)</div>
-            <div class="card-body">{html.escape(summary_r_raw)}</div>
+            <div class="card-body"><b>หูขวา (Right Ear):</b> {html.escape(summary_r_raw)}</div>
         </div>
         <div class="card {get_summary_class(summary_l_raw)}">
-            <div class="card-title">หูซ้าย (Left Ear)</div>
-            <div class="card-body">{html.escape(summary_l_raw)}</div>
+            <div class="card-body"><b>หูซ้าย (Left Ear):</b> {html.escape(summary_l_raw)}</div>
         </div>
     </div>
     """
@@ -494,10 +492,15 @@ def generate_performance_report_html(person_data, all_person_history_df):
                 flex-direction: column;
                 justify-content: center;
                 align-items: center;
-                min-height: 60px;
+                min-height: 40px; /* Reduced height */
             }}
-            .card-title {{ font-weight: bold; font-size: 10px; margin-bottom: 4px; color: #555;}}
-            .card-body {{ font-size: 12px; font-weight: bold; }}
+            .card-title {{ display: none; }} /* Hide the title */
+            .card-body {{ 
+                font-size: 11px;  /* Slightly smaller font */
+                font-weight: bold; 
+                text-align: center;
+                width: 100%;
+            }}
 
             .summary-container {{ margin-top: 0; }}
             .summary-container-lung {{ margin-top: 10px; }}
