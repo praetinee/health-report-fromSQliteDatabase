@@ -186,7 +186,12 @@ def render_print_vision(person_data):
     summary_section_html = ""
     advice_parts = []
     if not is_empty(summary_advice):
-        advice_parts.append(f"<div class='advice-box'><b>สรุปความเหมาะสมกับงาน:</b> {html.escape(summary_advice)}</div>")
+        summary_class = ''
+        if 'เหมาะสม' in summary_advice:
+            summary_class = 'advice-box-suitable'
+        elif 'ไม่เหมาะ' in summary_advice:
+            summary_class = 'advice-box-unsuitable'
+        advice_parts.append(f"<div class='advice-box {summary_class}'><b>สรุปความเหมาะสมกับงาน:</b> {html.escape(summary_advice)}</div>")
 
     if abnormal_details or not is_empty(doctor_advice):
         abnormal_summary_parts = []
@@ -505,6 +510,14 @@ def generate_performance_report_html(person_data, all_person_history_df):
                 background-color: #fff8e1; 
                 border-color: #ffecb3;
             }}
+            .advice-box-suitable {
+                background-color: #E6F4EA !important;
+                border-color: #B7E4C7 !important;
+            }
+            .advice-box-unsuitable {
+                background-color: #FDE2E4 !important;
+                border-color: #F8D0D5 !important;
+            }
             .summary-container .advice-box:last-child {{
                 margin-bottom: 0;
             }}
