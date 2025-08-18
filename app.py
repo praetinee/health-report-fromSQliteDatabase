@@ -460,16 +460,24 @@ def inject_custom_css():
         }
         .stButton>button {
             background-color: var(--primary-color);
-            color: white;
+            color: white !important;
             border-radius: 8px;
-            border: none;
+            border: 1px solid var(--primary-color);
             font-weight: 600;
             width: 100%;
         }
         .stButton>button:hover {
             opacity: 0.8;
-            color: white;
+            color: white !important;
+            border: 1px solid var(--primary-color);
         }
+        .stButton>button:disabled {
+            background-color: var(--secondary-background-color);
+            color: var(--text-color) !important;
+            opacity: 0.5;
+            border: 1px solid var(--border-color);
+        }
+
 
         /* --- New Report Header & Vitals --- */
         .report-header {
@@ -599,6 +607,7 @@ def inject_custom_css():
         }
         .status-normal-bg { background-color: var(--normal-bg-color); }
         .status-abnormal-bg { background-color: var(--abnormal-bg-color); }
+        .status-warning-bg { background-color: var(--warning-bg-color); }
         .status-neutral-bg { background-color: var(--neutral-bg-color); }
 
         .status-summary-card p {
@@ -847,10 +856,20 @@ def display_performance_report_lung(person_data):
     res_col1, res_col2 = st.columns([2, 3])
     with res_col1:
         st.markdown("<h5 class='section-subtitle'>ผลการแปลความหมาย</h5>", unsafe_allow_html=True)
-        if "ปกติ" in lung_summary: bg_color = "background-color: #28A745; color: white;"
-        elif "ไม่ได้" in lung_summary or "คลาดเคลื่อน" in lung_summary: bg_color = "background-color: #6C757D; color: white;"
-        else: bg_color = "background-color: #DC3545; color: white;"
-        st.markdown(f'<div style="padding: 1rem; border-radius: 8px; {bg_color} text-align: center;"><h4 style="color: white; margin: 0; font-weight: bold; border: none;">{lung_summary}</h4></div>', unsafe_allow_html=True)
+        # --- START OF CHANGE: Use CSS classes for consistent colors ---
+        summary_class = "status-neutral-bg"
+        if "ปกติ" in lung_summary:
+            summary_class = "status-normal-bg"
+        elif "ไม่ได้" not in lung_summary and "คลาดเคลื่อน" not in lung_summary:
+            summary_class = "status-warning-bg" # Use warning color for abnormalities
+        
+        st.markdown(f"""
+        <div class="status-summary-card {summary_class}">
+             <p style="font-size: 1.2rem; font-weight: bold;">{lung_summary}</p>
+        </div>
+        """, unsafe_allow_html=True)
+        # --- END OF CHANGE ---
+        
         st.markdown("<br><h5 class='section-subtitle'>คำแนะนำ</h5>", unsafe_allow_html=True)
         st.info(lung_advice or "ไม่มีคำแนะนำเพิ่มเติม")
         st.markdown("<h5 class='section-subtitle'>ผลเอกซเรย์ทรวงอก</h5>", unsafe_allow_html=True)
@@ -887,7 +906,7 @@ def display_performance_report_vision(person_data):
                  </div>""", unsafe_allow_html=True)
             if not is_empty(doctor_advice):
                  st.markdown(f"""
-                 <div style='background-color: rgba(255, 193, 7, 0.1); border: 1px solid rgba(255, 193, 7, 0.2); padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
+                 <div style='background-color: var(--warning-bg-color); border: 1px solid rgba(255, 193, 7, 0.2); padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
                     <div style='flex-shrink: 0;'><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFC107" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg></div>
                     <div><h5 style='margin-top: 0; margin-bottom: 0.25rem; color: #FFC107;'>คำแนะนำเพิ่มเติมจากแพทย์</h5><p style='margin:0;'>{doctor_advice}</p></div>
                  </div>""", unsafe_allow_html=True)
@@ -910,7 +929,7 @@ def display_performance_report_vision(person_data):
         if abnormal_topics: summary_parts.append(f"<b>พบความผิดปกติเกี่ยวกับ:</b> {', '.join(abnormal_topics)}")
         if not is_empty(doctor_advice): summary_parts.append(f"<b>คำแนะนำเพิ่มเติมจากแพทย์:</b> {doctor_advice}")
         st.markdown(f"""
-        <div style='background-color: rgba(255, 193, 7, 0.1); border: 1px solid rgba(255, 193, 7, 0.2); padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
+        <div style='background-color: var(--warning-bg-color); border: 1px solid rgba(255, 193, 7, 0.2); padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
             <div style='flex-shrink: 0;'><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFC107" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg></div>
             <div><h5 style='margin-top: 0; margin-bottom: 0.25rem; color: #FFC107;'>สรุปความผิดปกติและคำแนะนำ</h5><p style='margin:0;'>{"<br>".join(summary_parts)}</p></div>
         </div>""", unsafe_allow_html=True)
@@ -1035,12 +1054,13 @@ if 'selected_date' not in st.session_state: st.session_state.selected_date = Non
 if 'print_trigger' not in st.session_state: st.session_state.print_trigger = False
 if 'print_performance_trigger' not in st.session_state: st.session_state.print_performance_trigger = False
 
-# --- START OF CHANGE: Controls moved to Sidebar ---
+# --- START OF CHANGE: Controls moved to Sidebar with Form ---
 with st.sidebar:
     st.markdown('<div class="sidebar-title">ค้นหาข้อมูล</div>', unsafe_allow_html=True)
     
-    st.text_input("HN หรือ ชื่อ-สกุล", key="search_input", placeholder="ค้นหา...", label_visibility="collapsed")
-    st.button("ค้นหา", on_click=perform_search, use_container_width=True) # Added search button
+    with st.form(key="search_form"):
+        st.text_input("HN หรือ ชื่อ-สกุล", key="search_input", placeholder="ค้นหา...", label_visibility="collapsed")
+        st.form_submit_button("ค้นหา", on_click=perform_search, use_container_width=True)
     
     results_df = st.session_state.search_result
     if results_df.empty and st.session_state.search_query:
@@ -1169,4 +1189,4 @@ else:
         </script>
         """
         st.components.v1.html(print_component, height=0, width=0)
-        st.session_state.print_performance_trigger = Fa
+        st.session_state.print_performance_trigger = False
