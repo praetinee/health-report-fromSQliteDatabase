@@ -198,14 +198,21 @@ def interpret_ekg(val):
     if is_empty(val): return "ไม่ได้เข้ารับการตรวจคลื่นไฟฟ้าหัวใจ"
     if any(x in val.lower() for x in ["ผิดปกติ", "abnormal", "arrhythmia"]): return f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
     return val
+
+# --- START OF FIX ---
 def hepatitis_b_advice(hbsag, hbsab, hbcab):
-    """Generates advice based on Hepatitis B panel results."""
+    """Generates advice based on Hepatitis B panel results and returns a status."""
     hbsag, hbsab, hbcab = hbsag.lower(), hbsab.lower(), hbcab.lower()
-    if "positive" in hbsag: return "ติดเชื้อไวรัสตับอักเสบบี"
-    if "positive" in hbsab and "positive" not in hbsag: return "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี"
-    if "positive" in hbcab and "positive" not in hbsab: return "เคยติดเชื้อแต่ไม่มีภูมิคุ้มกันในปัจจุบัน"
-    if all(x == "negative" for x in [hbsag, hbsab, hbcab]): return "ไม่มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี ควรปรึกษาแพทย์เพื่อรับวัคซีน"
-    return "ไม่สามารถสรุปผลชัดเจน แนะนำให้พบแพทย์เพื่อประเมินซ้ำ"
+    if "positive" in hbsag:
+        return "ติดเชื้อไวรัสตับอักเสบบี", "infection"
+    if "positive" in hbsab and "positive" not in hbsag:
+        return "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี", "immune"
+    if "positive" in hbcab and "positive" not in hbsab:
+        return "เคยติดเชื้อแต่ไม่มีภูมิคุ้มกันในปัจจุบัน", "unclear"
+    if all(x == "negative" for x in [hbsag, hbsab, hbcab]):
+        return "ไม่มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี ควรปรึกษาแพทย์เพื่อรับวัคซีน", "no_immune"
+    return "ไม่สามารถสรุปผลชัดเจน แนะนำให้พบแพทย์เพื่อประเมินซ้ำ", "unclear"
+# --- END OF FIX ---
 
 # --- Data Loading ---
 @st.cache_data(ttl=600)
@@ -653,6 +660,30 @@ def inject_custom_css():
         .styled-df-table tbody td:first-child { text-align: left; }
         .styled-df-table tbody tr:hover { background-color: rgba(128, 128, 128, 0.1); }
         .hearing-table { table-layout: fixed; }
+        
+        /* --- START OF FIX --- */
+        .custom-advice-box {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            border: 1px solid transparent;
+        }
+        .immune-box {
+            background-color: var(--normal-bg-color); /* Translucent Green */
+            color: var(--normal-text-color);
+            border-color: rgba(40, 167, 69, 0.2);
+        }
+        .no-immune-box {
+            background-color: var(--abnormal-bg-color); /* Translucent Red */
+            color: var(--abnormal-text-color);
+            border-color: rgba(220, 53, 69, 0.2);
+        }
+        .warning-box {
+            background-color: var(--warning-bg-color); /* Translucent Yellow */
+            color: #856404;
+            border-color: rgba(255, 193, 7, 0.2);
+        }
+        /* --- END OF FIX --- */
     </style>
     """, unsafe_allow_html=True)
 # --- END OF CHANGE ---
@@ -1049,9 +1080,23 @@ def display_main_report(person_data, all_person_history_df):
                 <tbody><tr><td style='text-align: center;'>{hbsag}</td><td style='text-align: center;'>{hbsab}</td><td style='text-align: center;'>{hbcab}</td></tr></tbody>
             </table></div>""", unsafe_allow_html=True)
             
+            # --- START OF FIX ---
             if not (is_empty(hbsag) and is_empty(hbsab) and is_empty(hbcab)):
-                advice = hepatitis_b_advice(hbsag, hbsab, hbcab)
-                st.info(advice)
+                advice, status = hepatitis_b_advice(hbsag, hbsab, hbcab)
+                status_class = ""
+                if status == 'immune':
+                    status_class = 'immune-box'
+                elif status == 'no_immune':
+                    status_class = 'no-immune-box'
+                else: # infection or unclear
+                    status_class = 'warning-box'
+                
+                st.markdown(f"""
+                <div class='custom-advice-box {status_class}'>
+                    {advice}
+                </div>
+                """, unsafe_allow_html=True)
+            # --- END OF FIX ---
 
     with st.container(border=True):
         render_section_header("สรุปและคำแนะนำการปฏิบัติตัว (Summary & Recommendations)")
@@ -1238,4 +1283,4 @@ else:
         </script>
         """
         st.components.v1.html(print_component, height=0, width=0)
-        st.session_state.print_performance_trigger = False
+        st.session_state.print_performance_trigger = Fa
