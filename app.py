@@ -855,51 +855,71 @@ def display_performance_report_lung(person_data):
         st.warning("ไม่ได้เข้ารับการตรวจสมรรถภาพปอดในปีนี้")
         return
 
-    st.markdown("<h5 class='section-subtitle'>สรุปผลการตรวจที่สำคัญ</h5>", unsafe_allow_html=True)
-    def format_val(key):
-        val = lung_raw_values.get(key)
-        return f"{val:.1f}" if val is not None else "-"
-    col1, col2, col3 = st.columns(3)
-    col1.metric(label="FVC (% เทียบค่ามาตรฐาน)", value=format_val('FVC %'), help="ความจุของปอดเมื่อหายใจออกเต็มที่ (ควร > 80%)")
-    col2.metric(label="FEV1 (% เทียบค่ามาตรฐาน)", value=format_val('FEV1 %'), help="ปริมาตรอากาศที่หายใจออกในวินาทีแรก (ควร > 80%)")
-    col3.metric(label="FEV1/FVC Ratio (%)", value=format_val('FEV1/FVC %'), help="สัดส่วนของ FEV1 ต่อ FVC (ควร > 70%)")
-    st.markdown("<hr style='border-color: var(--border-color);'>", unsafe_allow_html=True)
+    # --- START OF CHANGE: New layout for lung report ---
+    main_col, side_col = st.columns([3, 2])
 
-    res_col1, res_col2 = st.columns([2, 3])
-    with res_col1:
+    with main_col:
+        st.markdown("<h5 class='section-subtitle'>ตารางแสดงผลโดยละเอียด</h5>", unsafe_allow_html=True)
+        
+        def format_detail_val(key, format_spec, unit=""):
+            val = lung_raw_values.get(key)
+            if val is not None and isinstance(val, (int, float)):
+                return f"{val:{format_spec}}{unit}"
+            return "-"
+
+        detail_data = {
+            "การทดสอบ (Test)": ["FVC", "FEV1", "FEV1/FVC"],
+            "ค่าที่วัดได้ (Actual)": [
+                format_detail_val('FVC', '.2f', ' L'),
+                format_detail_val('FEV1', '.2f', ' L'),
+                format_detail_val('FEV1/FVC %', '.1f', ' %')
+            ],
+            "ค่ามาตรฐาน (Predicted)": [
+                format_detail_val('FVC predic', '.2f', ' L'),
+                format_detail_val('FEV1 predic', '.2f', ' L'),
+                format_detail_val('FEV1/FVC % pre', '.1f', ' %')
+            ],
+            "% เทียบค่ามาตรฐาน (% Pred)": [
+                format_detail_val('FVC %', '.1f', ' %'),
+                format_detail_val('FEV1 %', '.1f', ' %'),
+                "-"
+            ]
+        }
+        df_details = pd.DataFrame(detail_data)
+        st.markdown(df_details.to_html(escape=False, index=False, classes="styled-df-table"), unsafe_allow_html=True)
+
+    with side_col:
         st.markdown("<h5 class='section-subtitle'>ผลการแปลความหมาย</h5>", unsafe_allow_html=True)
-        # --- START OF CHANGE: Use CSS classes for consistent colors ---
+        
         summary_class = "status-neutral-bg"
         if "ปกติ" in lung_summary:
             summary_class = "status-normal-bg"
         elif "ไม่ได้" not in lung_summary and "คลาดเคลื่อน" not in lung_summary:
-            summary_class = "status-warning-bg" # Use warning color for abnormalities
+            summary_class = "status-abnormal-bg"
         
         st.markdown(f"""
         <div class="status-summary-card {summary_class}">
              <p style="font-size: 1.2rem; font-weight: bold;">{lung_summary}</p>
         </div>
         """, unsafe_allow_html=True)
-        # --- END OF CHANGE ---
         
         st.markdown("<br><h5 class='section-subtitle'>คำแนะนำ</h5>", unsafe_allow_html=True)
         st.info(lung_advice or "ไม่มีคำแนะนำเพิ่มเติม")
+
         st.markdown("<h5 class='section-subtitle'>ผลเอกซเรย์ทรวงอก</h5>", unsafe_allow_html=True)
         selected_year = person_data.get("Year")
         cxr_result_interpreted = "ไม่มีข้อมูล"
         if selected_year:
             cxr_col_name = f"CXR{str(selected_year)[-2:]}" if selected_year != (datetime.now().year + 543) else "CXR"
             cxr_result_interpreted = interpret_cxr(person_data.get(cxr_col_name, ''))
-        st.markdown(f'<div style="font-size: 14px; padding: 0.5rem; background-color: var(--secondary-background-color); border-radius: 4px; border: 1px solid var(--border-color);">{cxr_result_interpreted}</div>', unsafe_allow_html=True)
-    with res_col2:
-        st.markdown("<h5 class='section-subtitle'>ตารางแสดงผลโดยละเอียด</h5>", unsafe_allow_html=True)
-        def format_detail_val(key, format_spec, unit=""):
-            val = lung_raw_values.get(key)
-            if val is not None and isinstance(val, (int, float)): return f"{val:{format_spec}}{unit}"
-            return "-"
-        detail_data = {"การทดสอบ (Test)": ["FVC", "FEV1", "FEV1/FVC"],"ค่าที่วัดได้ (Actual)": [format_detail_val('FVC', '.2f', ' L'), format_detail_val('FEV1', '.2f', ' L'), format_detail_val('FEV1/FVC %', '.1f', ' %')],"ค่ามาตรฐาน (Predicted)": [format_detail_val('FVC predic', '.2f', ' L'), format_detail_val('FEV1 predic', '.2f', ' L'), format_detail_val('FEV1/FVC % pre', '.1f', ' %')],"% เทียบค่ามาตรฐาน (% Pred)": [format_detail_val('FVC %', '.1f', ' %'), format_detail_val('FEV1 %', '.1f', ' %'), "-"]}
-        df_details = pd.DataFrame(detail_data)
-        st.markdown(df_details.to_html(escape=False, index=False, classes="styled-df-table"), unsafe_allow_html=True)
+        
+        st.markdown(f"""
+        <div style='background-color: var(--secondary-background-color); padding: 1rem; border-radius: 8px; line-height: 1.8; border: 1px solid var(--border-color);'>
+            {cxr_result_interpreted}
+        </div>
+        """, unsafe_allow_html=True)
+    # --- END OF CHANGE ---
+
 
 def display_performance_report_vision(person_data):
     render_section_header("รายงานผลการตรวจสมรรถภาพการมองเห็น (Vision Test Report)")
