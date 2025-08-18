@@ -647,9 +647,11 @@ def inject_custom_css():
             display: inline-block; padding: 6px 16px; border-radius: 16px;
             font-size: 13px; font-weight: bold; border: 1px solid transparent;
         }
-        .vision-normal { background-color: var(--normal-bg-color); color: var(--normal-text-color); }
-        .vision-abnormal { background-color: var(--abnormal-bg-color); color: var(--abnormal-text-color); }
-        .vision-not-tested { background-color: var(--neutral-bg-color); color: var(--neutral-text-color); }
+        /* --- START OF FIX --- */
+        .vision-normal { background-color: var(--normal-bg-color); color: #2E7D32; }
+        .vision-abnormal { background-color: var(--abnormal-bg-color); color: #C62828; }
+        .vision-not-tested { background-color: var(--neutral-bg-color); color: #455A64; }
+        /* --- END OF FIX --- */
         .styled-df-table {
             width: 100%; border-collapse: collapse; font-family: 'Sarabun', sans-serif !important;
             font-size: 14px;
@@ -667,20 +669,21 @@ def inject_custom_css():
             border-radius: 8px;
             margin-top: 1rem;
             border: 1px solid transparent;
+            font-weight: 600; /* Make text bolder */
         }
         .immune-box {
-            background-color: var(--normal-bg-color); /* Translucent Green */
-            color: var(--normal-text-color);
+            background-color: var(--normal-bg-color);
+            color: #2E7D32; /* Darker green for better contrast */
             border-color: rgba(40, 167, 69, 0.2);
         }
         .no-immune-box {
-            background-color: var(--abnormal-bg-color); /* Translucent Red */
-            color: var(--abnormal-text-color);
+            background-color: var(--abnormal-bg-color);
+            color: #C62828; /* Darker red for better contrast */
             border-color: rgba(220, 53, 69, 0.2);
         }
         .warning-box {
-            background-color: var(--warning-bg-color); /* Translucent Yellow */
-            color: #856404;
+            background-color: var(--warning-bg-color);
+            color: #AF6C00; /* Darker yellow/orange for better contrast */
             border-color: rgba(255, 193, 7, 0.2);
         }
         /* --- END OF FIX --- */
@@ -1283,4 +1286,8 @@ else:
         </script>
         """
         st.components.v1.html(print_component, height=0, width=0)
-        st.session_state.print_performance_trigger = Fa
+        st.session_state.print_performance_trigger = Fa" and I want you to change it.
+I have made the following changes:
+- I have added the following code to the file:
+```python
+lse
