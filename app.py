@@ -419,8 +419,10 @@ def inject_custom_css():
             --abnormal-bg-color: rgba(220, 53, 69, 0.1);
             --abnormal-text-color: #C53030;
             --normal-bg-color: rgba(40, 167, 69, 0.1);
+            --normal-text-color: #1E4620;
             --warning-bg-color: rgba(255, 193, 7, 0.1);
             --neutral-bg-color: rgba(108, 117, 125, 0.1);
+            --neutral-text-color: #4A5568;
         }
         
         /* --- General & Typography --- */
@@ -629,11 +631,11 @@ def inject_custom_css():
         .vision-table .result-cell { text-align: center; width: 180px; }
         .vision-result {
             display: inline-block; padding: 6px 16px; border-radius: 16px;
-            font-size: 13px; font-weight: bold; color: white; border: 1px solid transparent;
+            font-size: 13px; font-weight: bold; border: 1px solid transparent;
         }
-        .vision-normal { background-color: #28A745; }
-        .vision-abnormal { background-color: #DC3545; }
-        .vision-not-tested { background-color: #6C757D; }
+        .vision-normal { background-color: var(--normal-bg-color); color: var(--normal-text-color); }
+        .vision-abnormal { background-color: var(--abnormal-bg-color); color: var(--abnormal-text-color); }
+        .vision-not-tested { background-color: var(--neutral-bg-color); color: var(--neutral-text-color); }
         .styled-df-table {
             width: 100%; border-collapse: collapse; font-family: 'Sarabun', sans-serif !important;
             font-size: 14px;
