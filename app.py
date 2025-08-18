@@ -884,7 +884,7 @@ def display_performance_report_lung(person_data):
                 <tr>
                     <td>FEV1/FVC</td>
                     <td>{format_detail_val('FEV1/FVC %', '.1f', ' %')}</td>
-                    <td>-</td>
+                    <td>{format_detail_val('FEV1/FVC % pre', '.1f', ' %')}</td>
                     <td>-</td>
                 </tr>
         """
