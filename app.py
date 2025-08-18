@@ -463,25 +463,32 @@ def inject_custom_css():
             color: var(--primary-color);
             margin-bottom: 1rem;
         }
+        /* --- START OF FIX --- */
         .stButton>button {
-            background-color: var(--primary-color);
+            background-color: #00796B; /* Use the same teal as section headers */
             color: white !important;
             border-radius: 8px;
-            border: 1px solid var(--primary-color);
+            border: none;
             font-weight: 600;
             width: 100%;
+            padding: 0.5rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+            transition: background-color 0.2s, transform 0.2s;
         }
         .stButton>button:hover {
-            opacity: 0.8;
+            background-color: #00695C; /* A slightly darker teal for hover */
             color: white !important;
-            border: 1px solid var(--primary-color);
+            transform: translateY(-1px);
         }
         .stButton>button:disabled {
-            background-color: var(--secondary-background-color);
-            color: var(--text-color) !important;
-            opacity: 0.5;
-            border: 1px solid var(--border-color);
+            background-color: #BDBDBD;
+            color: #757575 !important;
+            opacity: 1;
+            border: none;
+            box-shadow: none;
+            cursor: not-allowed;
         }
+        /* --- END OF FIX --- */
 
 
         /* --- New Report Header & Vitals --- */
