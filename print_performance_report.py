@@ -490,6 +490,11 @@ def generate_performance_report_html(person_data, all_person_history_df):
                 flex: 1; border-radius: 6px; padding: 8px; text-align: center; 
                 border: 1px solid #e0e0e0; background-color: #f9f9f9;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                min-height: 60px;
             }}
             .card-title {{ font-weight: bold; font-size: 10px; margin-bottom: 4px; color: #555;}}
             .card-body {{ font-size: 12px; font-weight: bold; }}
