@@ -363,23 +363,6 @@ def render_print_lung(person_data):
         {html.escape(summary)}
     </div>
     """
-
-    metrics_html = f"""
-    <div class="summary-cards">
-        <div class="card">
-            <div class="card-title">FVC %Pred</div>
-            <div class="card-body {get_status_class(raw.get('FVC %'), 80)}">{format_val('FVC %')}%</div>
-        </div>
-        <div class="card">
-            <div class="card-title">FEV1 %Pred</div>
-            <div class="card-body {get_status_class(raw.get('FEV1 %'), 80)}">{format_val('FEV1 %')}%</div>
-        </div>
-        <div class="card">
-            <div class="card-title">FEV1/FVC Ratio</div>
-            <div class="card-body {get_status_class(raw.get('FEV1/FVC %'), 70)}">{format_val('FEV1/FVC %')}%</div>
-        </div>
-    </div>
-    """
     
     advice_box_html = f"<div class='advice-box'><b>คำแนะนำ:</b> {html.escape(advice)}</div>"
     
@@ -408,18 +391,15 @@ def render_print_lung(person_data):
     </table>
     """
 
-    # --- แก้ไข: รวม cxr_html และ advice_box_html เข้าด้วยกันสำหรับคอลัมน์ด้านขวา ---
     side_content_html = f"""
     {cxr_html}
     {advice_box_html}
     """
 
-    # --- แก้ไข: ปรับโครงสร้าง HTML หลักให้เป็น 2 คอลัมน์ ---
     return f"""
     <div class="report-section">
         {render_section_header("ผลการตรวจสมรรถภาพปอด (Spirometry)")}
         {summary_title_html}
-        {metrics_html}
         <div class="content-columns">
             <div class="main-content">
                 {data_table_html}
