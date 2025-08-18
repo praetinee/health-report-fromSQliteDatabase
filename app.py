@@ -928,11 +928,15 @@ def display_performance_report_vision(person_data):
         if not is_empty(vision_advice_summary) or not is_empty(doctor_advice):
             st.info("หมายเหตุ: ข้อมูลสรุปที่แสดงอาจมาจากผลการตรวจในปีอื่น")
             if not is_empty(vision_advice_summary):
-                 st.markdown(f"""
-                 <div style='background-color: rgba(0, 123, 255, 0.1); border: 1px solid rgba(0, 123, 255, 0.2); padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
-                    <div style='flex-shrink: 0;'><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div>
-                    <div><h5 style='margin-top: 0; margin-bottom: 0.25rem; color: var(--primary-color);'>สรุปความเหมาะสมกับงาน</h5><p style='margin:0;'>{vision_advice_summary}</p></div>
+                summary_class = "status-normal-bg" if "เหมาะสม" in vision_advice_summary else "status-abnormal-bg"
+                icon_svg = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#28A745" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>' if "เหมาะสม" in vision_advice_summary else '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#DC3545" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>'
+                title_color = "#28A745" if "เหมาะสม" in vision_advice_summary else "#DC3545"
+                st.markdown(f"""
+                 <div class='{summary_class}' style='border: 1px solid transparent; padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
+                    <div style='flex-shrink: 0;'>{icon_svg}</div>
+                    <div><h5 style='margin-top: 0; margin-bottom: 0.25rem; color: {title_color};'>สรุปความเหมาะสมกับงาน</h5><p style='margin:0;'>{vision_advice_summary}</p></div>
                  </div>""", unsafe_allow_html=True)
+
             if not is_empty(doctor_advice):
                  st.markdown(f"""
                  <div style='background-color: var(--warning-bg-color); border: 1px solid rgba(255, 193, 7, 0.2); padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
@@ -943,10 +947,13 @@ def display_performance_report_vision(person_data):
 
     vision_advice_summary = person_data.get('สรุปเหมาะสมกับงาน')
     if not is_empty(vision_advice_summary):
+        summary_class = "status-normal-bg" if "เหมาะสม" in vision_advice_summary else "status-abnormal-bg"
+        icon_svg = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#28A745" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>' if "เหมาะสม" in vision_advice_summary else '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#DC3545" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>'
+        title_color = "#28A745" if "เหมาะสม" in vision_advice_summary else "#DC3545"
         st.markdown(f"""
-         <div style='background-color: rgba(0, 123, 255, 0.1); border: 1px solid rgba(0, 123, 255, 0.2); padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
-            <div style='flex-shrink: 0;'><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div>
-            <div><h5 style='margin-top: 0; margin-bottom: 0.25rem; color: var(--primary-color);'>สรุปความเหมาะสมกับงาน</h5><p style='margin:0;'>{vision_advice_summary}</p></div>
+         <div class='{summary_class}' style='border: 1px solid transparent; padding: 1.25rem; border-radius: 0.75rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 1rem;'>
+            <div style='flex-shrink: 0;'>{icon_svg}</div>
+            <div><h5 style='margin-top: 0; margin-bottom: 0.25rem; color: {title_color};'>สรุปความเหมาะสมกับงาน</h5><p style='margin:0;'>{vision_advice_summary}</p></div>
          </div>""", unsafe_allow_html=True)
 
     abnormality_fields = OrderedDict([('ผ.สายตาเขซ่อนเร้น', 'สายตาเขซ่อนเร้น'), ('ผ.การรวมภาพ', 'การรวมภาพ'), ('ผ.ความชัดของภาพระยะไกล', 'ความชัดของภาพระยะไกล'), ('ผ.การกะระยะและมองความชัดลึกของภาพ', 'การกะระยะ/ความชัดลึก'), ('ผ.การจำแนกสี', 'การจำแนกสี'), ('ผ.ความชัดของภาพระยะใกล้', 'ความชัดของภาพระยะใกล้'), ('ผ.ลานสายตา', 'ลานสายตา')])
