@@ -855,26 +855,44 @@ def display_performance_report_lung(person_data):
                 return f"{val:{format_spec}}{unit}"
             return "-"
 
-        detail_data = {
-            "การทดสอบ (Test)": ["FVC", "FEV1", "FEV1/FVC"],
-            "ค่าที่วัดได้ (Actual)": [
-                format_detail_val('FVC', '.2f', ' L'),
-                format_detail_val('FEV1', '.2f', ' L'),
-                format_detail_val('FEV1/FVC %', '.1f', ' %')
-            ],
-            "ค่ามาตรฐาน (Predicted)": [
-                format_detail_val('FVC predic', '.2f', ' L'),
-                format_detail_val('FEV1 predic', '.2f', ' L'),
-                format_detail_val('FEV1/FVC % pre', '.1f', ' %')
-            ],
-            "% เทียบค่ามาตรฐาน (% Pred)": [
-                format_detail_val('FVC %', '.1f', ' %'),
-                format_detail_val('FEV1 %', '.1f', ' %'),
-                "-"
-            ]
-        }
-        df_details = pd.DataFrame(detail_data)
-        st.markdown(df_details.to_html(escape=False, index=False, classes="styled-df-table"), unsafe_allow_html=True)
+        # Build HTML string manually for consistency
+        table_html = """
+        <table class="styled-df-table">
+            <thead>
+                <tr>
+                    <th>การทดสอบ (Test)</th>
+                    <th>ค่าที่วัดได้ (Actual)</th>
+                    <th>ค่ามาตรฐาน (Predicted)</th>
+                    <th>% เทียบค่ามาตรฐาน (% Pred)</th>
+                </tr>
+            </thead>
+            <tbody>
+        """
+        table_html += f"""
+                <tr>
+                    <td>FVC</td>
+                    <td>{format_detail_val('FVC', '.2f', ' L')}</td>
+                    <td>{format_detail_val('FVC predic', '.2f', ' L')}</td>
+                    <td>{format_detail_val('FVC %', '.1f', ' %')}</td>
+                </tr>
+                <tr>
+                    <td>FEV1</td>
+                    <td>{format_detail_val('FEV1', '.2f', ' L')}</td>
+                    <td>{format_detail_val('FEV1 predic', '.2f', ' L')}</td>
+                    <td>{format_detail_val('FEV1 %', '.1f', ' %')}</td>
+                </tr>
+                <tr>
+                    <td>FEV1/FVC</td>
+                    <td>{format_detail_val('FEV1/FVC %', '.1f', ' %')}</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+        """
+        table_html += """
+            </tbody>
+        </table>
+        """
+        st.markdown(table_html, unsafe_allow_html=True)
 
     with side_col:
         st.markdown("<h5 class='section-subtitle'>ผลการแปลความหมาย</h5>", unsafe_allow_html=True)
