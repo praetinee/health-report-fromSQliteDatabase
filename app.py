@@ -744,11 +744,20 @@ def display_performance_report_hearing(person_data, all_person_history_df):
     summary_r_raw = person_data.get('ผลตรวจการได้ยินหูขวา', 'N/A')
     summary_l_raw = person_data.get('ผลตรวจการได้ยินหูซ้าย', 'N/A')
 
-    # --- START OF CHANGE: Use CSS classes for consistent colors ---
+    # --- START OF CHANGE: Logic to determine background color for hearing results ---
     def get_summary_class(summary_text):
-        if "ปกติ" in summary_text: return "status-normal-bg"
-        elif "N/A" in summary_text or "ไม่ได้" in summary_text: return "status-neutral-bg"
-        else: return "status-abnormal-bg"
+        """
+        Determines the CSS class for the summary card background.
+        Checks for 'ผิดปกติ' (abnormal) first to ensure correct color assignment.
+        """
+        if "ผิดปกติ" in summary_text:
+            return "status-abnormal-bg"
+        elif "ปกติ" in summary_text:
+            return "status-normal-bg"
+        elif "N/A" in summary_text or "ไม่ได้" in summary_text or is_empty(summary_text):
+            return "status-neutral-bg"
+        # Fallback for any other text that might imply abnormality
+        return "status-abnormal-bg"
     # --- END OF CHANGE ---
 
     col1, col2 = st.columns(2)
