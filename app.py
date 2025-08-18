@@ -452,6 +452,9 @@ def inject_custom_css():
         [data-testid="stSidebar"] {
             background-color: var(--secondary-background-color);
         }
+        [data-testid="stSidebar"] .stTextInput input {
+            border-color: var(--border-color);
+        }
         .sidebar-title {
             font-size: 1.5rem;
             font-weight: 700;
