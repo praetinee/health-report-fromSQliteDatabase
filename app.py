@@ -707,6 +707,50 @@ def inject_custom_css():
     </style>
     """, unsafe_allow_html=True)
 
+# --- START: โค้ดสำหรับแก้ไขไอคอน Sidebar ---
+def inject_sidebar_fix_css():
+    """
+    Injects highly specific CSS to override Streamlit's default sidebar collapse button icon.
+    This method avoids using JavaScript.
+    """
+    st.markdown("""
+    <style>
+        /* Prepare the button for the pseudo-element */
+        [data-testid="stSidebarNavCollapseButton"] {
+            position: relative !important;
+        }
+
+        /* Hide the original, broken icon/text by making it invisible */
+        [data-testid="stSidebarNavCollapseButton"] > span {
+            visibility: hidden !important;
+        }
+
+        /* Create the new icon using a ::before pseudo-element */
+        [data-testid="stSidebarNavCollapseButton"]::before {
+            content: '' !important;
+            display: block !important;
+            position: absolute !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            width: 24px !important;
+            height: 24px !important;
+            /* Default icon: left arrow (for expanded state) */
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='15 18 9 12 15 6'%3E%3C/polyline%3E%3C/svg%3E") !important;
+            background-repeat: no-repeat !important;
+            background-position: center !important;
+        }
+
+        /* Change the icon when the sidebar is collapsed (aria-expanded="false") */
+        [data-testid="stSidebarNavCollapseButton"][aria-expanded="false"]::before {
+            /* Icon for collapsed state: right arrow */
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 18 15 12 9 6'%3E%3C/polyline%3E%3C/svg%3E") !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+# --- END: โค้ดสำหรับแก้ไขไอคอน Sidebar ---
+
+
 def render_vision_details_table(person_data):
     """
     Renders a clearer, single-column result table for the vision test with corrected logic.
@@ -1131,6 +1175,7 @@ if df is None:
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
 inject_custom_css()
+inject_sidebar_fix_css() # <-- เรียกใช้ฟังก์ชันแก้ไขไอคอน
 
 def perform_search():
     st.session_state.search_query = st.session_state.search_input
