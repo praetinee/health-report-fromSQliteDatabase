@@ -49,7 +49,7 @@ def plot_historical_trends(history_df):
     สร้างกราฟเส้นแสดงแนวโน้มข้อมูลสุขภาพย้อนหลัง
     จัดการกับปีที่ไม่มีข้อมูลโดยการเว้นกราฟให้ขาดช่วง
     """
-    st.subheader("📈 กราฟแสดงแนวโน้มผลสุขภาพย้อนหลัง")
+    st.subheader("� กราฟแสดงแนวโน้มผลสุขภาพย้อนหลัง")
     st.caption("กราฟนี้แสดงการเปลี่ยนแปลงของค่าต่างๆ ในแต่ละปีที่มีการตรวจ จุดบนเส้นหมายถึงปีที่มีข้อมูล ส่วนเส้นที่ขาดหายไปหมายถึงปีที่ไม่ได้เข้ารับการตรวจ")
 
 
@@ -74,6 +74,39 @@ def plot_historical_trends(history_df):
     )
     history_df['Year'] = history_df['Year'].astype(str)
 
+    # --- START OF CHANGE: Define color bands for all metrics ---
+    metric_bands = {
+        'BMI': {
+            "โรคอ้วน": (25, 40, "lightcoral"),
+            "ท้วม": (23, 25, "yellow"),
+            "ปกติ": (18.5, 23, "lightgreen"),
+        },
+        'FBS': {
+            "เข้าเกณฑ์เบาหวาน": (126, 200, "lightcoral"),
+            "ภาวะเสี่ยง": (100, 126, "yellow"),
+            "ปกติ": (70, 100, "lightgreen"),
+        },
+        'CHOL': {
+            "สูง": (240, 400, "lightcoral"),
+            "เริ่มสูง": (200, 240, "yellow"),
+            "ปกติ": (100, 200, "lightgreen"),
+        },
+        'GFR': {
+            "ปกติ": (90, 150, "lightgreen"),
+            "เริ่มเสื่อม": (60, 90, "yellow"),
+            "เสื่อมปานกลาง": (30, 60, "orange"),
+            "เสื่อมรุนแรง": (0, 30, "lightcoral"),
+        },
+        'DBP': {}, # Handled with SBP
+        'SBP': {
+            "สูงมาก (ระดับ 2)": (140, 180, "lightcoral"),
+            "สูง (ระดับ 1)": (130, 140, "orange"),
+            "เริ่มสูง": (120, 130, "yellow"),
+            "ปกติ": (90, 120, "lightgreen")
+        }
+    }
+    # --- END OF CHANGE ---
+
     trend_metrics = {
         'ดัชนีมวลกาย (BMI)': ('BMI', 'kg/m²'),
         'ระดับน้ำตาลในเลือด (FBS)': ('FBS', 'mg/dL'),
@@ -87,35 +120,39 @@ def plot_historical_trends(history_df):
     
     for i, (title, (keys, unit)) in enumerate(trend_metrics.items()):
         with cols[i]:
+            fig = None
+            bands_key = ''
+            
             if isinstance(keys, list): # กรณีความดันโลหิต
                 df_plot = history_df[['Year', keys[0], keys[1]]]
                 fig = px.line(df_plot, x='Year', y=keys, title=title, markers=True)
-                
-                bp_levels = {
-                    "สูงมาก (ระดับ 2)": (140, 180, "lightcoral"),
-                    "สูง (ระดับ 1)": (130, 140, "orange"),
-                    "เริ่มสูง": (120, 130, "yellow"),
-                    "ปกติ": (90, 120, "lightgreen")
-                }
-                for name, (start, end, color) in bp_levels.items():
-                    fig.add_shape(type="rect", xref="paper", yref="y", x0=0, y0=start, x1=1, y1=end,
-                                  fillcolor=color, opacity=0.2, layer="below", line_width=0)
-                    fig.add_annotation(x=0.98, y=(start+end)/2, text=name, showarrow=False,
-                                       xref="paper", yref="y", font=dict(size=10, color="gray"),
-                                       xanchor="right")
-
-                fig.update_traces(connectgaps=False) # ทำให้เส้นขาดช่วงถ้าไม่มีข้อมูล
-                fig.update_layout(
-                    yaxis_title=unit, xaxis_title='ปี พ.ศ.', legend_title_text='เส้นเลือด',
-                    yaxis_range=[80,180] # Set a fixed range for context
-                )
-                st.plotly_chart(fig, use_container_width=True)
+                bands_key = 'SBP'
+                fig.update_layout(yaxis_range=[80,180]) # Set a fixed range for context
             else:
                 df_plot = history_df[['Year', keys]]
                 fig = px.line(df_plot, x='Year', y=keys, title=title, markers=True)
-                fig.update_traces(connectgaps=False)
-                fig.update_layout(yaxis_title=unit, xaxis_title='ปี พ.ศ.')
-                st.plotly_chart(fig, use_container_width=True)
+                bands_key = keys
+
+            # --- START OF CHANGE: Add bands to the figure ---
+            if bands_key in metric_bands:
+                for name, (start, end, color) in metric_bands[bands_key].items():
+                    fig.add_shape(type="rect", xref="paper", yref="y", x0=0, y0=start, x1=1, y1=end,
+                                  fillcolor=color, opacity=0.2, layer="below", line_width=0)
+                    # Add annotation only if there is enough space
+                    if abs(end - start) > (fig.layout.yaxis.range[1] - fig.layout.yaxis.range[0]) * 0.1:
+                         fig.add_annotation(x=0.98, y=(start+end)/2, text=name, showarrow=False,
+                                           xref="paper", yref="y", font=dict(size=10, color="gray"),
+                                           xanchor="right")
+            # --- END OF CHANGE ---
+
+            fig.update_traces(connectgaps=False)
+            fig.update_layout(
+                yaxis_title=unit, 
+                xaxis_title='ปี พ.ศ.', 
+                legend_title_text='เส้นเลือด' if isinstance(keys, list) else "",
+                font_family="Sarabun"
+            )
+            st.plotly_chart(fig, use_container_width=True)
 
 
 # --- 2. Gauge Charts ---
@@ -152,7 +189,7 @@ def plot_gauge_charts(person_data):
                         {'range': [30, 40], 'color': "red"}],
                     'bar': {'color': "darkblue"}
                 }))
-            fig.update_layout(height=250, margin=dict(l=20, r=20, t=40, b=10))
+            fig.update_layout(height=250, margin=dict(l=20, r=20, t=40, b=10), font_family="Sarabun")
             st.plotly_chart(fig, use_container_width=True)
             st.markdown(f"<p style='text-align: center; font-weight: bold;'>ผล: {get_bmi_desc(bmi)}</p>", unsafe_allow_html=True)
 
@@ -173,7 +210,7 @@ def plot_gauge_charts(person_data):
                         {'range': [126, 160], 'color': "red"}],
                     'bar': {'color': "darkblue"}
                 }))
-            fig.update_layout(height=250, margin=dict(l=20, r=20, t=40, b=10))
+            fig.update_layout(height=250, margin=dict(l=20, r=20, t=40, b=10), font_family="Sarabun")
             st.plotly_chart(fig, use_container_width=True)
             st.markdown(f"<p style='text-align: center; font-weight: bold;'>ผล: {get_fbs_desc(fbs)}</p>", unsafe_allow_html=True)
 
@@ -194,7 +231,7 @@ def plot_gauge_charts(person_data):
                         {'range': [90, 120], 'color': "green"}],
                     'bar': {'color': "darkblue"}
                 }))
-            fig.update_layout(height=250, margin=dict(l=20, r=20, t=40, b=10))
+            fig.update_layout(height=250, margin=dict(l=20, r=20, t=40, b=10), font_family="Sarabun")
             st.plotly_chart(fig, use_container_width=True)
             st.markdown(f"<p style='text-align: center; font-weight: bold;'>ผล: {get_gfr_desc(gfr)}</p>", unsafe_allow_html=True)
 
@@ -254,7 +291,8 @@ def plot_audiogram(person_data):
         xaxis=dict(type='category'),
         legend=dict(x=0.01, y=0.99, bordercolor="black", borderwidth=1),
         template="plotly_white",
-        margin=dict(l=20, r=20, t=40, b=20)
+        margin=dict(l=20, r=20, t=40, b=20),
+        font_family="Sarabun"
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -316,7 +354,8 @@ def plot_risk_radar(person_data):
                 ticktext=['ปกติ', 'เริ่มเสี่ยง', 'เสี่ยง', 'สูง', 'สูงมาก']
             )),
         showlegend=False,
-        title="ภาพรวมปัจจัยเสี่ยงโรคไม่ติดต่อเรื้อรัง (NCDs)"
+        title="ภาพรวมปัจจัยเสี่ยงโรคไม่ติดต่อเรื้อรัง (NCDs)",
+        font_family="Sarabun"
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -351,7 +390,8 @@ def plot_lung_comparison(person_data):
         title='เปรียบเทียบค่าสมรรถภาพปอดกับค่ามาตรฐาน',
         yaxis_title='ลิตร (L)',
         legend_title="ค่า",
-        legend=dict(x=0.01, y=0.99)
+        legend=dict(x=0.01, y=0.99),
+        font_family="Sarabun"
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -387,3 +427,4 @@ def display_visualization_tab(person_data, history_df):
     # Section 3: Trends in Expander
     with st.expander("คลิกเพื่อดูกราฟแนวโน้มย้อนหลัง", expanded=True):
         plot_historical_trends(history_df)
+�
