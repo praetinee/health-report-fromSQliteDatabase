@@ -504,6 +504,7 @@ def inject_custom_css():
             justify-content: space-between;
             align-items: flex-start;
             margin-bottom: 2rem;
+            flex-wrap: wrap; /* Allow wrapping on small screens */
         }
         .header-left h2 { color: var(--text-color); font-size: 2rem; margin-bottom: 0.25rem;}
         .header-left p { color: var(--text-color); opacity: 0.7; margin: 0; }
@@ -687,6 +688,37 @@ def inject_custom_css():
             border-color: rgba(255, 193, 7, 0.2);
         }
         /* --- END OF FIX --- */
+
+        /* --- START OF RESPONSIVE FIX --- */
+        @media (max-width: 768px) {
+            .report-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 1.5rem;
+            }
+            .header-left, .header-right {
+                width: 100%;
+                text-align: center;
+            }
+            .info-card {
+                grid-template-columns: 1fr; /* Single column on mobile */
+                min-width: 100%;
+                gap: 0.5rem;
+            }
+            .info-card-item {
+                text-align: left;
+            }
+            .header-left h2 {
+                font-size: 1.5rem; /* Smaller header on mobile */
+            }
+            div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] > div.st-emotion-cache-1jicfl2.e1f1d6gn3 > div {
+                padding: 16px; /* Reduce padding on mobile */
+            }
+            .lab-table th, .lab-table td, .info-detail-table th, .info-detail-table td {
+                padding: 8px 10px; /* Tighter padding for tables */
+            }
+        }
+        /* --- END OF RESPONSIVE FIX --- */
     </style>
     """, unsafe_allow_html=True)
 # --- END OF CHANGE ---
