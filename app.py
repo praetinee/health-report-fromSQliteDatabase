@@ -470,7 +470,6 @@ def inject_custom_css():
             color: var(--primary-color);
             margin-bottom: 1rem;
         }
-        /* --- START OF FIX --- */
         .stButton>button {
             background-color: #00796B; /* Use the same teal as section headers */
             color: white !important;
@@ -495,7 +494,25 @@ def inject_custom_css():
             box-shadow: none;
             cursor: not-allowed;
         }
-        /* --- END OF FIX --- */
+
+        /* --- START OF SIDEBAR TOGGLE FIX --- */
+        /* Hide the broken icon text */
+        button[data-testid="stSidebarNav-toggleButton"] span {
+            display: none !important;
+        }
+        /* Add our custom text */
+        button[data-testid="stSidebarNav-toggleButton"]::after {
+            content: 'ปิดเมนู'; /* Default text for when sidebar is open */
+            font-family: 'Sarabun', sans-serif;
+            color: inherit;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        /* Change text when sidebar is collapsed */
+        div[data-testid="stSidebarNav"][aria-expanded="false"] + section button[data-testid="stSidebarNav-toggleButton"]::after {
+            content: 'เปิดเมนูค้นหา';
+        }
+        /* --- END OF SIDEBAR TOGGLE FIX --- */
 
 
         /* --- New Report Header & Vitals --- */
@@ -648,11 +665,9 @@ def inject_custom_css():
             display: inline-block; padding: 6px 16px; border-radius: 16px;
             font-size: 13px; font-weight: bold; border: 1px solid transparent;
         }
-        /* --- START OF FIX --- */
         .vision-normal { background-color: var(--normal-bg-color); color: #2E7D32; }
         .vision-abnormal { background-color: var(--abnormal-bg-color); color: #C62828; }
         .vision-not-tested { background-color: var(--neutral-bg-color); color: #455A64; }
-        /* --- END OF FIX --- */
         .styled-df-table {
             width: 100%; border-collapse: collapse; font-family: 'Sarabun', sans-serif !important;
             font-size: 14px;
@@ -664,7 +679,6 @@ def inject_custom_css():
         .styled-df-table tbody tr:hover { background-color: rgba(128, 128, 128, 0.1); }
         .hearing-table { table-layout: fixed; }
         
-        /* --- START OF FIX --- */
         .custom-advice-box {
             padding: 1rem;
             border-radius: 8px;
@@ -687,7 +701,6 @@ def inject_custom_css():
             color: #AF6C00; /* Darker yellow/orange for better contrast */
             border-color: rgba(255, 193, 7, 0.2);
         }
-        /* --- END OF FIX --- */
 
         /* --- START OF RESPONSIVE FIX --- */
         @media (max-width: 768px) {
@@ -1325,3 +1338,4 @@ else:
         """
         st.components.v1.html(print_component, height=0, width=0)
         st.session_state.print_performance_trigger = False
+" and I want to "เห็นด้วยกับแผนนี้ พร้อมที่จะสร้างโค้ด app.py ที่อัปเดตแล้วให้ทันทีคร
