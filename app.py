@@ -691,60 +691,6 @@ def inject_custom_css():
     """, unsafe_allow_html=True)
 # --- END OF CHANGE ---
 
-# --- START OF NEW CODE: Custom Sidebar Toggle Button ---
-def custom_sidebar_toggle():
-    custom_css = """
-        <style>
-            /* ซ่อน icon เดิม */
-            [data-testid="collapsedControl"] svg {
-                display: none !important;
-            }
-
-            /* สไตล์ปุ่มข้อความ */
-            [data-testid="collapsedControl"] {
-                width: auto !important;
-                padding: 4px 12px !important;
-                font-size: 14px !important;
-                background: #f0f2f6 !important;
-                border-radius: 8px !important;
-                border: 1px solid #dcdcdc !important;
-                color: #333 !important;
-                font-weight: 500;
-            }
-        </style>
-
-        <script>
-        function updateSidebarButton() {
-            const btn = window.parent.document.querySelector('[data-testid="collapsedControl"]');
-            const sidebar = window.parent.document.querySelector('section[data-testid="stSidebar"]');
-            if (!btn || !sidebar) return;
-
-            // เช็คว่าซ่อนอยู่หรือไม่ (sidebar ถูกย่อ)
-            const hidden = sidebar.style.transform.includes('-100%');
-            if (hidden) {
-                btn.innerText = 'เปิดเมนูค้นหา';
-            } else {
-                btn.innerText = 'ปิดเมนู';
-            }
-        }
-
-        // ใช้ setTimeout เพื่อให้แน่ใจว่า DOM พร้อมใช้งานแล้ว
-        setTimeout(() => {
-            const sidebar = window.parent.document.querySelector('section[data-testid="stSidebar"]');
-            if (sidebar) {
-                const observer = new MutationObserver(updateSidebarButton);
-                observer.observe(sidebar, { attributes: true, attributeFilter: ['style'] });
-                
-                // เรียกใช้ครั้งแรกเพื่อให้แสดงผลถูกต้อง
-                updateSidebarButton(); 
-            }
-        }, 500); // หน่วงเวลาเล็กน้อย
-        </script>
-    """
-    st.markdown(custom_css, unsafe_allow_html=True)
-# --- END OF NEW CODE ---
-
-
 def render_vision_details_table(person_data):
     """
     Renders a clearer, single-column result table for the vision test with corrected logic.
@@ -1170,7 +1116,6 @@ st.set_page_config(page_title="ระบบรายงานสุขภาพ"
 
 # --- Call CSS and JS injection functions ---
 inject_custom_css()
-custom_sidebar_toggle() # <-- โค้ดใหม่สำหรับปุ่ม Sidebar
 
 def perform_search():
     st.session_state.search_query = st.session_state.search_input
@@ -1348,69 +1293,4 @@ else:
         </script>
         """
         st.components.v1.html(print_component, height=0, width=0)
-        st.session_state.print_performance_trigger = False
-" and am asking a query about/based on this code below.
-Instructions to follow:
-  * Don't output/edit the document if the query is Direct/Simple. For example, if the query asks for a simple explanation, output a direct answer.
-  * Make sure to **edit** the document if the query shows the intent of editing the document, in which case output the entire edited document, **not just that section or the edits**.
-    * Don't output the same document/empty document and say that you have edited it.
-    * Don't change unrelated code in the document.
-  * Don't output  and  in your final response.
-  * Any references like "this" or "selected code" refers to the code between  and  tags.
-  * Just acknowledge my request in the introduction.
-  * Make sure to refer to the document as "Canvas" in your response.
-
-ลบโค้ดส่วนนี้ออกไปเลย
-
-# --- START OF NEW CODE: Custom Sidebar Toggle Button ---
-def custom_sidebar_toggle():
-    custom_css = """
-        <style>
-            /* ซ่อน icon เดิม */
-            [data-testid="collapsedControl"] svg {
-                display: none !important;
-            }
-
-            /* สไตล์ปุ่มข้อความ */
-            [data-testid="collapsedControl"] {
-                width: auto !important;
-                padding: 4px 12px !important;
-                font-size: 14px !important;
-                background: #f0f2f6 !important;
-                border-radius: 8px !important;
-                border: 1px solid #dcdcdc !important;
-                color: #333 !important;
-                font-weight: 500;
-            }
-        </style>
-
-        <script>
-        function updateSidebarButton() {
-            const btn = window.parent.document.querySelector('[data-testid="collapsedControl"]');
-            const sidebar = window.parent.document.querySelector('section[data-testid="stSidebar"]');
-            if (!btn || !sidebar) return;
-
-            // เช็คว่าซ่อนอยู่หรือไม่ (sidebar ถูกย่อ)
-            const hidden = sidebar.style.transform.includes('-100%');
-            if (hidden) {
-                btn.innerText = 'เปิดเมนูค้นหา';
-            } else {
-                btn.innerText = 'ปิดเมนู';
-            }
-        }
-
-        // ใช้ setTimeout เพื่อให้แน่ใจว่า DOM พร้อมใช้งานแล้ว
-        setTimeout(() => {
-            const sidebar = window.parent.document.querySelector('section[data-testid="stSidebar"]');
-            if (sidebar) {
-                const observer = new MutationObserver(updateSidebarButton);
-                observer.observe(sidebar, { attributes: true, attributeFilter: ['style'] });
-                
-                // เรียกใช้ครั้งแรกเพื่อให้แสดงผลถูกต้อง
-                updateSidebarButton(); 
-            }
-        }, 500); // หน่วงเวลาเล็กน้อย
-        </script>
-    """
-    st.markdown(custom_css, unsafe_allow_html=True)
-# --- END OF NEW CODE 
+        st.session_state.print_performance_trigger = Fa
