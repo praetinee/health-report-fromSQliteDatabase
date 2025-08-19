@@ -1209,9 +1209,11 @@ with st.sidebar:
     if not results_df.empty:
         available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
         if available_years:
-            if st.session_state.selected_year not in available_years:
+            if 'selected_year' not in st.session_state or st.session_state.selected_year not in available_years:
                 st.session_state.selected_year = available_years[0]
-            year_idx = available_years.index(st.session_state.selected_year)
+            
+            year_idx = available_years.index(st.session_state.selected_year) if st.session_state.selected_year in available_years else 0
+            
             st.selectbox("เลือกปี พ.ศ.", options=available_years, index=year_idx, format_func=lambda y: f"พ.ศ. {y}", key="year_select", on_change=handle_year_change, label_visibility="collapsed")
         
             person_year_df = results_df[results_df["Year"] == st.session_state.selected_year]
