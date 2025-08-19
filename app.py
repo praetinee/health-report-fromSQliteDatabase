@@ -495,22 +495,22 @@ def inject_custom_css():
             cursor: not-allowed;
         }
 
-        /* --- START OF SIDEBAR TOGGLE FIX --- */
+        /* --- START OF SIDEBAR TOGGLE FIX (EMOJI VERSION) --- */
         /* Hide the broken icon text */
         button[data-testid="stSidebarNav-toggleButton"] span {
             display: none !important;
         }
-        /* Add our custom text */
+        /* Add our custom emoji */
         button[data-testid="stSidebarNav-toggleButton"]::after {
-            content: 'ปิดเมนู'; /* Default text for when sidebar is open */
-            font-family: 'Sarabun', sans-serif;
-            color: inherit;
-            font-size: 14px;
-            font-weight: 600;
+            content: '◀️'; /* Emoji for when sidebar is open */
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        /* Change text when sidebar is collapsed */
+        /* Change emoji when sidebar is collapsed */
         div[data-testid="stSidebarNav"][aria-expanded="false"] + section button[data-testid="stSidebarNav-toggleButton"]::after {
-            content: 'เปิดเมนูค้นหา';
+            content: '▶️'; /* Emoji for when sidebar is closed */
         }
         /* --- END OF SIDEBAR TOGGLE FIX --- */
 
@@ -1338,3 +1338,4 @@ else:
         """
         st.components.v1.html(print_component, height=0, width=0)
         st.session_state.print_performance_trigger = False
+" and I want to "เห็นด้วยกับแผนนี้ พร้อมที่จะสร้างโค้ด app.py ที่อัปเดตแล้วให้ทันทีค
