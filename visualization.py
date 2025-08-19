@@ -6,7 +6,7 @@ import plotly.express as px
 import pandas as pd
 import numpy as np
 
-# --- Helper Functions ---
+# --- ฟังก์ชันตัวช่วย ---
 
 def get_float(person_data, key):
     """ดึงค่า float จาก dictionary อย่างปลอดภัย"""
@@ -42,14 +42,14 @@ def get_gfr_desc(gfr):
     return "ไตวายระยะสุดท้าย"
 
 
-# --- 1. Historical Trend Graphs ---
+# --- 1. กราฟแสดงแนวโน้มย้อนหลัง ---
 
 def plot_historical_trends(history_df):
     """
     สร้างกราฟเส้นแสดงแนวโน้มข้อมูลสุขภาพย้อนหลัง
     จัดการกับปีที่ไม่มีข้อมูลโดยการเว้นกราฟให้ขาดช่วง
     """
-    st.subheader("� กราฟแสดงแนวโน้มผลสุขภาพย้อนหลัง")
+    st.subheader("📈 กราฟแสดงแนวโน้มผลสุขภาพย้อนหลัง")
     st.caption("กราฟนี้แสดงการเปลี่ยนแปลงของค่าต่างๆ ในแต่ละปีที่มีการตรวจ จุดบนเส้นหมายถึงปีที่มีข้อมูล ส่วนเส้นที่ขาดหายไปหมายถึงปีที่ไม่ได้เข้ารับการตรวจ")
 
 
@@ -74,7 +74,7 @@ def plot_historical_trends(history_df):
     )
     history_df['Year'] = history_df['Year'].astype(str)
 
-    # --- START OF CHANGE: Define color bands for all metrics ---
+    # กำหนดแถบสีสำหรับทุกค่าชี้วัด
     metric_bands = {
         'BMI': {
             "โรคอ้วน": (25, 40, "lightcoral"),
@@ -97,7 +97,7 @@ def plot_historical_trends(history_df):
             "เสื่อมปานกลาง": (30, 60, "orange"),
             "เสื่อมรุนแรง": (0, 30, "lightcoral"),
         },
-        'DBP': {}, # Handled with SBP
+        'DBP': {}, # จัดการพร้อมกับ SBP
         'SBP': {
             "สูงมาก (ระดับ 2)": (140, 180, "lightcoral"),
             "สูง (ระดับ 1)": (130, 140, "orange"),
@@ -105,7 +105,6 @@ def plot_historical_trends(history_df):
             "ปกติ": (90, 120, "lightgreen")
         }
     }
-    # --- END OF CHANGE ---
 
     trend_metrics = {
         'ดัชนีมวลกาย (BMI)': ('BMI', 'kg/m²'),
@@ -127,23 +126,22 @@ def plot_historical_trends(history_df):
                 df_plot = history_df[['Year', keys[0], keys[1]]]
                 fig = px.line(df_plot, x='Year', y=keys, title=title, markers=True)
                 bands_key = 'SBP'
-                fig.update_layout(yaxis_range=[80,180]) # Set a fixed range for context
+                fig.update_layout(yaxis_range=[80,180]) # กำหนดช่วงของแกน Y เพื่อให้เห็นภาพชัดเจน
             else:
                 df_plot = history_df[['Year', keys]]
                 fig = px.line(df_plot, x='Year', y=keys, title=title, markers=True)
                 bands_key = keys
 
-            # --- START OF CHANGE: Add bands to the figure ---
+            # เพิ่มแถบสีลงในกราฟ
             if bands_key in metric_bands:
                 for name, (start, end, color) in metric_bands[bands_key].items():
                     fig.add_shape(type="rect", xref="paper", yref="y", x0=0, y0=start, x1=1, y1=end,
                                   fillcolor=color, opacity=0.2, layer="below", line_width=0)
-                    # Add annotation only if there is enough space
+                    # เพิ่มคำอธิบายก็ต่อเมื่อมีพื้นที่เพียงพอ
                     if abs(end - start) > (fig.layout.yaxis.range[1] - fig.layout.yaxis.range[0]) * 0.1:
                          fig.add_annotation(x=0.98, y=(start+end)/2, text=name, showarrow=False,
                                            xref="paper", yref="y", font=dict(size=10, color="gray"),
                                            xanchor="right")
-            # --- END OF CHANGE ---
 
             fig.update_traces(connectgaps=False)
             fig.update_layout(
@@ -155,7 +153,7 @@ def plot_historical_trends(history_df):
             st.plotly_chart(fig, use_container_width=True)
 
 
-# --- 2. Gauge Charts ---
+# --- 2. เกจวัด ---
 
 def plot_gauge_charts(person_data):
     """สร้างเกจวัดสำหรับข้อมูลสุขภาพที่สำคัญ พร้อมคำอธิบาย"""
@@ -237,7 +235,7 @@ def plot_gauge_charts(person_data):
 
 
 
-# --- 3. Audiogram Chart ---
+# --- 3. กราฟการได้ยิน ---
 
 def plot_audiogram(person_data):
     """สร้างกราฟแสดงผลการตรวจการได้ยิน (Audiogram) พร้อมแถบสีแสดงเกณฑ์"""
@@ -260,7 +258,7 @@ def plot_audiogram(person_data):
 
     fig = go.Figure()
 
-    # Add shaded regions for hearing loss levels
+    # เพิ่มแถบสีพื้นหลังสำหรับระดับการสูญเสียการได้ยิน
     levels = {
         "ปกติ": (0, 25, "lightgreen"),
         "เล็กน้อย": (25, 40, "yellow"),
@@ -297,7 +295,7 @@ def plot_audiogram(person_data):
     st.plotly_chart(fig, use_container_width=True)
 
 
-# --- 4. Risk Factor Dashboard ---
+# --- 4. แดชบอร์ดปัจจัยเสี่ยง ---
 
 def plot_risk_radar(person_data):
     """สร้างกราฟเรดาร์สรุปปัจจัยเสี่ยง พร้อมคำอธิบาย"""
@@ -309,7 +307,7 @@ def plot_risk_radar(person_data):
     def normalize(value, thresholds, higher_is_better=False):
         if value is None: return 1
         if higher_is_better:
-            thresholds = thresholds[::-1] # Reverse thresholds for higher is better
+            thresholds = thresholds[::-1] # กลับลำดับค่าเกณฑ์สำหรับกรณีที่ค่าสูงคือดี
             for i, threshold in enumerate(thresholds):
                 if value >= threshold:
                     return i + 1
@@ -360,7 +358,7 @@ def plot_risk_radar(person_data):
     st.plotly_chart(fig, use_container_width=True)
 
 
-# --- 5. Bar Charts for Comparison ---
+# --- 5. กราฟแท่งเปรียบเทียบ ---
 
 def plot_lung_comparison(person_data):
     """สร้างกราฟแท่งเปรียบเทียบสมรรถภาพปอด พร้อมแสดงค่าบนแท่ง"""
@@ -396,7 +394,7 @@ def plot_lung_comparison(person_data):
     st.plotly_chart(fig, use_container_width=True)
 
 
-# --- Main Display Function ---
+# --- ฟังก์ชันหลักสำหรับแสดงผล ---
 
 def display_visualization_tab(person_data, history_df):
     """
@@ -427,4 +425,3 @@ def display_visualization_tab(person_data, history_df):
     # Section 3: Trends in Expander
     with st.expander("คลิกเพื่อดูกราฟแนวโน้มย้อนหลัง", expanded=True):
         plot_historical_trends(history_df)
-�
