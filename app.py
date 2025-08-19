@@ -36,7 +36,7 @@ def normalize_thai_date(date_str):
             if year > 2500: year -= 543
             dt = datetime(year, month, day)
             return f"{dt.day} {THAI_MONTHS_GLOBAL[dt.month]} {dt.year + 543}"
-        if re.match(r'^\d{1,2}-\d{1,2}/\d{4}$', s):
+        if re.match(r'^\d{1,2}-\d{1,2}-\d{4}$', s):
             day, month, year = map(int, s.split('-'))
             if year > 2500: year -= 543
             dt = datetime(year, month, day)
@@ -1354,4 +1354,4 @@ else:
         </script>
         """
         st.components.v1.html(print_component, height=0, width=0)
-        st.session_state.print_performance_trigger = False
+        st.session_state.print_performance_trigger = Fa
