@@ -18,59 +18,98 @@ def get_float(person_data, key):
     except (ValueError, TypeError):
         return None
 
+def get_bmi_desc(bmi):
+    if bmi is None: return "ไม่มีข้อมูล"
+    if bmi < 18.5: return "น้ำหนักน้อย"
+    if bmi < 23: return "น้ำหนักปกติ"
+    if bmi < 25: return "ท้วม"
+    if bmi < 30: return "โรคอ้วน"
+    return "โรคอ้วนอันตราย"
+
+def get_fbs_desc(fbs):
+    if fbs is None: return "ไม่มีข้อมูล"
+    if fbs < 74: return "ค่อนข้างต่ำ"
+    if fbs < 100: return "ปกติ"
+    if fbs < 126: return "ภาวะเสี่ยงเบาหวาน"
+    return "เข้าเกณฑ์เบาหวาน"
+
+def get_gfr_desc(gfr):
+    if gfr is None: return "ไม่มีข้อมูล"
+    if gfr >= 90: return "ปกติ"
+    if gfr >= 60: return "เริ่มเสื่อมเล็กน้อย"
+    if gfr >= 30: return "เสื่อมปานกลาง"
+    if gfr >= 15: return "เสื่อมรุนแรง"
+    return "ไตวายระยะสุดท้าย"
+
+
 # --- 1. Historical Trend Graphs ---
 
 def plot_historical_trends(history_df):
-    """สร้างกราฟเส้นแสดงแนวโน้มข้อมูลสุขภาพย้อนหลัง"""
-    st.subheader("📈 กราฟแสดงแนวโน้มผลสุขภาพย้อนหลัง (Historical Trends)")
+    """
+    สร้างกราฟเส้นแสดงแนวโน้มข้อมูลสุขภาพย้อนหลัง
+    จัดการกับปีที่ไม่มีข้อมูลโดยการเว้นกราฟให้ขาดช่วง
+    """
+    st.subheader("📈 กราฟแสดงแนวโน้มผลสุขภาพย้อนหลัง")
+    st.caption("กราฟนี้แสดงการเปลี่ยนแปลงของค่าต่างๆ ในแต่ละปีที่มีการตรวจ จุดบนเส้นหมายถึงปีที่มีข้อมูล ส่วนเส้นที่ขาดหายไปหมายถึงปีที่ไม่ได้เข้ารับการตรวจ")
+
 
     if history_df.shape[0] < 2:
         st.info("ข้อมูลย้อนหลังไม่เพียงพอที่จะสร้างกราฟแนวโน้ม (ต้องการอย่างน้อย 2 ปี)")
         return
 
     history_df = history_df.sort_values(by="Year", ascending=True).copy()
-    history_df['Year_str'] = history_df['Year'].astype(str)
+
+    # สร้างช่วงปีทั้งหมดตั้งแต่ปีแรกสุดถึงปีล่าสุดสุด
+    min_year, max_year = int(history_df['Year'].min()), int(history_df['Year'].max())
+    all_years_df = pd.DataFrame({'Year': range(min_year, max_year + 1)})
+
+    # รวมข้อมูลจริงเข้ากับช่วงปีทั้งหมด
+    history_df = pd.merge(all_years_df, history_df, on='Year', how='left')
 
     # คำนวณ BMI สำหรับข้อมูลย้อนหลัง
     history_df['BMI'] = history_df.apply(
         lambda row: (get_float(row, 'น้ำหนัก') / ((get_float(row, 'ส่วนสูง') / 100) ** 2))
-        if get_float(row, 'น้ำหนัก') and get_float(row, 'ส่วนสูง') else None,
+        if get_float(row, 'น้ำหนัก') and get_float(row, 'ส่วนสูง') else np.nan,
         axis=1
     )
+    history_df['Year'] = history_df['Year'].astype(str)
 
     trend_metrics = {
-        'ดัชนีมวลกาย (BMI)': 'BMI',
-        'ระดับน้ำตาลในเลือด (FBS)': 'FBS',
-        'คอเลสเตอรอล (Cholesterol)': 'CHOL',
-        'ประสิทธิภาพการกรองของไต (GFR)': 'GFR',
-        'ความดันโลหิต (SBP/DBP)': ['SBP', 'DBP']
+        'ดัชนีมวลกาย (BMI)': ('BMI', 'kg/m²'),
+        'ระดับน้ำตาลในเลือด (FBS)': ('FBS', 'mg/dL'),
+        'คอเลสเตอรอล (Cholesterol)': ('CHOL', 'mg/dL'),
+        'ประสิทธิภาพการกรองของไต (GFR)': ('GFR', 'mL/min'),
+        'ความดันโลหิต': (['SBP', 'DBP'], 'mmHg')
     }
 
     col1, col2 = st.columns(2)
     cols = [col1, col2, col1, col2, col1]
     
-    for i, (title, keys) in enumerate(trend_metrics.items()):
+    for i, (title, (keys, unit)) in enumerate(trend_metrics.items()):
         with cols[i]:
             if isinstance(keys, list): # กรณีความดันโลหิต
-                df_plot = history_df[['Year_str', keys[0], keys[1]]].dropna()
-                if not df_plot.empty:
-                    fig = px.line(df_plot, x='Year_str', y=keys, title=title, markers=True,
-                                  labels={'value': 'ค่า (mmHg)', 'Year_str': 'ปี พ.ศ.'})
-                    fig.update_layout(legend_title_text='เส้นเลือด')
-                    st.plotly_chart(fig, use_container_width=True)
+                df_plot = history_df[['Year', keys[0], keys[1]]]
+                fig = px.line(df_plot, x='Year', y=keys, title=title, markers=True)
+                fig.update_traces(connectgaps=False) # ทำให้เส้นขาดช่วงถ้าไม่มีข้อมูล
+                fig.update_layout(
+                    yaxis_title=unit, xaxis_title='ปี พ.ศ.', legend_title_text='เส้นเลือด'
+                )
+                st.plotly_chart(fig, use_container_width=True)
             else:
-                df_plot = history_df[['Year_str', keys]].dropna()
-                if not df_plot.empty:
-                    fig = px.line(df_plot, x='Year_str', y=keys, title=title, markers=True,
-                                  labels={'value': 'ค่า', 'Year_str': 'ปี พ.ศ.'})
-                    st.plotly_chart(fig, use_container_width=True)
+                df_plot = history_df[['Year', keys]]
+                fig = px.line(df_plot, x='Year', y=keys, title=title, markers=True)
+                fig.update_traces(connectgaps=False)
+                fig.update_layout(yaxis_title=unit, xaxis_title='ปี พ.ศ.')
+                st.plotly_chart(fig, use_container_width=True)
 
 
 # --- 2. Gauge Charts ---
 
 def plot_gauge_charts(person_data):
-    """สร้างเกจวัดสำหรับข้อมูลสุขภาพที่สำคัญ"""
-    st.subheader("🎯 เกจวัดผลสุขภาพ (Health Gauges)")
+    """สร้างเกจวัดสำหรับข้อมูลสุขภาพที่สำคัญ พร้อมคำอธิบาย"""
+    st.subheader("🎯 เกจวัดผลสุขภาพภาพรวม")
+    st.caption("เกจวัดนี้แสดงค่าสุขภาพที่สำคัญเทียบกับเกณฑ์มาตรฐาน สีเขียวหมายถึงปกติ และจะเปลี่ยนเป็นสีเหลือง ส้ม แดง เมื่อมีความเสี่ยงเพิ่มขึ้น")
+
 
     col1, col2, col3 = st.columns(3)
 
@@ -97,8 +136,10 @@ def plot_gauge_charts(person_data):
                         {'range': [30, 40], 'color': "red"}],
                     'bar': {'color': "darkblue"}
                 }))
-            fig.update_layout(height=250, margin=dict(l=10, r=10, t=40, b=10))
+            fig.update_layout(height=250, margin=dict(l=20, r=20, t=40, b=10))
             st.plotly_chart(fig, use_container_width=True)
+            st.markdown(f"<p style='text-align: center; font-weight: bold;'>ผล: {get_bmi_desc(bmi)}</p>", unsafe_allow_html=True)
+
 
     with col2:
         fbs = get_float(person_data, 'FBS')
@@ -106,7 +147,7 @@ def plot_gauge_charts(person_data):
             fig = go.Figure(go.Indicator(
                 mode = "gauge+number",
                 value = fbs,
-                title = {'text': "ระดับน้ำตาล (FBS)"},
+                title = {'text': "ระดับน้ำตาล (FBS mg/dL)"},
                 gauge = {
                     'axis': {'range': [60, 160]},
                     'steps' : [
@@ -116,8 +157,10 @@ def plot_gauge_charts(person_data):
                         {'range': [126, 160], 'color': "red"}],
                     'bar': {'color': "darkblue"}
                 }))
-            fig.update_layout(height=250, margin=dict(l=10, r=10, t=40, b=10))
+            fig.update_layout(height=250, margin=dict(l=20, r=20, t=40, b=10))
             st.plotly_chart(fig, use_container_width=True)
+            st.markdown(f"<p style='text-align: center; font-weight: bold;'>ผล: {get_fbs_desc(fbs)}</p>", unsafe_allow_html=True)
+
 
     with col3:
         gfr = get_float(person_data, 'GFR')
@@ -125,7 +168,7 @@ def plot_gauge_charts(person_data):
             fig = go.Figure(go.Indicator(
                 mode = "gauge+number",
                 value = gfr,
-                title = {'text': "การกรองของไต (GFR)"},
+                title = {'text': "การกรองของไต (GFR mL/min)"},
                 gauge = {
                     'axis': {'range': [0, 120]},
                     'steps' : [
@@ -135,14 +178,16 @@ def plot_gauge_charts(person_data):
                         {'range': [90, 120], 'color': "green"}],
                     'bar': {'color': "darkblue"}
                 }))
-            fig.update_layout(height=250, margin=dict(l=10, r=10, t=40, b=10))
+            fig.update_layout(height=250, margin=dict(l=20, r=20, t=40, b=10))
             st.plotly_chart(fig, use_container_width=True)
+            st.markdown(f"<p style='text-align: center; font-weight: bold;'>ผล: {get_gfr_desc(gfr)}</p>", unsafe_allow_html=True)
+
 
 
 # --- 3. Audiogram Chart ---
 
 def plot_audiogram(person_data):
-    """สร้างกราฟแสดงผลการตรวจการได้ยิน (Audiogram)"""
+    """สร้างกราฟแสดงผลการตรวจการได้ยิน (Audiogram) พร้อมแถบสีแสดงเกณฑ์"""
     st.subheader("👂 กราฟแสดงผลการตรวจการได้ยิน (Audiogram)")
 
     freq_cols = {
@@ -161,30 +206,38 @@ def plot_audiogram(person_data):
 
     fig = go.Figure()
 
+    # Add shaded regions for hearing loss levels
+    levels = {
+        "ปกติ": (0, 25, "lightgreen"),
+        "เล็กน้อย": (25, 40, "yellow"),
+        "ปานกลาง": (40, 70, "orange"),
+        "รุนแรง": (70, 120, "lightcoral")
+    }
+    for name, (start, end, color) in levels.items():
+        fig.add_shape(type="rect", xref="paper", yref="y", x0=0, y0=start, x1=1, y1=end,
+                      fillcolor=color, opacity=0.2, layer="below", line_width=0)
+        fig.add_annotation(x=0.98, y=(start+end)/2, text=name, showarrow=False,
+                           xref="paper", yref="y", font=dict(size=10, color="gray"))
+
     fig.add_trace(go.Scatter(
-        x=freqs, y=r_vals,
-        mode='lines+markers',
-        name='หูขวา (Right)',
-        line=dict(color='red'),
-        marker=dict(symbol='circle', size=10)
+        x=freqs, y=r_vals, mode='lines+markers', name='หูขวา (Right)',
+        line=dict(color='red'), marker=dict(symbol='circle-open', size=12, line=dict(width=2))
     ))
 
     fig.add_trace(go.Scatter(
-        x=freqs, y=l_vals,
-        mode='lines+markers',
-        name='หูซ้าย (Left)',
-        line=dict(color='blue'),
-        marker=dict(symbol='x', size=10)
+        x=freqs, y=l_vals, mode='lines+markers', name='หูซ้าย (Left)',
+        line=dict(color='blue'), marker=dict(symbol='x-thin', size=12, line=dict(width=2))
     ))
 
     fig.update_layout(
-        title='ผลการตรวจสมรรถภาพการได้ยิน',
+        title='ผลการตรวจเทียบกับระดับการสูญเสียการได้ยิน',
         xaxis_title='ความถี่เสียง (Hz)',
-        yaxis_title='ระดับการได้ยิน (dB)',
+        yaxis_title='ระดับการได้ยิน (dB HL)',
         yaxis=dict(autorange='reversed', range=[-10, 120]),
         xaxis=dict(type='category'),
-        legend_title="หู",
-        template="plotly_white"
+        legend=dict(x=0.01, y=0.99, bordercolor="black", borderwidth=1),
+        template="plotly_white",
+        margin=dict(l=20, r=20, t=40, b=20)
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -192,15 +245,24 @@ def plot_audiogram(person_data):
 # --- 4. Risk Factor Dashboard ---
 
 def plot_risk_radar(person_data):
-    """สร้างกราฟเรดาร์สรุปปัจจัยเสี่ยง"""
-    st.subheader("🕸️ กราฟเรดาร์สรุปปัจจัยเสี่ยง (Risk Factor Radar)")
+    """สร้างกราฟเรดาร์สรุปปัจจัยเสี่ยง พร้อมคำอธิบาย"""
+    st.subheader("🕸️ กราฟเรดาร์สรุปปัจจัยเสี่ยง")
+    st.caption("กราฟนี้สรุปปัจจัยเสี่ยง 5 ด้าน ยิ่งพื้นที่สีกว้างและเบ้ไปทางขอบนอก หมายถึงความเสี่ยงโดยรวมสูงขึ้น (ระดับ 1 คือปกติ, 5 คือเสี่ยงสูงมาก)")
 
-    def normalize(value, thresholds):
+
+    def normalize(value, thresholds, higher_is_better=False):
         if value is None: return 1
-        for i, threshold in enumerate(thresholds):
-            if value <= threshold:
-                return i + 1
-        return len(thresholds) + 1
+        if higher_is_better:
+            thresholds = thresholds[::-1] # Reverse thresholds for higher is better
+            for i, threshold in enumerate(thresholds):
+                if value >= threshold:
+                    return i + 1
+            return len(thresholds) + 1
+        else:
+            for i, threshold in enumerate(thresholds):
+                if value <= threshold:
+                    return i + 1
+            return len(thresholds) + 1
 
     bmi = get_float(person_data, 'BMI')
     if bmi is None:
@@ -211,11 +273,11 @@ def plot_risk_radar(person_data):
 
     categories = ['BMI', 'ความดัน (SBP)', 'น้ำตาล (FBS)', 'ไขมัน (LDL)', 'ไต (GFR)']
     values = [
-        normalize(bmi, [18.5, 23, 25, 30]),
+        normalize(bmi, [22.9, 24.9, 29.9, 35]),
         normalize(get_float(person_data, 'SBP'), [120, 130, 140, 160]),
-        normalize(get_float(person_data, 'FBS'), [100, 126, 150, 200]),
-        normalize(get_float(person_data, 'LDL'), [130, 160, 190, 220]),
-        6 - normalize(get_float(person_data, 'GFR'), [30, 60, 90, 120]) # Invert GFR score
+        normalize(get_float(person_data, 'FBS'), [99, 125, 150, 200]),
+        normalize(get_float(person_data, 'LDL'), [129, 159, 189, 220]),
+        normalize(get_float(person_data, 'GFR'), [30, 45, 60, 90], higher_is_better=True)
     ]
 
     fig = go.Figure()
@@ -244,8 +306,8 @@ def plot_risk_radar(person_data):
 # --- 5. Bar Charts for Comparison ---
 
 def plot_lung_comparison(person_data):
-    """สร้างกราฟแท่งเปรียบเทียบสมรรถภาพปอด"""
-    st.subheader("📊 กราฟแท่งเปรียบเทียบสมรรถภาพปอด (Spirometry)")
+    """สร้างกราฟแท่งเปรียบเทียบสมรรถภาพปอด พร้อมแสดงค่าบนแท่ง"""
+    st.subheader("📊 กราฟเปรียบเทียบสมรรถภาพปอด")
 
     fvc_actual = get_float(person_data, 'FVC')
     fvc_pred = get_float(person_data, 'FVC predic')
@@ -261,15 +323,16 @@ def plot_lung_comparison(person_data):
     pred_vals = [fvc_pred, fev1_pred]
 
     fig = go.Figure(data=[
-        go.Bar(name='ค่าที่วัดได้ (Actual)', x=categories, y=actual_vals),
-        go.Bar(name='ค่ามาตรฐาน (Predicted)', x=categories, y=pred_vals)
+        go.Bar(name='ค่าที่วัดได้ (Actual)', x=categories, y=actual_vals, text=actual_vals, textposition='auto'),
+        go.Bar(name='ค่ามาตรฐาน (Predicted)', x=categories, y=pred_vals, text=pred_vals, textposition='auto')
     ])
-
+    fig.update_traces(texttemplate='%{text:.2f}')
     fig.update_layout(
         barmode='group',
         title='เปรียบเทียบค่าสมรรถภาพปอดกับค่ามาตรฐาน',
         yaxis_title='ลิตร (L)',
-        legend_title="ค่า"
+        legend_title="ค่า",
+        legend=dict(x=0.01, y=0.99)
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -281,25 +344,27 @@ def display_visualization_tab(person_data, history_df):
     ฟังก์ชันหลักสำหรับแสดงผลแท็บ Visualization ทั้งหมด
     จะถูกเรียกจาก app.py
     """
-    st.header(f"ภาพรวมสุขภาพของคุณ: {person_data.get('ชื่อ-สกุล', '')}")
+    st.header(f"📊 ภาพรวมสุขภาพของคุณ: {person_data.get('ชื่อ-สกุล', '')}")
     st.markdown("---")
 
-    # Section 1: Gauges
-    plot_gauge_charts(person_data)
-    st.markdown("---")
+    # Section 1: Gauges and Radar
+    col1, col2 = st.columns([2, 3])
+    with col1:
+        plot_risk_radar(person_data)
+    with col2:
+        plot_gauge_charts(person_data)
 
-    # Section 2: Trends in Expander
-    with st.expander("คลิกเพื่อดูกราฟแนวโน้มย้อนหลัง", expanded=False):
-        plot_historical_trends(history_df)
     st.markdown("---")
     
-    # Section 3: Performance graphs
-    col1, col2 = st.columns(2)
-    with col1:
+    # Section 2: Performance graphs
+    st.header("เจาะลึกสมรรถภาพร่างกาย")
+    col3, col4 = st.columns(2)
+    with col3:
         plot_audiogram(person_data)
-    with col2:
+    with col4:
         plot_lung_comparison(person_data)
     st.markdown("---")
 
-    # Section 4: Risk Radar
-    plot_risk_radar(person_data)
+    # Section 3: Trends in Expander
+    with st.expander("คลิกเพื่อดูกราฟแนวโน้มย้อนหลัง", expanded=True):
+        plot_historical_trends(history_df)
