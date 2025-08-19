@@ -1194,52 +1194,72 @@ if 'selected_date' not in st.session_state: st.session_state.selected_date = Non
 if 'print_trigger' not in st.session_state: st.session_state.print_trigger = False
 if 'print_performance_trigger' not in st.session_state: st.session_state.print_performance_trigger = False
 
-# --- START OF CHANGE: Controls moved to Sidebar with Form ---
-with st.sidebar:
-    st.markdown('<div class="sidebar-title">ค้นหาข้อมูล</div>', unsafe_allow_html=True)
-    
-    with st.form(key="search_form"):
-        st.text_input("HN หรือ ชื่อ-สกุล", key="search_input", placeholder="ค้นหา...", label_visibility="collapsed")
-        st.form_submit_button("ค้นหา", on_click=perform_search, use_container_width=True)
-    
-    results_df = st.session_state.search_result
-    if results_df.empty and st.session_state.search_query:
-        st.error("❌ ไม่พบข้อมูล")
+# --- START OF NEW LAYOUT ---
 
+# --- Search controls on the main page ---
+st.markdown('<h4>ค้นหาข้อมูลผู้รับบริการ</h4>', unsafe_allow_html=True)
+with st.container(border=True):
+    with st.form(key="search_form"):
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.text_input("HN หรือ ชื่อ-สกุล", key="search_input", placeholder="กรอก HN หรือ ชื่อ-สกุล เพื่อค้นหา...", label_visibility="collapsed")
+        with col2:
+            st.form_submit_button("ค้นหา", on_click=perform_search, use_container_width=True)
+
+# --- Sidebar for options after a search is successful ---
+with st.sidebar:
+    st.markdown('<div class="sidebar-title">ตัวเลือกเพิ่มเติม</div>', unsafe_allow_html=True)
+    results_df = st.session_state.get('search_result', pd.DataFrame())
+    
     if not results_df.empty:
+        # Year selection
         available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
         if available_years:
-            if st.session_state.selected_year not in available_years:
+            # Initialize selected_year if it's not set or not in the available years
+            if 'selected_year' not in st.session_state or st.session_state.selected_year not in available_years:
                 st.session_state.selected_year = available_years[0]
+                
+            # Find the index of the selected year for the selectbox
             year_idx = available_years.index(st.session_state.selected_year)
-            st.selectbox("เลือกปี พ.ศ.", options=available_years, index=year_idx, format_func=lambda y: f"พ.ศ. {y}", key="year_select", on_change=handle_year_change, label_visibility="collapsed")
+            st.selectbox("เลือกปี พ.ศ. ที่ต้องการดูผล", options=available_years, index=year_idx, key="year_select", on_change=handle_year_change)
         
-            person_year_df = results_df[results_df["Year"] == st.session_state.selected_year]
-
-            if not person_year_df.empty:
-                merged_series = person_year_df.bfill().ffill().iloc[0]
-                st.session_state.person_row = merged_series.to_dict()
-                st.session_state.selected_row_found = True
-            else:
-                 st.session_state.pop("person_row", None)
-                 st.session_state.pop("selected_row_found", None)
-    
-    st.markdown("---")
-    st.markdown('<div class="sidebar-title" style="font-size: 1.2rem; margin-top: 1rem;">พิมพ์รายงาน</div>', unsafe_allow_html=True)
-    if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
-        if st.button("พิมพ์รายงานสุขภาพ", use_container_width=True):
-             st.session_state.print_trigger = True
-        if st.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True):
-            st.session_state.print_performance_trigger = True
+        st.markdown("---")
+        
+        # Print buttons
+        st.markdown('<div class="sidebar-title" style="font-size: 1.2rem;">พิมพ์รายงาน</div>', unsafe_allow_html=True)
+        if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
+            if st.button("พิมพ์รายงานสุขภาพ", use_container_width=True):
+                 st.session_state.print_trigger = True
+            if st.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True):
+                st.session_state.print_performance_trigger = True
+        else:
+            st.button("พิมพ์รายงานสุขภาพ", use_container_width=True, disabled=True)
+            st.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True, disabled=True)
     else:
-        st.button("พิมพ์รายงานสุขภาพ", use_container_width=True, disabled=True)
-        st.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True, disabled=True)
+        st.info("กรุณาค้นหาข้อมูลในหน้าหลักเพื่อแสดงตัวเลือก")
 
-# --- END OF CHANGE ---
 
-# --- Main Page ---
+# --- Main Page Report Display ---
+# This part now depends on the year selection in the sidebar
+if 'selected_year' in st.session_state and st.session_state.selected_year is not None:
+    results_df = st.session_state.get('search_result', pd.DataFrame())
+    if not results_df.empty:
+        person_year_df = results_df[results_df["Year"] == st.session_state.selected_year]
+        if not person_year_df.empty:
+            merged_series = person_year_df.bfill().ffill().iloc[0]
+            st.session_state.person_row = merged_series.to_dict()
+            st.session_state.selected_row_found = True
+        else:
+            st.session_state.pop("person_row", None)
+            st.session_state.selected_row_found = False
+            st.warning(f"ไม่พบข้อมูลสำหรับปี พ.ศ. {st.session_state.selected_year}")
+
 if "person_row" not in st.session_state or not st.session_state.get("selected_row_found", False):
-    st.info("กรุณาค้นหาและเลือกผลตรวจจากเมนูด้านข้าง")
+    # Handle initial state and failed search
+    if st.session_state.get('search_query') and st.session_state.get('search_result', pd.DataFrame()).empty:
+        st.error("❌ ไม่พบข้อมูล กรุณาตรวจสอบ HN หรือ ชื่อ-สกุล แล้วลองอีกครั้ง")
+    else:
+        st.info("กรุณากรอกข้อมูลเพื่อค้นหารายงานสุขภาพ")
 else:
     person_data = st.session_state.person_row
     all_person_history_df = st.session_state.search_result
@@ -1273,9 +1293,7 @@ else:
         report_html_data = generate_printable_report(person_data, all_person_history_df)
         escaped_html = json.dumps(report_html_data)
         
-        # --- START OF FIX: Use a unique ID for the iframe to allow repeated printing ---
         iframe_id = f"print-iframe-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
-        # --- END OF FIX ---
         
         print_component = f"""
         <iframe id="{iframe_id}" style="display:none;"></iframe>
@@ -1307,9 +1325,7 @@ else:
         report_html_data = generate_performance_report_html(person_data, all_person_history_df)
         escaped_html = json.dumps(report_html_data)
         
-        # --- START OF FIX: Use a unique ID for the iframe to allow repeated printing ---
         iframe_id = f"print-perf-iframe-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
-        # --- END OF FIX ---
         
         print_component = f"""
         <iframe id="{iframe_id}" style="display:none;"></iframe>
