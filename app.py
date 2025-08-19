@@ -199,6 +199,7 @@ def interpret_ekg(val):
     if any(x in val.lower() for x in ["ผิดปกติ", "abnormal", "arrhythmia"]): return f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
     return val
 
+# --- START OF FIX ---
 def hepatitis_b_advice(hbsag, hbsab, hbcab):
     """Generates advice based on Hepatitis B panel results and returns a status."""
     hbsag, hbsab, hbcab = hbsag.lower(), hbsab.lower(), hbcab.lower()
@@ -211,6 +212,7 @@ def hepatitis_b_advice(hbsag, hbsab, hbcab):
     if all(x == "negative" for x in [hbsag, hbsab, hbcab]):
         return "ไม่มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี ควรปรึกษาแพทย์เพื่อรับวัคซีน", "no_immune"
     return "ไม่สามารถสรุปผลชัดเจน แนะนำให้พบแพทย์เพื่อประเมินซ้ำ", "unclear"
+# --- END OF FIX ---
 
 # --- Data Loading ---
 @st.cache_data(ttl=600)
@@ -293,6 +295,7 @@ def interpret_cxr(val):
     if any(keyword in val.lower() for keyword in ["ผิดปกติ", "ฝ้า", "รอย", "abnormal", "infiltrate", "lesion"]): return f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
     return val
 
+# --- START OF CHANGE: New function to interpret BMI with updated terminology ---
 def interpret_bmi(bmi):
     """Interprets BMI value and returns a description string."""
     if bmi is None:
@@ -308,7 +311,9 @@ def interpret_bmi(bmi):
     elif bmi >= 30:
         return "เข้าเกณฑ์โรคอ้วนอันตราย"
     return ""
+# --- END OF CHANGE ---
 
+# --- START OF CHANGE: New Header and Vitals Design ---
 def display_common_header(person_data):
     """Displays the new report header with integrated personal info and vitals cards."""
     
@@ -408,6 +413,9 @@ def display_common_header(person_data):
     </div>
     """, unsafe_allow_html=True)
 
+# --- END OF CHANGE ---
+
+# --- START OF CHANGE: New Centralized and Adaptive CSS ---
 def inject_custom_css():
     st.markdown("""
     <style>
@@ -462,6 +470,7 @@ def inject_custom_css():
             color: var(--primary-color);
             margin-bottom: 1rem;
         }
+        /* --- START OF FIX --- */
         .stButton>button {
             background-color: #00796B; /* Use the same teal as section headers */
             color: white !important;
@@ -486,6 +495,8 @@ def inject_custom_css():
             box-shadow: none;
             cursor: not-allowed;
         }
+        /* --- END OF FIX --- */
+
 
         /* --- New Report Header & Vitals --- */
         .report-header {
@@ -493,7 +504,6 @@ def inject_custom_css():
             justify-content: space-between;
             align-items: flex-start;
             margin-bottom: 2rem;
-            flex-wrap: wrap; /* Allow wrapping on small screens */
         }
         .header-left h2 { color: var(--text-color); font-size: 2rem; margin-bottom: 0.25rem;}
         .header-left p { color: var(--text-color); opacity: 0.7; margin: 0; }
@@ -637,9 +647,11 @@ def inject_custom_css():
             display: inline-block; padding: 6px 16px; border-radius: 16px;
             font-size: 13px; font-weight: bold; border: 1px solid transparent;
         }
+        /* --- START OF FIX --- */
         .vision-normal { background-color: var(--normal-bg-color); color: #2E7D32; }
         .vision-abnormal { background-color: var(--abnormal-bg-color); color: #C62828; }
         .vision-not-tested { background-color: var(--neutral-bg-color); color: #455A64; }
+        /* --- END OF FIX --- */
         .styled-df-table {
             width: 100%; border-collapse: collapse; font-family: 'Sarabun', sans-serif !important;
             font-size: 14px;
@@ -651,6 +663,7 @@ def inject_custom_css():
         .styled-df-table tbody tr:hover { background-color: rgba(128, 128, 128, 0.1); }
         .hearing-table { table-layout: fixed; }
         
+        /* --- START OF FIX --- */
         .custom-advice-box {
             padding: 1rem;
             border-radius: 8px;
@@ -673,102 +686,10 @@ def inject_custom_css():
             color: #AF6C00; /* Darker yellow/orange for better contrast */
             border-color: rgba(255, 193, 7, 0.2);
         }
-
-        /* --- START OF RESPONSIVE FIX --- */
-        @media (max-width: 768px) {
-            .report-header {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 1.5rem;
-            }
-            .header-left, .header-right {
-                width: 100%;
-                text-align: center;
-            }
-            .info-card {
-                grid-template-columns: 1fr; /* Single column on mobile */
-                min-width: 100%;
-                gap: 0.5rem;
-            }
-            .info-card-item {
-                text-align: left;
-            }
-            .header-left h2 {
-                font-size: 1.5rem; /* Smaller header on mobile */
-            }
-            div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] > div.st-emotion-cache-1jicfl2.e1f1d6gn3 > div {
-                padding: 16px; /* Reduce padding on mobile */
-            }
-            .lab-table th, .lab-table td, .info-detail-table th, .info-detail-table td {
-                padding: 8px 10px; /* Tighter padding for tables */
-            }
-        }
-        /* --- END OF RESPONSIVE FIX --- */
+        /* --- END OF FIX --- */
     </style>
     """, unsafe_allow_html=True)
-
-# --- START: โค้ดสำหรับแก้ไขไอคอน Sidebar ด้วย JavaScript ---
-def inject_sidebar_fix_js():
-    """
-    Injects JavaScript to find and replace the sidebar collapse button's icon.
-    This method is robust against Streamlit's dynamic UI rendering.
-    """
-    js_code = """
-    <script>
-        const observer = new MutationObserver((mutations, obs) => {
-            const button = document.querySelector('[data-testid="stSidebarNavCollapseButton"]');
-            if (button) {
-                const updateIcon = () => {
-                    const isExpanded = button.getAttribute('aria-expanded') === 'true';
-                    const rightArrowSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
-                    const leftArrowSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>`;
-                    
-                    // Use a specific container for our icon to avoid conflicts
-                    let iconContainer = button.querySelector('.custom-icon-container');
-                    if (!iconContainer) {
-                        // Hide the original broken content
-                        const originalSpan = button.querySelector('span');
-                        if (originalSpan) {
-                            originalSpan.style.display = 'none';
-                        }
-                        // Create our container
-                        iconContainer = document.createElement('span');
-                        iconContainer.className = 'custom-icon-container';
-                        button.appendChild(iconContainer);
-                    }
-                    
-                    iconContainer.innerHTML = isExpanded ? leftArrowSvg : rightArrowSvg;
-                };
-
-                // Run it once on discovery
-                updateIcon();
-
-                // Create a new observer just for the button's attribute changes
-                const buttonObserver = new MutationObserver((mutationList) => {
-                    for (const mutation of mutationList) {
-                        if (mutation.type === 'attributes' && mutation.attributeName === 'aria-expanded') {
-                            updateIcon();
-                        }
-                    }
-                });
-
-                buttonObserver.observe(button, { attributes: true });
-
-                // Disconnect the main observer as we've found and handled the button
-                obs.disconnect();
-            }
-        });
-
-        // Start the main observer to watch for the button to be added to the page
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-    </script>
-    """
-    st.components.v1.html(js_code, height=0, width=0)
-# --- END: โค้ดสำหรับแก้ไขไอคอน Sidebar ---
-
+# --- END OF CHANGE ---
 
 def render_vision_details_table(person_data):
     """
@@ -1194,7 +1115,6 @@ if df is None:
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
 inject_custom_css()
-inject_sidebar_fix_js() # <-- เรียกใช้ฟังก์ชันแก้ไขไอคอนด้วย JS
 
 def perform_search():
     st.session_state.search_query = st.session_state.search_input
@@ -1231,7 +1151,7 @@ if 'selected_date' not in st.session_state: st.session_state.selected_date = Non
 if 'print_trigger' not in st.session_state: st.session_state.print_trigger = False
 if 'print_performance_trigger' not in st.session_state: st.session_state.print_performance_trigger = False
 
-# --- START OF ORIGINAL LAYOUT ---
+# --- START OF CHANGE: Controls moved to Sidebar with Form ---
 with st.sidebar:
     st.markdown('<div class="sidebar-title">ค้นหาข้อมูล</div>', unsafe_allow_html=True)
     
@@ -1246,11 +1166,9 @@ with st.sidebar:
     if not results_df.empty:
         available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
         if available_years:
-            if 'selected_year' not in st.session_state or st.session_state.selected_year not in available_years:
+            if st.session_state.selected_year not in available_years:
                 st.session_state.selected_year = available_years[0]
-            
-            year_idx = available_years.index(st.session_state.selected_year) if st.session_state.selected_year in available_years else 0
-            
+            year_idx = available_years.index(st.session_state.selected_year)
             st.selectbox("เลือกปี พ.ศ.", options=available_years, index=year_idx, format_func=lambda y: f"พ.ศ. {y}", key="year_select", on_change=handle_year_change, label_visibility="collapsed")
         
             person_year_df = results_df[results_df["Year"] == st.session_state.selected_year]
@@ -1273,6 +1191,8 @@ with st.sidebar:
     else:
         st.button("พิมพ์รายงานสุขภาพ", use_container_width=True, disabled=True)
         st.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True, disabled=True)
+
+# --- END OF CHANGE ---
 
 # --- Main Page ---
 if "person_row" not in st.session_state or not st.session_state.get("selected_row_found", False):
@@ -1310,7 +1230,9 @@ else:
         report_html_data = generate_printable_report(person_data, all_person_history_df)
         escaped_html = json.dumps(report_html_data)
         
+        # --- START OF FIX: Use a unique ID for the iframe to allow repeated printing ---
         iframe_id = f"print-iframe-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
+        # --- END OF FIX ---
         
         print_component = f"""
         <iframe id="{iframe_id}" style="display:none;"></iframe>
@@ -1342,7 +1264,9 @@ else:
         report_html_data = generate_performance_report_html(person_data, all_person_history_df)
         escaped_html = json.dumps(report_html_data)
         
+        # --- START OF FIX: Use a unique ID for the iframe to allow repeated printing ---
         iframe_id = f"print-perf-iframe-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
+        # --- END OF FIX ---
         
         print_component = f"""
         <iframe id="{iframe_id}" style="display:none;"></iframe>
