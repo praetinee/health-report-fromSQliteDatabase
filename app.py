@@ -199,7 +199,6 @@ def interpret_ekg(val):
     if any(x in val.lower() for x in ["ผิดปกติ", "abnormal", "arrhythmia"]): return f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
     return val
 
-# --- START OF FIX ---
 def hepatitis_b_advice(hbsag, hbsab, hbcab):
     """Generates advice based on Hepatitis B panel results and returns a status."""
     hbsag, hbsab, hbcab = hbsag.lower(), hbsab.lower(), hbcab.lower()
@@ -212,7 +211,6 @@ def hepatitis_b_advice(hbsag, hbsab, hbcab):
     if all(x == "negative" for x in [hbsag, hbsab, hbcab]):
         return "ไม่มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี ควรปรึกษาแพทย์เพื่อรับวัคซีน", "no_immune"
     return "ไม่สามารถสรุปผลชัดเจน แนะนำให้พบแพทย์เพื่อประเมินซ้ำ", "unclear"
-# --- END OF FIX ---
 
 # --- Data Loading ---
 @st.cache_data(ttl=600)
@@ -295,7 +293,6 @@ def interpret_cxr(val):
     if any(keyword in val.lower() for keyword in ["ผิดปกติ", "ฝ้า", "รอย", "abnormal", "infiltrate", "lesion"]): return f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
     return val
 
-# --- START OF CHANGE: New function to interpret BMI with updated terminology ---
 def interpret_bmi(bmi):
     """Interprets BMI value and returns a description string."""
     if bmi is None:
@@ -311,9 +308,7 @@ def interpret_bmi(bmi):
     elif bmi >= 30:
         return "เข้าเกณฑ์โรคอ้วนอันตราย"
     return ""
-# --- END OF CHANGE ---
 
-# --- START OF CHANGE: New Header and Vitals Design ---
 def display_common_header(person_data):
     """Displays the new report header with integrated personal info and vitals cards."""
     
@@ -413,9 +408,6 @@ def display_common_header(person_data):
     </div>
     """, unsafe_allow_html=True)
 
-# --- END OF CHANGE ---
-
-# --- START OF CHANGE: New Centralized and Adaptive CSS ---
 def inject_custom_css():
     st.markdown("""
     <style>
@@ -496,21 +488,30 @@ def inject_custom_css():
         }
 
         /* --- START OF SIDEBAR TOGGLE FIX (EMOJI VERSION) --- */
-        /* Hide the broken icon text */
-        button[data-testid="stSidebarNav-toggleButton"] span {
-            display: none !important;
+        button[data-testid="stSidebarNav-toggleButton"] {
+            position: relative !important;
+            width: 2.5rem !important;
+            height: 2.5rem !important;
         }
-        /* Add our custom emoji */
+        /* Hide the broken icon text completely */
+        button[data-testid="stSidebarNav-toggleButton"] span {
+            visibility: hidden !important;
+            font-size: 0 !important;
+        }
+        /* Add our custom emoji and center it */
         button[data-testid="stSidebarNav-toggleButton"]::after {
             content: '◀️'; /* Emoji for when sidebar is open */
-            font-size: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            visibility: visible !important;
+            position: absolute !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            font-size: 18px !important;
+            color: inherit !important;
         }
         /* Change emoji when sidebar is collapsed */
         div[data-testid="stSidebarNav"][aria-expanded="false"] + section button[data-testid="stSidebarNav-toggleButton"]::after {
-            content: '▶️'; /* Emoji for when sidebar is closed */
+            content: '▶️' !important; /* Emoji for when sidebar is closed */
         }
         /* --- END OF SIDEBAR TOGGLE FIX --- */
 
@@ -734,7 +735,6 @@ def inject_custom_css():
         /* --- END OF RESPONSIVE FIX --- */
     </style>
     """, unsafe_allow_html=True)
-# --- END OF CHANGE ---
 
 def render_vision_details_table(person_data):
     """
@@ -1338,3 +1338,4 @@ else:
         """
         st.components.v1.html(print_component, height=0, width=0)
         st.session_state.print_performance_trigger = False
+" and I want to "เห็นด้วยกับแผนนี้ พร้อมที่จะสร้างโค้ด app.py ที่อัปเดตแล้วให้ทันที
