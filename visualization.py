@@ -132,8 +132,18 @@ def plot_historical_trends(history_df):
                 fig = px.line(df_plot, x='Year', y=keys, title=title, markers=True)
                 bands_key = keys
 
+            # --- START OF FIX: ตรวจสอบและกำหนด yaxis.range ก่อนเพิ่มแถบสี ---
+            if fig.layout.yaxis.range is None:
+                # หากไม่มีข้อมูล ให้กำหนดช่วงแกน Y เริ่มต้นจากแถบสี
+                if bands_key in metric_bands and metric_bands[bands_key]:
+                    min_range = min(start for start, end, color in metric_bands[bands_key].values())
+                    max_range = max(end for start, end, color in metric_bands[bands_key].values())
+                    padding = (max_range - min_range) * 0.1
+                    fig.update_layout(yaxis_range=[min_range - padding, max_range + padding])
+            # --- END OF FIX ---
+
             # เพิ่มแถบสีลงในกราฟ
-            if bands_key in metric_bands:
+            if bands_key in metric_bands and fig.layout.yaxis.range is not None:
                 for name, (start, end, color) in metric_bands[bands_key].items():
                     fig.add_shape(type="rect", xref="paper", yref="y", x0=0, y0=start, x1=1, y1=end,
                                   fillcolor=color, opacity=0.2, layer="below", line_width=0)
