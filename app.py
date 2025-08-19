@@ -687,6 +687,31 @@ def inject_custom_css():
             border-color: rgba(255, 193, 7, 0.2);
         }
         /* --- END OF FIX --- */
+
+        /* --- START OF CHANGE: Added Responsive Design for Mobile --- */
+        @media (max-width: 768px) {
+            .report-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 1.5rem;
+            }
+            .header-left h2 {
+                font-size: 1.5rem;
+            }
+            .info-card {
+                min-width: 0;
+                width: 100%;
+                grid-template-columns: 1fr; /* Stack info items */
+            }
+            .vitals-grid {
+                grid-template-columns: 1fr; /* Stack vital cards */
+            }
+            /* Adjust columns in main report to stack vertically */
+            div[data-testid="stHorizontalBlock"] {
+                flex-direction: column;
+            }
+        }
+        /* --- END OF CHANGE --- */
     </style>
     """, unsafe_allow_html=True)
 # --- END OF CHANGE ---
