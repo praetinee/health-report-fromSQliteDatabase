@@ -36,7 +36,7 @@ def normalize_thai_date(date_str):
             if year > 2500: year -= 543
             dt = datetime(year, month, day)
             return f"{dt.day} {THAI_MONTHS_GLOBAL[dt.month]} {dt.year + 543}"
-        if re.match(r'^\d{1,2}-\d{1,2}-\d{4}$', s):
+        if re.match(r'^\d{1,2}-\d{1,2}/\d{4}$', s):
             day, month, year = map(int, s.split('-'))
             if year > 2500: year -= 543
             dt = datetime(year, month, day)
@@ -691,6 +691,66 @@ def inject_custom_css():
     """, unsafe_allow_html=True)
 # --- END OF CHANGE ---
 
+# --- START OF NEW CODE: Custom Sidebar Toggle Button ---
+def custom_sidebar_toggle():
+    st.markdown("""
+        <style>
+            /* ซ่อนปุ่มลูกศรเดิม */
+            [data-testid="collapsedControl"] svg {
+                display: none;
+            }
+
+            /* ปรับขนาดปุ่มให้รองรับข้อความ */
+            [data-testid="collapsedControl"] {
+                width: auto !important;
+                padding: 4px 12px !important;
+                font-size: 14px !important;
+                background: #f0f2f6;
+                border-radius: 8px;
+                border: 1px solid #dcdcdc;
+                color: #333;
+            }
+        </style>
+
+        <script>
+        // ใช้ setTimeout เพื่อให้แน่ใจว่า DOM พร้อมใช้งานแล้ว
+        setTimeout(() => {
+            const btn = window.parent.document.querySelector('[data-testid="collapsedControl"]');
+            const sidebar = window.parent.document.querySelector('section[data-testid="stSidebar"]');
+
+            if (!btn || !sidebar) return;
+
+            // ฟังก์ชันสำหรับอัปเดตข้อความ
+            function updateSidebarText() {
+                // ตรวจสอบสถานะของ sidebar จาก attribute 'aria-expanded' ซึ่งน่าเชื่อถือกว่า
+                const isExpanded = sidebar.getAttribute('aria-expanded') === 'true';
+                if (isExpanded) {
+                    btn.innerText = 'ปิดเมนู';
+                } else {
+                    btn.innerText = 'เปิดเมนูค้นหา';
+                }
+            }
+
+            // สังเกตการเปลี่ยนแปลง attribute ของ sidebar
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach(mutation => {
+                    if (mutation.attributeName === 'aria-expanded') {
+                        updateSidebarText();
+                    }
+                });
+            });
+
+            observer.observe(sidebar, { attributes: true });
+
+            // ตั้งค่าข้อความเริ่มต้น
+            updateSidebarText();
+
+        }, 500); // หน่วงเวลา 500ms
+        </script>
+    """, unsafe_allow_html=True)
+# --- END OF NEW CODE ---
+
+
 def render_vision_details_table(person_data):
     """
     Renders a clearer, single-column result table for the vision test with corrected logic.
@@ -1114,7 +1174,9 @@ if df is None:
 
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
+# --- Call CSS and JS injection functions ---
 inject_custom_css()
+custom_sidebar_toggle() # <-- โค้ดใหม่สำหรับปุ่ม Sidebar
 
 def perform_search():
     st.session_state.search_query = st.session_state.search_input
