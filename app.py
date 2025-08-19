@@ -1305,4 +1305,3 @@ else:
         """
         st.components.v1.html(print_component, height=0, width=0)
         st.session_state.print_performance_trigger = False
-" and I want to "ทำไมโค้ดที่ให้มาล่าสุดถึงได้มีแค่ 2000 กว่าบรรทัด ทั้งที่โค้ดเดิมมีเกือบ 3000 บรรทั
