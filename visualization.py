@@ -150,7 +150,7 @@ def plot_historical_trends(history_df):
                     # เพิ่มคำอธิบายก็ต่อเมื่อมีพื้นที่เพียงพอ
                     if abs(end - start) > (fig.layout.yaxis.range[1] - fig.layout.yaxis.range[0]) * 0.1:
                          fig.add_annotation(x=0.98, y=(start+end)/2, text=name, showarrow=False,
-                                           xref="paper", yref="y", font=dict(size=10, color="gray"),
+                                           xref="paper", yref="y", font=dict(size=10, color="gray", family="Sarabun"),
                                            xanchor="right")
 
             fig.update_traces(connectgaps=False)
@@ -279,7 +279,7 @@ def plot_audiogram(person_data):
         fig.add_shape(type="rect", xref="paper", yref="y", x0=0, y0=start, x1=1, y1=end,
                       fillcolor=color, opacity=0.2, layer="below", line_width=0)
         fig.add_annotation(x=0.98, y=(start+end)/2, text=name, showarrow=False,
-                           xref="paper", yref="y", font=dict(size=10, color="gray"))
+                           xref="paper", yref="y", font=dict(size=10, color="gray", family="Sarabun"))
 
     fig.add_trace(go.Scatter(
         x=freqs, y=r_vals, mode='lines+markers', name='หูขวา (Right)',
