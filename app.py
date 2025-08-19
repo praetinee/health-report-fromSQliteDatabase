@@ -199,6 +199,7 @@ def interpret_ekg(val):
     if any(x in val.lower() for x in ["ผิดปกติ", "abnormal", "arrhythmia"]): return f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
     return val
 
+# --- START OF FIX ---
 def hepatitis_b_advice(hbsag, hbsab, hbcab):
     """Generates advice based on Hepatitis B panel results and returns a status."""
     hbsag, hbsab, hbcab = hbsag.lower(), hbsab.lower(), hbcab.lower()
@@ -211,6 +212,7 @@ def hepatitis_b_advice(hbsag, hbsab, hbcab):
     if all(x == "negative" for x in [hbsag, hbsab, hbcab]):
         return "ไม่มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี ควรปรึกษาแพทย์เพื่อรับวัคซีน", "no_immune"
     return "ไม่สามารถสรุปผลชัดเจน แนะนำให้พบแพทย์เพื่อประเมินซ้ำ", "unclear"
+# --- END OF FIX ---
 
 # --- Data Loading ---
 @st.cache_data(ttl=600)
@@ -293,6 +295,7 @@ def interpret_cxr(val):
     if any(keyword in val.lower() for keyword in ["ผิดปกติ", "ฝ้า", "รอย", "abnormal", "infiltrate", "lesion"]): return f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
     return val
 
+# --- START OF CHANGE: New function to interpret BMI with updated terminology ---
 def interpret_bmi(bmi):
     """Interprets BMI value and returns a description string."""
     if bmi is None:
@@ -308,10 +311,13 @@ def interpret_bmi(bmi):
     elif bmi >= 30:
         return "เข้าเกณฑ์โรคอ้วนอันตราย"
     return ""
+# --- END OF CHANGE ---
 
+# --- START OF CHANGE: New Header and Vitals Design ---
 def display_common_header(person_data):
     """Displays the new report header with integrated personal info and vitals cards."""
     
+    # --- Prepare data for display ---
     name = person_data.get('ชื่อ-สกุล', '-')
     age = str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person_data.get('อายุ', '-')
     sex = person_data.get('เพศ', '-')
@@ -336,6 +342,7 @@ def display_common_header(person_data):
     height_val = f"{height}" if height is not None else "-"
     waist_val = f"{person_data.get('รอบเอว', '-')}"
 
+    # --- BMI Calculation and Interpretation ---
     bmi_val_str = "-"
     bmi_desc = ""
     if weight is not None and height is not None and height > 0:
@@ -343,6 +350,8 @@ def display_common_header(person_data):
         bmi_val_str = f"{bmi:.1f} kg/m²"
         bmi_desc = interpret_bmi(bmi)
 
+
+    # --- Render HTML ---
     st.markdown(f"""
     <div class="report-header">
         <div class="header-left">
@@ -404,11 +413,15 @@ def display_common_header(person_data):
     </div>
     """, unsafe_allow_html=True)
 
+# --- END OF CHANGE ---
+
+# --- START OF CHANGE: New Centralized and Adaptive CSS ---
 def inject_custom_css():
     st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap');
         
+        /* --- Color Variables for Consistency --- */
         :root {
             --abnormal-bg-color: rgba(220, 53, 69, 0.1);
             --abnormal-text-color: #C53030;
@@ -419,26 +432,47 @@ def inject_custom_css():
             --neutral-text-color: #4A5568;
         }
         
+        /* --- General & Typography --- */
         html, body, [class*="st-"], .st-emotion-cache-10trblm, h1, h2, h3, h4, h5, h6 {
             font-family: 'Sarabun', sans-serif !important; 
         }
-        h4 {
+        .main {
+             background-color: var(--background-color);
+             color: var(--text-color);
+        }
+        h4 { /* For section headers */
             font-size: 1.25rem;
             font-weight: 600;
             border-bottom: 2px solid var(--border-color);
             padding-bottom: 10px;
             margin-top: 40px;
             margin-bottom: 24px;
+            color: var(--text-color);
         }
         h5.section-subtitle {
             font-weight: 600;
             margin-top: 1.5rem;
             margin-bottom: 0.75rem;
+            color: var(--text-color);
             opacity: 0.7;
         }
 
+        /* --- Sidebar Controls --- */
+        [data-testid="stSidebar"] {
+            background-color: var(--secondary-background-color);
+        }
+        [data-testid="stSidebar"] .stTextInput input {
+            border-color: var(--border-color);
+        }
+        .sidebar-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+        /* --- START OF FIX --- */
         .stButton>button {
-            background-color: #00796B;
+            background-color: #00796B; /* Use the same teal as section headers */
             color: white !important;
             border-radius: 8px;
             border: none;
@@ -449,7 +483,7 @@ def inject_custom_css():
             transition: background-color 0.2s, transform 0.2s;
         }
         .stButton>button:hover {
-            background-color: #00695C;
+            background-color: #00695C; /* A slightly darker teal for hover */
             color: white !important;
             transform: translateY(-1px);
         }
@@ -461,15 +495,18 @@ def inject_custom_css():
             box-shadow: none;
             cursor: not-allowed;
         }
+        /* --- END OF FIX --- */
 
+
+        /* --- New Report Header & Vitals --- */
         .report-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
             margin-bottom: 2rem;
         }
-        .header-left h2 { font-size: 2rem; margin-bottom: 0.25rem;}
-        .header-left p { opacity: 0.7; margin: 0; }
+        .header-left h2 { color: var(--text-color); font-size: 2rem; margin-bottom: 0.25rem;}
+        .header-left p { color: var(--text-color); opacity: 0.7; margin: 0; }
         .info-card {
             background-color: var(--secondary-background-color);
             border-radius: 8px;
@@ -480,8 +517,8 @@ def inject_custom_css():
             min-width: 400px;
             border: 1px solid var(--border-color);
         }
-        .info-card-item { font-size: 0.9rem; }
-        .info-card-item span { opacity: 0.7; margin-right: 8px; }
+        .info-card-item { font-size: 0.9rem; color: var(--text-color); }
+        .info-card-item span { color: var(--text-color); opacity: 0.7; margin-right: 8px; }
 
         .vitals-grid {
             display: grid;
@@ -501,10 +538,45 @@ def inject_custom_css():
         }
         .vital-icon svg { color: var(--primary-color); }
         .vital-data { display: flex; flex-direction: column; }
-        .vital-label { font-size: 0.8rem; opacity: 0.7; }
-        .vital-value { font-size: 1.2rem; font-weight: 700; line-height: 1.2; white-space: nowrap;}
-        .vital-sub-value { font-size: 0.8rem; opacity: 0.6; }
+        .vital-label { font-size: 0.8rem; color: var(--text-color); opacity: 0.7; }
+        .vital-value { font-size: 1.2rem; font-weight: 700; color: var(--text-color); line-height: 1.2; white-space: nowrap;}
+        .vital-sub-value { font-size: 0.8rem; color: var(--text-color); opacity: 0.6; }
 
+        /* --- Styled Tabs --- */
+        div[data-testid="stTabs"] {
+            border-bottom: 2px solid var(--border-color);
+        }
+        div[data-testid="stTabs"] button {
+            background-color: transparent;
+            color: var(--text-color);
+            opacity: 0.7;
+            border-radius: 8px 8px 0 0;
+            margin: 0;
+            padding: 10px 20px;
+            border: none;
+            border-bottom: 2px solid transparent;
+        }
+        div[data-testid="stTabs"] button[aria-selected="true"] {
+            background-color: var(--secondary-background-color);
+            color: var(--primary-color);
+            font-weight: 600;
+            opacity: 1;
+            border: 2px solid var(--border-color);
+            border-bottom: 2px solid var(--secondary-background-color);
+            margin-bottom: -2px;
+        }
+        
+        /* --- Containers for sections --- */
+        div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] > div.st-emotion-cache-1jicfl2.e1f1d6gn3 > div {
+             background-color: var(--secondary-background-color);
+             border: 1px solid var(--border-color);
+             border-radius: 12px;
+             padding: 24px;
+             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+
+        /* --- Lab Result Tables --- */
+        .table-container { overflow-x: auto; }
         .lab-table, .info-detail-table {
             width: 100%;
             border-collapse: collapse;
@@ -512,16 +584,22 @@ def inject_custom_css():
         }
         .lab-table th, .lab-table td, .info-detail-table th, .info-detail-table td {
             padding: 12px 15px;
+            border: 1px solid transparent;
             border-bottom: 1px solid var(--border-color);
         }
         .lab-table th, .info-detail-table th {
             font-weight: 600;
             text-align: left;
+            color: var(--text-color);
             opacity: 0.7;
+        }
+        .lab-table thead th {
+            background-color: rgba(128, 128, 128, 0.1);
         }
         .lab-table td:nth-child(2) {
             text-align: center;
         }
+        .lab-table tbody tr:hover { background-color: rgba(128, 128, 128, 0.1); }
         .lab-table .abnormal-row {
             background-color: var(--abnormal-bg-color);
             color: var(--abnormal-text-color);
@@ -529,22 +607,22 @@ def inject_custom_css():
         }
         .info-detail-table th { width: 35%; }
         
+        /* --- Recommendation Container --- */
         .recommendation-container {
             border-left: 5px solid var(--primary-color);
             padding: 1.5rem;
             border-radius: 0 8px 8px 0;
+            background-color: var(--background-color);
         }
         .recommendation-container ul { padding-left: 20px; }
         .recommendation-container li { margin-bottom: 0.5rem; }
 
+        /* --- Performance Report Specific Styles --- */
         .status-summary-card {
             padding: 1rem; 
             border-radius: 8px; 
             text-align: center; 
             height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
         }
         .status-normal-bg { background-color: var(--normal-bg-color); }
         .status-abnormal-bg { background-color: var(--abnormal-bg-color); }
@@ -553,6 +631,7 @@ def inject_custom_css():
 
         .status-summary-card p {
             margin: 0;
+            color: var(--text-color);
         }
         .vision-table {
             width: 100%; border-collapse: collapse; font-size: 14px;
@@ -568,9 +647,11 @@ def inject_custom_css():
             display: inline-block; padding: 6px 16px; border-radius: 16px;
             font-size: 13px; font-weight: bold; border: 1px solid transparent;
         }
+        /* --- START OF FIX --- */
         .vision-normal { background-color: var(--normal-bg-color); color: #2E7D32; }
         .vision-abnormal { background-color: var(--abnormal-bg-color); color: #C62828; }
         .vision-not-tested { background-color: var(--neutral-bg-color); color: #455A64; }
+        /* --- END OF FIX --- */
         .styled-df-table {
             width: 100%; border-collapse: collapse; font-family: 'Sarabun', sans-serif !important;
             font-size: 14px;
@@ -579,32 +660,36 @@ def inject_custom_css():
         .styled-df-table thead th { background-color: var(--secondary-background-color); opacity: 0.7; font-weight: bold; text-align: center; vertical-align: middle; }
         .styled-df-table tbody td { text-align: center; }
         .styled-df-table tbody td:first-child { text-align: left; }
+        .styled-df-table tbody tr:hover { background-color: rgba(128, 128, 128, 0.1); }
         .hearing-table { table-layout: fixed; }
         
+        /* --- START OF FIX --- */
         .custom-advice-box {
             padding: 1rem;
             border-radius: 8px;
             margin-top: 1rem;
             border: 1px solid transparent;
-            font-weight: 600;
+            font-weight: 600; /* Make text bolder */
         }
         .immune-box {
             background-color: var(--normal-bg-color);
-            color: #2E7D32;
+            color: #2E7D32; /* Darker green for better contrast */
             border-color: rgba(40, 167, 69, 0.2);
         }
         .no-immune-box {
             background-color: var(--abnormal-bg-color);
-            color: #C62828;
+            color: #C62828; /* Darker red for better contrast */
             border-color: rgba(220, 53, 69, 0.2);
         }
         .warning-box {
             background-color: var(--warning-bg-color);
-            color: #AF6C00;
+            color: #AF6C00; /* Darker yellow/orange for better contrast */
             border-color: rgba(255, 193, 7, 0.2);
         }
+        /* --- END OF FIX --- */
     </style>
     """, unsafe_allow_html=True)
+# --- END OF CHANGE ---
 
 def render_vision_details_table(person_data):
     """
@@ -714,16 +799,16 @@ def display_performance_report_hearing(person_data, all_person_history_df):
     with col1:
         st.markdown(f"""
         <div class="status-summary-card {get_summary_class(summary_r_raw)}">
-            <p><b>หูขวา (Right Ear)</b></p>
-            <p>{summary_r_raw}</p>
+            <p style="font-size: 1rem; font-weight: bold;">หูขวา (Right Ear)</p>
+            <p style="font-size: 1.2rem; font-weight: bold; margin-top: 0.25rem;">{summary_r_raw}</p>
         </div>
         """, unsafe_allow_html=True)
 
     with col2:
         st.markdown(f"""
         <div class="status-summary-card {get_summary_class(summary_l_raw)}">
-            <p><b>หูซ้าย (Left Ear)</b></p>
-            <p>{summary_l_raw}</p>
+            <p style="font-size: 1rem; font-weight: bold;">หูซ้าย (Left Ear)</p>
+            <p style="font-size: 1.2rem; font-weight: bold; margin-top: 0.25rem;">{summary_l_raw}</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -811,6 +896,8 @@ def display_performance_report_lung(person_data):
                 return f"{val:{format_spec}}{unit}"
             return "-"
 
+        # --- START OF FIX ---
+        # Build HTML string in a single f-string to prevent concatenation issues.
         table_html = f"""
         <table class="styled-df-table">
             <thead>
@@ -844,6 +931,7 @@ def display_performance_report_lung(person_data):
         </table>
         """
         st.markdown(table_html, unsafe_allow_html=True)
+        # --- END OF FIX ---
 
     with side_col:
         st.markdown("<h5 class='section-subtitle'>ผลการแปลความหมาย</h5>", unsafe_allow_html=True)
@@ -995,6 +1083,7 @@ def display_main_report(person_data, all_person_history_df):
                 <tbody><tr><td style='text-align: center;'>{hbsag}</td><td style='text-align: center;'>{hbsab}</td><td style='text-align: center;'>{hbcab}</td></tr></tbody>
             </table></div>""", unsafe_allow_html=True)
             
+            # --- START OF FIX ---
             if not (is_empty(hbsag) and is_empty(hbsab) and is_empty(hbcab)):
                 advice, status = hepatitis_b_advice(hbsag, hbsab, hbcab)
                 status_class = ""
@@ -1010,6 +1099,7 @@ def display_main_report(person_data, all_person_history_df):
                     {advice}
                 </div>
                 """, unsafe_allow_html=True)
+            # --- END OF FIX ---
 
     with st.container(border=True):
         render_section_header("สรุปและคำแนะนำการปฏิบัติตัว (Summary & Recommendations)")
@@ -1058,7 +1148,10 @@ if 'search_input' not in st.session_state: st.session_state.search_input = ""
 if 'search_result' not in st.session_state: st.session_state.search_result = pd.DataFrame()
 if 'selected_year' not in st.session_state: st.session_state.selected_year = None
 if 'selected_date' not in st.session_state: st.session_state.selected_date = None
+if 'print_trigger' not in st.session_state: st.session_state.print_trigger = False
+if 'print_performance_trigger' not in st.session_state: st.session_state.print_performance_trigger = False
 
+# --- START OF CHANGE: Controls moved to Sidebar with Form ---
 with st.sidebar:
     st.markdown('<div class="sidebar-title">ค้นหาข้อมูล</div>', unsafe_allow_html=True)
     
@@ -1091,54 +1184,17 @@ with st.sidebar:
     st.markdown("---")
     st.markdown('<div class="sidebar-title" style="font-size: 1.2rem; margin-top: 1rem;">พิมพ์รายงาน</div>', unsafe_allow_html=True)
     if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
-        person_data = st.session_state.person_row
-        all_person_history_df = st.session_state.search_result
-
         if st.button("พิมพ์รายงานสุขภาพ", use_container_width=True):
-            report_html_data = generate_printable_report(person_data, all_person_history_df)
-            escaped_html = json.dumps(report_html_data)
-            print_js = f"""
-                (function() {{
-                    const htmlContent = {escaped_html};
-                    const printWindow = window.open('', '_blank');
-                    if (printWindow) {{
-                        printWindow.document.write(htmlContent);
-                        printWindow.document.close();
-                        setTimeout(function() {{
-                            printWindow.focus();
-                            printWindow.print();
-                        }}, 500);
-                    }} else {{
-                        alert("Popup blocked. Please allow popups for this site to print the report.");
-                    }}
-                }})();
-            """
-            streamlit_js_eval(js_expressions=print_js, key='print_health_report')
-
+             st.session_state.print_trigger = True
         if st.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True):
-            report_html_data = generate_performance_report_html(person_data, all_person_history_df)
-            escaped_html = json.dumps(report_html_data)
-            print_js = f"""
-                (function() {{
-                    const htmlContent = {escaped_html};
-                    const printWindow = window.open('', '_blank');
-                    if (printWindow) {{
-                        printWindow.document.write(htmlContent);
-                        printWindow.document.close();
-                        setTimeout(function() {{
-                            printWindow.focus();
-                            printWindow.print();
-                        }}, 500);
-                    }} else {{
-                        alert("Popup blocked. Please allow popups for this site to print the report.");
-                    }}
-                }})();
-            """
-            streamlit_js_eval(js_expressions=print_js, key='print_performance_report')
+            st.session_state.print_performance_trigger = True
     else:
         st.button("พิมพ์รายงานสุขภาพ", use_container_width=True, disabled=True)
         st.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True, disabled=True)
 
+# --- END OF CHANGE ---
+
+# --- Main Page ---
 if "person_row" not in st.session_state or not st.session_state.get("selected_row_found", False):
     st.info("กรุณาค้นหาและเลือกผลตรวจจากเมนูด้านข้าง")
 else:
@@ -1168,3 +1224,66 @@ else:
                     display_performance_report(person_data, 'lung')
                 elif page_key == 'main_report':
                     display_main_report(person_data, all_person_history_df)
+
+    # --- Print Logic ---
+    if st.session_state.get("print_trigger", False):
+        report_html_data = generate_printable_report(person_data, all_person_history_df)
+        escaped_html = json.dumps(report_html_data)
+        
+        print_component = f"""
+        <iframe id="print-iframe" style="display:none;"></iframe>
+        <script>
+            (function() {{
+                const iframe = document.getElementById('print-iframe');
+                if (!iframe) return;
+                const iframeDoc = iframe.contentWindow.document;
+                iframeDoc.open();
+                iframeDoc.write({escaped_html});
+                iframeDoc.close();
+                iframe.onload = function() {{
+                    setTimeout(function() {{
+                        try {{
+                            iframe.contentWindow.focus();
+                            iframe.contentWindow.print();
+                        }} catch (e) {{
+                            console.error("Printing failed:", e);
+                            alert("Could not open print dialog.");
+                        }}
+                    }}, 500);
+                }};
+            }})();
+        </script>
+        """
+        st.components.v1.html(print_component, height=0, width=0)
+        st.session_state.print_trigger = False
+
+    if st.session_state.get("print_performance_trigger", False):
+        report_html_data = generate_performance_report_html(person_data, all_person_history_df)
+        escaped_html = json.dumps(report_html_data)
+        
+        print_component = f"""
+        <iframe id="print-perf-iframe" style="display:none;"></iframe>
+        <script>
+            (function() {{
+                const iframe = document.getElementById('print-perf-iframe');
+                if (!iframe) return;
+                const iframeDoc = iframe.contentWindow.document;
+                iframeDoc.open();
+                iframeDoc.write({escaped_html});
+                iframeDoc.close();
+                iframe.onload = function() {{
+                    setTimeout(function() {{
+                        try {{
+                            iframe.contentWindow.focus();
+                            iframe.contentWindow.print();
+                        }} catch (e) {{
+                            console.error("Printing performance report failed:", e);
+                            alert("Could not open print dialog for performance report.");
+                        }}
+                    }}, 500);
+                }};
+            }})();
+        </script>
+        """
+        st.components.v1.html(print_component, height=0, width=0)
+        st.session_state.print_performance_trigger = False
