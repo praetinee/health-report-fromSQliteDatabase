@@ -132,7 +132,7 @@ def plot_historical_trends(history_df):
                 fig = px.line(df_plot, x='Year', y=keys, title=title, markers=True)
                 bands_key = keys
 
-            # --- START OF FIX: ตรวจสอบและกำหนด yaxis.range ก่อนเพิ่มแถบสี ---
+            # ตรวจสอบและกำหนด yaxis.range ก่อนเพิ่มแถบสี
             if fig.layout.yaxis.range is None:
                 # หากไม่มีข้อมูล ให้กำหนดช่วงแกน Y เริ่มต้นจากแถบสี
                 if bands_key in metric_bands and metric_bands[bands_key]:
@@ -140,7 +140,6 @@ def plot_historical_trends(history_df):
                     max_range = max(end for start, end, color in metric_bands[bands_key].values())
                     padding = (max_range - min_range) * 0.1
                     fig.update_layout(yaxis_range=[min_range - padding, max_range + padding])
-            # --- END OF FIX ---
 
             # เพิ่มแถบสีลงในกราฟ
             if bands_key in metric_bands and fig.layout.yaxis.range is not None:
@@ -150,7 +149,7 @@ def plot_historical_trends(history_df):
                     # เพิ่มคำอธิบายก็ต่อเมื่อมีพื้นที่เพียงพอ
                     if abs(end - start) > (fig.layout.yaxis.range[1] - fig.layout.yaxis.range[0]) * 0.1:
                          fig.add_annotation(x=0.98, y=(start+end)/2, text=name, showarrow=False,
-                                           xref="paper", yref="y", font=dict(size=10, color="gray", family="Sarabun"),
+                                           xref="paper", yref="y", font=dict(size=10, family="Sarabun"),
                                            xanchor="right")
 
             fig.update_traces(connectgaps=False)
@@ -158,7 +157,8 @@ def plot_historical_trends(history_df):
                 yaxis_title=unit, 
                 xaxis_title='ปี พ.ศ.', 
                 legend_title_text='เส้นเลือด' if isinstance(keys, list) else "",
-                font_family="Sarabun"
+                font_family="Sarabun",
+                template="streamlit" # --- CHANGE: ทำให้สีกราฟยืดหยุ่นตามธีม ---
             )
             st.plotly_chart(fig, use_container_width=True)
 
@@ -197,7 +197,7 @@ def plot_gauge_charts(person_data):
                         {'range': [30, 40], 'color': "red"}],
                     'bar': {'color': "darkblue"}
                 }))
-            fig.update_layout(height=250, margin=dict(l=20, r=20, t=40, b=10), font_family="Sarabun")
+            fig.update_layout(height=250, margin=dict(l=20, r=20, t=40, b=10), font_family="Sarabun", template="streamlit")
             st.plotly_chart(fig, use_container_width=True)
             st.markdown(f"<p style='text-align: center; font-weight: bold;'>ผล: {get_bmi_desc(bmi)}</p>", unsafe_allow_html=True)
 
@@ -218,7 +218,7 @@ def plot_gauge_charts(person_data):
                         {'range': [126, 160], 'color': "red"}],
                     'bar': {'color': "darkblue"}
                 }))
-            fig.update_layout(height=250, margin=dict(l=20, r=20, t=40, b=10), font_family="Sarabun")
+            fig.update_layout(height=250, margin=dict(l=20, r=20, t=40, b=10), font_family="Sarabun", template="streamlit")
             st.plotly_chart(fig, use_container_width=True)
             st.markdown(f"<p style='text-align: center; font-weight: bold;'>ผล: {get_fbs_desc(fbs)}</p>", unsafe_allow_html=True)
 
@@ -239,7 +239,7 @@ def plot_gauge_charts(person_data):
                         {'range': [90, 120], 'color': "green"}],
                     'bar': {'color': "darkblue"}
                 }))
-            fig.update_layout(height=250, margin=dict(l=20, r=20, t=40, b=10), font_family="Sarabun")
+            fig.update_layout(height=250, margin=dict(l=20, r=20, t=40, b=10), font_family="Sarabun", template="streamlit")
             st.plotly_chart(fig, use_container_width=True)
             st.markdown(f"<p style='text-align: center; font-weight: bold;'>ผล: {get_gfr_desc(gfr)}</p>", unsafe_allow_html=True)
 
@@ -279,7 +279,7 @@ def plot_audiogram(person_data):
         fig.add_shape(type="rect", xref="paper", yref="y", x0=0, y0=start, x1=1, y1=end,
                       fillcolor=color, opacity=0.2, layer="below", line_width=0)
         fig.add_annotation(x=0.98, y=(start+end)/2, text=name, showarrow=False,
-                           xref="paper", yref="y", font=dict(size=10, color="gray", family="Sarabun"))
+                           xref="paper", yref="y", font=dict(size=10, family="Sarabun"))
 
     fig.add_trace(go.Scatter(
         x=freqs, y=r_vals, mode='lines+markers', name='หูขวา (Right)',
@@ -298,7 +298,7 @@ def plot_audiogram(person_data):
         yaxis=dict(autorange='reversed', range=[-10, 120]),
         xaxis=dict(type='category'),
         legend=dict(x=0.01, y=0.99, bordercolor="black", borderwidth=1),
-        template="plotly_white",
+        template="streamlit",
         margin=dict(l=20, r=20, t=40, b=20),
         font_family="Sarabun"
     )
@@ -363,7 +363,8 @@ def plot_risk_radar(person_data):
             )),
         showlegend=False,
         title="ภาพรวมปัจจัยเสี่ยงโรคไม่ติดต่อเรื้อรัง (NCDs)",
-        font_family="Sarabun"
+        font_family="Sarabun",
+        template="streamlit"
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -399,7 +400,8 @@ def plot_lung_comparison(person_data):
         yaxis_title='ลิตร (L)',
         legend_title="ค่า",
         legend=dict(x=0.01, y=0.99),
-        font_family="Sarabun"
+        font_family="Sarabun",
+        template="streamlit"
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -415,21 +417,22 @@ def display_visualization_tab(person_data, history_df):
     st.markdown("---")
 
     # Section 1: Gauges and Radar
+    st.subheader(f"สรุปผลสุขภาพภาพรวม (ปี พ.ศ. {person_data.get('Year', '')})")
     col1, col2 = st.columns([2, 3])
     with col1:
-        plot_risk_radar(person_data)
+        plot_risk_radar(person_data) # Subheader is now inside the function
     with col2:
-        plot_gauge_charts(person_data)
+        plot_gauge_charts(person_data) # Subheader is now inside the function
 
     st.markdown("---")
     
     # Section 2: Performance graphs
-    st.header("เจาะลึกสมรรถภาพร่างกาย")
+    st.subheader(f"เจาะลึกสมรรถภาพร่างกาย (ปี พ.ศ. {person_data.get('Year', '')})")
     col3, col4 = st.columns(2)
     with col3:
-        plot_audiogram(person_data)
+        plot_audiogram(person_data) # Subheader is now inside the function
     with col4:
-        plot_lung_comparison(person_data)
+        plot_lung_comparison(person_data) # Subheader is now inside the function
     st.markdown("---")
 
     # Section 3: Trends in Expander
