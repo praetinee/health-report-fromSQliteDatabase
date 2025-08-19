@@ -487,31 +487,29 @@ def inject_custom_css():
             cursor: not-allowed;
         }
 
-        /* --- START OF SIDEBAR TOGGLE FIX (EMOJI VERSION) --- */
+        /* --- START OF SIDEBAR TOGGLE FIX (SVG VERSION) --- */
         button[data-testid="stSidebarNav-toggleButton"] {
-            position: relative !important;
-            width: 2.5rem !important;
-            height: 2.5rem !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
         }
         /* Hide the broken icon text completely */
         button[data-testid="stSidebarNav-toggleButton"] span {
-            visibility: hidden !important;
-            font-size: 0 !important;
+            display: none !important;
         }
-        /* Add our custom emoji and center it */
-        button[data-testid="stSidebarNav-toggleButton"]::after {
-            content: '◀️'; /* Emoji for when sidebar is open */
-            visibility: visible !important;
-            position: absolute !important;
-            top: 50% !important;
-            left: 50% !important;
-            transform: translate(-50%, -50%) !important;
-            font-size: 18px !important;
-            color: inherit !important;
+        /* Add our custom SVG icon as a background image */
+        button[data-testid="stSidebarNav-toggleButton"]::before {
+            content: '' !important;
+            display: block !important;
+            width: 20px !important;
+            height: 20px !important;
+            background-repeat: no-repeat !important;
+            background-size: contain !important;
+            background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M14 7l-5 5 5 5V7z'/%3E%3C/svg%3E") !important; /* Left arrow for open state */
         }
-        /* Change emoji when sidebar is collapsed */
-        div[data-testid="stSidebarNav"][aria-expanded="false"] + section button[data-testid="stSidebarNav-toggleButton"]::after {
-            content: '▶️' !important; /* Emoji for when sidebar is closed */
+        /* Change icon when sidebar is collapsed */
+        div[data-testid="stSidebarNav"][aria-expanded="false"] + section button[data-testid="stSidebarNav-toggleButton"]::before {
+            background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M10 17l5-5-5-5v10z'/%3E%3C/svg%3E") !important; /* Right arrow for closed state */
         }
         /* --- END OF SIDEBAR TOGGLE FIX --- */
 
@@ -1338,3 +1336,4 @@ else:
         """
         st.components.v1.html(print_component, height=0, width=0)
         st.session_state.print_performance_trigger = False
+" and I want to "เห็นด้วยกับแผนนี้ พร้อมที่จะสร้างโค้ด app.py ที่อัปเดตแล้วให้ทันท
