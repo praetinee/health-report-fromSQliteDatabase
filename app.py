@@ -1230,11 +1230,15 @@ else:
         report_html_data = generate_printable_report(person_data, all_person_history_df)
         escaped_html = json.dumps(report_html_data)
         
+        # --- START OF FIX: Use a unique ID for the iframe to allow repeated printing ---
+        iframe_id = f"print-iframe-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
+        # --- END OF FIX ---
+        
         print_component = f"""
-        <iframe id="print-iframe" style="display:none;"></iframe>
+        <iframe id="{iframe_id}" style="display:none;"></iframe>
         <script>
             (function() {{
-                const iframe = document.getElementById('print-iframe');
+                const iframe = document.getElementById('{iframe_id}');
                 if (!iframe) return;
                 const iframeDoc = iframe.contentWindow.document;
                 iframeDoc.open();
@@ -1247,7 +1251,6 @@ else:
                             iframe.contentWindow.print();
                         }} catch (e) {{
                             console.error("Printing failed:", e);
-                            alert("Could not open print dialog.");
                         }}
                     }}, 500);
                 }};
@@ -1261,11 +1264,15 @@ else:
         report_html_data = generate_performance_report_html(person_data, all_person_history_df)
         escaped_html = json.dumps(report_html_data)
         
+        # --- START OF FIX: Use a unique ID for the iframe to allow repeated printing ---
+        iframe_id = f"print-perf-iframe-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
+        # --- END OF FIX ---
+        
         print_component = f"""
-        <iframe id="print-perf-iframe" style="display:none;"></iframe>
+        <iframe id="{iframe_id}" style="display:none;"></iframe>
         <script>
             (function() {{
-                const iframe = document.getElementById('print-perf-iframe');
+                const iframe = document.getElementById('{iframe_id}');
                 if (!iframe) return;
                 const iframeDoc = iframe.contentWindow.document;
                 iframeDoc.open();
@@ -1278,7 +1285,6 @@ else:
                             iframe.contentWindow.print();
                         }} catch (e) {{
                             console.error("Printing performance report failed:", e);
-                            alert("Could not open print dialog for performance report.");
                         }}
                     }}, 500);
                 }};
