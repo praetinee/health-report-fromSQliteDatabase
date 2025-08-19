@@ -487,33 +487,6 @@ def inject_custom_css():
             cursor: not-allowed;
         }
 
-        /* --- START OF SIDEBAR TOGGLE FIX (SVG VERSION) --- */
-        button[data-testid="stSidebarNav-toggleButton"] {
-            display: flex !important;
-            justify-content: center !important;
-            align-items: center !important;
-        }
-        /* Hide the broken icon text completely */
-        button[data-testid="stSidebarNav-toggleButton"] span {
-            display: none !important;
-        }
-        /* Add our custom SVG icon as a background image */
-        button[data-testid="stSidebarNav-toggleButton"]::before {
-            content: '' !important;
-            display: block !important;
-            width: 20px !important;
-            height: 20px !important;
-            background-repeat: no-repeat !important;
-            background-size: contain !important;
-            background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M14 7l-5 5 5 5V7z'/%3E%3C/svg%3E") !important; /* Left arrow for open state */
-        }
-        /* Change icon when sidebar is collapsed */
-        div[data-testid="stSidebarNav"][aria-expanded="false"] + section button[data-testid="stSidebarNav-toggleButton"]::before {
-            background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M10 17l5-5-5-5v10z'/%3E%3C/svg%3E") !important; /* Right arrow for closed state */
-        }
-        /* --- END OF SIDEBAR TOGGLE FIX --- */
-
-
         /* --- New Report Header & Vitals --- */
         .report-header {
             display: flex;
@@ -1332,3 +1305,4 @@ else:
         """
         st.components.v1.html(print_component, height=0, width=0)
         st.session_state.print_performance_trigger = False
+" and I want to "ทำไมโค้ดที่ให้มาล่าสุดถึงได้มีแค่ 2000 กว่าบรรทัด ทั้งที่โค้ดเดิมมีเกือบ 3000 บรรทั
