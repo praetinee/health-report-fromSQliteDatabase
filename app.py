@@ -707,47 +707,66 @@ def inject_custom_css():
     </style>
     """, unsafe_allow_html=True)
 
-# --- START: โค้ดสำหรับแก้ไขไอคอน Sidebar ---
-def inject_sidebar_fix_css():
+# --- START: โค้ดสำหรับแก้ไขไอคอน Sidebar ด้วย JavaScript ---
+def inject_sidebar_fix_js():
     """
-    Injects highly specific CSS to override Streamlit's default sidebar collapse button icon.
-    This method avoids using JavaScript.
+    Injects JavaScript to find and replace the sidebar collapse button's icon.
+    This method is robust against Streamlit's dynamic UI rendering.
     """
-    st.markdown("""
-    <style>
-        /* Prepare the button for the pseudo-element */
-        [data-testid="stSidebarNavCollapseButton"] {
-            position: relative !important;
-        }
+    js_code = """
+    <script>
+        const observer = new MutationObserver((mutations, obs) => {
+            const button = document.querySelector('[data-testid="stSidebarNavCollapseButton"]');
+            if (button) {
+                const updateIcon = () => {
+                    const isExpanded = button.getAttribute('aria-expanded') === 'true';
+                    const rightArrowSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
+                    const leftArrowSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>`;
+                    
+                    // Use a specific container for our icon to avoid conflicts
+                    let iconContainer = button.querySelector('.custom-icon-container');
+                    if (!iconContainer) {
+                        // Hide the original broken content
+                        const originalSpan = button.querySelector('span');
+                        if (originalSpan) {
+                            originalSpan.style.display = 'none';
+                        }
+                        // Create our container
+                        iconContainer = document.createElement('span');
+                        iconContainer.className = 'custom-icon-container';
+                        button.appendChild(iconContainer);
+                    }
+                    
+                    iconContainer.innerHTML = isExpanded ? leftArrowSvg : rightArrowSvg;
+                };
 
-        /* Hide the original, broken icon/text by making it invisible */
-        [data-testid="stSidebarNavCollapseButton"] > span {
-            visibility: hidden !important;
-        }
+                // Run it once on discovery
+                updateIcon();
 
-        /* Create the new icon using a ::before pseudo-element */
-        [data-testid="stSidebarNavCollapseButton"]::before {
-            content: '' !important;
-            display: block !important;
-            position: absolute !important;
-            top: 50% !important;
-            left: 50% !important;
-            transform: translate(-50%, -50%) !important;
-            width: 24px !important;
-            height: 24px !important;
-            /* Default icon: left arrow (for expanded state) */
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='15 18 9 12 15 6'%3E%3C/polyline%3E%3C/svg%3E") !important;
-            background-repeat: no-repeat !important;
-            background-position: center !important;
-        }
+                // Create a new observer just for the button's attribute changes
+                const buttonObserver = new MutationObserver((mutationList) => {
+                    for (const mutation of mutationList) {
+                        if (mutation.type === 'attributes' && mutation.attributeName === 'aria-expanded') {
+                            updateIcon();
+                        }
+                    }
+                });
 
-        /* Change the icon when the sidebar is collapsed (aria-expanded="false") */
-        [data-testid="stSidebarNavCollapseButton"][aria-expanded="false"]::before {
-            /* Icon for collapsed state: right arrow */
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 18 15 12 9 6'%3E%3C/polyline%3E%3C/svg%3E") !important;
-        }
-    </style>
-    """, unsafe_allow_html=True)
+                buttonObserver.observe(button, { attributes: true });
+
+                // Disconnect the main observer as we've found and handled the button
+                obs.disconnect();
+            }
+        });
+
+        // Start the main observer to watch for the button to be added to the page
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    </script>
+    """
+    st.components.v1.html(js_code, height=0, width=0)
 # --- END: โค้ดสำหรับแก้ไขไอคอน Sidebar ---
 
 
@@ -1175,7 +1194,7 @@ if df is None:
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
 inject_custom_css()
-inject_sidebar_fix_css() # <-- เรียกใช้ฟังก์ชันแก้ไขไอคอน
+inject_sidebar_fix_js() # <-- เรียกใช้ฟังก์ชันแก้ไขไอคอนด้วย JS
 
 def perform_search():
     st.session_state.search_query = st.session_state.search_input
@@ -1349,4 +1368,4 @@ else:
         </script>
         """
         st.components.v1.html(print_component, height=0, width=0)
-        st.session_state.print_performance_trigger = False
+        st.session_state.print_performance_trigger = Fa
