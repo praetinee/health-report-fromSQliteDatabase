@@ -1114,7 +1114,6 @@ if df is None:
 
 st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
-# --- Call CSS and JS injection functions ---
 inject_custom_css()
 
 def perform_search():
