@@ -435,6 +435,5 @@ def display_visualization_tab(person_data, history_df):
         plot_lung_comparison(person_data) # Subheader is now inside the function
     st.markdown("---")
 
-    # Section 3: Trends in Expander
-    with st.expander("คลิกเพื่อดูกราฟแนวโน้มย้อนหลัง", expanded=True):
-        plot_historical_trends(history_df)
+    # Section 3: Trends
+    plot_historical_trends(history_df)
