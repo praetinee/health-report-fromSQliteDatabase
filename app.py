@@ -12,10 +12,14 @@ import re
 import os
 import json
 from streamlit_js_eval import streamlit_js_eval
+
 # --- Import ฟังก์ชันจากไฟล์อื่น ---
 from performance_tests import interpret_audiogram, interpret_lung_capacity, generate_comprehensive_recommendations
 from print_report import generate_printable_report
 from print_performance_report import generate_performance_report_html
+# --- START OF CHANGE: Import the new visualization function ---
+from visualization import display_visualization_tab
+# --- END OF CHANGE ---
 
 
 # --- Helper Functions (ที่ยังคงใช้งาน) ---
@@ -276,6 +280,12 @@ def has_hearing_data(person_data):
 def has_lung_data(person_data):
     key_indicators = ['FVC เปอร์เซ็นต์', 'FEV1เปอร์เซ็นต์', 'FEV1/FVC%']
     return any(not is_empty(person_data.get(key)) for key in key_indicators)
+
+# --- START OF CHANGE: Add check for visualization data ---
+def has_visualization_data(history_df):
+    """Check if there is enough data to show visualizations (at least 1 year)."""
+    return history_df is not None and not history_df.empty
+# --- END OF CHANGE ---
 
 # --- UI and Report Rendering Functions ---
 def interpret_bp(sbp, dbp):
@@ -1202,6 +1212,9 @@ else:
     all_person_history_df = st.session_state.search_result
     
     available_reports = OrderedDict()
+    # --- START OF CHANGE: Add Visualization tab ---
+    if has_visualization_data(all_person_history_df): available_reports['ภาพรวมสุขภาพ (Graphs)'] = 'visualization_report'
+    # --- END OF CHANGE ---
     if has_basic_health_data(person_data): available_reports['สุขภาพพื้นฐาน'] = 'main_report'
     if has_vision_data(person_data): available_reports['สมรรถภาพการมองเห็น'] = 'vision_report'
     if has_hearing_data(person_data): available_reports['สมรรถภาพการได้ยิน'] = 'hearing_report'
@@ -1216,7 +1229,11 @@ else:
     
         for i, (tab_title, page_key) in enumerate(available_reports.items()):
             with tabs[i]:
-                if page_key == 'vision_report':
+                # --- START OF CHANGE: Handle the new visualization tab ---
+                if page_key == 'visualization_report':
+                    display_visualization_tab(person_data, all_person_history_df)
+                # --- END OF CHANGE ---
+                elif page_key == 'vision_report':
                     display_performance_report(person_data, 'vision')
                 elif page_key == 'hearing_report':
                     display_performance_report(person_data, 'hearing', all_person_history_df=all_person_history_df)
