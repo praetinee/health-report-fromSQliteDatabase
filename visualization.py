@@ -458,7 +458,7 @@ def display_visualization_tab(person_data, history_df):
 
     # Section 3: Performance graphs (Current Year Details)
     with st.container(border=True):
-        st.subheader(f"💪 เจาะลึกสมรรถภาพร่างกาย (ปี พ.ศ. {person_data.get('Year', '')})")
+        st.subheader(f" เจาะลึกสมรรถภาพร่างกาย (ปี พ.ศ. {person_data.get('Year', '')})")
         col3, col4 = st.columns(2)
         with col3:
             plot_audiogram(person_data)
