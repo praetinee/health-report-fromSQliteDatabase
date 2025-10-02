@@ -42,7 +42,6 @@ def get_gfr_desc(gfr):
     return "ไตวายระยะสุดท้าย"
 
 
-# --- START OF CHANGE: Add helper for hover text ---
 def get_interpretation_text(metric, value):
     """สร้างข้อความแปลผลสำหรับใช้ใน hover tooltip ของกราฟ"""
     if pd.isna(value):
@@ -69,14 +68,59 @@ def get_interpretation_text(metric, value):
         if value < 100: return " (สูงระดับ 2)"
         return " (สูงมาก)"
     return ""
+
+# --- START OF CHANGE: New helper functions for BP trend table ---
+def get_bp_classification(sbp, dbp):
+    """จำแนกระดับความดันโลหิตและคืนค่าสีสำหรับตาราง"""
+    if sbp is None or dbp is None or pd.isna(sbp) or pd.isna(dbp):
+        return "ไม่มีข้อมูล", "#FFFFFF"  # White/default
+    sbp, dbp = float(sbp), float(dbp)
+    if sbp >= 180 or dbp >= 120:
+        return "สูงวิกฤต", "#dc3545" 
+    if sbp >= 140 or dbp >= 90:
+        return "สูงระยะที่ 2", "#fd7e14"
+    if 130 <= sbp <= 139 or 80 <= dbp <= 89:
+        return "สูงระยะที่ 1", "#ffc107"
+    if 120 <= sbp <= 129 and dbp < 80:
+        return "เริ่มสูง", "#fff3cd"
+    if sbp < 120 and dbp < 80:
+        return "ปกติ", "#d4edda"
+    return "ไม่สามารถจำแนกได้", "#f8f9fa"
+
+def render_bp_trend_table(history_df, title_html):
+    """สร้างตาราง HTML สำหรับแสดงแนวโน้มความดันโลหิต"""
+    table_css = """
+    <style>
+        .bp-trend-table {
+            width: 100%; border-collapse: collapse;
+            font-size: 14px; text-align: center;
+        }
+        .bp-trend-table th, .bp-trend-table td {
+            border: 1px solid #dee2e6; padding: 8px;
+        }
+        .bp-trend-table th { background-color: #f8f9fa; }
+        .bp-trend-table tbody tr:hover { background-color: #f1f1f1; }
+    </style>
+    """
+    html = [table_css, f"<div style='text-align:center;'>{title_html}</div>", "<table class='bp-trend-table'><thead><tr><th>ปี พ.ศ.</th><th>SBP (mmHg)</th><th>DBP (mmHg)</th><th>Pulse Pressure</th><th>การแปลผล</th></tr></thead><tbody>"]
+    bp_history = history_df[['Year', 'SBP', 'DBP']].dropna(subset=['SBP', 'DBP'])
+    if bp_history.empty:
+        return f"<div style='text-align:center;'>{title_html}</div><p style='text-align:center;'>ไม่มีข้อมูลความดันโลหิต</p>"
+    for _, row in bp_history.iterrows():
+        year = int(row['Year'])
+        sbp = int(row['SBP'])
+        dbp = int(row['DBP'])
+        pulse_pressure = sbp - dbp
+        classification, color = get_bp_classification(sbp, dbp)
+        html.append(f"<tr><td>{year}</td><td>{sbp}</td><td>{dbp}</td><td>{pulse_pressure}</td><td style='background-color:{color}; color: black; font-weight:bold;'>{classification}</td></tr>")
+    html.append("</tbody></table>")
+    return "".join(html)
 # --- END OF CHANGE ---
 
 # --- 1. กราฟแสดงแนวโน้มย้อนหลัง ---
-# --- START OF CHANGE: Overhaul historical trends plot ---
 def plot_historical_trends(history_df):
     """
-    สร้างกราฟเส้นแสดงแนวโน้มข้อมูลสุขภาพย้อนหลัง
-    พร้อมเส้นเป้าหมาย, เส้นคาดการณ์อนาคต, และคำอธิบายใน tooltip ที่ดีขึ้น
+    สร้างกราฟเส้น/ตารางแสดงแนวโน้มข้อมูลสุขภาพย้อนหลัง
     """
     st.caption("กราฟนี้แสดงการเปลี่ยนแปลงของค่าต่างๆ ในแต่ละปีที่มีการตรวจ พร้อมเส้นคาดการณ์แนวโน้มในอีก 2 ปีข้างหน้า (เส้นประ) และเส้นเกณฑ์สุขภาพ (เส้นสีเขียว)")
 
@@ -85,20 +129,11 @@ def plot_historical_trends(history_df):
         return
 
     history_df = history_df.sort_values(by="Year", ascending=True).copy()
-
-    # Create a full year range to show gaps in data
     min_year, max_year = int(history_df['Year'].min()), int(history_df['Year'].max())
     all_years_df = pd.DataFrame({'Year': range(min_year, max_year + 1)})
     history_df = pd.merge(all_years_df, history_df, on='Year', how='left')
-
-    # Calculate BMI for historical data
-    history_df['BMI'] = history_df.apply(
-        lambda row: (get_float(row, 'น้ำหนัก') / ((get_float(row, 'ส่วนสูง') / 100) ** 2))
-        if get_float(row, 'น้ำหนัก') and get_float(row, 'ส่วนสูง') else np.nan,
-        axis=1
-    )
+    history_df['BMI'] = history_df.apply(lambda row: (get_float(row, 'น้ำหนัก') / ((get_float(row, 'ส่วนสูง') / 100) ** 2)) if get_float(row, 'น้ำหนัก') and get_float(row, 'ส่วนสูง') else np.nan, axis=1)
     
-    # Define metrics, their keys, units, and goals
     trend_metrics = {
         'ดัชนีมวลกาย (BMI)': ('BMI', 'kg/m²', 23.0, 'range'),
         'ระดับน้ำตาลในเลือด (FBS)': ('FBS', 'mg/dL', 100.0, 'lower'),
@@ -107,7 +142,6 @@ def plot_historical_trends(history_df):
         'ความดันโลหิต': (['SBP', 'DBP'], 'mmHg', 120.0, 'lower')
     }
     
-    # Prepare data for plotting, including interpretation text for tooltips
     for title, (keys, unit, goal, *_) in trend_metrics.items():
         if isinstance(keys, list):
             for key in keys:
@@ -117,83 +151,37 @@ def plot_historical_trends(history_df):
 
     history_df['Year_str'] = history_df['Year'].astype(str)
 
-    # Layout for plots
     col1, col2 = st.columns(2)
     cols = [col1, col2, col1, col2, col1]
     
     for i, (title, (keys, unit, goal, direction_type)) in enumerate(trend_metrics.items()):
         with cols[i]:
-            fig = None
-            is_bp_chart = isinstance(keys, list)
-            icon = "🩸" if is_bp_chart else "📊"
+            is_bp = isinstance(keys, list)
+            icon = "🩸" if is_bp else "📊"
+            direction_text = "(ควรอยู่ในเกณฑ์)" if direction_type == 'range' else ("(ยิ่งสูงยิ่งดี)" if direction_type == 'higher' else "(ยิ่งต่ำยิ่งดี)")
+            full_title = f"<h5 style='text-align:center;'>{icon} {title} <br><span style='font-size:0.8em;color:gray;'>{direction_text}</span></h5>"
 
-            # Add direction text to the title
-            if direction_type == 'higher':
-                direction_text = "(ยิ่งสูงยิ่งดี)"
-            elif direction_type == 'range':
-                direction_text = "(ควรอยู่ในเกณฑ์)"
-            else: # Default to 'lower'
-                direction_text = "(ยิ่งต่ำยิ่งดี)"
-            full_title = f"{icon} {title} <br><span style='font-size:0.8em;color:gray;'>{direction_text}</span>"
-
-
-            # Create the base figure
-            if is_bp_chart: # Blood Pressure plot
-                df_plot = history_df[['Year_str', keys[0], keys[1], f'{keys[0]}_interp', f'{keys[1]}_interp']]
-                fig = px.line(df_plot, x='Year_str', y=keys, title=full_title, markers=True)
-                fig.data[0].name = 'SBP'
-                fig.data[1].name = 'DBP'
-                fig.update_traces(
-                    hovertemplate='<b>%{x}</b><br>%{data.name}: %{y:.0f}'+ f' mmHg<extra></extra>'
-                )
-
-            else: # Single metric plot
+            if is_bp:
+                st.markdown(render_bp_trend_table(history_df, full_title), unsafe_allow_html=True)
+            else:
                 df_plot = history_df[['Year_str', keys, f'{keys}_interp']]
-                fig = px.line(df_plot, x='Year_str', y=keys, title=full_title, markers=True,
-                              custom_data=[keys, f'{keys}_interp'])
+                fig = px.line(df_plot, x='Year_str', y=keys, title=full_title.replace("<h5 style='text-align:center;'>", "").replace("</h5>",""), markers=True, custom_data=[keys, f'{keys}_interp'])
                 fig.update_traces(hovertemplate='<b>%{x}</b><br>%{customdata[0]:.1f} ' + unit + '%{customdata[1]}<extra></extra>')
+                fig.add_hline(y=goal, line_width=2, line_dash="dash", line_color="green", annotation_text="เกณฑ์", annotation_position="bottom right")
 
-            # Add Goal Line
-            fig.add_hline(y=goal, line_width=2, line_dash="dash", line_color="green",
-                          annotation_text="เกณฑ์", annotation_position="bottom right")
-
-            # Add Prediction Line
-            predict_key = keys[0] if is_bp_chart else keys
-            
-            clean_df = history_df[['Year', predict_key]].dropna()
-            if len(clean_df) >= 3:
-                x_fit = clean_df['Year']
-                y_fit = clean_df[predict_key]
+                clean_df = history_df[['Year', keys]].dropna()
+                if len(clean_df) >= 3:
+                    model = np.polyfit(clean_df['Year'], clean_df[keys], 1)
+                    predict = np.poly1d(model)
+                    future_years = np.array([max_year + 1, max_year + 2])
+                    predicted_values = predict(future_years)
+                    all_future_years = np.insert(future_years, 0, max_year)
+                    all_predicted_values = np.insert(predicted_values, 0, predict(max_year))
+                    fig.add_trace(go.Scatter(x=all_future_years.astype(str), y=all_predicted_values, mode='lines', line=dict(color='rgba(128,128,128,0.7)', width=2, dash='dot'), name='คาดการณ์', hovertemplate='คาดการณ์ปี %{x}: %{y:.1f}<extra></extra>'))
                 
-                model = np.polyfit(x_fit, y_fit, 1)
-                predict = np.poly1d(model)
-                
-                future_years = np.array([max_year + 1, max_year + 2])
-                predicted_values = predict(future_years)
-                
-                all_future_years = np.insert(future_years, 0, max_year)
-                all_predicted_values = np.insert(predicted_values, 0, predict(max_year))
-
-                fig.add_trace(go.Scatter(
-                    x=all_future_years.astype(str), y=all_predicted_values, mode='lines',
-                    line=dict(color='rgba(128,128,128,0.7)', width=2, dash='dot'),
-                    name='คาดการณ์',
-                    hovertemplate='คาดการณ์ปี %{x}: %{y:.1f}<extra></extra>'
-                ))
-            
-            # Final Touches
-            fig.update_traces(connectgaps=False)
-            fig.update_layout(
-                yaxis_title=unit, 
-                xaxis_title='ปี พ.ศ.', 
-                legend_title_text="",
-                font_family="Sarabun",
-                template="streamlit",
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-            )
-            st.plotly_chart(fig, use_container_width=True)
-
-# --- END OF CHANGE ---
+                fig.update_traces(connectgaps=False)
+                fig.update_layout(yaxis_title=unit, xaxis_title='ปี พ.ศ.', legend_title_text="", font_family="Sarabun", template="streamlit", legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
+                st.plotly_chart(fig, use_container_width=True)
 
 
 # --- 2. เกจวัด ---
@@ -426,7 +414,6 @@ def plot_lung_comparison(person_data):
 
 
 # --- ฟังก์ชันหลักสำหรับแสดงผล ---
-# --- START OF CHANGE: Add icons and adjust layout in main display function ---
 def display_visualization_tab(person_data, history_df):
     """
     ฟังก์ชันหลักสำหรับแสดงผลแท็บ Visualization ทั้งหมด
@@ -451,11 +438,10 @@ def display_visualization_tab(person_data, history_df):
 
     # Section 3: Performance graphs (Current Year Details)
     with st.container(border=True):
-        st.subheader(f" เจาะลึกสมรรถภาพร่างกาย (ปี พ.ศ. {person_data.get('Year', '')})")
+        st.subheader(f"💪 เจาะลึกสมรรถภาพร่างกาย (ปี พ.ศ. {person_data.get('Year', '')})")
         col3, col4 = st.columns(2)
         with col3:
             plot_audiogram(person_data)
         with col4:
             plot_lung_comparison(person_data)
-# --- END OF CHANGE ---
 
