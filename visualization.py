@@ -207,7 +207,6 @@ def plot_historical_trends(history_df):
                 st.plotly_chart(fig, use_container_width=True)
 
 
-# --- START OF CHANGE: Break `plot_gauge_charts` into individual functions ---
 # --- 2. เกจวัด ---
 
 def plot_bmi_gauge(person_data):
@@ -220,21 +219,21 @@ def plot_bmi_gauge(person_data):
              bmi = weight / ((height/100)**2)
 
     if bmi is not None:
+        st.markdown("<p style='text-align: center; font-weight: bold;'>ดัชนีมวลกาย (BMI)</p>", unsafe_allow_html=True)
         fig = go.Figure(go.Indicator(
             mode = "gauge+number",
             value = bmi,
-            title = {'text': "ดัชนีมวลกาย (BMI)"},
             gauge = {
-                'axis': {'range': [15, 40]},
+                'axis': {'range': [15, 40], 'tickfont': {'color': "gray"}},
                 'steps' : [
                     {'range': [15, 18.5], 'color': "lightblue"},
                     {'range': [18.5, 23], 'color': "green"},
                     {'range': [23, 25], 'color': "yellow"},
                     {'range': [25, 30], 'color': "orange"},
                     {'range': [30, 40], 'color': "red"}],
-                'bar': {'color': "darkblue"}
+                'bar': {'color': "royalblue"}
             }))
-        fig.update_layout(height=250, margin=dict(l=20, r=20, t=40, b=10), font_family="Sarabun", template="streamlit")
+        fig.update_layout(height=220, margin=dict(l=20, r=20, t=20, b=20), font_family="Sarabun", template="streamlit")
         st.plotly_chart(fig, use_container_width=True)
         st.markdown(f"<p style='text-align: center; font-weight: bold;'>ผล: {get_bmi_desc(bmi)}</p>", unsafe_allow_html=True)
     else:
@@ -244,20 +243,20 @@ def plot_fbs_gauge(person_data):
     """สร้างเกจวัดสำหรับ FBS"""
     fbs = get_float(person_data, 'FBS')
     if fbs is not None:
+        st.markdown("<p style='text-align: center; font-weight: bold;'>ระดับน้ำตาล (FBS mg/dL)</p>", unsafe_allow_html=True)
         fig = go.Figure(go.Indicator(
             mode = "gauge+number",
             value = fbs,
-            title = {'text': "ระดับน้ำตาล (FBS mg/dL)"},
             gauge = {
-                'axis': {'range': [60, 160]},
+                'axis': {'range': [60, 160], 'tickfont': {'color': "gray"}},
                 'steps' : [
                     {'range': [60, 74], 'color': "yellow"},
                     {'range': [74, 100], 'color': "green"},
                     {'range': [100, 126], 'color': "orange"},
                     {'range': [126, 160], 'color': "red"}],
-                'bar': {'color': "darkblue"}
+                'bar': {'color': "royalblue"}
             }))
-        fig.update_layout(height=250, margin=dict(l=20, r=20, t=40, b=10), font_family="Sarabun", template="streamlit")
+        fig.update_layout(height=220, margin=dict(l=20, r=20, t=20, b=20), font_family="Sarabun", template="streamlit")
         st.plotly_chart(fig, use_container_width=True)
         st.markdown(f"<p style='text-align: center; font-weight: bold;'>ผล: {get_fbs_desc(fbs)}</p>", unsafe_allow_html=True)
     else:
@@ -267,25 +266,24 @@ def plot_gfr_gauge(person_data):
     """สร้างเกจวัดสำหรับ GFR"""
     gfr = get_float(person_data, 'GFR')
     if gfr is not None:
+        st.markdown("<p style='text-align: center; font-weight: bold;'>การกรองของไต (GFR mL/min)</p>", unsafe_allow_html=True)
         fig = go.Figure(go.Indicator(
             mode = "gauge+number",
             value = gfr,
-            title = {'text': "การกรองของไต (GFR mL/min)"},
             gauge = {
-                'axis': {'range': [0, 120]},
+                'axis': {'range': [0, 120], 'tickfont': {'color': "gray"}},
                 'steps' : [
                     {'range': [0, 30], 'color': "red"},
                     {'range': [30, 60], 'color': "orange"},
                     {'range': [60, 90], 'color': "yellow"},
                     {'range': [90, 120], 'color': "green"}],
-                'bar': {'color': "darkblue"}
+                'bar': {'color': "royalblue"}
             }))
-        fig.update_layout(height=250, margin=dict(l=20, r=20, t=40, b=10), font_family="Sarabun", template="streamlit")
+        fig.update_layout(height=220, margin=dict(l=20, r=20, t=20, b=20), font_family="Sarabun", template="streamlit")
         st.plotly_chart(fig, use_container_width=True)
         st.markdown(f"<p style='text-align: center; font-weight: bold;'>ผล: {get_gfr_desc(gfr)}</p>", unsafe_allow_html=True)
     else:
         st.info("ไม่มีข้อมูล GFR")
-# --- END OF CHANGE ---
 
 
 
@@ -454,15 +452,6 @@ def display_visualization_tab(person_data, history_df):
     with st.container(border=True):
         st.subheader(f"🎯 สรุปผลสุขภาพภาพรวม (ปี พ.ศ. {person_data.get('Year', '')})")
         
-        # --- START OF CHANGE: Create responsive grid for snapshot charts ---
-        # Define the charts for this section
-        snapshot_charts_funcs = [
-            plot_risk_radar, 
-            plot_bmi_gauge, 
-            plot_fbs_gauge, 
-            plot_gfr_gauge
-        ]
-        
         # Create a 2-column layout that will stack on smaller screens
         cols = st.columns(2)
         
@@ -473,7 +462,6 @@ def display_visualization_tab(person_data, history_df):
         with cols[1]:
             plot_bmi_gauge(person_data)
             plot_gfr_gauge(person_data)
-        # --- END OF CHANGE ---
 
     # Section 2: Trends (Historical View)
     with st.container(border=True):
@@ -482,8 +470,7 @@ def display_visualization_tab(person_data, history_df):
 
     # Section 3: Performance graphs (Current Year Details)
     with st.container(border=True):
-        st.subheader(f" เจาะลึกสมรรถภาพร่างกาย (ปี พ.ศ. {person_data.get('Year', '')})")
-        # --- START OF CHANGE: Make performance plots responsive ---
+        st.subheader(f"💪 เจาะลึกสมรรถภาพร่างกาย (ปี พ.ศ. {person_data.get('Year', '')})")
         charts_to_plot = [
             {'type': 'audiogram', 'data': person_data},
             {'type': 'lung', 'data': person_data}
@@ -496,5 +483,4 @@ def display_visualization_tab(person_data, history_df):
                     plot_audiogram(chart['data'])
                 elif chart['type'] == 'lung':
                     plot_lung_comparison(chart['data'])
-        # --- END OF CHANGE ---
 
