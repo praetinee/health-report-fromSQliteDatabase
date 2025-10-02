@@ -42,16 +42,43 @@ def get_gfr_desc(gfr):
     return "ไตวายระยะสุดท้าย"
 
 
-# --- 1. กราฟแสดงแนวโน้มย้อนหลัง ---
+# --- START OF CHANGE: Add helper for hover text ---
+def get_interpretation_text(metric, value):
+    """สร้างข้อความแปลผลสำหรับใช้ใน hover tooltip ของกราฟ"""
+    if pd.isna(value):
+        return ""
+    if metric == 'BMI':
+        return f" ({get_bmi_desc(value)})"
+    if metric == 'FBS':
+        return f" ({get_fbs_desc(value)})"
+    if metric == 'CHOL':
+        if value < 200: return " (ปกติ)"
+        if value < 240: return " (เริ่มสูง)"
+        return " (สูง)"
+    if metric == 'GFR':
+        return f" ({get_gfr_desc(value)})"
+    if metric == 'SBP':
+        if value < 120: return " (ปกติ)"
+        if value < 130: return " (เริ่มสูง)"
+        if value < 140: return " (สูงระดับ 1)"
+        if value < 160: return " (สูงระดับ 2)"
+        return " (สูงมาก)"
+    if metric == 'DBP':
+        if value < 80: return " (ปกติ)"
+        if value < 90: return " (สูงระดับ 1)"
+        if value < 100: return " (สูงระดับ 2)"
+        return " (สูงมาก)"
+    return ""
+# --- END OF CHANGE ---
 
+# --- 1. กราฟแสดงแนวโน้มย้อนหลัง ---
+# --- START OF CHANGE: Overhaul historical trends plot ---
 def plot_historical_trends(history_df):
     """
     สร้างกราฟเส้นแสดงแนวโน้มข้อมูลสุขภาพย้อนหลัง
-    จัดการกับปีที่ไม่มีข้อมูลโดยการเว้นกราฟให้ขาดช่วง
+    พร้อมเส้นเป้าหมาย, เส้นคาดการณ์อนาคต, และคำอธิบายใน tooltip ที่ดีขึ้น
     """
-    st.subheader("📈 กราฟแสดงแนวโน้มผลสุขภาพย้อนหลัง")
-    st.caption("กราฟนี้แสดงการเปลี่ยนแปลงของค่าต่างๆ ในแต่ละปีที่มีการตรวจ จุดบนเส้นหมายถึงปีที่มีข้อมูล ส่วนเส้นที่ขาดหายไปหมายถึงปีที่ไม่ได้เข้ารับการตรวจ")
-
+    st.caption("กราฟนี้แสดงการเปลี่ยนแปลงของค่าต่างๆ ในแต่ละปีที่มีการตรวจ พร้อมเส้นคาดการณ์แนวโน้มในอีก 2 ปีข้างหน้า (เส้นประ) และเส้นเป้าหมายสุขภาพ (เส้นสีเทา)")
 
     if history_df.shape[0] < 2:
         st.info("ข้อมูลย้อนหลังไม่เพียงพอที่จะสร้างกราฟแนวโน้ม (ต้องการอย่างน้อย 2 ปี)")
@@ -59,119 +86,111 @@ def plot_historical_trends(history_df):
 
     history_df = history_df.sort_values(by="Year", ascending=True).copy()
 
-    # สร้างช่วงปีทั้งหมดตั้งแต่ปีแรกสุดถึงปีล่าสุดสุด
+    # Create a full year range to show gaps in data
     min_year, max_year = int(history_df['Year'].min()), int(history_df['Year'].max())
     all_years_df = pd.DataFrame({'Year': range(min_year, max_year + 1)})
-
-    # รวมข้อมูลจริงเข้ากับช่วงปีทั้งหมด
     history_df = pd.merge(all_years_df, history_df, on='Year', how='left')
 
-    # คำนวณ BMI สำหรับข้อมูลย้อนหลัง
+    # Calculate BMI for historical data
     history_df['BMI'] = history_df.apply(
         lambda row: (get_float(row, 'น้ำหนัก') / ((get_float(row, 'ส่วนสูง') / 100) ** 2))
         if get_float(row, 'น้ำหนัก') and get_float(row, 'ส่วนสูง') else np.nan,
         axis=1
     )
-    history_df['Year'] = history_df['Year'].astype(str)
-
-    # กำหนดแถบสีสำหรับทุกค่าชี้วัด
-    metric_bands = {
-        'BMI': {
-            "โรคอ้วน": (25, 40, "lightcoral"),
-            "ท้วม": (23, 25, "yellow"),
-            "ปกติ": (18.5, 23, "lightgreen"),
-        },
-        'FBS': {
-            "เข้าเกณฑ์เบาหวาน": (126, 200, "lightcoral"),
-            "ภาวะเสี่ยง": (100, 126, "yellow"),
-            "ปกติ": (70, 100, "lightgreen"),
-        },
-        'CHOL': {
-            "สูง": (240, 400, "lightcoral"),
-            "เริ่มสูง": (200, 240, "yellow"),
-            "ปกติ": (100, 200, "lightgreen"),
-        },
-        'GFR': {
-            "ปกติ": (90, 150, "lightgreen"),
-            "เริ่มเสื่อม": (60, 90, "yellow"),
-            "เสื่อมปานกลาง": (30, 60, "orange"),
-            "เสื่อมรุนแรง": (0, 30, "lightcoral"),
-        },
-        'DBP': {}, # จัดการพร้อมกับ SBP
-        'SBP': {
-            "สูงมาก (ระดับ 2)": (140, 180, "lightcoral"),
-            "สูง (ระดับ 1)": (130, 140, "orange"),
-            "เริ่มสูง": (120, 130, "yellow"),
-            "ปกติ": (90, 120, "lightgreen")
-        }
-    }
-
+    
+    # Define metrics, their keys, units, and goals
     trend_metrics = {
-        'ดัชนีมวลกาย (BMI)': ('BMI', 'kg/m²'),
-        'ระดับน้ำตาลในเลือด (FBS)': ('FBS', 'mg/dL'),
-        'คอเลสเตอรอล (Cholesterol)': ('CHOL', 'mg/dL'),
-        'ประสิทธิภาพการกรองของไต (GFR)': ('GFR', 'mL/min'),
-        'ความดันโลหิต': (['SBP', 'DBP'], 'mmHg')
+        'ดัชนีมวลกาย (BMI)': ('BMI', 'kg/m²', 23.0),
+        'ระดับน้ำตาลในเลือด (FBS)': ('FBS', 'mg/dL', 100.0),
+        'คอเลสเตอรอล (Cholesterol)': ('CHOL', 'mg/dL', 200.0),
+        'ประสิทธิภาพการกรองของไต (GFR)': ('GFR', 'mL/min', 90.0, True), # Higher is better
+        'ความดันโลหิต': (['SBP', 'DBP'], 'mmHg', 120.0, False) # Goal for SBP
     }
+    
+    # Prepare data for plotting, including interpretation text for tooltips
+    for title, (keys, unit, goal, *_) in trend_metrics.items():
+        if isinstance(keys, list):
+            for key in keys:
+                 history_df[f'{key}_interp'] = history_df[key].apply(lambda x: get_interpretation_text(key, x))
+        else:
+            history_df[f'{keys}_interp'] = history_df[keys].apply(lambda x: get_interpretation_text(keys, x))
 
+    history_df['Year_str'] = history_df['Year'].astype(str)
+
+    # Layout for plots
     col1, col2 = st.columns(2)
     cols = [col1, col2, col1, col2, col1]
     
-    for i, (title, (keys, unit)) in enumerate(trend_metrics.items()):
+    for i, (title, (keys, unit, goal, *rest)) in enumerate(trend_metrics.items()):
+        higher_is_better = rest[0] if rest else False
         with cols[i]:
             fig = None
-            bands_key = ''
+            is_bp_chart = isinstance(keys, list)
+            icon = "🩸" if is_bp_chart else "📊"
+
+            # Create the base figure
+            if is_bp_chart: # Blood Pressure plot
+                df_plot = history_df[['Year_str', keys[0], keys[1], f'{keys[0]}_interp', f'{keys[1]}_interp']]
+                fig = px.line(df_plot, x='Year_str', y=keys, title=f"{icon} {title}", markers=True)
+                fig.data[0].name = 'SBP'
+                fig.data[1].name = 'DBP'
+                fig.update_traces(
+                    hovertemplate='<b>%{x}</b><br>%{data.name}: %{y:.0f}'+ f' mmHg<extra></extra>'
+                )
+
+            else: # Single metric plot
+                df_plot = history_df[['Year_str', keys, f'{keys}_interp']]
+                fig = px.line(df_plot, x='Year_str', y=keys, title=f"{icon} {title}", markers=True,
+                              custom_data=[keys, f'{keys}_interp'])
+                fig.update_traces(hovertemplate='<b>%{x}</b><br>%{customdata[0]:.1f} ' + unit + '%{customdata[1]}<extra></extra>')
+
+            # Add Goal Line
+            fig.add_hline(y=goal, line_width=2, line_dash="dash", line_color="gray",
+                          annotation_text="เป้าหมาย", annotation_position="bottom right")
+
+            # Add Prediction Line
+            predict_key = keys[0] if is_bp_chart else keys
             
-            if isinstance(keys, list): # กรณีความดันโลหิต
-                df_plot = history_df[['Year', keys[0], keys[1]]]
-                fig = px.line(df_plot, x='Year', y=keys, title=title, markers=True)
-                bands_key = 'SBP'
-                fig.update_layout(yaxis_range=[80,180]) # กำหนดช่วงของแกน Y เพื่อให้เห็นภาพชัดเจน
-            else:
-                df_plot = history_df[['Year', keys]]
-                fig = px.line(df_plot, x='Year', y=keys, title=title, markers=True)
-                bands_key = keys
+            clean_df = history_df[['Year', predict_key]].dropna()
+            if len(clean_df) >= 3:
+                x_fit = clean_df['Year']
+                y_fit = clean_df[predict_key]
+                
+                model = np.polyfit(x_fit, y_fit, 1)
+                predict = np.poly1d(model)
+                
+                future_years = np.array([max_year + 1, max_year + 2])
+                predicted_values = predict(future_years)
+                
+                all_future_years = np.insert(future_years, 0, max_year)
+                all_predicted_values = np.insert(predicted_values, 0, predict(max_year))
 
-            # ตรวจสอบและกำหนด yaxis.range ก่อนเพิ่มแถบสี
-            if fig.layout.yaxis.range is None:
-                # หากไม่มีข้อมูล ให้กำหนดช่วงแกน Y เริ่มต้นจากแถบสี
-                if bands_key in metric_bands and metric_bands[bands_key]:
-                    min_range = min(start for start, end, color in metric_bands[bands_key].values())
-                    max_range = max(end for start, end, color in metric_bands[bands_key].values())
-                    padding = (max_range - min_range) * 0.1
-                    fig.update_layout(yaxis_range=[min_range - padding, max_range + padding])
-
-            # เพิ่มแถบสีลงในกราฟ
-            if bands_key in metric_bands and fig.layout.yaxis.range is not None:
-                for name, (start, end, color) in metric_bands[bands_key].items():
-                    fig.add_shape(type="rect", xref="paper", yref="y", x0=0, y0=start, x1=1, y1=end,
-                                  fillcolor=color, opacity=0.2, layer="below", line_width=0)
-                    # เพิ่มคำอธิบายก็ต่อเมื่อมีพื้นที่เพียงพอ
-                    if abs(end - start) > (fig.layout.yaxis.range[1] - fig.layout.yaxis.range[0]) * 0.1:
-                         fig.add_annotation(x=0.98, y=(start+end)/2, text=name, showarrow=False,
-                                           xref="paper", yref="y", font=dict(size=10, family="Sarabun"),
-                                           xanchor="right")
-
+                fig.add_trace(go.Scatter(
+                    x=all_future_years.astype(str), y=all_predicted_values, mode='lines',
+                    line=dict(color='rgba(128,128,128,0.7)', width=2, dash='dot'),
+                    name='คาดการณ์',
+                    hovertemplate='คาดการณ์ปี %{x}: %{y:.1f}<extra></extra>'
+                ))
+            
+            # Final Touches
             fig.update_traces(connectgaps=False)
             fig.update_layout(
                 yaxis_title=unit, 
                 xaxis_title='ปี พ.ศ.', 
-                legend_title_text='เส้นเลือด' if isinstance(keys, list) else "",
+                legend_title_text="",
                 font_family="Sarabun",
-                template="streamlit" # --- CHANGE: ทำให้สีกราฟยืดหยุ่นตามธีม ---
+                template="streamlit",
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
             )
             st.plotly_chart(fig, use_container_width=True)
+
+# --- END OF CHANGE ---
 
 
 # --- 2. เกจวัด ---
 
 def plot_gauge_charts(person_data):
     """สร้างเกจวัดสำหรับข้อมูลสุขภาพที่สำคัญ พร้อมคำอธิบาย"""
-    year = person_data.get('Year', '')
-    st.subheader(f"🎯 เกจวัดผลสุขภาพภาพรวม (ปี พ.ศ. {year})")
-    st.caption("เกจวัดนี้แสดงค่าสุขภาพที่สำคัญเทียบกับเกณฑ์มาตรฐาน สีเขียวหมายถึงปกติ และจะเปลี่ยนเป็นสีเหลือง ส้ม แดง เมื่อมีความเสี่ยงเพิ่มขึ้น")
-
-
     col1, col2, col3 = st.columns(3)
 
     with col1:
@@ -249,9 +268,6 @@ def plot_gauge_charts(person_data):
 
 def plot_audiogram(person_data):
     """สร้างกราฟแสดงผลการตรวจการได้ยิน (Audiogram) พร้อมแถบสีแสดงเกณฑ์"""
-    year = person_data.get('Year', '')
-    st.subheader(f"👂 กราฟแสดงผลการตรวจการได้ยิน (ปี พ.ศ. {year})")
-
     freq_cols = {
         '500': ('R500', 'L500'), '1000': ('R1k', 'L1k'), '2000': ('R2k', 'L2k'),
         '3000': ('R3k', 'L3k'), '4000': ('R4k', 'L4k'), '6000': ('R6k', 'L6k'),
@@ -268,7 +284,6 @@ def plot_audiogram(person_data):
 
     fig = go.Figure()
 
-    # เพิ่มแถบสีพื้นหลังสำหรับระดับการสูญเสียการได้ยิน
     levels = {
         "ปกติ": (0, 25, "lightgreen"),
         "เล็กน้อย": (25, 40, "yellow"),
@@ -309,24 +324,22 @@ def plot_audiogram(person_data):
 
 def plot_risk_radar(person_data):
     """สร้างกราฟเรดาร์สรุปปัจจัยเสี่ยง พร้อมคำอธิบาย"""
-    year = person_data.get('Year', '')
-    st.subheader(f"🕸️ กราฟเรดาร์สรุปปัจจัยเสี่ยง (ปี พ.ศ. {year})")
     st.caption("กราฟนี้สรุปปัจจัยเสี่ยง 5 ด้าน ยิ่งพื้นที่สีกว้างและเบ้ไปทางขอบนอก หมายถึงความเสี่ยงโดยรวมสูงขึ้น (ระดับ 1 คือปกติ, 5 คือเสี่ยงสูงมาก)")
-
 
     def normalize(value, thresholds, higher_is_better=False):
         if value is None: return 1
+        scores = list(range(1, len(thresholds) + 2))
         if higher_is_better:
-            thresholds = thresholds[::-1] # กลับลำดับค่าเกณฑ์สำหรับกรณีที่ค่าสูงคือดี
+            thresholds = sorted(thresholds) 
             for i, threshold in enumerate(thresholds):
-                if value >= threshold:
-                    return i + 1
-            return len(thresholds) + 1
-        else:
+                if value < threshold: return scores[i]
+            return scores[-1]
+        else: # Lower is better
+            thresholds = sorted(thresholds)
             for i, threshold in enumerate(thresholds):
-                if value <= threshold:
-                    return i + 1
-            return len(thresholds) + 1
+                if value <= threshold: return scores[i]
+            return scores[-1]
+
 
     bmi = get_float(person_data, 'BMI')
     if bmi is None:
@@ -341,7 +354,7 @@ def plot_risk_radar(person_data):
         normalize(get_float(person_data, 'SBP'), [120, 130, 140, 160]),
         normalize(get_float(person_data, 'FBS'), [99, 125, 150, 200]),
         normalize(get_float(person_data, 'LDL'), [129, 159, 189, 220]),
-        normalize(get_float(person_data, 'GFR'), [30, 45, 60, 90], higher_is_better=True)
+        normalize(get_float(person_data, 'GFR'), [60, 90], higher_is_better=True)
     ]
 
     fig = go.Figure()
@@ -373,9 +386,6 @@ def plot_risk_radar(person_data):
 
 def plot_lung_comparison(person_data):
     """สร้างกราฟแท่งเปรียบเทียบสมรรถภาพปอด พร้อมแสดงค่าบนแท่ง"""
-    year = person_data.get('Year', '')
-    st.subheader(f"📊 กราฟเปรียบเทียบสมรรถภาพปอด (ปี พ.ศ. {year})")
-
     fvc_actual = get_float(person_data, 'FVC')
     fvc_pred = get_float(person_data, 'FVC predic')
     fev1_actual = get_float(person_data, 'FEV1')
@@ -407,34 +417,35 @@ def plot_lung_comparison(person_data):
 
 
 # --- ฟังก์ชันหลักสำหรับแสดงผล ---
-
+# --- START OF CHANGE: Add icons and adjust layout in main display function ---
 def display_visualization_tab(person_data, history_df):
     """
     ฟังก์ชันหลักสำหรับแสดงผลแท็บ Visualization ทั้งหมด
-    จะถูกเรียกจาก app.py
+    ถูกเรียกจาก app.py และมีการปรับปรุง Layout ใหม่
     """
     st.header(f"📊 ภาพรวมสุขภาพของคุณ: {person_data.get('ชื่อ-สกุล', '')}")
     st.markdown("---")
 
-    # Section 1: Gauges and Radar
-    st.subheader(f"สรุปผลสุขภาพภาพรวม (ปี พ.ศ. {person_data.get('Year', '')})")
-    col1, col2 = st.columns([2, 3])
-    with col1:
-        plot_risk_radar(person_data) # Subheader is now inside the function
-    with col2:
-        plot_gauge_charts(person_data) # Subheader is now inside the function
+    # Section 1: Gauges and Radar (Current Year Snapshot)
+    with st.container(border=True):
+        st.subheader(f"🎯 สรุปผลสุขภาพภาพรวม (ปี พ.ศ. {person_data.get('Year', '')})")
+        col1, col2 = st.columns([2, 3])
+        with col1:
+            plot_risk_radar(person_data)
+        with col2:
+            plot_gauge_charts(person_data)
 
-    st.markdown("---")
-    
-    # Section 2: Performance graphs
-    st.subheader(f"เจาะลึกสมรรถภาพร่างกาย (ปี พ.ศ. {person_data.get('Year', '')})")
-    col3, col4 = st.columns(2)
-    with col3:
-        plot_audiogram(person_data) # Subheader is now inside the function
-    with col4:
-        plot_lung_comparison(person_data) # Subheader is now inside the function
-    st.markdown("---")
-
-    # Section 3: Trends in Expander
-    with st.expander("คลิกเพื่อดูกราฟแนวโน้มย้อนหลัง", expanded=True):
+    # Section 2: Trends (Historical View)
+    with st.container(border=True):
+        st.subheader("📈 กราฟแสดงแนวโน้มผลสุขภาพย้อนหลัง")
         plot_historical_trends(history_df)
+
+    # Section 3: Performance graphs (Current Year Details)
+    with st.container(border=True):
+        st.subheader(f"💪 เจาะลึกสมรรถภาพร่างกาย (ปี พ.ศ. {person_data.get('Year', '')})")
+        col3, col4 = st.columns(2)
+        with col3:
+            plot_audiogram(person_data)
+        with col4:
+            plot_lung_comparison(person_data)
+# --- END OF CHANGE ---
