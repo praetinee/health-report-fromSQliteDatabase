@@ -551,7 +551,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
                 <div class="line"></div>
                 <div class="name">นายแพทย์นพรัตน์ รัชฎาพร</div>
                 <div class="title">แพทย์อาชีวเวชศาสตร์</div>
-                <div class="license">เลขที่ใบอนุญาตฯ ว.26674</div>
+                <div class="license">ว.26674</div>
             </div>
         </div>
     </body>
