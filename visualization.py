@@ -78,7 +78,7 @@ def plot_historical_trends(history_df):
     สร้างกราฟเส้นแสดงแนวโน้มข้อมูลสุขภาพย้อนหลัง
     พร้อมเส้นเป้าหมาย, เส้นคาดการณ์อนาคต, และคำอธิบายใน tooltip ที่ดีขึ้น
     """
-    st.caption("กราฟนี้แสดงการเปลี่ยนแปลงของค่าต่างๆ ในแต่ละปีที่มีการตรวจ พร้อมเส้นคาดการณ์แนวโน้มในอีก 2 ปีข้างหน้า (เส้นประ) และเส้นเป้าหมายสุขภาพ (เส้นสีเทา)")
+    st.caption("กราฟนี้แสดงการเปลี่ยนแปลงของค่าต่างๆ ในแต่ละปีที่มีการตรวจ พร้อมเส้นคาดการณ์แนวโน้มในอีก 2 ปีข้างหน้า (เส้นประ) และเส้นเกณฑ์สุขภาพ (เส้นสีเทา)")
 
     if history_df.shape[0] < 2:
         st.info("ข้อมูลย้อนหลังไม่เพียงพอที่จะสร้างกราฟแนวโน้ม (ต้องการอย่างน้อย 2 ปี)")
@@ -146,7 +146,7 @@ def plot_historical_trends(history_df):
 
             # Add Goal Line
             fig.add_hline(y=goal, line_width=2, line_dash="dash", line_color="gray",
-                          annotation_text="เป้าหมาย", annotation_position="bottom right")
+                          annotation_text="เกณฑ์", annotation_position="bottom right")
 
             # Add Prediction Line
             predict_key = keys[0] if is_bp_chart else keys
@@ -449,3 +449,4 @@ def display_visualization_tab(person_data, history_df):
         with col4:
             plot_lung_comparison(person_data)
 # --- END OF CHANGE ---
+
