@@ -70,7 +70,7 @@ def normalize_thai_date(date_str):
     except Exception: pass
     return pd.NA
 
-def get_float(col, person_data):
+def get_float(person_data, col):
     """Safely gets a float value from person_data dictionary."""
     try:
         val = person_data.get(col, "")
@@ -210,7 +210,6 @@ def interpret_ekg(val):
     if any(x in val.lower() for x in ["ผิดปกติ", "abnormal", "arrhythmia"]): return f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
     return val
 
-# --- START OF FIX ---
 def hepatitis_b_advice(hbsag, hbsab, hbcab):
     """Generates advice based on Hepatitis B panel results and returns a status."""
     hbsag, hbsab, hbcab = hbsag.lower(), hbsab.lower(), hbcab.lower()
@@ -223,7 +222,6 @@ def hepatitis_b_advice(hbsag, hbsab, hbcab):
     if all(x == "negative" for x in [hbsag, hbsab, hbcab]):
         return "ไม่มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี ควรปรึกษาแพทย์เพื่อรับวัคซีน", "no_immune"
     return "ไม่สามารถสรุปผลชัดเจน แนะนำให้พบแพทย์เพื่อประเมินซ้ำ", "unclear"
-# --- END OF FIX ---
 
 # --- Data Loading ---
 @st.cache_data(ttl=600)
@@ -347,8 +345,8 @@ def display_common_header(person_data):
     try: pulse_val = f"{int(float(person_data.get('pulse', '-')))}"
     except: pulse_val = "-"
 
-    weight = get_float('น้ำหนัก', person_data)
-    height = get_float('ส่วนสูง', person_data)
+    weight = get_float(person_data, 'น้ำหนัก')
+    height = get_float(person_data, 'ส่วนสูง')
     weight_val = f"{weight}" if weight is not None else "-"
     height_val = f"{height}" if height is not None else "-"
     waist_val = f"{person_data.get('รอบเอว', '-')}"
@@ -884,8 +882,6 @@ def display_performance_report_lung(person_data):
                 return f"{val:{format_spec}}{unit}"
             return "-"
 
-        # --- START OF FIX ---
-        # Build HTML string in a single f-string to prevent concatenation issues.
         table_html = f"""
         <table class="styled-df-table">
             <thead>
@@ -919,7 +915,6 @@ def display_performance_report_lung(person_data):
         </table>
         """
         st.markdown(table_html, unsafe_allow_html=True)
-        # --- END OF FIX ---
 
     with side_col:
         st.markdown("<h5 class='section-subtitle'>ผลการแปลความหมาย</h5>", unsafe_allow_html=True)
@@ -1024,10 +1019,10 @@ def display_main_report(person_data, all_person_history_df):
     if sex not in ["ชาย", "หญิง"]: sex = "ไม่ระบุ"
     hb_low, hct_low = (12, 36) if sex == "หญิง" else (13, 39)
     cbc_config = [("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None), ("ฮีมาโตคริต (Hct)", "HCT", "ชาย > 39%, หญิง > 36%", hct_low, None), ("เม็ดเลือดขาว (wbc)", "WBC (cumm)", "4,000 - 10,000 /cu.mm", 4000, 10000), ("นิวโทรฟิล (Neutrophil)", "Ne (%)", "43 - 70%", 43, 70), ("ลิมโฟไซต์ (Lymphocyte)", "Ly (%)", "20 - 44%", 20, 44), ("โมโนไซต์ (Monocyte)", "M", "3 - 9%", 3, 9), ("อีโอซิโนฟิล (Eosinophil)", "Eo", "0 - 9%", 0, 9), ("เบโซฟิล (Basophil)", "BA", "0 - 3%", 0, 3), ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150,000 - 500,000 /cu.mm", 150000, 500000)]
-    cbc_rows = [([(label, is_abn), (result, is_abn), (norm, is_abn)]) for label, col, norm, low, high in cbc_config for val in [get_float(col, person)] for result, is_abn in [flag(val, low, high)]]
+    cbc_rows = [([(label, is_abn), (result, is_abn), (norm, is_abn)]) for label, col, norm, low, high in cbc_config for val in [get_float(person, col)] for result, is_abn in [flag(val, low, high)]]
     
     blood_config = [("น้ำตาลในเลือด (FBS)", "FBS", "74 - 106 mg/dl", 74, 106), ("กรดยูริก (Uric Acid)", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2), ("การทำงานของเอนไซม์ตับ (ALK)", "ALP", "30 - 120 U/L", 30, 120), ("การทำงานของเอนไซม์ตับ (SGOT)", "SGOT", "< 37 U/L", None, 37), ("การทำงานของเอนไซม์ตับ (SGPT)", "SGPT", "< 41 U/L", None, 41), ("คลอเรสเตอรอล (CHOL)", "CHOL", "150 - 200 mg/dl", 150, 200), ("ไตรกลีเซอไรด์ (TGL)", "TGL", "35 - 150 mg/dl", 35, 150), ("ไขมันดี (HDL)", "HDL", "> 40 mg/dl", 40, None, True), ("ไขมันเลว (LDL)", "LDL", "0 - 160 mg/dl", 0, 160), ("การทำงานของไต (BUN)", "BUN", "7.9 - 20 mg/dl", 7.9, 20), ("การทำงานของไต (Cr)", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17), ("ประสิทธิภาพการกรองของไต (GFR)", "GFR", "> 60 mL/min", 60, None, True)]
-    blood_rows = [([(label, is_abn), (result, is_abn), (norm, is_abn)]) for label, col, norm, low, high, *opt in blood_config for higher in [opt[0] if opt else False] for val in [get_float(col, person)] for result, is_abn in [flag(val, low, high, higher)]]
+    blood_rows = [([(label, is_abn), (result, is_abn), (norm, is_abn)]) for label, col, norm, low, high, *opt in blood_config for higher in [opt[0] if opt else False] for val in [get_float(person, col)] for result, is_abn in [flag(val, low, high, higher)]]
     
     with st.container(border=True):
         render_section_header("ผลการตรวจทางห้องปฏิบัติการ (Laboratory Results)")
@@ -1071,7 +1066,6 @@ def display_main_report(person_data, all_person_history_df):
                 <tbody><tr><td style='text-align: center;'>{hbsag}</td><td style='text-align: center;'>{hbsab}</td><td style='text-align: center;'>{hbcab}</td></tr></tbody>
             </table></div>""", unsafe_allow_html=True)
             
-            # --- START OF FIX ---
             if not (is_empty(hbsag) and is_empty(hbsab) and is_empty(hbcab)):
                 advice, status = hepatitis_b_advice(hbsag, hbsab, hbcab)
                 status_class = ""
@@ -1087,7 +1081,6 @@ def display_main_report(person_data, all_person_history_df):
                     {advice}
                 </div>
                 """, unsafe_allow_html=True)
-            # --- END OF FIX ---
 
     with st.container(border=True):
         render_section_header("สรุปและคำแนะนำการปฏิบัติตัว (Summary & Recommendations)")
@@ -1139,7 +1132,6 @@ if 'selected_date' not in st.session_state: st.session_state.selected_date = Non
 if 'print_trigger' not in st.session_state: st.session_state.print_trigger = False
 if 'print_performance_trigger' not in st.session_state: st.session_state.print_performance_trigger = False
 
-# --- START OF CHANGE: Controls moved to Sidebar with Form ---
 with st.sidebar:
     st.markdown('<div class="sidebar-title">ค้นหาข้อมูล</div>', unsafe_allow_html=True)
     
@@ -1179,8 +1171,6 @@ with st.sidebar:
     else:
         st.button("พิมพ์รายงานสุขภาพ", use_container_width=True, disabled=True)
         st.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True, disabled=True)
-
-# --- END OF CHANGE ---
 
 # --- Main Page ---
 if "person_row" not in st.session_state or not st.session_state.get("selected_row_found", False):
