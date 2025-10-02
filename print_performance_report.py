@@ -243,9 +243,11 @@ def render_print_hearing(person_data, all_person_history_df):
         </div>
     </div>
     """
-
-    advice = results.get('advice', 'ไม่มีคำแนะนำเพิ่มเติม')
+    
+    # --- START OF CHANGE: Handle None for advice ---
+    advice = results.get('advice', '') or 'ไม่มีคำแนะนำเพิ่มเติม'
     advice_box_html = f"<div class='advice-box'><b>คำแนะนำ:</b> {html.escape(advice)}</div>"
+    # --- END OF CHANGE ---
     if results.get('sts_detected'):
         advice_box_html = f"<div class='advice-box'><b>⚠️ พบการเปลี่ยนแปลงระดับการได้ยินอย่างมีนัยสำคัญ (STS)</b><br>{html.escape(advice)}</div>"
 
