@@ -128,10 +128,15 @@ def plot_historical_trends(history_df):
             is_bp_chart = isinstance(keys, list)
             icon = "🩸" if is_bp_chart else "📊"
 
+            # Add direction text to the title
+            direction_text = "(ยิ่งสูงยิ่งดี)" if higher_is_better else "(ยิ่งต่ำยิ่งดี)"
+            full_title = f"{icon} {title} <br><span style='font-size:0.8em;color:gray;'>{direction_text}</span>"
+
+
             # Create the base figure
             if is_bp_chart: # Blood Pressure plot
                 df_plot = history_df[['Year_str', keys[0], keys[1], f'{keys[0]}_interp', f'{keys[1]}_interp']]
-                fig = px.line(df_plot, x='Year_str', y=keys, title=f"{icon} {title}", markers=True)
+                fig = px.line(df_plot, x='Year_str', y=keys, title=full_title, markers=True)
                 fig.data[0].name = 'SBP'
                 fig.data[1].name = 'DBP'
                 fig.update_traces(
@@ -140,7 +145,7 @@ def plot_historical_trends(history_df):
 
             else: # Single metric plot
                 df_plot = history_df[['Year_str', keys, f'{keys}_interp']]
-                fig = px.line(df_plot, x='Year_str', y=keys, title=f"{icon} {title}", markers=True,
+                fig = px.line(df_plot, x='Year_str', y=keys, title=full_title, markers=True,
                               custom_data=[keys, f'{keys}_interp'])
                 fig.update_traces(hovertemplate='<b>%{x}</b><br>%{customdata[0]:.1f} ' + unit + '%{customdata[1]}<extra></extra>')
 
