@@ -18,6 +18,45 @@ def get_float(person_data, key):
     except (ValueError, TypeError):
         return None
 
+# --- [ใหม่] ฟังก์ชันหลักสำหรับแสดงผล (จัด Layout ใหม่) ---
+
+def display_visualization_tab(person_data, history_df):
+    """
+    ฟังก์ชันหลักสำหรับแสดงผลแท็บ Visualization ทั้งหมด
+    จัด Layout ใหม่โดยแสดง Dashboard สรุปก่อน และซ่อนรายละเอียดไว้ใน Expander
+    """
+    st.header(f"📊 ภาพรวมสุขภาพของคุณ: {person_data.get('ชื่อ-สกุล', '')}")
+    st.markdown("---")
+
+    # Section 1: Health Dashboard (ใหม่)
+    plot_health_dashboard(person_data)
+
+    st.markdown("---")
+    
+    # Section 2: รายละเอียดเพิ่มเติม (ซ่อนใน Expander)
+    with st.expander("คลิกเพื่อดูรายละเอียดเชิงลึกและแนวโน้มย้อนหลัง"):
+        
+        st.subheader("เจาะลึกผลสุขภาพรายบุคคล")
+        col1, col2 = st.columns([2, 3])
+        with col1:
+            plot_risk_radar(person_data)
+        with col2:
+            plot_gauge_charts(person_data)
+        
+        st.markdown("<hr>", unsafe_allow_html=True)
+
+        st.subheader(f"เจาะลึกสมรรถภาพร่างกาย")
+        col3, col4 = st.columns(2)
+        with col3:
+            plot_audiogram(person_data)
+        with col4:
+            plot_lung_comparison(person_data)
+            
+        st.markdown("<hr>", unsafe_allow_html=True)
+        
+        st.subheader("กราฟแสดงแนวโน้มผลสุขภาพย้อนหลัง")
+        plot_historical_trends(history_df)
+
 # --- [ใหม่] ส่วนคำนวณคะแนนสุขภาพ (Health Score) ---
 
 def calculate_health_score(person_data):
@@ -298,43 +337,4 @@ def plot_lung_comparison(person_data):
     fig.update_traces(texttemplate='%{text:.2f}')
     fig.update_layout(barmode='group',title='เปรียบเทียบค่าสมรรถภาพปอดกับค่ามาตรฐาน',yaxis_title='ลิตร (L)',legend_title="ค่า",legend=dict(x=0.01, y=0.99),font_family="Sarabun",template="streamlit")
     st.plotly_chart(fig, use_container_width=True)
-
-# --- [ใหม่] ฟังก์ชันหลักสำหรับแสดงผล (จัด Layout ใหม่) ---
-
-def display_visualization_tab(person_data, history_df):
-    """
-    ฟังก์ชันหลักสำหรับแสดงผลแท็บ Visualization ทั้งหมด
-    จัด Layout ใหม่โดยแสดง Dashboard สรุปก่อน และซ่อนรายละเอียดไว้ใน Expander
-    """
-    st.header(f"📊 ภาพรวมสุขภาพของคุณ: {person_data.get('ชื่อ-สกุล', '')}")
-    st.markdown("---")
-
-    # Section 1: Health Dashboard (ใหม่)
-    plot_health_dashboard(person_data)
-
-    st.markdown("---")
-    
-    # Section 2: รายละเอียดเพิ่มเติม (ซ่อนใน Expander)
-    with st.expander("คลิกเพื่อดูรายละเอียดเชิงลึกและแนวโน้มย้อนหลัง"):
-        
-        st.subheader("เจาะลึกผลสุขภาพรายบุคคล")
-        col1, col2 = st.columns([2, 3])
-        with col1:
-            plot_risk_radar(person_data)
-        with col2:
-            plot_gauge_charts(person_data)
-        
-        st.markdown("<hr>", unsafe_allow_html=True)
-
-        st.subheader(f"เจาะลึกสมรรถภาพร่างกาย")
-        col3, col4 = st.columns(2)
-        with col3:
-            plot_audiogram(person_data)
-        with col4:
-            plot_lung_comparison(person_data)
-            
-        st.markdown("<hr>", unsafe_allow_html=True)
-        
-        st.subheader("กราฟแสดงแนวโน้มผลสุขภาพย้อนหลัง")
-        plot_historical_trends(history_df)
 
