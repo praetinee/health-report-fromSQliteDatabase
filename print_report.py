@@ -297,7 +297,7 @@ def generate_printable_report(person_data, all_person_history_df=None):
             <div style="border-bottom: 1px dotted #333; margin-bottom: 0.4rem; width: 100%;"></div>
             <div style="white-space: nowrap;">นายแพทย์นพรัตน์ รัชฎาพร</div>
             <div style="white-space: nowrap;">แพทย์อาชีวเวชศาสตร์</div>
-            <div style="white-space: nowrap;">เลขที่ใบอนุญาตฯ ว.26674</div>
+            <div style="white-space: nowrap;">ว.26674</div>
         </div>
     </div>
     """
