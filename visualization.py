@@ -78,7 +78,7 @@ def plot_historical_trends(history_df):
     สร้างกราฟเส้นแสดงแนวโน้มข้อมูลสุขภาพย้อนหลัง
     พร้อมเส้นเป้าหมาย, เส้นคาดการณ์อนาคต, และคำอธิบายใน tooltip ที่ดีขึ้น
     """
-    st.caption("กราฟนี้แสดงการเปลี่ยนแปลงของค่าต่างๆ ในแต่ละปีที่มีการตรวจ พร้อมเส้นคาดการณ์แนวโน้มในอีก 2 ปีข้างหน้า (เส้นประ) และเส้นเกณฑ์สุขภาพ (เส้นสีเทา)")
+    st.caption("กราฟนี้แสดงการเปลี่ยนแปลงของค่าต่างๆ ในแต่ละปีที่มีการตรวจ พร้อมเส้นคาดการณ์แนวโน้มในอีก 2 ปีข้างหน้า (เส้นประ) และเส้นเกณฑ์สุขภาพ (เส้นสีเขียว)")
 
     if history_df.shape[0] < 2:
         st.info("ข้อมูลย้อนหลังไม่เพียงพอที่จะสร้างกราฟแนวโน้ม (ต้องการอย่างน้อย 2 ปี)")
@@ -145,7 +145,7 @@ def plot_historical_trends(history_df):
                 fig.update_traces(hovertemplate='<b>%{x}</b><br>%{customdata[0]:.1f} ' + unit + '%{customdata[1]}<extra></extra>')
 
             # Add Goal Line
-            fig.add_hline(y=goal, line_width=2, line_dash="dash", line_color="gray",
+            fig.add_hline(y=goal, line_width=2, line_dash="dash", line_color="green",
                           annotation_text="เกณฑ์", annotation_position="bottom right")
 
             # Add Prediction Line
