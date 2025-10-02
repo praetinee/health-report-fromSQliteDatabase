@@ -100,11 +100,11 @@ def plot_historical_trends(history_df):
     
     # Define metrics, their keys, units, and goals
     trend_metrics = {
-        'ดัชนีมวลกาย (BMI)': ('BMI', 'kg/m²', 23.0),
-        'ระดับน้ำตาลในเลือด (FBS)': ('FBS', 'mg/dL', 100.0),
-        'คอเลสเตอรอล (Cholesterol)': ('CHOL', 'mg/dL', 200.0),
-        'ประสิทธิภาพการกรองของไต (GFR)': ('GFR', 'mL/min', 90.0, True), # Higher is better
-        'ความดันโลหิต': (['SBP', 'DBP'], 'mmHg', 120.0, False) # Goal for SBP
+        'ดัชนีมวลกาย (BMI)': ('BMI', 'kg/m²', 23.0, 'range'),
+        'ระดับน้ำตาลในเลือด (FBS)': ('FBS', 'mg/dL', 100.0, 'lower'),
+        'คอเลสเตอรอล (Cholesterol)': ('CHOL', 'mg/dL', 200.0, 'lower'),
+        'ประสิทธิภาพการกรองของไต (GFR)': ('GFR', 'mL/min', 90.0, 'higher'),
+        'ความดันโลหิต': (['SBP', 'DBP'], 'mmHg', 120.0, 'lower')
     }
     
     # Prepare data for plotting, including interpretation text for tooltips
@@ -121,15 +121,19 @@ def plot_historical_trends(history_df):
     col1, col2 = st.columns(2)
     cols = [col1, col2, col1, col2, col1]
     
-    for i, (title, (keys, unit, goal, *rest)) in enumerate(trend_metrics.items()):
-        higher_is_better = rest[0] if rest else False
+    for i, (title, (keys, unit, goal, direction_type)) in enumerate(trend_metrics.items()):
         with cols[i]:
             fig = None
             is_bp_chart = isinstance(keys, list)
             icon = "🩸" if is_bp_chart else "📊"
 
             # Add direction text to the title
-            direction_text = "(ยิ่งสูงยิ่งดี)" if higher_is_better else "(ยิ่งต่ำยิ่งดี)"
+            if direction_type == 'higher':
+                direction_text = "(ยิ่งสูงยิ่งดี)"
+            elif direction_type == 'range':
+                direction_text = "(ค่าอยู่ในเกณฑ์ดีที่สุด)"
+            else: # Default to 'lower'
+                direction_text = "(ยิ่งต่ำยิ่งดี)"
             full_title = f"{icon} {title} <br><span style='font-size:0.8em;color:gray;'>{direction_text}</span>"
 
 
@@ -454,4 +458,5 @@ def display_visualization_tab(person_data, history_df):
         with col4:
             plot_lung_comparison(person_data)
 # --- END OF CHANGE ---
+
 
