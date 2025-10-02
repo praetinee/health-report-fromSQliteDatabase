@@ -470,7 +470,7 @@ def display_visualization_tab(person_data, history_df):
 
     # Section 3: Performance graphs (Current Year Details)
     with st.container(border=True):
-        st.subheader(f"💪 เจาะลึกสมรรถภาพร่างกาย (ปี พ.ศ. {person_data.get('Year', '')})")
+        st.subheader(f" เจาะลึกสมรรถภาพร่างกาย (ปี พ.ศ. {person_data.get('Year', '')})")
         charts_to_plot = [
             {'type': 'audiogram', 'data': person_data},
             {'type': 'lung', 'data': person_data}
