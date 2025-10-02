@@ -558,7 +558,9 @@ def interpret_audiogram(current_year_data, all_person_history_df=None):
     results['summary']['right'] = "N/A" if is_empty(summary_r) else summary_r
     results['summary']['left'] = "N/A" if is_empty(summary_l) else summary_l
     results['summary']['overall'] = current_year_data.get('ผลตรวจการได้ยินหูขวา', 'N/A')
-    results['advice'] = current_year_data.get('คำแนะนำผลตรวจการได้ยิน', 'ไม่มีคำแนะนำเพิ่มเติม')
+    # --- START OF CHANGE: Handle None for advice ---
+    results['advice'] = current_year_data.get('คำแนะนำผลตรวจการได้ยิน', '') or "ไม่มีคำแนะนำเพิ่มเติม"
+    # --- END OF CHANGE ---
 
     # 4. คำนวณ Shift และ STS ถ้ามีข้อมูล Baseline
     if results['baseline_source'] != 'none':
