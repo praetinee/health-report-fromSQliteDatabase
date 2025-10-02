@@ -68,7 +68,8 @@ def calculate_health_score(person_data):
     if bmi is None:
         weight = get_float(person_data, 'น้ำหนัก')
         height = get_float(person_data, 'ส่วนสูง')
-        if weight and height: bmi = weight / ((height/100)**2)
+        if weight and height and height > 0: 
+            bmi = weight / ((height/100)**2)
     
     if bmi is not None:
         if 18.5 <= bmi < 23: scores['BMI'] = 100
@@ -219,7 +220,7 @@ def plot_historical_trends(history_df):
     min_year, max_year = int(history_df['Year'].min()), int(history_df['Year'].max())
     all_years_df = pd.DataFrame({'Year': range(min_year, max_year + 1)})
     history_df = pd.merge(all_years_df, history_df, on='Year', how='left')
-    history_df['BMI'] = history_df.apply(lambda row: (get_float(row, 'น้ำหนัก') / ((get_float(row, 'ส่วนสูง') / 100) ** 2)) if get_float(row, 'น้ำหนัก') and get_float(row, 'ส่วนสูง') else np.nan, axis=1)
+    history_df['BMI'] = history_df.apply(lambda row: (get_float(row, 'น้ำหนัก') / ((get_float(row, 'ส่วนสูง') / 100) ** 2)) if get_float(row, 'น้ำหนัก') and get_float(row, 'ส่วนสูง') and get_float(row, 'ส่วนสูง') > 0 else np.nan, axis=1)
     history_df['Year'] = history_df['Year'].astype(str)
     metric_bands = {'BMI': {"โรคอ้วน": (25, 40, "lightcoral"),"ท้วม": (23, 25, "yellow"),"ปกติ": (18.5, 23, "lightgreen")},'FBS': {"เข้าเกณฑ์เบาหวาน": (126, 200, "lightcoral"),"ภาวะเสี่ยง": (100, 126, "yellow"),"ปกติ": (70, 100, "lightgreen")},'CHOL': {"สูง": (240, 400, "lightcoral"),"เริ่มสูง": (200, 240, "yellow"),"ปกติ": (100, 200, "lightgreen")},'GFR': {"ปกติ": (90, 150, "lightgreen"),"เริ่มเสื่อม": (60, 90, "yellow"),"เสื่อมปานกลาง": (30, 60, "orange"),"เสื่อมรุนแรง": (0, 30, "lightcoral")},'DBP': {},'SBP': {"สูงมาก (ระดับ 2)": (140, 180, "lightcoral"),"สูง (ระดับ 1)": (130, 140, "orange"),"เริ่มสูง": (120, 130, "yellow"),"ปกติ": (90, 120, "lightgreen")}}
     trend_metrics = {'ดัชนีมวลกาย (BMI)': ('BMI', 'kg/m²'),'ระดับน้ำตาลในเลือด (FBS)': ('FBS', 'mg/dL'),'คอเลสเตอรอล (Cholesterol)': ('CHOL', 'mg/dL'),'ประสิทธิภาพการกรองของไต (GFR)': ('GFR', 'mL/min'),'ความดันโลหิต': (['SBP', 'DBP'], 'mmHg')}
@@ -261,7 +262,8 @@ def plot_gauge_charts(person_data):
         if bmi is None:
              weight = get_float(person_data, 'น้ำหนัก')
              height = get_float(person_data, 'ส่วนสูง')
-             if weight and height: bmi = weight / ((height/100)**2)
+             if weight and height and height > 0: 
+                 bmi = weight / ((height/100)**2)
         if bmi is not None:
             fig = go.Figure(go.Indicator(mode = "gauge+number",value = bmi,title = {'text': "ดัชนีมวลกาย (BMI)"},gauge = {'axis': {'range': [15, 40]},'steps' : [{'range': [15, 18.5], 'color': "lightblue"},{'range': [18.5, 23], 'color': "green"},{'range': [23, 25], 'color': "yellow"},{'range': [25, 30], 'color': "orange"},{'range': [30, 40], 'color': "red"}],'bar': {'color': "darkblue"}}))
             fig.update_layout(height=250, margin=dict(l=20, r=20, t=40, b=10), font_family="Sarabun", template="streamlit")
@@ -296,7 +298,8 @@ def plot_risk_radar(person_data):
     if bmi is None:
         weight = get_float(person_data, 'น้ำหนัก')
         height = get_float(person_data, 'ส่วนสูง')
-        if weight and height: bmi = weight / ((height/100)**2)
+        if weight and height and height > 0: 
+            bmi = weight / ((height/100)**2)
     categories = ['BMI', 'ความดัน (SBP)', 'น้ำตาล (FBS)', 'ไขมัน (LDL)', 'ไต (GFR)']
     values = [normalize(bmi, [22.9, 24.9, 29.9, 35]), normalize(get_float(person_data, 'SBP'), [120, 130, 140, 160]), normalize(get_float(person_data, 'FBS'), [99, 125, 150, 200]), normalize(get_float(person_data, 'LDL'), [129, 159, 189, 220]), normalize(get_float(person_data, 'GFR'), [30, 45, 60, 90], higher_is_better=True)]
     fig = go.Figure()
