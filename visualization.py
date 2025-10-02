@@ -125,7 +125,6 @@ def plot_historical_trends(history_df):
             direction_text = "(ควรอยู่ในเกณฑ์)" if direction_type == 'range' else ("(ยิ่งสูงยิ่งดี)" if direction_type == 'higher' else "(ยิ่งต่ำยิ่งดี)")
             full_title = f"<h5 style='text-align:center;'>{icon} {title} <br><span style='font-size:0.8em;color:gray;'>{direction_text}</span></h5>"
 
-            # --- START OF CHANGE: Reverted BP chart to Dual Line Chart for clarity ---
             if is_bp:
                 bp_history = history_df[['Year_str', 'SBP', 'DBP', 'SBP_interp', 'DBP_interp']].copy()
                 
@@ -135,7 +134,6 @@ def plot_historical_trends(history_df):
                 else:
                     fig = go.Figure()
 
-                    # Add colored zones for SBP
                     zones = [
                         {'name': 'สูงระยะที่ 2', 'range': [140, 220], 'color': 'rgba(253, 126, 20, 0.15)'},
                         {'name': 'สูงระยะที่ 1', 'range': [130, 140], 'color': 'rgba(255, 193, 7, 0.15)'},
@@ -145,8 +143,19 @@ def plot_historical_trends(history_df):
                     for zone in zones:
                         fig.add_shape(type="rect", xref="paper", yref="y", x0=0, y0=zone['range'][0], x1=1, y1=zone['range'][1],
                                         fillcolor=zone['color'], layer="below", line_width=0)
+                        # --- START OF CHANGE: Added annotation for each zone ---
+                        fig.add_annotation(
+                            x=0.02, 
+                            y=(zone['range'][0] + zone['range'][1]) / 2,
+                            text=zone['name'],
+                            showarrow=False,
+                            xref="paper",
+                            yref="y",
+                            font=dict(size=10, color="gray"),
+                            xanchor="left"
+                        )
+                        # --- END OF CHANGE ---
                     
-                    # SBP Line
                     fig.add_trace(go.Scatter(
                         x=bp_history['Year_str'], y=bp_history['SBP'],
                         mode='lines+markers', name='SBP (ตัวบน)',
@@ -155,7 +164,6 @@ def plot_historical_trends(history_df):
                         hovertemplate='<b>%{x}</b><br>SBP: %{customdata[0]:.0f} %{customdata[1]}<extra></extra>'
                     ))
                     
-                    # DBP Line
                     fig.add_trace(go.Scatter(
                         x=bp_history['Year_str'], y=bp_history['DBP'],
                         mode='lines+markers', name='DBP (ตัวล่าง)',
@@ -175,7 +183,6 @@ def plot_historical_trends(history_df):
                         template="streamlit"
                     )
                     st.plotly_chart(fig, use_container_width=True)
-            # --- END OF CHANGE ---
             else:
                 df_plot = history_df[['Year_str', keys, f'{keys}_interp']]
                 fig = px.line(df_plot, x='Year_str', y=keys, title=full_title.replace("<h5 style='text-align:center;'>", "").replace("</h5>",""), markers=True, custom_data=[keys, f'{keys}_interp'])
