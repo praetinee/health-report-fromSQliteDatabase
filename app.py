@@ -15,17 +15,11 @@ from streamlit_js_eval import streamlit_js_eval
 import plotly.graph_objects as go
 import plotly.express as px
 
-# --- START OF FIX: แก้ปัญหาการ Import ---
-# เพิ่ม Path ของโปรเจกต์เพื่อให้ Python หาไฟล์ visualization.py เจอ
-import sys
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
-# --- END OF FIX ---
-
 # --- Import ฟังก์ชันจากไฟล์อื่น ---
 from performance_tests import interpret_audiogram, interpret_lung_capacity, generate_comprehensive_recommendations
 from print_report import generate_printable_report
 from print_performance_report import generate_performance_report_html
-from visualization import display_visualization_tab
+from health_visuals import display_visualization_tab
 
 
 # --- Helper Functions (ที่ยังคงใช้งาน) ---
