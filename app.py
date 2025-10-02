@@ -12,20 +12,14 @@ import re
 import os
 import json
 from streamlit_js_eval import streamlit_js_eval
-import plotly.graph_objects as go
-import plotly.express as px
-
-# --- START OF FIX: แก้ปัญหาการ Import ---
-# เพิ่ม Path ของโปรเจกต์เพื่อให้ Python หาไฟล์ visualization.py เจอ
-import sys
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
-# --- END OF FIX ---
 
 # --- Import ฟังก์ชันจากไฟล์อื่น ---
 from performance_tests import interpret_audiogram, interpret_lung_capacity, generate_comprehensive_recommendations
 from print_report import generate_printable_report
 from print_performance_report import generate_performance_report_html
+# --- START OF CHANGE: Import the new visualization function ---
 from visualization import display_visualization_tab
+# --- END OF CHANGE ---
 
 
 # --- Helper Functions (ที่ยังคงใช้งาน) ---
@@ -70,14 +64,13 @@ def normalize_thai_date(date_str):
     except Exception: pass
     return pd.NA
 
-def get_float(person_data, col):
+def get_float(col, person_data):
     """Safely gets a float value from person_data dictionary."""
     try:
         val = person_data.get(col, "")
         if is_empty(val): return None
         return float(str(val).replace(",", "").strip())
     except: return None
-
 
 def flag(val, low=None, high=None, higher_is_better=False):
     """Formats a lab value and flags it if it's abnormal."""
@@ -210,6 +203,7 @@ def interpret_ekg(val):
     if any(x in val.lower() for x in ["ผิดปกติ", "abnormal", "arrhythmia"]): return f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
     return val
 
+# --- START OF FIX ---
 def hepatitis_b_advice(hbsag, hbsab, hbcab):
     """Generates advice based on Hepatitis B panel results and returns a status."""
     hbsag, hbsab, hbcab = hbsag.lower(), hbsab.lower(), hbcab.lower()
@@ -222,6 +216,7 @@ def hepatitis_b_advice(hbsag, hbsab, hbcab):
     if all(x == "negative" for x in [hbsag, hbsab, hbcab]):
         return "ไม่มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี ควรปรึกษาแพทย์เพื่อรับวัคซีน", "no_immune"
     return "ไม่สามารถสรุปผลชัดเจน แนะนำให้พบแพทย์เพื่อประเมินซ้ำ", "unclear"
+# --- END OF FIX ---
 
 # --- Data Loading ---
 @st.cache_data(ttl=600)
@@ -286,9 +281,11 @@ def has_lung_data(person_data):
     key_indicators = ['FVC เปอร์เซ็นต์', 'FEV1เปอร์เซ็นต์', 'FEV1/FVC%']
     return any(not is_empty(person_data.get(key)) for key in key_indicators)
 
+# --- START OF CHANGE: Add check for visualization data ---
 def has_visualization_data(history_df):
     """Check if there is enough data to show visualizations (at least 1 year)."""
     return history_df is not None and not history_df.empty
+# --- END OF CHANGE ---
 
 # --- UI and Report Rendering Functions ---
 def interpret_bp(sbp, dbp):
@@ -308,6 +305,7 @@ def interpret_cxr(val):
     if any(keyword in val.lower() for keyword in ["ผิดปกติ", "ฝ้า", "รอย", "abnormal", "infiltrate", "lesion"]): return f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
     return val
 
+# --- START OF CHANGE: New function to interpret BMI with updated terminology ---
 def interpret_bmi(bmi):
     """Interprets BMI value and returns a description string."""
     if bmi is None:
@@ -323,10 +321,13 @@ def interpret_bmi(bmi):
     elif bmi >= 30:
         return "เข้าเกณฑ์โรคอ้วนอันตราย"
     return ""
+# --- END OF CHANGE ---
 
+# --- START OF CHANGE: New Header and Vitals Design ---
 def display_common_header(person_data):
     """Displays the new report header with integrated personal info and vitals cards."""
     
+    # --- Prepare data for display ---
     name = person_data.get('ชื่อ-สกุล', '-')
     age = str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person_data.get('อายุ', '-')
     sex = person_data.get('เพศ', '-')
@@ -345,12 +346,13 @@ def display_common_header(person_data):
     try: pulse_val = f"{int(float(person_data.get('pulse', '-')))}"
     except: pulse_val = "-"
 
-    weight = get_float(person_data, 'น้ำหนัก')
-    height = get_float(person_data, 'ส่วนสูง')
+    weight = get_float('น้ำหนัก', person_data)
+    height = get_float('ส่วนสูง', person_data)
     weight_val = f"{weight}" if weight is not None else "-"
     height_val = f"{height}" if height is not None else "-"
     waist_val = f"{person_data.get('รอบเอว', '-')}"
 
+    # --- BMI Calculation and Interpretation ---
     bmi_val_str = "-"
     bmi_desc = ""
     if weight is not None and height is not None and height > 0:
@@ -358,6 +360,8 @@ def display_common_header(person_data):
         bmi_val_str = f"{bmi:.1f} kg/m²"
         bmi_desc = interpret_bmi(bmi)
 
+
+    # --- Render HTML ---
     st.markdown(f"""
     <div class="report-header">
         <div class="header-left">
@@ -419,11 +423,15 @@ def display_common_header(person_data):
     </div>
     """, unsafe_allow_html=True)
 
+# --- END OF CHANGE ---
+
+# --- START OF CHANGE: New Centralized and Adaptive CSS ---
 def inject_custom_css():
     st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap');
         
+        /* --- Color Variables for Consistency --- */
         :root {
             --abnormal-bg-color: rgba(220, 53, 69, 0.1);
             --abnormal-text-color: #C53030;
@@ -434,6 +442,7 @@ def inject_custom_css():
             --neutral-text-color: #4A5568;
         }
         
+        /* --- General & Typography --- */
         html, body, [class*="st-"], .st-emotion-cache-10trblm, h1, h2, h3, h4, h5, h6 {
             font-family: 'Sarabun', sans-serif !important; 
         }
@@ -441,7 +450,7 @@ def inject_custom_css():
              background-color: var(--background-color);
              color: var(--text-color);
         }
-        h4 { 
+        h4 { /* For section headers */
             font-size: 1.25rem;
             font-weight: 600;
             border-bottom: 2px solid var(--border-color);
@@ -458,6 +467,7 @@ def inject_custom_css():
             opacity: 0.7;
         }
 
+        /* --- Sidebar Controls --- */
         [data-testid="stSidebar"] {
             background-color: var(--secondary-background-color);
         }
@@ -470,8 +480,9 @@ def inject_custom_css():
             color: var(--primary-color);
             margin-bottom: 1rem;
         }
+        /* --- START OF FIX --- */
         .stButton>button {
-            background-color: #00796B; 
+            background-color: #00796B; /* Use the same teal as section headers */
             color: white !important;
             border-radius: 8px;
             border: none;
@@ -482,7 +493,7 @@ def inject_custom_css():
             transition: background-color 0.2s, transform 0.2s;
         }
         .stButton>button:hover {
-            background-color: #00695C; 
+            background-color: #00695C; /* A slightly darker teal for hover */
             color: white !important;
             transform: translateY(-1px);
         }
@@ -494,7 +505,10 @@ def inject_custom_css():
             box-shadow: none;
             cursor: not-allowed;
         }
+        /* --- END OF FIX --- */
 
+
+        /* --- New Report Header & Vitals --- */
         .report-header {
             display: flex;
             justify-content: space-between;
@@ -538,6 +552,7 @@ def inject_custom_css():
         .vital-value { font-size: 1.2rem; font-weight: 700; color: var(--text-color); line-height: 1.2; white-space: nowrap;}
         .vital-sub-value { font-size: 0.8rem; color: var(--text-color); opacity: 0.6; }
 
+        /* --- Styled Tabs --- */
         div[data-testid="stTabs"] {
             border-bottom: 2px solid var(--border-color);
         }
@@ -561,6 +576,7 @@ def inject_custom_css():
             margin-bottom: -2px;
         }
         
+        /* --- Containers for sections --- */
         div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] > div.st-emotion-cache-1jicfl2.e1f1d6gn3 > div {
              background-color: var(--secondary-background-color);
              border: 1px solid var(--border-color);
@@ -569,6 +585,7 @@ def inject_custom_css():
              box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
         }
 
+        /* --- Lab Result Tables --- */
         .table-container { overflow-x: auto; }
         .lab-table, .info-detail-table {
             width: 100%;
@@ -600,6 +617,7 @@ def inject_custom_css():
         }
         .info-detail-table th { width: 35%; }
         
+        /* --- Recommendation Container --- */
         .recommendation-container {
             border-left: 5px solid var(--primary-color);
             padding: 1.5rem;
@@ -609,6 +627,7 @@ def inject_custom_css():
         .recommendation-container ul { padding-left: 20px; }
         .recommendation-container li { margin-bottom: 0.5rem; }
 
+        /* --- Performance Report Specific Styles --- */
         .status-summary-card {
             padding: 1rem; 
             border-radius: 8px; 
@@ -638,9 +657,11 @@ def inject_custom_css():
             display: inline-block; padding: 6px 16px; border-radius: 16px;
             font-size: 13px; font-weight: bold; border: 1px solid transparent;
         }
+        /* --- START OF FIX --- */
         .vision-normal { background-color: var(--normal-bg-color); color: #2E7D32; }
         .vision-abnormal { background-color: var(--abnormal-bg-color); color: #C62828; }
         .vision-not-tested { background-color: var(--neutral-bg-color); color: #455A64; }
+        /* --- END OF FIX --- */
         .styled-df-table {
             width: 100%; border-collapse: collapse; font-family: 'Sarabun', sans-serif !important;
             font-size: 14px;
@@ -652,30 +673,33 @@ def inject_custom_css():
         .styled-df-table tbody tr:hover { background-color: rgba(128, 128, 128, 0.1); }
         .hearing-table { table-layout: fixed; }
         
+        /* --- START OF FIX --- */
         .custom-advice-box {
             padding: 1rem;
             border-radius: 8px;
             margin-top: 1rem;
             border: 1px solid transparent;
-            font-weight: 600; 
+            font-weight: 600; /* Make text bolder */
         }
         .immune-box {
             background-color: var(--normal-bg-color);
-            color: #2E7D32; 
+            color: #2E7D32; /* Darker green for better contrast */
             border-color: rgba(40, 167, 69, 0.2);
         }
         .no-immune-box {
             background-color: var(--abnormal-bg-color);
-            color: #C62828; 
+            color: #C62828; /* Darker red for better contrast */
             border-color: rgba(220, 53, 69, 0.2);
         }
         .warning-box {
             background-color: var(--warning-bg-color);
-            color: #AF6C00; 
+            color: #AF6C00; /* Darker yellow/orange for better contrast */
             border-color: rgba(255, 193, 7, 0.2);
         }
+        /* --- END OF FIX --- */
     </style>
     """, unsafe_allow_html=True)
+# --- END OF CHANGE ---
 
 def render_vision_details_table(person_data):
     """
@@ -882,6 +906,8 @@ def display_performance_report_lung(person_data):
                 return f"{val:{format_spec}}{unit}"
             return "-"
 
+        # --- START OF FIX ---
+        # Build HTML string in a single f-string to prevent concatenation issues.
         table_html = f"""
         <table class="styled-df-table">
             <thead>
@@ -915,6 +941,7 @@ def display_performance_report_lung(person_data):
         </table>
         """
         st.markdown(table_html, unsafe_allow_html=True)
+        # --- END OF FIX ---
 
     with side_col:
         st.markdown("<h5 class='section-subtitle'>ผลการแปลความหมาย</h5>", unsafe_allow_html=True)
@@ -1019,10 +1046,10 @@ def display_main_report(person_data, all_person_history_df):
     if sex not in ["ชาย", "หญิง"]: sex = "ไม่ระบุ"
     hb_low, hct_low = (12, 36) if sex == "หญิง" else (13, 39)
     cbc_config = [("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None), ("ฮีมาโตคริต (Hct)", "HCT", "ชาย > 39%, หญิง > 36%", hct_low, None), ("เม็ดเลือดขาว (wbc)", "WBC (cumm)", "4,000 - 10,000 /cu.mm", 4000, 10000), ("นิวโทรฟิล (Neutrophil)", "Ne (%)", "43 - 70%", 43, 70), ("ลิมโฟไซต์ (Lymphocyte)", "Ly (%)", "20 - 44%", 20, 44), ("โมโนไซต์ (Monocyte)", "M", "3 - 9%", 3, 9), ("อีโอซิโนฟิล (Eosinophil)", "Eo", "0 - 9%", 0, 9), ("เบโซฟิล (Basophil)", "BA", "0 - 3%", 0, 3), ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150,000 - 500,000 /cu.mm", 150000, 500000)]
-    cbc_rows = [([(label, is_abn), (result, is_abn), (norm, is_abn)]) for label, col, norm, low, high in cbc_config for val in [get_float(person, col)] for result, is_abn in [flag(val, low, high)]]
+    cbc_rows = [([(label, is_abn), (result, is_abn), (norm, is_abn)]) for label, col, norm, low, high in cbc_config for val in [get_float(col, person)] for result, is_abn in [flag(val, low, high)]]
     
     blood_config = [("น้ำตาลในเลือด (FBS)", "FBS", "74 - 106 mg/dl", 74, 106), ("กรดยูริก (Uric Acid)", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2), ("การทำงานของเอนไซม์ตับ (ALK)", "ALP", "30 - 120 U/L", 30, 120), ("การทำงานของเอนไซม์ตับ (SGOT)", "SGOT", "< 37 U/L", None, 37), ("การทำงานของเอนไซม์ตับ (SGPT)", "SGPT", "< 41 U/L", None, 41), ("คลอเรสเตอรอล (CHOL)", "CHOL", "150 - 200 mg/dl", 150, 200), ("ไตรกลีเซอไรด์ (TGL)", "TGL", "35 - 150 mg/dl", 35, 150), ("ไขมันดี (HDL)", "HDL", "> 40 mg/dl", 40, None, True), ("ไขมันเลว (LDL)", "LDL", "0 - 160 mg/dl", 0, 160), ("การทำงานของไต (BUN)", "BUN", "7.9 - 20 mg/dl", 7.9, 20), ("การทำงานของไต (Cr)", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17), ("ประสิทธิภาพการกรองของไต (GFR)", "GFR", "> 60 mL/min", 60, None, True)]
-    blood_rows = [([(label, is_abn), (result, is_abn), (norm, is_abn)]) for label, col, norm, low, high, *opt in blood_config for higher in [opt[0] if opt else False] for val in [get_float(person, col)] for result, is_abn in [flag(val, low, high, higher)]]
+    blood_rows = [([(label, is_abn), (result, is_abn), (norm, is_abn)]) for label, col, norm, low, high, *opt in blood_config for higher in [opt[0] if opt else False] for val in [get_float(col, person)] for result, is_abn in [flag(val, low, high, higher)]]
     
     with st.container(border=True):
         render_section_header("ผลการตรวจทางห้องปฏิบัติการ (Laboratory Results)")
@@ -1066,6 +1093,7 @@ def display_main_report(person_data, all_person_history_df):
                 <tbody><tr><td style='text-align: center;'>{hbsag}</td><td style='text-align: center;'>{hbsab}</td><td style='text-align: center;'>{hbcab}</td></tr></tbody>
             </table></div>""", unsafe_allow_html=True)
             
+            # --- START OF FIX ---
             if not (is_empty(hbsag) and is_empty(hbsab) and is_empty(hbcab)):
                 advice, status = hepatitis_b_advice(hbsag, hbsab, hbcab)
                 status_class = ""
@@ -1081,6 +1109,7 @@ def display_main_report(person_data, all_person_history_df):
                     {advice}
                 </div>
                 """, unsafe_allow_html=True)
+            # --- END OF FIX ---
 
     with st.container(border=True):
         render_section_header("สรุปและคำแนะนำการปฏิบัติตัว (Summary & Recommendations)")
@@ -1132,6 +1161,7 @@ if 'selected_date' not in st.session_state: st.session_state.selected_date = Non
 if 'print_trigger' not in st.session_state: st.session_state.print_trigger = False
 if 'print_performance_trigger' not in st.session_state: st.session_state.print_performance_trigger = False
 
+# --- START OF CHANGE: Controls moved to Sidebar with Form ---
 with st.sidebar:
     st.markdown('<div class="sidebar-title">ค้นหาข้อมูล</div>', unsafe_allow_html=True)
     
@@ -1172,6 +1202,8 @@ with st.sidebar:
         st.button("พิมพ์รายงานสุขภาพ", use_container_width=True, disabled=True)
         st.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True, disabled=True)
 
+# --- END OF CHANGE ---
+
 # --- Main Page ---
 if "person_row" not in st.session_state or not st.session_state.get("selected_row_found", False):
     st.info("กรุณาค้นหาและเลือกผลตรวจจากเมนูด้านข้าง")
@@ -1180,7 +1212,9 @@ else:
     all_person_history_df = st.session_state.search_result
     
     available_reports = OrderedDict()
+    # --- START OF CHANGE: Add Visualization tab ---
     if has_visualization_data(all_person_history_df): available_reports['ภาพรวมสุขภาพ (Graphs)'] = 'visualization_report'
+    # --- END OF CHANGE ---
     if has_basic_health_data(person_data): available_reports['สุขภาพพื้นฐาน'] = 'main_report'
     if has_vision_data(person_data): available_reports['สมรรถภาพการมองเห็น'] = 'vision_report'
     if has_hearing_data(person_data): available_reports['สมรรถภาพการได้ยิน'] = 'hearing_report'
@@ -1195,8 +1229,10 @@ else:
     
         for i, (tab_title, page_key) in enumerate(available_reports.items()):
             with tabs[i]:
+                # --- START OF CHANGE: Handle the new visualization tab ---
                 if page_key == 'visualization_report':
                     display_visualization_tab(person_data, all_person_history_df)
+                # --- END OF CHANGE ---
                 elif page_key == 'vision_report':
                     display_performance_report(person_data, 'vision')
                 elif page_key == 'hearing_report':
@@ -1211,7 +1247,9 @@ else:
         report_html_data = generate_printable_report(person_data, all_person_history_df)
         escaped_html = json.dumps(report_html_data)
         
+        # --- START OF FIX: Use a unique ID for the iframe to allow repeated printing ---
         iframe_id = f"print-iframe-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
+        # --- END OF FIX ---
         
         print_component = f"""
         <iframe id="{iframe_id}" style="display:none;"></iframe>
@@ -1243,7 +1281,9 @@ else:
         report_html_data = generate_performance_report_html(person_data, all_person_history_df)
         escaped_html = json.dumps(report_html_data)
         
+        # --- START OF FIX: Use a unique ID for the iframe to allow repeated printing ---
         iframe_id = f"print-perf-iframe-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
+        # --- END OF FIX ---
         
         print_component = f"""
         <iframe id="{iframe_id}" style="display:none;"></iframe>
@@ -1270,4 +1310,3 @@ else:
         """
         st.components.v1.html(print_component, height=0, width=0)
         st.session_state.print_performance_trigger = False
-
