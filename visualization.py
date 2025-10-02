@@ -69,52 +69,18 @@ def get_interpretation_text(metric, value):
         return " (สูงมาก)"
     return ""
 
-# --- START OF CHANGE: New helper functions for BP trend table ---
+# --- START OF CHANGE: New helper for BP classification and removed old table functions ---
 def get_bp_classification(sbp, dbp):
-    """จำแนกระดับความดันโลหิตและคืนค่าสีสำหรับตาราง"""
+    """จำแนกระดับความดันโลหิตสำหรับใช้ในกราฟ"""
     if sbp is None or dbp is None or pd.isna(sbp) or pd.isna(dbp):
-        return "ไม่มีข้อมูล", "#FFFFFF"  # White/default
+        return "ไม่มีข้อมูล"
     sbp, dbp = float(sbp), float(dbp)
-    if sbp >= 180 or dbp >= 120:
-        return "สูงวิกฤต", "#dc3545" 
-    if sbp >= 140 or dbp >= 90:
-        return "สูงระยะที่ 2", "#fd7e14"
-    if 130 <= sbp <= 139 or 80 <= dbp <= 89:
-        return "สูงระยะที่ 1", "#ffc107"
-    if 120 <= sbp <= 129 and dbp < 80:
-        return "เริ่มสูง", "#fff3cd"
-    if sbp < 120 and dbp < 80:
-        return "ปกติ", "#d4edda"
-    return "ไม่สามารถจำแนกได้", "#f8f9fa"
-
-def render_bp_trend_table(history_df, title_html):
-    """สร้างตาราง HTML สำหรับแสดงแนวโน้มความดันโลหิต"""
-    table_css = """
-    <style>
-        .bp-trend-table {
-            width: 100%; border-collapse: collapse;
-            font-size: 14px; text-align: center;
-        }
-        .bp-trend-table th, .bp-trend-table td {
-            border: 1px solid #dee2e6; padding: 8px;
-        }
-        .bp-trend-table th { background-color: #f8f9fa; }
-        .bp-trend-table tbody tr:hover { background-color: #f1f1f1; }
-    </style>
-    """
-    html = [table_css, f"<div style='text-align:center;'>{title_html}</div>", "<table class='bp-trend-table'><thead><tr><th>ปี พ.ศ.</th><th>SBP (mmHg)</th><th>DBP (mmHg)</th><th>Pulse Pressure</th><th>การแปลผล</th></tr></thead><tbody>"]
-    bp_history = history_df[['Year', 'SBP', 'DBP']].dropna(subset=['SBP', 'DBP'])
-    if bp_history.empty:
-        return f"<div style='text-align:center;'>{title_html}</div><p style='text-align:center;'>ไม่มีข้อมูลความดันโลหิต</p>"
-    for _, row in bp_history.iterrows():
-        year = int(row['Year'])
-        sbp = int(row['SBP'])
-        dbp = int(row['DBP'])
-        pulse_pressure = sbp - dbp
-        classification, color = get_bp_classification(sbp, dbp)
-        html.append(f"<tr><td>{year}</td><td>{sbp}</td><td>{dbp}</td><td>{pulse_pressure}</td><td style='background-color:{color}; color: black; font-weight:bold;'>{classification}</td></tr>")
-    html.append("</tbody></table>")
-    return "".join(html)
+    if sbp >= 180 or dbp >= 120: return "สูงวิกฤต"
+    if sbp >= 140 or dbp >= 90: return "สูงระยะที่ 2"
+    if 130 <= sbp <= 139 or 80 <= dbp <= 89: return "สูงระยะที่ 1"
+    if 120 <= sbp <= 129 and dbp < 80: return "เริ่มสูง"
+    if sbp < 120 and dbp < 80: return "ปกติ"
+    return "ไม่สามารถจำแนกได้"
 # --- END OF CHANGE ---
 
 # --- 1. กราฟแสดงแนวโน้มย้อนหลัง ---
@@ -161,8 +127,66 @@ def plot_historical_trends(history_df):
             direction_text = "(ควรอยู่ในเกณฑ์)" if direction_type == 'range' else ("(ยิ่งสูงยิ่งดี)" if direction_type == 'higher' else "(ยิ่งต่ำยิ่งดี)")
             full_title = f"<h5 style='text-align:center;'>{icon} {title} <br><span style='font-size:0.8em;color:gray;'>{direction_text}</span></h5>"
 
+            # --- START OF CHANGE: Replaced BP table with modern scatter plot ---
             if is_bp:
-                st.markdown(render_bp_trend_table(history_df, full_title), unsafe_allow_html=True)
+                bp_history = history_df[['Year', 'SBP', 'DBP']].dropna(subset=['SBP', 'DBP']).copy()
+                if bp_history.empty:
+                    st.markdown(full_title, unsafe_allow_html=True)
+                    st.info("ไม่มีข้อมูลความดันโลหิตเพียงพอที่จะแสดงผล")
+                else:
+                    bp_history['Classification'] = bp_history.apply(lambda row: get_bp_classification(row['SBP'], row['DBP']), axis=1)
+
+                    fig = go.Figure()
+
+                    # Add colored zones for SBP
+                    zones = [
+                        {'name': 'สูงวิกฤต', 'range': [180, 220], 'color': 'rgba(220, 53, 69, 0.15)'},
+                        {'name': 'สูงระยะที่ 2', 'range': [140, 180], 'color': 'rgba(253, 126, 20, 0.2)'},
+                        {'name': 'สูงระยะที่ 1', 'range': [130, 140], 'color': 'rgba(255, 193, 7, 0.2)'},
+                        {'name': 'เริ่มสูง', 'range': [120, 130], 'color': 'rgba(255, 243, 205, 0.5)'},
+                        {'name': 'ปกติ', 'range': [80, 120], 'color': 'rgba(40, 167, 69, 0.15)'}
+                    ]
+                    for zone in zones:
+                        fig.add_shape(type="rect", xref="paper", yref="y", x0=0, y0=zone['range'][0], x1=1, y1=zone['range'][1],
+                                      fillcolor=zone['color'], layer="below", line_width=0)
+                        fig.add_annotation(x=0.02, y=(zone['range'][0] + zone['range'][1])/2, text=zone['name'], showarrow=False,
+                                           xref="paper", yref="y", font=dict(size=10, color="gray"), xanchor="left")
+                    
+                    # Add data points
+                    fig.add_trace(go.Scatter(
+                        x=bp_history['Year'],
+                        y=bp_history['SBP'],
+                        mode='lines+markers',
+                        marker=dict(
+                            size=bp_history['DBP'],
+                            sizemin=8,
+                            sizeref=bp_history['DBP'].max() / 50, # Adjust scaling
+                            color='#007bff',
+                            line=dict(width=1, color='DarkSlateGrey')
+                        ),
+                        customdata=bp_history[['SBP', 'DBP', 'Classification']],
+                        hovertemplate=(
+                            "<b>ปี %{x}</b><br>"
+                            "SBP: %{customdata[0]:.0f} (ตัวบน)<br>"
+                            "DBP: %{customdata[1]:.0f} (ตัวล่าง)<br>"
+                            "ขนาดจุดแทนค่า DBP<br>"
+                            "ผล: %{customdata[2]}<extra></extra>"
+                        ),
+                        name='ความดันโลหิต'
+                    ))
+
+                    fig.update_layout(
+                        title=full_title.replace("<h5 style='text-align:center;'>", "").replace("</h5>",""),
+                        xaxis_title="ปี พ.ศ.",
+                        yaxis_title="SBP (ความดันตัวบน)",
+                        yaxis_range=[80, max(200, bp_history['SBP'].max() + 10)],
+                        xaxis=dict(tickmode='linear'),
+                        showlegend=False,
+                        font_family="Sarabun",
+                        template="streamlit"
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+            # --- END OF CHANGE ---
             else:
                 df_plot = history_df[['Year_str', keys, f'{keys}_interp']]
                 fig = px.line(df_plot, x='Year_str', y=keys, title=full_title.replace("<h5 style='text-align:center;'>", "").replace("</h5>",""), markers=True, custom_data=[keys, f'{keys}_interp'])
