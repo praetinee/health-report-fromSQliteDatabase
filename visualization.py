@@ -131,7 +131,7 @@ def plot_historical_trends(history_df):
             if direction_type == 'higher':
                 direction_text = "(ยิ่งสูงยิ่งดี)"
             elif direction_type == 'range':
-                direction_text = "(ค่าอยู่ในเกณฑ์ดีที่สุด)"
+                direction_text = "(ควรอยู่ในเกณฑ์)"
             else: # Default to 'lower'
                 direction_text = "(ยิ่งต่ำยิ่งดี)"
             full_title = f"{icon} {title} <br><span style='font-size:0.8em;color:gray;'>{direction_text}</span>"
@@ -458,5 +458,4 @@ def display_visualization_tab(person_data, history_df):
         with col4:
             plot_lung_comparison(person_data)
 # --- END OF CHANGE ---
-
 
