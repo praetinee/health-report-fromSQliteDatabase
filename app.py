@@ -18,7 +18,7 @@ from performance_tests import interpret_audiogram, interpret_lung_capacity, gene
 from print_report import generate_printable_report
 from print_performance_report import generate_performance_report_html
 # --- START OF CHANGE: Import the new visualization function ---
-from visualization import display_visualization_tab
+import visualization
 # --- END OF CHANGE ---
 
 
@@ -1231,7 +1231,7 @@ else:
             with tabs[i]:
                 # --- START OF CHANGE: Handle the new visualization tab ---
                 if page_key == 'visualization_report':
-                    display_visualization_tab(person_data, all_person_history_df)
+                    visualization.display_visualization_tab(person_data, all_person_history_df)
                 # --- END OF CHANGE ---
                 elif page_key == 'vision_report':
                     display_performance_report(person_data, 'vision')
@@ -1310,3 +1310,4 @@ else:
         """
         st.components.v1.html(print_component, height=0, width=0)
         st.session_state.print_performance_trigger = False
+
