@@ -115,7 +115,6 @@ def plot_historical_trends(history_df):
 
     history_df['Year_str'] = history_df['Year'].astype(str)
 
-    # --- START OF CHANGE: Make trend plots responsive ---
     # Create a list of metrics to plot
     metrics_to_plot = [ (title, keys, unit, goal, direction_type) 
                         for title, (keys, unit, goal, direction_type) in trend_metrics.items() ]
@@ -126,7 +125,6 @@ def plot_historical_trends(history_df):
     for i in range(num_metrics):
         with cols[i % 2]:
             title, keys, unit, goal, direction_type = metrics_to_plot[i]
-    # --- END OF CHANGE ---
             is_bp = isinstance(keys, list)
             icon = "🩸" if is_bp else "📊"
             direction_text = "(ควรอยู่ในเกณฑ์)" if direction_type == 'range' else ("(ยิ่งสูงยิ่งดี)" if direction_type == 'higher' else "(ยิ่งต่ำยิ่งดี)")
@@ -209,91 +207,85 @@ def plot_historical_trends(history_df):
                 st.plotly_chart(fig, use_container_width=True)
 
 
+# --- START OF CHANGE: Break `plot_gauge_charts` into individual functions ---
 # --- 2. เกจวัด ---
 
-def plot_gauge_charts(person_data):
-    """สร้างเกจวัดสำหรับข้อมูลสุขภาพที่สำคัญ พร้อมคำอธิบาย"""
-    # --- START OF CHANGE: Make gauge charts responsive ---
-    gauges_to_plot = [
-        {'type': 'BMI', 'data': person_data},
-        {'type': 'FBS', 'data': person_data},
-        {'type': 'GFR', 'data': person_data}
-    ]
-    
-    cols = st.columns(len(gauges_to_plot))
-    for i, gauge in enumerate(gauges_to_plot):
-        with cols[i]:
-            if gauge['type'] == 'BMI':
-    # --- END OF CHANGE ---
-                bmi = get_float(person_data, 'BMI')
-                if bmi is None:
-                     weight = get_float(person_data, 'น้ำหนัก')
-                     height = get_float(person_data, 'ส่วนสูง')
-                     if weight and height:
-                         bmi = weight / ((height/100)**2)
+def plot_bmi_gauge(person_data):
+    """สร้างเกจวัดสำหรับ BMI"""
+    bmi = get_float(person_data, 'BMI')
+    if bmi is None:
+         weight = get_float(person_data, 'น้ำหนัก')
+         height = get_float(person_data, 'ส่วนสูง')
+         if weight and height and height > 0:
+             bmi = weight / ((height/100)**2)
 
-                if bmi is not None:
-                    fig = go.Figure(go.Indicator(
-                        mode = "gauge+number",
-                        value = bmi,
-                        title = {'text': "ดัชนีมวลกาย (BMI)"},
-                        gauge = {
-                            'axis': {'range': [15, 40]},
-                            'steps' : [
-                                {'range': [15, 18.5], 'color': "lightblue"},
-                                {'range': [18.5, 23], 'color': "green"},
-                                {'range': [23, 25], 'color': "yellow"},
-                                {'range': [25, 30], 'color': "orange"},
-                                {'range': [30, 40], 'color': "red"}],
-                            'bar': {'color': "darkblue"}
-                        }))
-                    fig.update_layout(height=250, margin=dict(l=20, r=20, t=40, b=10), font_family="Sarabun", template="streamlit")
-                    st.plotly_chart(fig, use_container_width=True)
-                    st.markdown(f"<p style='text-align: center; font-weight: bold;'>ผล: {get_bmi_desc(bmi)}</p>", unsafe_allow_html=True)
+    if bmi is not None:
+        fig = go.Figure(go.Indicator(
+            mode = "gauge+number",
+            value = bmi,
+            title = {'text': "ดัชนีมวลกาย (BMI)"},
+            gauge = {
+                'axis': {'range': [15, 40]},
+                'steps' : [
+                    {'range': [15, 18.5], 'color': "lightblue"},
+                    {'range': [18.5, 23], 'color': "green"},
+                    {'range': [23, 25], 'color': "yellow"},
+                    {'range': [25, 30], 'color': "orange"},
+                    {'range': [30, 40], 'color': "red"}],
+                'bar': {'color': "darkblue"}
+            }))
+        fig.update_layout(height=250, margin=dict(l=20, r=20, t=40, b=10), font_family="Sarabun", template="streamlit")
+        st.plotly_chart(fig, use_container_width=True)
+        st.markdown(f"<p style='text-align: center; font-weight: bold;'>ผล: {get_bmi_desc(bmi)}</p>", unsafe_allow_html=True)
+    else:
+        st.info("ไม่มีข้อมูล BMI")
 
-            # --- START OF CHANGE: Make gauge charts responsive ---
-            elif gauge['type'] == 'FBS':
-            # --- END OF CHANGE ---
-                fbs = get_float(person_data, 'FBS')
-                if fbs is not None:
-                    fig = go.Figure(go.Indicator(
-                        mode = "gauge+number",
-                        value = fbs,
-                        title = {'text': "ระดับน้ำตาล (FBS mg/dL)"},
-                        gauge = {
-                            'axis': {'range': [60, 160]},
-                            'steps' : [
-                                {'range': [60, 74], 'color': "yellow"},
-                                {'range': [74, 100], 'color': "green"},
-                                {'range': [100, 126], 'color': "orange"},
-                                {'range': [126, 160], 'color': "red"}],
-                            'bar': {'color': "darkblue"}
-                        }))
-                    fig.update_layout(height=250, margin=dict(l=20, r=20, t=40, b=10), font_family="Sarabun", template="streamlit")
-                    st.plotly_chart(fig, use_container_width=True)
-                    st.markdown(f"<p style='text-align: center; font-weight: bold;'>ผล: {get_fbs_desc(fbs)}</p>", unsafe_allow_html=True)
+def plot_fbs_gauge(person_data):
+    """สร้างเกจวัดสำหรับ FBS"""
+    fbs = get_float(person_data, 'FBS')
+    if fbs is not None:
+        fig = go.Figure(go.Indicator(
+            mode = "gauge+number",
+            value = fbs,
+            title = {'text': "ระดับน้ำตาล (FBS mg/dL)"},
+            gauge = {
+                'axis': {'range': [60, 160]},
+                'steps' : [
+                    {'range': [60, 74], 'color': "yellow"},
+                    {'range': [74, 100], 'color': "green"},
+                    {'range': [100, 126], 'color': "orange"},
+                    {'range': [126, 160], 'color': "red"}],
+                'bar': {'color': "darkblue"}
+            }))
+        fig.update_layout(height=250, margin=dict(l=20, r=20, t=40, b=10), font_family="Sarabun", template="streamlit")
+        st.plotly_chart(fig, use_container_width=True)
+        st.markdown(f"<p style='text-align: center; font-weight: bold;'>ผล: {get_fbs_desc(fbs)}</p>", unsafe_allow_html=True)
+    else:
+        st.info("ไม่มีข้อมูล FBS")
 
-            # --- START OF CHANGE: Make gauge charts responsive ---
-            elif gauge['type'] == 'GFR':
-            # --- END OF CHANGE ---
-                gfr = get_float(person_data, 'GFR')
-                if gfr is not None:
-                    fig = go.Figure(go.Indicator(
-                        mode = "gauge+number",
-                        value = gfr,
-                        title = {'text': "การกรองของไต (GFR mL/min)"},
-                        gauge = {
-                            'axis': {'range': [0, 120]},
-                            'steps' : [
-                                {'range': [0, 30], 'color': "red"},
-                                {'range': [30, 60], 'color': "orange"},
-                                {'range': [60, 90], 'color': "yellow"},
-                                {'range': [90, 120], 'color': "green"}],
-                            'bar': {'color': "darkblue"}
-                        }))
-                    fig.update_layout(height=250, margin=dict(l=20, r=20, t=40, b=10), font_family="Sarabun", template="streamlit")
-                    st.plotly_chart(fig, use_container_width=True)
-                    st.markdown(f"<p style='text-align: center; font-weight: bold;'>ผล: {get_gfr_desc(gfr)}</p>", unsafe_allow_html=True)
+def plot_gfr_gauge(person_data):
+    """สร้างเกจวัดสำหรับ GFR"""
+    gfr = get_float(person_data, 'GFR')
+    if gfr is not None:
+        fig = go.Figure(go.Indicator(
+            mode = "gauge+number",
+            value = gfr,
+            title = {'text': "การกรองของไต (GFR mL/min)"},
+            gauge = {
+                'axis': {'range': [0, 120]},
+                'steps' : [
+                    {'range': [0, 30], 'color': "red"},
+                    {'range': [30, 60], 'color': "orange"},
+                    {'range': [60, 90], 'color': "yellow"},
+                    {'range': [90, 120], 'color': "green"}],
+                'bar': {'color': "darkblue"}
+            }))
+        fig.update_layout(height=250, margin=dict(l=20, r=20, t=40, b=10), font_family="Sarabun", template="streamlit")
+        st.plotly_chart(fig, use_container_width=True)
+        st.markdown(f"<p style='text-align: center; font-weight: bold;'>ผล: {get_gfr_desc(gfr)}</p>", unsafe_allow_html=True)
+    else:
+        st.info("ไม่มีข้อมูล GFR")
+# --- END OF CHANGE ---
 
 
 
@@ -461,11 +453,27 @@ def display_visualization_tab(person_data, history_df):
     # Section 1: Gauges and Radar (Current Year Snapshot)
     with st.container(border=True):
         st.subheader(f"🎯 สรุปผลสุขภาพภาพรวม (ปี พ.ศ. {person_data.get('Year', '')})")
-        col1, col2 = st.columns([2, 3])
-        with col1:
+        
+        # --- START OF CHANGE: Create responsive grid for snapshot charts ---
+        # Define the charts for this section
+        snapshot_charts_funcs = [
+            plot_risk_radar, 
+            plot_bmi_gauge, 
+            plot_fbs_gauge, 
+            plot_gfr_gauge
+        ]
+        
+        # Create a 2-column layout that will stack on smaller screens
+        cols = st.columns(2)
+        
+        # Distribute charts into the columns
+        with cols[0]:
             plot_risk_radar(person_data)
-        with col2:
-            plot_gauge_charts(person_data)
+            plot_fbs_gauge(person_data)
+        with cols[1]:
+            plot_bmi_gauge(person_data)
+            plot_gfr_gauge(person_data)
+        # --- END OF CHANGE ---
 
     # Section 2: Trends (Historical View)
     with st.container(border=True):
@@ -489,3 +497,4 @@ def display_visualization_tab(person_data, history_df):
                 elif chart['type'] == 'lung':
                     plot_lung_comparison(chart['data'])
         # --- END OF CHANGE ---
+
