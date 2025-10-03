@@ -452,16 +452,18 @@ def display_visualization_tab(person_data, history_df):
     with st.container(border=True):
         st.subheader(f"🎯 สรุปผลสุขภาพภาพรวม (ปี พ.ศ. {person_data.get('Year', '')})")
         
-        # Create a 2-column layout that will stack on smaller screens
-        cols = st.columns(2)
+        # --- START OF CHANGE: Reworked the layout for better responsiveness ---
+        # Radar chart will be in the first column, gauges in the second.
+        col1, col2 = st.columns(2)
         
-        # Distribute charts into the columns
-        with cols[0]:
+        with col1:
             plot_risk_radar(person_data)
-            plot_fbs_gauge(person_data)
-        with cols[1]:
+        
+        with col2:
             plot_bmi_gauge(person_data)
+            plot_fbs_gauge(person_data)
             plot_gfr_gauge(person_data)
+        # --- END OF CHANGE ---
 
     # Section 2: Trends (Historical View)
     with st.container(border=True):
