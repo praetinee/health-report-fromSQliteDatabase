@@ -198,6 +198,12 @@ def authentication_flow(df):
     
     st.markdown("""
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
+        
+        body, .stApp, .stTextInput, .stButton, h1, h3, .stMarkdown {
+            font-family: 'Sarabun', sans-serif !important;
+        }
+
         .main { background-color: #f0f2f6; }
         .stApp {
             display: flex;
@@ -236,6 +242,12 @@ def pdpa_consent_page():
     st.set_page_config(page_title="PDPA Consent", layout="centered")
     st.markdown("""
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
+        
+        body, .stApp, .stButton, h2, h4, p, li, ul {
+            font-family: 'Sarabun', sans-serif !important;
+        }
+
         .main { background-color: #f0f2f6; }
         .consent-container {
             background-color: white; padding: 2rem 3rem; border-radius: 10px;
