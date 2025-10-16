@@ -227,11 +227,7 @@ def authentication_flow(df):
     with st.container():
         st.markdown("""
         <div class="auth-header">
-          <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#00796B" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z"></path>
-            <path d="M12 8v8"></path>
-            <path d="M8 12h8"></path>
-          </svg>
+          <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSkshqNvuTMBqpcTdn9xdTb19dIgTt0RIbsrw&s" alt="Logo" width="80">
           <h2 style='text-align: center; margin-top: 10px; margin-bottom: 0px;'>ระบบรายงานผลตรวจสุขภาพ</h2>
           <p style='text-align: center; color: #555; margin-top: 5px; margin-bottom: 20px;'>กลุ่มงานอาชีวเวชกรรม รพ.สันทราย</p>
         </div>
