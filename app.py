@@ -14,7 +14,7 @@ import json
 from streamlit_js_eval import streamlit_js_eval
 
 # --- START OF CHANGE: Import new authentication module ---
-from auth import login_page, pdpa_consent_page
+from auth import authentication_flow, pdpa_consent_page
 # --- END OF CHANGE ---
 
 # --- Import ฟังก์ชันจากไฟล์อื่น ---
@@ -1131,26 +1131,16 @@ def main_app(df):
 
     inject_custom_css()
 
-    def perform_search():
-        st.session_state.search_query = st.session_state.search_input
-        st.session_state.selected_year = None
-        st.session_state.selected_date = None
-        st.session_state.pop("person_row", None)
-        st.session_state.pop("selected_row_found", None)
-        raw_search_term = st.session_state.search_query.strip()
-        search_term = re.sub(r'\s+', ' ', raw_search_term)
-        if search_term:
-            if search_term.isdigit():
-                 results_df = df[df["HN"] == search_term].copy()
-            else:
-                 results_df = df[df["ชื่อ-สกุล"] == search_term].copy()
+    # --- START OF CHANGE: Logic to handle data for the logged-in user ---
+    # No search form needed. Data is pre-loaded based on login.
+    if 'user_hn' not in st.session_state:
+        st.error("เกิดข้อผิดพลาด: ไม่พบข้อมูลผู้ใช้")
+        st.stop()
 
-            if results_df.empty:
-                st.session_state.search_result = pd.DataFrame()
-            else:
-                st.session_state.search_result = results_df
-        else:
-            st.session_state.search_result = pd.DataFrame()
+    user_hn = st.session_state['user_hn']
+    results_df = df[df['HN'] == user_hn].copy()
+    st.session_state['search_result'] = results_df
+    # --- END OF CHANGE ---
 
     def handle_year_change():
         st.session_state.selected_year = st.session_state.year_select
@@ -1158,32 +1148,26 @@ def main_app(df):
         st.session_state.pop("person_row", None)
         st.session_state.pop("selected_row_found", None)
 
-    if 'search_query' not in st.session_state: st.session_state.search_query = ""
-    if 'search_input' not in st.session_state: st.session_state.search_input = ""
-    if 'search_result' not in st.session_state: st.session_state.search_result = pd.DataFrame()
+    # Initialize states for the logged-in user
     if 'selected_year' not in st.session_state: st.session_state.selected_year = None
-    if 'selected_date' not in st.session_state: st.session_state.selected_date = None
     if 'print_trigger' not in st.session_state: st.session_state.print_trigger = False
     if 'print_performance_trigger' not in st.session_state: st.session_state.print_performance_trigger = False
 
     with st.sidebar:
-        st.markdown('<div class="sidebar-title">ค้นหาข้อมูล</div>', unsafe_allow_html=True)
+        # --- START OF CHANGE: Display user info instead of search ---
+        st.markdown(f"<div class='sidebar-title'>ยินดีต้อนรับ</div><h3>{st.session_state.get('user_name', '')}</h3>", unsafe_allow_html=True)
+        st.markdown(f"**HN:** {st.session_state.get('user_hn', '')}")
+        st.markdown("---")
+        # --- END OF CHANGE ---
         
-        with st.form(key="search_form"):
-            st.text_input("HN หรือ ชื่อ-สกุล", key="search_input", placeholder="ค้นหา...", label_visibility="collapsed")
-            st.form_submit_button("ค้นหา", on_click=perform_search, use_container_width=True)
-        
-        results_df = st.session_state.search_result
-        if results_df.empty and st.session_state.search_query:
-            st.error("❌ ไม่พบข้อมูล")
-
         if not results_df.empty:
             available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
             if available_years:
                 if st.session_state.selected_year not in available_years:
                     st.session_state.selected_year = available_years[0]
+                
                 year_idx = available_years.index(st.session_state.selected_year)
-                st.selectbox("เลือกปี พ.ศ.", options=available_years, index=year_idx, format_func=lambda y: f"พ.ศ. {y}", key="year_select", on_change=handle_year_change, label_visibility="collapsed")
+                st.selectbox("เลือกปี พ.ศ. ที่ต้องการดูผลตรวจ", options=available_years, index=year_idx, format_func=lambda y: f"พ.ศ. {y}", key="year_select", on_change=handle_year_change)
             
                 person_year_df = results_df[results_df["Year"] == st.session_state.selected_year]
 
@@ -1209,14 +1193,20 @@ def main_app(df):
         # Add logout button
         st.markdown("---")
         if st.button("ออกจากระบบ (Logout)", use_container_width=True):
-            for key in ['authenticated', 'pdpa_accepted', 'search_query', 'person_row', 'selected_row_found']:
+            # Clear all session state keys related to the user session
+            keys_to_clear = [
+                'authenticated', 'pdpa_accepted', 'user_hn', 'user_name',
+                'search_result', 'selected_year', 'person_row', 
+                'selected_row_found', 'auth_step'
+            ]
+            for key in keys_to_clear:
                 if key in st.session_state:
                     del st.session_state[key]
             st.rerun()
 
     # --- Main Page ---
     if "person_row" not in st.session_state or not st.session_state.get("selected_row_found", False):
-        st.info("กรุณาค้นหาและเลือกผลตรวจจากเมนูด้านข้าง")
+        st.info("กรุณาเลือกปีที่ต้องการดูผลตรวจจากเมนูด้านข้าง")
     else:
         person_data = st.session_state.person_row
         all_person_history_df = st.session_state.search_result
@@ -1230,7 +1220,7 @@ def main_app(df):
         
         if not available_reports:
             display_common_header(person_data)
-            st.warning("ไม่พบข้อมูลการตรวจใดๆ สำหรับวันที่และปีที่เลือก")
+            st.warning("ไม่พบข้อมูลการตรวจใดๆ สำหรับปีที่เลือก")
         else:
             display_common_header(person_data)
             tabs = st.tabs(list(available_reports.keys()))
@@ -1326,7 +1316,7 @@ if df is None:
     st.stop()
 
 if not st.session_state['authenticated']:
-    login_page(df)
+    authentication_flow(df)
 elif not st.session_state['pdpa_accepted']:
     pdpa_consent_page()
 else:
