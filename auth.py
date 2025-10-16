@@ -1,9 +1,9 @@
 import streamlit as st
 
-def login_page():
+def login_page(df):
     """
-    แสดงหน้าล็อกอินและจัดการการยืนยันตัวตน
-    Renders the login page and handles authentication.
+    แสดงหน้าล็อกอินและจัดการการยืนยันตัวตนโดยใช้ข้อมูลจาก DataFrame
+    Renders the login page and handles authentication using data from the DataFrame.
     """
     st.set_page_config(page_title="Login", layout="centered")
     
@@ -44,23 +44,32 @@ def login_page():
         st.markdown("<h1>ระบบรายงานผลตรวจสุขภาพ</h1>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center;'>กรุณาลงชื่อเข้าใช้เพื่อดำเนินการต่อ</p>", unsafe_allow_html=True)
 
-        username = st.text_input("ชื่อผู้ใช้ (Username)", key="username_input")
-        password = st.text_input("รหัสผ่าน (Password)", type="password", key="password_input")
+        username = st.text_input("ชื่อผู้ใช้ (HN)", key="username_input", help="กรอก Hospital Number ของท่าน")
+        password = st.text_input("รหัสผ่าน (เลขบัตรประชาชน)", type="password", key="password_input", help="กรอกเลขบัตรประชาชน 13 หลัก")
 
         if st.button("ลงชื่อเข้าใช้ (Login)"):
-            # หมายเหตุ: นี่คือการล็อกอินแบบง่ายและไม่ปลอดภัย
-            # ในการใช้งานจริง ควรใช้วิธีที่ปลอดภัย เช่น การเข้ารหัสรหัสผ่าน
-            # และตรวจสอบกับฐานข้อมูล
-            # NOTE: This is a simple, insecure login. 
-            # In a real application, use a secure method like hashing passwords 
-            # and checking against a database.
-            if username == "admin" and password == "password1234":
-                st.session_state['authenticated'] = True
-                st.rerun()
+            if not username or not password:
+                st.error("กรุณากรอก HN และ เลขบัตรประชาชนให้ครบถ้วน")
             else:
-                st.error("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
-        
-        st.markdown("<p style='text-align: center; color: grey; font-size: 0.8em; margin-top: 2rem;'>Username: admin<br>Password: password1234</p>", unsafe_allow_html=True)
+                # ค้นหาข้อมูลผู้ใช้ใน DataFrame
+                # Search for the user in the DataFrame.
+                try:
+                    user_record = df[
+                        (df['HN'].astype(str) == str(username).strip()) & 
+                        (df['เลขบัตรประชาชน'].astype(str) == str(password).strip())
+                    ]
+
+                    if not user_record.empty:
+                        st.session_state['authenticated'] = True
+                        st.session_state['user_name'] = user_record.iloc[0]['ชื่อ-สกุล']
+                        st.success("ลงชื่อเข้าใช้สำเร็จ!")
+                        st.rerun()
+                    else:
+                        st.error("HN หรือ เลขบัตรประชาชนไม่ถูกต้อง")
+                except Exception as e:
+                    st.error(f"เกิดข้อผิดพลาดในการตรวจสอบข้อมูล: {e}")
+
+        st.markdown("<p style='text-align: center; color: grey; font-size: 0.8em; margin-top: 2rem;'>ใช้ HN เป็นชื่อผู้ใช้ และใช้เลขบัตรประชาชนเป็นรหัสผ่าน</p>", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
 
@@ -130,3 +139,4 @@ def pdpa_consent_page():
             st.rerun()
             
         st.markdown('</div>', unsafe_allow_html=True)
+
