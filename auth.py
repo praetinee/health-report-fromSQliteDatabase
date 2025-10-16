@@ -34,7 +34,7 @@ def generate_questions(user_profile, num_questions=3):
         try:
             question_pool.append({
                 'type': 'number_input', 'key': 'weight',
-                'label': 'จากผลตรวจสุขภาพครั้งล่าสุด **น้ำหนัก** ของท่านคือเท่าไหร่ (กรอกเฉพาะตัวเลข)?',
+                'label': 'จากผลตรวจสุขภาพกับกลุ่มงานอาชีวเวชกรรมครั้งล่าสุด **น้ำหนัก** ของท่านคือเท่าไหร่ (กรอกเฉพาะตัวเลข)?',
                 'answer': float(weight)
             })
         except (ValueError, TypeError):
