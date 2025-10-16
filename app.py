@@ -13,6 +13,10 @@ import os
 import json
 from streamlit_js_eval import streamlit_js_eval
 
+# --- START OF CHANGE: Import new authentication module ---
+from auth import login_page, pdpa_consent_page
+# --- END OF CHANGE ---
+
 # --- Import ฟังก์ชันจากไฟล์อื่น ---
 from performance_tests import interpret_audiogram, interpret_lung_capacity, generate_comprehensive_recommendations
 from print_report import generate_printable_report
@@ -1117,196 +1121,212 @@ def display_main_report(person_data, all_person_history_df):
         st.markdown(f"<div class='recommendation-container'>{recommendations_html}</div>", unsafe_allow_html=True)
 
 
-# --- Main Application Logic ---
-df = load_sqlite_data()
-if df is None:
-    st.stop()
+# --- START OF CHANGE: Main application logic is wrapped in a function ---
+def main_app():
+    """
+    This function contains the main application logic for displaying health reports.
+    It's called after the user has successfully logged in and accepted the PDPA consent.
+    """
+    df = load_sqlite_data()
+    if df is None:
+        st.stop()
 
-st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
+    st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
-inject_custom_css()
+    inject_custom_css()
 
-def perform_search():
-    st.session_state.search_query = st.session_state.search_input
-    st.session_state.selected_year = None
-    st.session_state.selected_date = None
-    st.session_state.pop("person_row", None)
-    st.session_state.pop("selected_row_found", None)
-    raw_search_term = st.session_state.search_query.strip()
-    search_term = re.sub(r'\s+', ' ', raw_search_term)
-    if search_term:
-        if search_term.isdigit():
-             results_df = df[df["HN"] == search_term].copy()
-        else:
-             results_df = df[df["ชื่อ-สกุล"] == search_term].copy()
-
-        if results_df.empty:
-            st.session_state.search_result = pd.DataFrame()
-        else:
-            st.session_state.search_result = results_df
-    else:
-        st.session_state.search_result = pd.DataFrame()
-
-def handle_year_change():
-    st.session_state.selected_year = st.session_state.year_select
-    st.session_state.selected_date = None
-    st.session_state.pop("person_row", None)
-    st.session_state.pop("selected_row_found", None)
-
-if 'search_query' not in st.session_state: st.session_state.search_query = ""
-if 'search_input' not in st.session_state: st.session_state.search_input = ""
-if 'search_result' not in st.session_state: st.session_state.search_result = pd.DataFrame()
-if 'selected_year' not in st.session_state: st.session_state.selected_year = None
-if 'selected_date' not in st.session_state: st.session_state.selected_date = None
-if 'print_trigger' not in st.session_state: st.session_state.print_trigger = False
-if 'print_performance_trigger' not in st.session_state: st.session_state.print_performance_trigger = False
-
-# --- START OF CHANGE: Controls moved to Sidebar with Form ---
-with st.sidebar:
-    st.markdown('<div class="sidebar-title">ค้นหาข้อมูล</div>', unsafe_allow_html=True)
-    
-    with st.form(key="search_form"):
-        st.text_input("HN หรือ ชื่อ-สกุล", key="search_input", placeholder="ค้นหา...", label_visibility="collapsed")
-        st.form_submit_button("ค้นหา", on_click=perform_search, use_container_width=True)
-    
-    results_df = st.session_state.search_result
-    if results_df.empty and st.session_state.search_query:
-        st.error("❌ ไม่พบข้อมูล")
-
-    if not results_df.empty:
-        available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
-        if available_years:
-            if st.session_state.selected_year not in available_years:
-                st.session_state.selected_year = available_years[0]
-            year_idx = available_years.index(st.session_state.selected_year)
-            st.selectbox("เลือกปี พ.ศ.", options=available_years, index=year_idx, format_func=lambda y: f"พ.ศ. {y}", key="year_select", on_change=handle_year_change, label_visibility="collapsed")
-        
-            person_year_df = results_df[results_df["Year"] == st.session_state.selected_year]
-
-            if not person_year_df.empty:
-                merged_series = person_year_df.bfill().ffill().iloc[0]
-                st.session_state.person_row = merged_series.to_dict()
-                st.session_state.selected_row_found = True
+    def perform_search():
+        st.session_state.search_query = st.session_state.search_input
+        st.session_state.selected_year = None
+        st.session_state.selected_date = None
+        st.session_state.pop("person_row", None)
+        st.session_state.pop("selected_row_found", None)
+        raw_search_term = st.session_state.search_query.strip()
+        search_term = re.sub(r'\s+', ' ', raw_search_term)
+        if search_term:
+            if search_term.isdigit():
+                 results_df = df[df["HN"] == search_term].copy()
             else:
-                 st.session_state.pop("person_row", None)
-                 st.session_state.pop("selected_row_found", None)
-    
-    st.markdown("---")
-    st.markdown('<div class="sidebar-title" style="font-size: 1.2rem; margin-top: 1rem;">พิมพ์รายงาน</div>', unsafe_allow_html=True)
-    if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
-        if st.button("พิมพ์รายงานสุขภาพ", use_container_width=True):
-             st.session_state.print_trigger = True
-        if st.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True):
-            st.session_state.print_performance_trigger = True
+                 results_df = df[df["ชื่อ-สกุล"] == search_term].copy()
+
+            if results_df.empty:
+                st.session_state.search_result = pd.DataFrame()
+            else:
+                st.session_state.search_result = results_df
+        else:
+            st.session_state.search_result = pd.DataFrame()
+
+    def handle_year_change():
+        st.session_state.selected_year = st.session_state.year_select
+        st.session_state.selected_date = None
+        st.session_state.pop("person_row", None)
+        st.session_state.pop("selected_row_found", None)
+
+    if 'search_query' not in st.session_state: st.session_state.search_query = ""
+    if 'search_input' not in st.session_state: st.session_state.search_input = ""
+    if 'search_result' not in st.session_state: st.session_state.search_result = pd.DataFrame()
+    if 'selected_year' not in st.session_state: st.session_state.selected_year = None
+    if 'selected_date' not in st.session_state: st.session_state.selected_date = None
+    if 'print_trigger' not in st.session_state: st.session_state.print_trigger = False
+    if 'print_performance_trigger' not in st.session_state: st.session_state.print_performance_trigger = False
+
+    with st.sidebar:
+        st.markdown('<div class="sidebar-title">ค้นหาข้อมูล</div>', unsafe_allow_html=True)
+        
+        with st.form(key="search_form"):
+            st.text_input("HN หรือ ชื่อ-สกุล", key="search_input", placeholder="ค้นหา...", label_visibility="collapsed")
+            st.form_submit_button("ค้นหา", on_click=perform_search, use_container_width=True)
+        
+        results_df = st.session_state.search_result
+        if results_df.empty and st.session_state.search_query:
+            st.error("❌ ไม่พบข้อมูล")
+
+        if not results_df.empty:
+            available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
+            if available_years:
+                if st.session_state.selected_year not in available_years:
+                    st.session_state.selected_year = available_years[0]
+                year_idx = available_years.index(st.session_state.selected_year)
+                st.selectbox("เลือกปี พ.ศ.", options=available_years, index=year_idx, format_func=lambda y: f"พ.ศ. {y}", key="year_select", on_change=handle_year_change, label_visibility="collapsed")
+            
+                person_year_df = results_df[results_df["Year"] == st.session_state.selected_year]
+
+                if not person_year_df.empty:
+                    merged_series = person_year_df.bfill().ffill().iloc[0]
+                    st.session_state.person_row = merged_series.to_dict()
+                    st.session_state.selected_row_found = True
+                else:
+                     st.session_state.pop("person_row", None)
+                     st.session_state.pop("selected_row_found", None)
+        
+        st.markdown("---")
+        st.markdown('<div class="sidebar-title" style="font-size: 1.2rem; margin-top: 1rem;">พิมพ์รายงาน</div>', unsafe_allow_html=True)
+        if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
+            if st.button("พิมพ์รายงานสุขภาพ", use_container_width=True):
+                 st.session_state.print_trigger = True
+            if st.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True):
+                st.session_state.print_performance_trigger = True
+        else:
+            st.button("พิมพ์รายงานสุขภาพ", use_container_width=True, disabled=True)
+            st.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True, disabled=True)
+
+        # Add logout button
+        st.markdown("---")
+        if st.button("ออกจากระบบ (Logout)", use_container_width=True):
+            for key in ['authenticated', 'pdpa_accepted', 'search_query', 'person_row', 'selected_row_found']:
+                if key in st.session_state:
+                    del st.session_state[key]
+            st.rerun()
+
+    # --- Main Page ---
+    if "person_row" not in st.session_state or not st.session_state.get("selected_row_found", False):
+        st.info("กรุณาค้นหาและเลือกผลตรวจจากเมนูด้านข้าง")
     else:
-        st.button("พิมพ์รายงานสุขภาพ", use_container_width=True, disabled=True)
-        st.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True, disabled=True)
+        person_data = st.session_state.person_row
+        all_person_history_df = st.session_state.search_result
+        
+        available_reports = OrderedDict()
+        if has_visualization_data(all_person_history_df): available_reports['ภาพรวมสุขภาพ (Graphs)'] = 'visualization_report'
+        if has_basic_health_data(person_data): available_reports['สุขภาพพื้นฐาน'] = 'main_report'
+        if has_vision_data(person_data): available_reports['สมรรถภาพการมองเห็น'] = 'vision_report'
+        if has_hearing_data(person_data): available_reports['สมรรถภาพการได้ยิน'] = 'hearing_report'
+        if has_lung_data(person_data): available_reports['สมรรถภาพปอด'] = 'lung_report'
+        
+        if not available_reports:
+            display_common_header(person_data)
+            st.warning("ไม่พบข้อมูลการตรวจใดๆ สำหรับวันที่และปีที่เลือก")
+        else:
+            display_common_header(person_data)
+            tabs = st.tabs(list(available_reports.keys()))
+        
+            for i, (tab_title, page_key) in enumerate(available_reports.items()):
+                with tabs[i]:
+                    if page_key == 'visualization_report':
+                        display_visualization_tab(person_data, all_person_history_df)
+                    elif page_key == 'vision_report':
+                        display_performance_report(person_data, 'vision')
+                    elif page_key == 'hearing_report':
+                        display_performance_report(person_data, 'hearing', all_person_history_df=all_person_history_df)
+                    elif page_key == 'lung_report':
+                        display_performance_report(person_data, 'lung')
+                    elif page_key == 'main_report':
+                        display_main_report(person_data, all_person_history_df)
 
-# --- END OF CHANGE ---
+        # --- Print Logic ---
+        if st.session_state.get("print_trigger", False):
+            report_html_data = generate_printable_report(person_data, all_person_history_df)
+            escaped_html = json.dumps(report_html_data)
+            
+            iframe_id = f"print-iframe-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
+            
+            print_component = f"""
+            <iframe id="{iframe_id}" style="display:none;"></iframe>
+            <script>
+                (function() {{
+                    const iframe = document.getElementById('{iframe_id}');
+                    if (!iframe) return;
+                    const iframeDoc = iframe.contentWindow.document;
+                    iframeDoc.open();
+                    iframeDoc.write({escaped_html});
+                    iframeDoc.close();
+                    iframe.onload = function() {{
+                        setTimeout(function() {{
+                            try {{
+                                iframe.contentWindow.focus();
+                                iframe.contentWindow.print();
+                            }} catch (e) {{
+                                console.error("Printing failed:", e);
+                            }}
+                        }}, 500);
+                    }};
+                }})();
+            </script>
+            """
+            st.components.v1.html(print_component, height=0, width=0)
+            st.session_state.print_trigger = False
 
-# --- Main Page ---
-if "person_row" not in st.session_state or not st.session_state.get("selected_row_found", False):
-    st.info("กรุณาค้นหาและเลือกผลตรวจจากเมนูด้านข้าง")
+        if st.session_state.get("print_performance_trigger", False):
+            report_html_data = generate_performance_report_html(person_data, all_person_history_df)
+            escaped_html = json.dumps(report_html_data)
+            
+            iframe_id = f"print-perf-iframe-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
+            
+            print_component = f"""
+            <iframe id="{iframe_id}" style="display:none;"></iframe>
+            <script>
+                (function() {{
+                    const iframe = document.getElementById('{iframe_id}');
+                    if (!iframe) return;
+                    const iframeDoc = iframe.contentWindow.document;
+                    iframeDoc.open();
+                    iframeDoc.write({escaped_html});
+                    iframeDoc.close();
+                    iframe.onload = function() {{
+                        setTimeout(function() {{
+                            try {{
+                                iframe.contentWindow.focus();
+                                iframe.contentWindow.print();
+                            }} catch (e) {{
+                                console.error("Printing performance report failed:", e);
+                            }}
+                        }}, 500);
+                    }};
+                }})();
+            </script>
+            """
+            st.components.v1.html(print_component, height=0, width=0)
+            st.session_state.print_performance_trigger = False
+
+# --- Main Logic to control page flow ---
+if 'authenticated' not in st.session_state:
+    st.session_state['authenticated'] = False
+if 'pdpa_accepted' not in st.session_state:
+    st.session_state['pdpa_accepted'] = False
+
+if not st.session_state['authenticated']:
+    login_page()
+elif not st.session_state['pdpa_accepted']:
+    pdpa_consent_page()
 else:
-    person_data = st.session_state.person_row
-    all_person_history_df = st.session_state.search_result
-    
-    available_reports = OrderedDict()
-    # --- START OF CHANGE: Add Visualization tab ---
-    if has_visualization_data(all_person_history_df): available_reports['ภาพรวมสุขภาพ (Graphs)'] = 'visualization_report'
-    # --- END OF CHANGE ---
-    if has_basic_health_data(person_data): available_reports['สุขภาพพื้นฐาน'] = 'main_report'
-    if has_vision_data(person_data): available_reports['สมรรถภาพการมองเห็น'] = 'vision_report'
-    if has_hearing_data(person_data): available_reports['สมรรถภาพการได้ยิน'] = 'hearing_report'
-    if has_lung_data(person_data): available_reports['สมรรถภาพปอด'] = 'lung_report'
-    
-    if not available_reports:
-        display_common_header(person_data)
-        st.warning("ไม่พบข้อมูลการตรวจใดๆ สำหรับวันที่และปีที่เลือก")
-    else:
-        display_common_header(person_data)
-        tabs = st.tabs(list(available_reports.keys()))
-    
-        for i, (tab_title, page_key) in enumerate(available_reports.items()):
-            with tabs[i]:
-                # --- START OF CHANGE: Handle the new visualization tab ---
-                if page_key == 'visualization_report':
-                    display_visualization_tab(person_data, all_person_history_df)
-                # --- END OF CHANGE ---
-                elif page_key == 'vision_report':
-                    display_performance_report(person_data, 'vision')
-                elif page_key == 'hearing_report':
-                    display_performance_report(person_data, 'hearing', all_person_history_df=all_person_history_df)
-                elif page_key == 'lung_report':
-                    display_performance_report(person_data, 'lung')
-                elif page_key == 'main_report':
-                    display_main_report(person_data, all_person_history_df)
-
-    # --- Print Logic ---
-    if st.session_state.get("print_trigger", False):
-        report_html_data = generate_printable_report(person_data, all_person_history_df)
-        escaped_html = json.dumps(report_html_data)
-        
-        # --- START OF FIX: Use a unique ID for the iframe to allow repeated printing ---
-        iframe_id = f"print-iframe-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
-        # --- END OF FIX ---
-        
-        print_component = f"""
-        <iframe id="{iframe_id}" style="display:none;"></iframe>
-        <script>
-            (function() {{
-                const iframe = document.getElementById('{iframe_id}');
-                if (!iframe) return;
-                const iframeDoc = iframe.contentWindow.document;
-                iframeDoc.open();
-                iframeDoc.write({escaped_html});
-                iframeDoc.close();
-                iframe.onload = function() {{
-                    setTimeout(function() {{
-                        try {{
-                            iframe.contentWindow.focus();
-                            iframe.contentWindow.print();
-                        }} catch (e) {{
-                            console.error("Printing failed:", e);
-                        }}
-                    }}, 500);
-                }};
-            }})();
-        </script>
-        """
-        st.components.v1.html(print_component, height=0, width=0)
-        st.session_state.print_trigger = False
-
-    if st.session_state.get("print_performance_trigger", False):
-        report_html_data = generate_performance_report_html(person_data, all_person_history_df)
-        escaped_html = json.dumps(report_html_data)
-        
-        # --- START OF FIX: Use a unique ID for the iframe to allow repeated printing ---
-        iframe_id = f"print-perf-iframe-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
-        # --- END OF FIX ---
-        
-        print_component = f"""
-        <iframe id="{iframe_id}" style="display:none;"></iframe>
-        <script>
-            (function() {{
-                const iframe = document.getElementById('{iframe_id}');
-                if (!iframe) return;
-                const iframeDoc = iframe.contentWindow.document;
-                iframeDoc.open();
-                iframeDoc.write({escaped_html});
-                iframeDoc.close();
-                iframe.onload = function() {{
-                    setTimeout(function() {{
-                        try {{
-                            iframe.contentWindow.focus();
-                            iframe.contentWindow.print();
-                        }} catch (e) {{
-                            console.error("Printing performance report failed:", e);
-                        }}
-                    }}, 500);
-                }};
-            }})();
-        </script>
-        """
-        st.components.v1.html(print_component, height=0, width=0)
-        st.session_state.print_performance_trigger = False
+    main_app()
+# --- END OF CHANGE ---
