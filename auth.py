@@ -93,9 +93,9 @@ def generate_questions(user_profile, num_questions=3):
 
 def display_primary_login(df):
     """แสดงหน้าจอเข้าสู่ระบบหลัก (ชื่อ-สกุล + HN)"""
-    st.markdown("<h3>เข้าสู่ระบบ</h3>", unsafe_allow_html=True)
+    st.markdown("<h4>เข้าสู่ระบบ</h4>", unsafe_allow_html=True)
     name_input = st.text_input("ชื่อ-นามสกุล", key="login_name", label_visibility="collapsed", placeholder="ชื่อ-นามสกุล")
-    hn_input = st.text_input("รหัสผ่าน (HN)", key="login_hn", help="กรอก Hospital Number ของท่าน", label_visibility="collapsed", placeholder="รหัสผ่าน (HN)")
+    hn_input = st.text_input("รหัสผ่าน (HN)", key="login_hn", help="กรอก Hospital Number ของท่าน", label_visibility="collapsed", placeholder="รหัสผ่าน (HN)", type="password")
 
     col1, col2 = st.columns([3, 2])
     with col1:
@@ -126,7 +126,7 @@ def display_primary_login(df):
 
 def display_question_verification(df):
     """แสดงหน้าจอสำหรับตอบคำถามยืนยันตัวตน"""
-    st.markdown("<h3>ยืนยันตัวตนเพื่อเข้าสู่ระบบ</h3>", unsafe_allow_html=True)
+    st.markdown("<h4>ยืนยันตัวตนเพื่อเข้าสู่ระบบ</h4>", unsafe_allow_html=True)
     
     name_input = st.text_input("กรุณากรอก ชื่อ-นามสกุล ของท่านเพื่อเริ่มต้น", key="verify_name")
 
@@ -203,23 +203,18 @@ def authentication_flow(df):
         html, body, [class*="st-"], h1, h2, h3, h4, h5, h6, p, label, button, input, div {
             font-family: 'Sarabun', sans-serif !important;
         }
-
-        .main { background-color: #f0f2f6; }
         
-        /* --- START OF CHANGE: Remove vertical centering --- */
-        /* .stApp is removed */
-        /* --- END OF CHANGE --- */
+        /* Center the main block content */
+        .block-container {
+            padding-top: 3rem !important;
+        }
 
-        .auth-container {
+        /* Style the container for login */
+        div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] {
             background-color: white;
-            padding: 2rem 3rem;
+            padding: 2rem 2.5rem;
             border-radius: 10px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            max-width: 500px;
-            width: 100%;
-            /* --- START OF CHANGE: Add margin auto for horizontal centering --- */
-            margin: 5rem auto; 
-            /* --- END OF CHANGE --- */
         }
         
         .auth-header {
@@ -229,29 +224,26 @@ def authentication_flow(df):
     </style>
     """, unsafe_allow_html=True)
 
-    st.markdown('<div class="auth-container">', unsafe_allow_html=True)
-    
-    st.markdown("""
-    <div class="auth-header">
-      <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#00796B" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z"></path>
-        <path d="M12 8v8"></path>
-        <path d="M8 12h8"></path>
-      </svg>
-      <h2 style='text-align: center; margin-top: 10px; margin-bottom: 0px;'>ระบบรายงานผลตรวจสุขภาพ</h2>
-      <p style='text-align: center; color: #555; margin-top: 5px; margin-bottom: 20px;'>กลุ่มงานอาชีวเวชกรรม รพ.สันทราย</p>
-    </div>
-    """, unsafe_allow_html=True)
+    with st.container():
+        st.markdown("""
+        <div class="auth-header">
+          <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#00796B" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z"></path>
+            <path d="M12 8v8"></path>
+            <path d="M8 12h8"></path>
+          </svg>
+          <h2 style='text-align: center; margin-top: 10px; margin-bottom: 0px;'>ระบบรายงานผลตรวจสุขภาพ</h2>
+          <p style='text-align: center; color: #555; margin-top: 5px; margin-bottom: 20px;'>กลุ่มงานอาชีวเวชกรรม รพ.สันทราย</p>
+        </div>
+        """, unsafe_allow_html=True)
 
-    if 'auth_step' not in st.session_state:
-        st.session_state['auth_step'] = 'primary_login'
+        if 'auth_step' not in st.session_state:
+            st.session_state['auth_step'] = 'primary_login'
 
-    if st.session_state['auth_step'] == 'primary_login':
-        display_primary_login(df)
-    elif st.session_state['auth_step'] == 'questions':
-        display_question_verification(df)
-    
-    st.markdown('</div>', unsafe_allow_html=True)
+        if st.session_state['auth_step'] == 'primary_login':
+            display_primary_login(df)
+        elif st.session_state['auth_step'] == 'questions':
+            display_question_verification(df)
 
 def pdpa_consent_page():
     """แสดงหน้าสำหรับให้ความยินยอม PDPA"""
@@ -263,13 +255,17 @@ def pdpa_consent_page():
         html, body, [class*="st-"], h1, h2, h3, h4, h5, h6, p, label, button, input, div, li, ul {
             font-family: 'Sarabun', sans-serif !important;
         }
-
-        .main { background-color: #f0f2f6; }
-        .consent-container {
-            background-color: white; padding: 2rem 3rem; border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 700px;
-            margin: 3rem auto;
+        
+        .block-container {
+            padding-top: 3rem !important;
         }
+
+        /* Style the container for consent */
+        div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] {
+             background-color: white; padding: 2rem 3rem; border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
         h2 { text-align: center; }
         .consent-text {
             height: 300px; overflow-y: scroll; border: 1px solid #ddd;
@@ -280,27 +276,26 @@ def pdpa_consent_page():
     </style>
     """, unsafe_allow_html=True)
     
-    st.markdown('<div class="consent-container">', unsafe_allow_html=True)
-    st.markdown("<h2>ข้อตกลงและเงื่อนไขการใช้งาน (PDPA Consent)</h2>", unsafe_allow_html=True)
-    st.markdown("""
-    <div class="consent-text">
-        <h4>คำประกาศเกี่ยวกับความเป็นส่วนตัว (Privacy Notice)</h4>
-        <p><strong>โรงพยาบาลสันทราย ("โรงพยาบาล")</strong> ให้ความสำคัญกับการคุ้มครองข้อมูลส่วนบุคคลของท่าน เพื่อให้ท่านมั่นใจได้ว่าข้อมูลส่วนบุคคลของท่านที่เราได้รับจะถูกนำไปใช้ตรงตามความต้องการของท่านและถูกต้องตามกฎหมายคุ้มครองข้อมูลส่วนบุคคล</p>
-        <p><strong>วัตถุประสงค์ในการเก็บรวบรวม ใช้ หรือเปิดเผยข้อมูลส่วนบุคคล</strong></p>
-        <ul>
-            <li>เพื่อใช้ในการระบุและยืนยันตัวตนของท่านก่อนเข้าใช้งานระบบรายงานผลตรวจสุขภาพ</li>
-            <li>เพื่อแสดงผลการตรวจสุขภาพและข้อมูลที่เกี่ยวข้องซึ่งเป็นข้อมูลส่วนบุคคลที่มีความอ่อนไหว</li>
-            <li>เพื่อการวิเคราะห์ข้อมูลในภาพรวมสำหรับการพัฒนาคุณภาพบริการของโรงพยาบาล (โดยไม่ระบุตัวตน)</li>
-        </ul>
-        <p><strong>การรักษาความปลอดภัยของข้อมูล</strong></p>
-        <p>โรงพยาบาลมีมาตรการรักษาความปลอดภัยของข้อมูลส่วนบุคคลของท่านอย่างเข้มงวด เพื่อป้องกันการเข้าถึง การใช้ หรือการเปิดเผยข้อมูลโดยไม่ได้รับอนุญาต</p>
-        <p><strong>การเปิดเผยข้อมูลส่วนบุคคล</strong></p>
-        <p>โรงพยาบาลจะไม่เปิดเผยข้อมูลส่วนบุคคลของท่านแก่บุคคลภายนอก เว้นแต่จะได้รับความยินยอมจากท่าน หรือเป็นไปตามที่กฎหมายกำหนด</p>
-        <p>โดยการคลิกปุ่ม <strong>"ยอมรับ"</strong> ด้านล่างนี้ ท่านรับทราบและยินยอมให้โรงพยาบาลเก็บรวบรวม ใช้ และเปิดเผยข้อมูลส่วนบุคคลของท่านตามวัตถุประสงค์ที่ระบุไว้ในคำประกาศนี้</p>
-    </div>
-    """, unsafe_allow_html=True)
-    if st.button("ยอมรับและดำเนินการต่อ (Accept & Continue)"):
-        st.session_state['pdpa_accepted'] = True
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+    with st.container():
+        st.markdown("<h2>ข้อตกลงและเงื่อนไขการใช้งาน (PDPA Consent)</h2>", unsafe_allow_html=True)
+        st.markdown("""
+        <div class="consent-text">
+            <h4>คำประกาศเกี่ยวกับความเป็นส่วนตัว (Privacy Notice)</h4>
+            <p><strong>โรงพยาบาลสันทราย ("โรงพยาบาล")</strong> ให้ความสำคัญกับการคุ้มครองข้อมูลส่วนบุคคลของท่าน เพื่อให้ท่านมั่นใจได้ว่าข้อมูลส่วนบุคคลของท่านที่เราได้รับจะถูกนำไปใช้ตรงตามความต้องการของท่านและถูกต้องตามกฎหมายคุ้มครองข้อมูลส่วนบุคคล</p>
+            <p><strong>วัตถุประสงค์ในการเก็บรวบรวม ใช้ หรือเปิดเผยข้อมูลส่วนบุคคล</strong></p>
+            <ul>
+                <li>เพื่อใช้ในการระบุและยืนยันตัวตนของท่านก่อนเข้าใช้งานระบบรายงานผลตรวจสุขภาพ</li>
+                <li>เพื่อแสดงผลการตรวจสุขภาพและข้อมูลที่เกี่ยวข้องซึ่งเป็นข้อมูลส่วนบุคคลที่มีความอ่อนไหว</li>
+                <li>เพื่อการวิเคราะห์ข้อมูลในภาพรวมสำหรับการพัฒนาคุณภาพบริการของโรงพยาบาล (โดยไม่ระบุตัวตน)</li>
+            </ul>
+            <p><strong>การรักษาความปลอดภัยของข้อมูล</strong></p>
+            <p>โรงพยาบาลมีมาตรการรักษาความปลอดภัยของข้อมูลส่วนบุคคลของท่านอย่างเข้มงวด เพื่อป้องกันการเข้าถึง การใช้ หรือการเปิดเผยข้อมูลโดยไม่ได้รับอนุญาต</p>
+            <p><strong>การเปิดเผยข้อมูลส่วนบุคคล</strong></p>
+            <p>โรงพยาบาลจะไม่เปิดเผยข้อมูลส่วนบุคคลของท่านแก่บุคคลภายนอก เว้นแต่จะได้รับความยินยอมจากท่าน หรือเป็นไปตามที่กฎหมายกำหนด</p>
+            <p>โดยการคลิกปุ่ม <strong>"ยอมรับ"</strong> ด้านล่างนี้ ท่านรับทราบและยินยอมให้โรงพยาบาลเก็บรวบรวม ใช้ และเปิดเผยข้อมูลส่วนบุคคลของท่านตามวัตถุประสงค์ที่ระบุไว้ในคำประกาศนี้</p>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("ยอมรับและดำเนินการต่อ (Accept & Continue)"):
+            st.session_state['pdpa_accepted'] = True
+            st.rerun()
 
