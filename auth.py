@@ -94,8 +94,8 @@ def generate_questions(user_profile, num_questions=3):
 def display_primary_login(df):
     """แสดงหน้าจอเข้าสู่ระบบหลัก (ชื่อ-สกุล + HN)"""
     st.markdown("<h3>เข้าสู่ระบบ</h3>", unsafe_allow_html=True)
-    name_input = st.text_input("ชื่อ-นามสกุล", key="login_name")
-    hn_input = st.text_input("รหัสผ่าน (HN)", key="login_hn", help="กรอก Hospital Number ของท่าน")
+    name_input = st.text_input("ชื่อ-นามสกุล", key="login_name", label_visibility="collapsed", placeholder="ชื่อ-นามสกุล")
+    hn_input = st.text_input("รหัสผ่าน (HN)", key="login_hn", help="กรอก Hospital Number ของท่าน", label_visibility="collapsed", placeholder="รหัสผ่าน (HN)")
 
     col1, col2 = st.columns([3, 2])
     with col1:
@@ -205,12 +205,11 @@ def authentication_flow(df):
         }
 
         .main { background-color: #f0f2f6; }
-        .stApp {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
+        
+        /* --- START OF CHANGE: Remove vertical centering --- */
+        /* .stApp is removed */
+        /* --- END OF CHANGE --- */
+
         .auth-container {
             background-color: white;
             padding: 2rem 3rem;
@@ -218,26 +217,31 @@ def authentication_flow(df):
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             max-width: 500px;
             width: 100%;
+            /* --- START OF CHANGE: Add margin auto for horizontal centering --- */
+            margin: 5rem auto; 
+            /* --- END OF CHANGE --- */
+        }
+        
+        .auth-header {
+            text-align: center;
+            padding-bottom: 1rem;
         }
     </style>
     """, unsafe_allow_html=True)
 
     st.markdown('<div class="auth-container">', unsafe_allow_html=True)
     
-    # --- START OF CHANGE: Add logo ---
     st.markdown("""
-    <div style="text-align: center; padding-bottom: 1rem;">
+    <div class="auth-header">
       <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#00796B" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z"></path>
         <path d="M12 8v8"></path>
         <path d="M8 12h8"></path>
       </svg>
+      <h2 style='text-align: center; margin-top: 10px; margin-bottom: 0px;'>ระบบรายงานผลตรวจสุขภาพ</h2>
+      <p style='text-align: center; color: #555; margin-top: 5px; margin-bottom: 20px;'>กลุ่มงานอาชีวเวชกรรม รพ.สันทราย</p>
     </div>
     """, unsafe_allow_html=True)
-    # --- END OF CHANGE ---
-
-    st.markdown("<h1 style='text-align: center; margin-top: -10px;'>ระบบรายงานผลตรวจสุขภาพ</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #555; margin-top: -10px; margin-bottom: 20px;'>กลุ่มงานอาชีวเวชกรรม รพ.สันทราย</p>", unsafe_allow_html=True)
 
     if 'auth_step' not in st.session_state:
         st.session_state['auth_step'] = 'primary_login'
@@ -264,7 +268,7 @@ def pdpa_consent_page():
         .consent-container {
             background-color: white; padding: 2rem 3rem; border-radius: 10px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 700px;
-            margin: auto; margin-top: 3rem;
+            margin: 3rem auto;
         }
         h2 { text-align: center; }
         .consent-text {
@@ -276,7 +280,6 @@ def pdpa_consent_page():
     </style>
     """, unsafe_allow_html=True)
     
-    # --- START OF CHANGE: Remove unnecessary container ---
     st.markdown('<div class="consent-container">', unsafe_allow_html=True)
     st.markdown("<h2>ข้อตกลงและเงื่อนไขการใช้งาน (PDPA Consent)</h2>", unsafe_allow_html=True)
     st.markdown("""
@@ -300,5 +303,4 @@ def pdpa_consent_page():
         st.session_state['pdpa_accepted'] = True
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
-    # --- END OF CHANGE ---
 
