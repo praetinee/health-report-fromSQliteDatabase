@@ -200,9 +200,11 @@ def authentication_flow(df):
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
         
-        body, .stApp, .stTextInput, .stButton, h1, h3, .stMarkdown {
+        /* --- START OF CHANGE: Apply Sarabun font to all elements --- */
+        html, body, [class*="st-"], h1, h2, h3, h4, h5, h6, p, label, button, input, div {
             font-family: 'Sarabun', sans-serif !important;
         }
+        /* --- END OF CHANGE --- */
 
         .main { background-color: #f0f2f6; }
         .stApp {
@@ -225,6 +227,7 @@ def authentication_flow(df):
     with st.container():
         st.markdown('<div class="auth-container">', unsafe_allow_html=True)
         st.markdown("<h1 style='text-align: center;'>ระบบรายงานผลตรวจสุขภาพ</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #555; margin-top: -10px; margin-bottom: 20px;'>กลุ่มงานอาชีวเวชกรรม รพ.สันทราย</p>", unsafe_allow_html=True)
 
         if 'auth_step' not in st.session_state:
             st.session_state['auth_step'] = 'primary_login'
@@ -244,9 +247,11 @@ def pdpa_consent_page():
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
         
-        body, .stApp, .stButton, h2, h4, p, li, ul {
+        /* --- START OF CHANGE: Apply Sarabun font to all elements --- */
+        html, body, [class*="st-"], h1, h2, h3, h4, h5, h6, p, label, button, input, div, li, ul {
             font-family: 'Sarabun', sans-serif !important;
         }
+        /* --- END OF CHANGE --- */
 
         .main { background-color: #f0f2f6; }
         .consent-container {
@@ -287,4 +292,5 @@ def pdpa_consent_page():
             st.session_state['pdpa_accepted'] = True
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
+
 
