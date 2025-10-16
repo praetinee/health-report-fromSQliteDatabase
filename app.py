@@ -1122,15 +1122,11 @@ def display_main_report(person_data, all_person_history_df):
 
 
 # --- START OF CHANGE: Main application logic is wrapped in a function ---
-def main_app():
+def main_app(df):
     """
     This function contains the main application logic for displaying health reports.
     It's called after the user has successfully logged in and accepted the PDPA consent.
     """
-    df = load_sqlite_data()
-    if df is None:
-        st.stop()
-
     st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
     inject_custom_css()
@@ -1323,10 +1319,17 @@ if 'authenticated' not in st.session_state:
 if 'pdpa_accepted' not in st.session_state:
     st.session_state['pdpa_accepted'] = False
 
+# --- START OF CHANGE: Load data before authentication check ---
+df = load_sqlite_data()
+if df is None:
+    st.error("ไม่สามารถโหลดฐานข้อมูลได้ กรุณาลองอีกครั้งในภายหลัง")
+    st.stop()
+
 if not st.session_state['authenticated']:
-    login_page()
+    login_page(df)
 elif not st.session_state['pdpa_accepted']:
     pdpa_consent_page()
 else:
-    main_app()
+    main_app(df)
 # --- END OF CHANGE ---
+
