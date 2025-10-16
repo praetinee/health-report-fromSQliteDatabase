@@ -224,20 +224,19 @@ def authentication_flow(df):
     </style>
     """, unsafe_allow_html=True)
 
-    with st.container():
-        st.markdown('<div class="auth-container">', unsafe_allow_html=True)
-        st.markdown("<h1 style='text-align: center;'>ระบบรายงานผลตรวจสุขภาพ</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #555; margin-top: -10px; margin-bottom: 20px;'>กลุ่มงานอาชีวเวชกรรม รพ.สันทราย</p>", unsafe_allow_html=True)
+    st.markdown('<div class="auth-container">', unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>ระบบรายงานผลตรวจสุขภาพ</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #555; margin-top: -10px; margin-bottom: 20px;'>กลุ่มงานอาชีวเวชกรรม รพ.สันทราย</p>", unsafe_allow_html=True)
 
-        if 'auth_step' not in st.session_state:
-            st.session_state['auth_step'] = 'primary_login'
+    if 'auth_step' not in st.session_state:
+        st.session_state['auth_step'] = 'primary_login'
 
-        if st.session_state['auth_step'] == 'primary_login':
-            display_primary_login(df)
-        elif st.session_state['auth_step'] == 'questions':
-            display_question_verification(df)
-        
-        st.markdown('</div>', unsafe_allow_html=True)
+    if st.session_state['auth_step'] == 'primary_login':
+        display_primary_login(df)
+    elif st.session_state['auth_step'] == 'questions':
+        display_question_verification(df)
+    
+    st.markdown('</div>', unsafe_allow_html=True)
 
 def pdpa_consent_page():
     """แสดงหน้าสำหรับให้ความยินยอม PDPA"""
@@ -292,5 +291,4 @@ def pdpa_consent_page():
             st.session_state['pdpa_accepted'] = True
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
-
 
