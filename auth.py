@@ -200,11 +200,9 @@ def authentication_flow(df):
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
         
-        /* --- START OF CHANGE: Apply Sarabun font to all elements --- */
         html, body, [class*="st-"], h1, h2, h3, h4, h5, h6, p, label, button, input, div {
             font-family: 'Sarabun', sans-serif !important;
         }
-        /* --- END OF CHANGE --- */
 
         .main { background-color: #f0f2f6; }
         .stApp {
@@ -225,7 +223,20 @@ def authentication_flow(df):
     """, unsafe_allow_html=True)
 
     st.markdown('<div class="auth-container">', unsafe_allow_html=True)
-    st.markdown("<h1 style='text-align: center;'>ระบบรายงานผลตรวจสุขภาพ</h1>", unsafe_allow_html=True)
+    
+    # --- START OF CHANGE: Add logo ---
+    st.markdown("""
+    <div style="text-align: center; padding-bottom: 1rem;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#00796B" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z"></path>
+        <path d="M12 8v8"></path>
+        <path d="M8 12h8"></path>
+      </svg>
+    </div>
+    """, unsafe_allow_html=True)
+    # --- END OF CHANGE ---
+
+    st.markdown("<h1 style='text-align: center; margin-top: -10px;'>ระบบรายงานผลตรวจสุขภาพ</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #555; margin-top: -10px; margin-bottom: 20px;'>กลุ่มงานอาชีวเวชกรรม รพ.สันทราย</p>", unsafe_allow_html=True)
 
     if 'auth_step' not in st.session_state:
@@ -240,17 +251,14 @@ def authentication_flow(df):
 
 def pdpa_consent_page():
     """แสดงหน้าสำหรับให้ความยินยอม PDPA"""
-    # โค้ดส่วนนี้เหมือนเดิม ไม่มีการเปลี่ยนแปลง
     st.set_page_config(page_title="PDPA Consent", layout="centered")
     st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
         
-        /* --- START OF CHANGE: Apply Sarabun font to all elements --- */
         html, body, [class*="st-"], h1, h2, h3, h4, h5, h6, p, label, button, input, div, li, ul {
             font-family: 'Sarabun', sans-serif !important;
         }
-        /* --- END OF CHANGE --- */
 
         .main { background-color: #f0f2f6; }
         .consent-container {
@@ -267,28 +275,30 @@ def pdpa_consent_page():
         .stButton>button { width: 100%; height: 3rem; }
     </style>
     """, unsafe_allow_html=True)
-    with st.container():
-        st.markdown('<div class="consent-container">', unsafe_allow_html=True)
-        st.markdown("<h2>ข้อตกลงและเงื่อนไขการใช้งาน (PDPA Consent)</h2>", unsafe_allow_html=True)
-        st.markdown("""
-        <div class="consent-text">
-            <h4>คำประกาศเกี่ยวกับความเป็นส่วนตัว (Privacy Notice)</h4>
-            <p><strong>โรงพยาบาลสันทราย ("โรงพยาบาล")</strong> ให้ความสำคัญกับการคุ้มครองข้อมูลส่วนบุคคลของท่าน เพื่อให้ท่านมั่นใจได้ว่าข้อมูลส่วนบุคคลของท่านที่เราได้รับจะถูกนำไปใช้ตรงตามความต้องการของท่านและถูกต้องตามกฎหมายคุ้มครองข้อมูลส่วนบุคคล</p>
-            <p><strong>วัตถุประสงค์ในการเก็บรวบรวม ใช้ หรือเปิดเผยข้อมูลส่วนบุคคล</strong></p>
-            <ul>
-                <li>เพื่อใช้ในการระบุและยืนยันตัวตนของท่านก่อนเข้าใช้งานระบบรายงานผลตรวจสุขภาพ</li>
-                <li>เพื่อแสดงผลการตรวจสุขภาพและข้อมูลที่เกี่ยวข้องซึ่งเป็นข้อมูลส่วนบุคคลที่มีความอ่อนไหว</li>
-                <li>เพื่อการวิเคราะห์ข้อมูลในภาพรวมสำหรับการพัฒนาคุณภาพบริการของโรงพยาบาล (โดยไม่ระบุตัวตน)</li>
-            </ul>
-            <p><strong>การรักษาความปลอดภัยของข้อมูล</strong></p>
-            <p>โรงพยาบาลมีมาตรการรักษาความปลอดภัยของข้อมูลส่วนบุคคลของท่านอย่างเข้มงวด เพื่อป้องกันการเข้าถึง การใช้ หรือการเปิดเผยข้อมูลโดยไม่ได้รับอนุญาต</p>
-            <p><strong>การเปิดเผยข้อมูลส่วนบุคคล</strong></p>
-            <p>โรงพยาบาลจะไม่เปิดเผยข้อมูลส่วนบุคคลของท่านแก่บุคคลภายนอก เว้นแต่จะได้รับความยินยอมจากท่าน หรือเป็นไปตามที่กฎหมายกำหนด</p>
-            <p>โดยการคลิกปุ่ม <strong>"ยอมรับ"</strong> ด้านล่างนี้ ท่านรับทราบและยินยอมให้โรงพยาบาลเก็บรวบรวม ใช้ และเปิดเผยข้อมูลส่วนบุคคลของท่านตามวัตถุประสงค์ที่ระบุไว้ในคำประกาศนี้</p>
-        </div>
-        """, unsafe_allow_html=True)
-        if st.button("ยอมรับและดำเนินการต่อ (Accept & Continue)"):
-            st.session_state['pdpa_accepted'] = True
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
+    
+    # --- START OF CHANGE: Remove unnecessary container ---
+    st.markdown('<div class="consent-container">', unsafe_allow_html=True)
+    st.markdown("<h2>ข้อตกลงและเงื่อนไขการใช้งาน (PDPA Consent)</h2>", unsafe_allow_html=True)
+    st.markdown("""
+    <div class="consent-text">
+        <h4>คำประกาศเกี่ยวกับความเป็นส่วนตัว (Privacy Notice)</h4>
+        <p><strong>โรงพยาบาลสันทราย ("โรงพยาบาล")</strong> ให้ความสำคัญกับการคุ้มครองข้อมูลส่วนบุคคลของท่าน เพื่อให้ท่านมั่นใจได้ว่าข้อมูลส่วนบุคคลของท่านที่เราได้รับจะถูกนำไปใช้ตรงตามความต้องการของท่านและถูกต้องตามกฎหมายคุ้มครองข้อมูลส่วนบุคคล</p>
+        <p><strong>วัตถุประสงค์ในการเก็บรวบรวม ใช้ หรือเปิดเผยข้อมูลส่วนบุคคล</strong></p>
+        <ul>
+            <li>เพื่อใช้ในการระบุและยืนยันตัวตนของท่านก่อนเข้าใช้งานระบบรายงานผลตรวจสุขภาพ</li>
+            <li>เพื่อแสดงผลการตรวจสุขภาพและข้อมูลที่เกี่ยวข้องซึ่งเป็นข้อมูลส่วนบุคคลที่มีความอ่อนไหว</li>
+            <li>เพื่อการวิเคราะห์ข้อมูลในภาพรวมสำหรับการพัฒนาคุณภาพบริการของโรงพยาบาล (โดยไม่ระบุตัวตน)</li>
+        </ul>
+        <p><strong>การรักษาความปลอดภัยของข้อมูล</strong></p>
+        <p>โรงพยาบาลมีมาตรการรักษาความปลอดภัยของข้อมูลส่วนบุคคลของท่านอย่างเข้มงวด เพื่อป้องกันการเข้าถึง การใช้ หรือการเปิดเผยข้อมูลโดยไม่ได้รับอนุญาต</p>
+        <p><strong>การเปิดเผยข้อมูลส่วนบุคคล</strong></p>
+        <p>โรงพยาบาลจะไม่เปิดเผยข้อมูลส่วนบุคคลของท่านแก่บุคคลภายนอก เว้นแต่จะได้รับความยินยอมจากท่าน หรือเป็นไปตามที่กฎหมายกำหนด</p>
+        <p>โดยการคลิกปุ่ม <strong>"ยอมรับ"</strong> ด้านล่างนี้ ท่านรับทราบและยินยอมให้โรงพยาบาลเก็บรวบรวม ใช้ และเปิดเผยข้อมูลส่วนบุคคลของท่านตามวัตถุประสงค์ที่ระบุไว้ในคำประกาศนี้</p>
+    </div>
+    """, unsafe_allow_html=True)
+    if st.button("ยอมรับและดำเนินการต่อ (Accept & Continue)"):
+        st.session_state['pdpa_accepted'] = True
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+    # --- END OF CHANGE ---
 
