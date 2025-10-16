@@ -227,7 +227,7 @@ def authentication_flow(df):
     with st.container():
         st.markdown("""
         <div class="auth-header">
-          <img src="https://i.postimg.cc/tJd4DZSY/image.png" alt="Logo" width="100">
+          <img src="https://i.postimg.cc/tJd4DZSY/image.png" alt="Logo" width="350">
           <h2 style='text-align: center; margin-top: 10px; margin-bottom: 0px;'>ระบบรายงานผลตรวจสุขภาพ</h2>
           <p style='text-align: center; color: #555; margin-top: 5px; margin-bottom: 20px;'>กลุ่มงานอาชีวเวชกรรม รพ.สันทราย</p>
         </div>
