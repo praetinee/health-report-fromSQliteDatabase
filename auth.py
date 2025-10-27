@@ -35,7 +35,17 @@ def display_primary_login(df):
 
     # --- START OF CHANGE: Removed columns and "Forgot Password" button ---
     if st.button("ลงชื่อเข้าใช้", use_container_width=True, type="primary"):
-        if name_input and id_input:
+        
+        # --- START OF CHANGE: Add Admin login check ---
+        if name_input == "admin" and id_input == "admin":
+            st.session_state['authenticated'] = True
+            st.session_state['is_admin'] = True
+            st.session_state['user_name'] = "Admin"
+            st.success("ลงชื่อเข้าใช้สำเร็จ (Admin)!")
+            st.rerun()
+        # --- END OF CHANGE ---
+
+        elif name_input and id_input: # Keep existing user logic in elif
             normalized_input_name = normalize_name(name_input)
             input_password = str(id_input).strip()
             
@@ -50,6 +60,7 @@ def display_primary_login(df):
             
             if not user_record.empty:
                 st.session_state['authenticated'] = True
+                st.session_state['is_admin'] = False # Set user as not admin
                 # ยังคงเก็บ HN ไว้ใน session เพื่อให้ส่วนที่เหลือของแอปทำงานได้ตามปกติ
                 st.session_state['user_hn'] = user_record.iloc[0]['HN'] 
                 st.session_state['user_name'] = user_record.iloc[0]['ชื่อ-สกุล']
