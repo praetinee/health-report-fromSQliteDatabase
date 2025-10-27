@@ -289,7 +289,276 @@ def display_common_header(person_data):
 
 # --- START OF CHANGE: New Centralized and Adaptive CSS ---
 def inject_custom_css():
-# ... (existing code ... no changes in this function) ...
+    st.markdown("""
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap');
+        
+        /* --- Color Variables for Consistency --- */
+        :root {
+            --abnormal-bg-color: rgba(220, 53, 69, 0.1);
+            --abnormal-text-color: #C53030;
+            --normal-bg-color: rgba(40, 167, 69, 0.1);
+            --normal-text-color: #1E4620;
+            --warning-bg-color: rgba(255, 193, 7, 0.1);
+            --neutral-bg-color: rgba(108, 117, 125, 0.1);
+            --neutral-text-color: #4A5568;
+        }
+        
+        /* --- General & Typography --- */
+        html, body, [class*="st-"], .st-emotion-cache-10trblm, h1, h2, h3, h4, h5, h6 {
+            font-family: 'Sarabun', sans-serif !important; 
+        }
+        .main {
+             background-color: var(--background-color);
+             color: var(--text-color);
+        }
+        h4 { /* For section headers */
+            font-size: 1.25rem;
+            font-weight: 600;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-top: 40px;
+            margin-bottom: 24px;
+            color: var(--text-color);
+        }
+        h5.section-subtitle {
+            font-weight: 600;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: var(--text-color);
+            opacity: 0.7;
+        }
+
+        /* --- Sidebar Controls --- */
+        [data-testid="stSidebar"] {
+            background-color: var(--secondary-background-color);
+        }
+        [data-testid="stSidebar"] .stTextInput input {
+            border-color: var(--border-color);
+        }
+        .sidebar-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+        /* --- START OF FIX --- */
+        .stButton>button {
+            background-color: #00796B; /* Use the same teal as section headers */
+            color: white !important;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            width: 100%;
+            padding: 0.5rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+            transition: background-color 0.2s, transform 0.2s;
+        }
+        .stButton>button:hover {
+            background-color: #00695C; /* A slightly darker teal for hover */
+            color: white !important;
+            transform: translateY(-1px);
+        }
+        .stButton>button:disabled {
+            background-color: #BDBDBD;
+            color: #757575 !important;
+            opacity: 1;
+            border: none;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+        /* --- END OF FIX --- */
+
+
+        /* --- New Report Header & Vitals --- */
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 2rem;
+        }
+        .header-left h2 { color: var(--text-color); font-size: 2rem; margin-bottom: 0.25rem;}
+        .header-left p { color: var(--text-color); opacity: 0.7; margin: 0; }
+        .info-card {
+            background-color: var(--secondary-background-color);
+            border-radius: 8px;
+            padding: 1rem;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem 1.5rem;
+            min-width: 400px;
+            border: 1px solid var(--border-color);
+        }
+        .info-card-item { font-size: 0.9rem; color: var(--text-color); }
+        .info-card-item span { color: var(--text-color); opacity: 0.7; margin-right: 8px; }
+
+        .vitals-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .vital-card {
+            background-color: var(--secondary-background-color);
+            border-radius: 12px;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+        .vital-icon svg { color: var(--primary-color); }
+        .vital-data { display: flex; flex-direction: column; }
+        .vital-label { font-size: 0.8rem; color: var(--text-color); opacity: 0.7; }
+        .vital-value { font-size: 1.2rem; font-weight: 700; color: var(--text-color); line-height: 1.2; white-space: nowrap;}
+        .vital-sub-value { font-size: 0.8rem; color: var(--text-color); opacity: 0.6; }
+
+        /* --- Styled Tabs --- */
+        div[data-testid="stTabs"] {
+            border-bottom: 2px solid var(--border-color);
+        }
+        div[data-testid="stTabs"] button {
+            background-color: transparent;
+            color: var(--text-color);
+            opacity: 0.7;
+            border-radius: 8px 8px 0 0;
+            margin: 0;
+            padding: 10px 20px;
+            border: none;
+            border-bottom: 2px solid transparent;
+        }
+        div[data-testid="stTabs"] button[aria-selected="true"] {
+            background-color: var(--secondary-background-color);
+            color: var(--primary-color);
+            font-weight: 600;
+            opacity: 1;
+            border: 2px solid var(--border-color);
+            border-bottom: 2px solid var(--secondary-background-color);
+            margin-bottom: -2px;
+        }
+        
+        /* --- Containers for sections --- */
+        div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] > div.st-emotion-cache-1jicfl2.e1f1d6gn3 > div {
+             background-color: var(--secondary-background-color);
+             border: 1px solid var(--border-color);
+             border-radius: 12px;
+             padding: 24px;
+             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+
+        /* --- Lab Result Tables --- */
+        .table-container { overflow-x: auto; }
+        .lab-table, .info-detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        .lab-table th, .lab-table td, .info-detail-table th, .info-detail-table td {
+            padding: 12px 15px;
+            border: 1px solid transparent;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .lab-table th, .info-detail-table th {
+            font-weight: 600;
+            text-align: left;
+            color: var(--text-color);
+            opacity: 0.7;
+        }
+        .lab-table thead th {
+            background-color: rgba(128, 128, 128, 0.1);
+        }
+        .lab-table td:nth-child(2) {
+            text-align: center;
+        }
+        .lab-table tbody tr:hover { background-color: rgba(128, 128, 128, 0.1); }
+        .lab-table .abnormal-row {
+            background-color: var(--abnormal-bg-color);
+            color: var(--abnormal-text-color);
+            font-weight: 600;
+        }
+        .info-detail-table th { width: 35%; }
+        
+        /* --- Recommendation Container --- */
+        .recommendation-container {
+            border-left: 5px solid var(--primary-color);
+            padding: 1.5rem;
+            border-radius: 0 8px 8px 0;
+            background-color: var(--background-color);
+        }
+        .recommendation-container ul { padding-left: 20px; }
+        .recommendation-container li { margin-bottom: 0.5rem; }
+
+        /* --- Performance Report Specific Styles --- */
+        .status-summary-card {
+            padding: 1rem; 
+            border-radius: 8px; 
+            text-align: center; 
+            height: 100%;
+        }
+        .status-normal-bg { background-color: var(--normal-bg-color); }
+        .status-abnormal-bg { background-color: var(--abnormal-bg-color); }
+        .status-warning-bg { background-color: var(--warning-bg-color); }
+        .status-neutral-bg { background-color: var(--neutral-bg-color); }
+
+        .status-summary-card p {
+            margin: 0;
+            color: var(--text-color);
+        }
+        .vision-table {
+            width: 100%; border-collapse: collapse; font-size: 14px;
+            margin-top: 1.5rem;
+        }
+        .vision-table th, .vision-table td {
+            border: 1px solid var(--border-color); padding: 10px;
+            text-align: left; vertical-align: middle;
+        }
+        .vision-table th { background-color: var(--secondary-background-color); opacity: 0.7; font-weight: bold; }
+        .vision-table .result-cell { text-align: center; width: 180px; }
+        .vision-result {
+            display: inline-block; padding: 6px 16px; border-radius: 16px;
+            font-size: 13px; font-weight: bold; border: 1px solid transparent;
+        }
+        /* --- START OF FIX --- */
+        .vision-normal { background-color: var(--normal-bg-color); color: #2E7D32; }
+        .vision-abnormal { background-color: var(--abnormal-bg-color); color: #C62828; }
+        .vision-not-tested { background-color: var(--neutral-bg-color); color: #455A64; }
+        /* --- END OF FIX --- */
+        .styled-df-table {
+            width: 100%; border-collapse: collapse; font-family: 'Sarabun', sans-serif !important;
+            font-size: 14px;
+        }
+        .styled-df-table th, .styled-df-table td { border: 1px solid var(--border-color); padding: 10px; text-align: left; }
+        .styled-df-table thead th { background-color: var(--secondary-background-color); opacity: 0.7; font-weight: bold; text-align: center; vertical-align: middle; }
+        .styled-df-table tbody td { text-align: center; }
+        .styled-df-table tbody td:first-child { text-align: left; }
+        .styled-df-table tbody tr:hover { background-color: rgba(128, 128, 128, 0.1); }
+        .hearing-table { table-layout: fixed; }
+        
+        /* --- START OF FIX --- */
+        .custom-advice-box {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            border: 1px solid transparent;
+            font-weight: 600; /* Make text bolder */
+        }
+        .immune-box {
+            background-color: var(--normal-bg-color);
+            color: #2E7D32; /* Darker green for better contrast */
+            border-color: rgba(40, 167, 69, 0.2);
+        }
+        .no-immune-box {
+            background-color: var(--abnormal-bg-color);
+            color: #C62828; /* Darker red for better contrast */
+            border-color: rgba(220, 53, 69, 0.2);
+        }
+        .warning-box {
+            background-color: var(--warning-bg-color);
+            color: #AF6C00; /* Darker yellow/orange for better contrast */
+            border-color: rgba(255, 193, 7, 0.2);
+        }
+        /* --- END OF FIX --- */
     </style>
     """, unsafe_allow_html=True)
 # --- END OF CHANGE ---
