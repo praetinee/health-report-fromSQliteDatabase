@@ -92,35 +92,51 @@ def generate_questions(user_profile, num_questions=3):
 
 
 def display_primary_login(df):
-    """แสดงหน้าจอเข้าสู่ระบบหลัก (ชื่อ-สกุล + HN)"""
+    """แสดงหน้าจอเข้าสู่ระบบหลัก (ชื่อ-สกุล + เลขบัตรประชาชน)"""
     st.markdown("<h4>เข้าสู่ระบบ</h4>", unsafe_allow_html=True)
     name_input = st.text_input("ชื่อ-นามสกุล", key="login_name", label_visibility="collapsed", placeholder="ชื่อ-นามสกุล")
-    hn_input = st.text_input("รหัสผ่าน (HN)", key="login_hn", help="กรอก Hospital Number ของท่าน", label_visibility="collapsed", placeholder="รหัสผ่าน (HN)", type="password")
+    # --- START OF CHANGE: เปลี่ยนจาก HN เป็น เลขบัตรประชาชน ---
+    id_input = st.text_input(
+        "รหัสผ่าน (เลขบัตรประชาชน 13 หลัก)", 
+        key="login_id", 
+        help="กรอกเลขบัตรประชาชน 13 หลักของท่าน", 
+        label_visibility="collapsed", 
+        placeholder="รหัสผ่าน (เลขบัตรประชาชน 13 หลัก)", 
+        type="password"
+    )
+    # --- END OF CHANGE ---
 
     col1, col2 = st.columns([3, 2])
     with col1:
         if st.button("ลงชื่อเข้าใช้", use_container_width=True, type="primary"):
-            if name_input and hn_input:
+            # --- START OF CHANGE: เปลี่ยนการตรวจสอบจาก hn_input เป็น id_input ---
+            if name_input and id_input:
                 normalized_input_name = normalize_name(name_input)
-                # ค้นหาผู้ใช้
+                # ค้นหาผู้ใช้โดยใช้ 'เลขบัตรประชาชน'
                 user_record = df[
                     (df['ชื่อ-สกุล'].apply(normalize_name) == normalized_input_name) &
-                    (df['HN'].astype(str) == str(hn_input).strip())
+                    (df['เลขบัตรประชาชน'].astype(str) == str(id_input).strip())
                 ]
+                # --- END OF CHANGE ---
                 
                 if not user_record.empty:
                     st.session_state['authenticated'] = True
-                    st.session_state['user_hn'] = user_record.iloc[0]['HN']
+                    # ยังคงเก็บ HN ไว้ใน session เพื่อให้ส่วนที่เหลือของแอปทำงานได้ตามปกติ
+                    st.session_state['user_hn'] = user_record.iloc[0]['HN'] 
                     st.session_state['user_name'] = user_record.iloc[0]['ชื่อ-สกุล']
                     st.success("ลงชื่อเข้าใช้สำเร็จ!")
                     st.rerun()
                 else:
-                    st.error("ชื่อ-นามสกุล หรือ HN ไม่ถูกต้อง")
+                    # --- START OF CHANGE: อัปเดตข้อความ error ---
+                    st.error("ชื่อ-นามสกุล หรือ เลขบัตรประชาชน ไม่ถูกต้อง")
+                    # --- END OF CHANGE ---
             else:
                 st.warning("กรุณากรอกข้อมูลให้ครบถ้วน")
     
     with col2:
-        if st.button("ลืม HN?", use_container_width=True):
+        # --- START OF CHANGE: เปลี่ยนปุ่ม "ลืม HN?" เป็น "ลืมรหัสผ่าน?" ---
+        if st.button("ลืมรหัสผ่าน?", use_container_width=True):
+        # --- END OF CHANGE ---
             st.session_state['auth_step'] = 'questions'
             st.rerun()
 
@@ -294,4 +310,3 @@ def pdpa_consent_page():
         if st.button("ยอมรับและดำเนินการต่อ (Accept & Continue)"):
             st.session_state['pdpa_accepted'] = True
             st.rerun()
-
