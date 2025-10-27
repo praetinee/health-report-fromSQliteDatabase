@@ -15,80 +15,8 @@ def normalize_name(name):
         return ""
     return re.sub(r'\s+', '', str(name).strip())
 
-def generate_questions(user_profile, num_questions=3):
-    """สร้างชุดคำถามยืนยันตัวตนแบบสุ่มจากข้อมูลผู้ใช้"""
-    question_pool = []
-    
-    # 1. คำถามเลขบัตรประชาชน (ถ้ามีข้อมูล)
-    id_card = user_profile.get('เลขบัตรประชาชน')
-    if not is_empty(id_card):
-        question_pool.append({
-            'type': 'text_input', 'key': 'id_card',
-            'label': 'กรุณากรอก **เลขบัตรประชาชน** 13 หลักของท่าน',
-            'answer': str(id_card).strip()
-        })
-
-    # 2. คำถามน้ำหนักล่าสุด (ถ้ามีข้อมูล)
-    weight = user_profile.get('น้ำหนัก')
-    if not is_empty(weight):
-        try:
-            question_pool.append({
-                'type': 'number_input', 'key': 'weight',
-                'label': 'จากผลตรวจสุขภาพกับกลุ่มงานอาชีวเวชกรรมครั้งล่าสุด **น้ำหนัก** ของท่านคือเท่าไหร่ (กรอกเฉพาะตัวเลข)?',
-                'answer': float(weight)
-            })
-        except (ValueError, TypeError):
-            pass # ไม่เพิ่มคำถามถ้าแปลงเป็น float ไม่ได้
-
-    # 3. คำถามหน่วยงาน (ถ้ามีข้อมูล)
-    department = user_profile.get('หน่วยงาน')
-    if not is_empty(department):
-        question_pool.append({
-            'type': 'text_input', 'key': 'department',
-            'label': 'ท่านสังกัด **หน่วยงาน** ใด?',
-            'answer': str(department).strip()
-        })
-
-    # 4. คำถามประวัติการแพ้ยา (ถ้ามีข้อมูล)
-    # หมายเหตุ: สมมติว่าคอลัมน์ชื่อ 'แพ้ยา' หากไม่ใช่ ต้องเปลี่ยนชื่อคอลัมน์ตรงนี้
-    drug_allergy = user_profile.get('แพ้ยา') 
-    if not is_empty(drug_allergy):
-        correct_answer = f"{drug_allergy}"
-        # รายการยาหลอก (ควรมีทั้งชื่อไทยและอังกฤษ)
-        decoy_drugs = [
-            "Paracetamol / พาราเซตามอล", 
-            "Aspirin / แอสไพริน", 
-            "Ibuprofen / ไอบูโพรเฟน",
-            "Amoxicillin / อะมอกซิซิลลิน"
-        ]
-        options = [correct_answer] + random.sample([d for d in decoy_drugs if d.split(' ')[0].lower() not in correct_answer.lower()], 2)
-        options.append("ฉันไม่มีประวัติการแพ้ยา")
-        random.shuffle(options)
-        
-        question_pool.append({
-            'type': 'radio', 'key': 'allergy',
-            'label': 'ท่านมีประวัติ **การแพ้ยา** ตามที่ระบุไว้ในข้อใด?',
-            'options': options,
-            'answer': correct_answer
-        })
-    
-    # ถ้าไม่มีประวัติแพ้ยา ให้สร้างคำถามที่คำตอบคือ "ไม่มีประวัติ"
-    elif 'แพ้ยา' in user_profile and is_empty(drug_allergy):
-        decoy_drugs = ["Paracetamol / พาราเซตามอล", "Aspirin / แอสไพริน", "Ibuprofen / ไอบูโพรเฟน"]
-        correct_answer = "ฉันไม่มีประวัติการแพ้ยา"
-        options = [correct_answer] + random.sample(decoy_drugs, 2)
-        random.shuffle(options)
-        question_pool.append({
-            'type': 'radio', 'key': 'allergy_none',
-            'label': 'ท่านมีประวัติ **การแพ้ยา** ตามที่ระบุไว้ในข้อใด?',
-            'options': options,
-            'answer': correct_answer
-        })
-
-    # สุ่มเลือกคำถามตามจำนวนที่ต้องการ
-    if len(question_pool) < num_questions:
-        return question_pool # ถ้ามีคำถามไม่พอ ให้ใช้ทั้งหมด
-    return random.sample(question_pool, num_questions)
+# --- START OF CHANGE: 'generate_questions' function removed ---
+# --- END OF CHANGE ---
 
 
 def display_primary_login(df):
@@ -96,7 +24,6 @@ def display_primary_login(df):
     st.markdown("<h4>เข้าสู่ระบบ</h4>", unsafe_allow_html=True)
     name_input = st.text_input("ชื่อ-นามสกุล", key="login_name", label_visibility="collapsed", placeholder="ชื่อ-นามสกุล")
     
-    # --- START OF CHANGE: ปรับช่องกรอกรหัสผ่าน ---
     id_input = st.text_input(
         "รหัสผ่าน (เลขบัตรประชาชน 13 หลัก หรือ HN)", 
         key="login_id", 
@@ -105,111 +32,37 @@ def display_primary_login(df):
         placeholder="รหัสผ่าน (เลขบัตรประชาชน 13 หลัก หรือ HN)", 
         type="password"
     )
+
+    # --- START OF CHANGE: Removed columns and "Forgot Password" button ---
+    if st.button("ลงชื่อเข้าใช้", use_container_width=True, type="primary"):
+        if name_input and id_input:
+            normalized_input_name = normalize_name(name_input)
+            input_password = str(id_input).strip()
+            
+            # ค้นหาผู้ใช้โดยใช้ 'เลขบัตรประชาชน' หรือ 'HN'
+            user_record = df[
+                (df['ชื่อ-สกุล'].apply(normalize_name) == normalized_input_name) &
+                (
+                    (df['เลขบัตรประชาชน'].astype(str) == input_password) |
+                    (df['HN'].astype(str) == input_password)
+                )
+            ]
+            
+            if not user_record.empty:
+                st.session_state['authenticated'] = True
+                # ยังคงเก็บ HN ไว้ใน session เพื่อให้ส่วนที่เหลือของแอปทำงานได้ตามปกติ
+                st.session_state['user_hn'] = user_record.iloc[0]['HN'] 
+                st.session_state['user_name'] = user_record.iloc[0]['ชื่อ-สกุล']
+                st.success("ลงชื่อเข้าใช้สำเร็จ!")
+                st.rerun()
+            else:
+                st.error("ชื่อ-นามสกุล หรือ รหัสผ่าน (เลขบัตร/HN) ไม่ถูกต้อง")
+        else:
+            st.warning("กรุณากรอกข้อมูลให้ครบถ้วน")
     # --- END OF CHANGE ---
 
-    col1, col2 = st.columns([3, 2])
-    with col1:
-        if st.button("ลงชื่อเข้าใช้", use_container_width=True, type="primary"):
-            # --- START OF CHANGE: ตรวจสอบทั้งเลขบัตรประชาชนและ HN ---
-            if name_input and id_input:
-                normalized_input_name = normalize_name(name_input)
-                input_password = str(id_input).strip()
-                
-                # ค้นหาผู้ใช้โดยใช้ 'เลขบัตรประชาชน' หรือ 'HN'
-                user_record = df[
-                    (df['ชื่อ-สกุล'].apply(normalize_name) == normalized_input_name) &
-                    (
-                        (df['เลขบัตรประชาชน'].astype(str) == input_password) |
-                        (df['HN'].astype(str) == input_password)
-                    )
-                ]
-                # --- END OF CHANGE ---
-                
-                if not user_record.empty:
-                    st.session_state['authenticated'] = True
-                    # ยังคงเก็บ HN ไว้ใน session เพื่อให้ส่วนที่เหลือของแอปทำงานได้ตามปกติ
-                    st.session_state['user_hn'] = user_record.iloc[0]['HN'] 
-                    st.session_state['user_name'] = user_record.iloc[0]['ชื่อ-สกุล']
-                    st.success("ลงชื่อเข้าใช้สำเร็จ!")
-                    st.rerun()
-                else:
-                    # --- START OF CHANGE: อัปเดตข้อความ error ---
-                    st.error("ชื่อ-นามสกุล หรือ รหัสผ่าน (เลขบัตร/HN) ไม่ถูกต้อง")
-                    # --- END OF CHANGE ---
-            else:
-                st.warning("กรุณากรอกข้อมูลให้ครบถ้วน")
-    
-    with col2:
-        if st.button("ลืมรหัสผ่าน?", use_container_width=True):
-            st.session_state['auth_step'] = 'questions'
-            st.rerun()
-
-def display_question_verification(df):
-    """แสดงหน้าจอสำหรับตอบคำถามยืนยันตัวตน"""
-    st.markdown("<h4>ยืนยันตัวตนเพื่อเข้าสู่ระบบ</h4>", unsafe_allow_html=True)
-    
-    name_input = st.text_input("กรุณากรอก ชื่อ-นามสกุล ของท่านเพื่อเริ่มต้น", key="verify_name")
-
-    if name_input:
-        if 'questions' not in st.session_state or st.session_state.get('current_verify_name') != name_input:
-            normalized_input_name = normalize_name(name_input)
-            user_records = df[df['ชื่อ-สกุล'].apply(normalize_name) == normalized_input_name]
-            
-            if not user_records.empty:
-                # ใช้ข้อมูลปีล่าสุด
-                user_profile = user_records.sort_values('Year', ascending=False).iloc[0].to_dict()
-                st.session_state['user_profile_to_verify'] = user_profile
-                st.session_state['questions'] = generate_questions(user_profile, num_questions=3)
-                st.session_state['current_verify_name'] = name_input
-            else:
-                st.error("ไม่พบชื่อ-นามสกุลดังกล่าวในระบบ")
-                st.session_state.pop('questions', None)
-        
-        if 'questions' in st.session_state and st.session_state['questions']:
-            st.markdown("---")
-            st.info("กรุณาตอบคำถามต่อไปนี้ให้ถูกต้องทั้งหมดเพื่อยืนยันตัวตนของท่าน")
-            
-            answers = {}
-            for q in st.session_state['questions']:
-                if q['type'] == 'text_input':
-                    answers[q['key']] = st.text_input(q['label'], key=f"q_{q['key']}")
-                elif q['type'] == 'number_input':
-                    answers[q['key']] = st.number_input(q['label'], step=1.0, format="%.1f", key=f"q_{q['key']}")
-                elif q['type'] == 'radio':
-                    answers[q['key']] = st.radio(q['label'], options=q['options'], key=f"q_{q['key']}", index=None)
-
-            if st.button("ยืนยันคำตอบ", type="primary"):
-                all_correct = True
-                for q in st.session_state['questions']:
-                    user_answer = answers.get(q['key'])
-                    correct_answer = q['answer']
-                    
-                    is_correct = False
-                    if q['key'] == 'weight':
-                        is_correct = abs(float(user_answer or 0) - correct_answer) <= 1.0
-                    elif isinstance(correct_answer, str):
-                         is_correct = str(user_answer).strip().lower() == correct_answer.lower()
-
-                    if not is_correct:
-                        all_correct = False
-                        break
-                
-                if all_correct:
-                    user_profile = st.session_state['user_profile_to_verify']
-                    st.session_state['authenticated'] = True
-                    st.session_state['user_hn'] = user_profile['HN']
-                    st.session_state['user_name'] = user_profile['ชื่อ-สกุล']
-                    st.success("การยืนยันตัวตนสำเร็จ!")
-                    # ล้าง state ที่ไม่จำเป็น
-                    for key in ['questions', 'user_profile_to_verify', 'current_verify_name']:
-                        if key in st.session_state: del st.session_state[key]
-                    st.rerun()
-                else:
-                    st.error("ข้อมูลไม่ถูกต้อง กรุณาลองอีกครั้ง")
-    
-    if st.button("กลับไปหน้าเข้าสู่ระบบหลัก"):
-        st.session_state['auth_step'] = 'primary_login'
-        st.rerun()
+# --- START OF CHANGE: 'display_question_verification' function removed ---
+# --- END OF CHANGE ---
 
 
 def authentication_flow(df):
@@ -231,7 +84,8 @@ def authentication_flow(df):
 
         /* Style the container for login */
         div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] {
-            background-color: white;
+            background-color: var(--background-color); /* Changed from white */
+            color: var(--text-color); /* Added */
             padding: 2rem 2.5rem;
             border-radius: 10px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
@@ -253,13 +107,10 @@ def authentication_flow(df):
         </div>
         """, unsafe_allow_html=True)
 
-        if 'auth_step' not in st.session_state:
-            st.session_state['auth_step'] = 'primary_login'
-
-        if st.session_state['auth_step'] == 'primary_login':
-            display_primary_login(df)
-        elif st.session_state['auth_step'] == 'questions':
-            display_question_verification(df)
+        # --- START OF CHANGE: Removed auth_step logic ---
+        # No more 'auth_step' needed, just show the primary login
+        display_primary_login(df)
+        # --- END OF CHANGE ---
 
 def pdpa_consent_page():
     """แสดงหน้าสำหรับให้ความยินยอม PDPA"""
@@ -276,18 +127,29 @@ def pdpa_consent_page():
             padding-top: 3rem !important;
         }
 
+        /* --- START OF CHANGE: Make theme-adaptive --- */
         /* Style the container for consent */
         div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] {
-             background-color: white; padding: 2rem 3rem; border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+             background-color: var(--background-color); /* Was white */
+             color: var(--text-color); /* Added */
+             padding: 2rem 3rem; 
+             border-radius: 10px;
+             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         
-        h2 { text-align: center; }
+        h2 { text-align: center; color: var(--text-color); } /* Added text color */
         .consent-text {
-            height: 300px; overflow-y: scroll; border: 1px solid #ddd;
-            padding: 1rem; border-radius: 5px; background-color: #fafafa;
-            margin-bottom: 1.5rem; text-align: left;
+            height: 300px; 
+            overflow-y: scroll; 
+            border: 1px solid var(--border-color); /* Was #ddd */
+            padding: 1rem; 
+            border-radius: 5px; 
+            background-color: var(--secondary-background-color); /* Was #fafafa */
+            margin-bottom: 1.5rem; 
+            text-align: left;
+            color: var(--text-color); /* Added */
         }
+        /* --- END OF CHANGE --- */
         .stButton>button { width: 100%; height: 3rem; }
     </style>
     """, unsafe_allow_html=True)
@@ -314,3 +176,4 @@ def pdpa_consent_page():
         if st.button("ยอมรับและดำเนินการต่อ (Accept & Continue)"):
             st.session_state['pdpa_accepted'] = True
             st.rerun()
+
