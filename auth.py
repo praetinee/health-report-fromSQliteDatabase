@@ -92,16 +92,17 @@ def generate_questions(user_profile, num_questions=3):
 
 
 def display_primary_login(df):
-    """แสดงหน้าจอเข้าสู่ระบบหลัก (ชื่อ-สกุล + เลขบัตรประชาชน)"""
+    """แสดงหน้าจอเข้าสู่ระบบหลัก (ชื่อ-สกุล + เลขบัตรประชาชน หรือ HN)"""
     st.markdown("<h4>เข้าสู่ระบบ</h4>", unsafe_allow_html=True)
     name_input = st.text_input("ชื่อ-นามสกุล", key="login_name", label_visibility="collapsed", placeholder="ชื่อ-นามสกุล")
-    # --- START OF CHANGE: เปลี่ยนจาก HN เป็น เลขบัตรประชาชน ---
+    
+    # --- START OF CHANGE: ปรับช่องกรอกรหัสผ่าน ---
     id_input = st.text_input(
-        "รหัสผ่าน (เลขบัตรประชาชน 13 หลัก)", 
+        "รหัสผ่าน (เลขบัตรประชาชน 13 หลัก หรือ HN)", 
         key="login_id", 
-        help="กรอกเลขบัตรประชาชน 13 หลักของท่าน", 
+        help="กรอกเลขบัตรประชาชน 13 หลัก หรือ หมายเลข HN ของท่าน", 
         label_visibility="collapsed", 
-        placeholder="รหัสผ่าน (เลขบัตรประชาชน 13 หลัก)", 
+        placeholder="รหัสผ่าน (เลขบัตรประชาชน 13 หลัก หรือ HN)", 
         type="password"
     )
     # --- END OF CHANGE ---
@@ -109,13 +110,18 @@ def display_primary_login(df):
     col1, col2 = st.columns([3, 2])
     with col1:
         if st.button("ลงชื่อเข้าใช้", use_container_width=True, type="primary"):
-            # --- START OF CHANGE: เปลี่ยนการตรวจสอบจาก hn_input เป็น id_input ---
+            # --- START OF CHANGE: ตรวจสอบทั้งเลขบัตรประชาชนและ HN ---
             if name_input and id_input:
                 normalized_input_name = normalize_name(name_input)
-                # ค้นหาผู้ใช้โดยใช้ 'เลขบัตรประชาชน'
+                input_password = str(id_input).strip()
+                
+                # ค้นหาผู้ใช้โดยใช้ 'เลขบัตรประชาชน' หรือ 'HN'
                 user_record = df[
                     (df['ชื่อ-สกุล'].apply(normalize_name) == normalized_input_name) &
-                    (df['เลขบัตรประชาชน'].astype(str) == str(id_input).strip())
+                    (
+                        (df['เลขบัตรประชาชน'].astype(str) == input_password) |
+                        (df['HN'].astype(str) == input_password)
+                    )
                 ]
                 # --- END OF CHANGE ---
                 
@@ -128,15 +134,13 @@ def display_primary_login(df):
                     st.rerun()
                 else:
                     # --- START OF CHANGE: อัปเดตข้อความ error ---
-                    st.error("ชื่อ-นามสกุล หรือ เลขบัตรประชาชน ไม่ถูกต้อง")
+                    st.error("ชื่อ-นามสกุล หรือ รหัสผ่าน (เลขบัตร/HN) ไม่ถูกต้อง")
                     # --- END OF CHANGE ---
             else:
                 st.warning("กรุณากรอกข้อมูลให้ครบถ้วน")
     
     with col2:
-        # --- START OF CHANGE: เปลี่ยนปุ่ม "ลืม HN?" เป็น "ลืมรหัสผ่าน?" ---
         if st.button("ลืมรหัสผ่าน?", use_container_width=True):
-        # --- END OF CHANGE ---
             st.session_state['auth_step'] = 'questions'
             st.rerun()
 
