@@ -562,9 +562,9 @@ def inject_custom_css():
     css_lines.append('    /* --- END OF FIX --- */')
     css_lines.append('</style>')
     
-    st.markdown("\n".join(css_lines), unsafe_allow_html=True)
+    # --- START OF CHANGE: Use st.html() instead of st.markdown() ---
+    st.html("\n".join(css_lines))
     # --- END OF CHANGE ---
-# --- END OF CHANGE ---
 
 # --- START OF CHANGE: MOVED 'render_vision_details_table' TO GLOBAL SCOPE ---
 def render_vision_details_table(person_data):
