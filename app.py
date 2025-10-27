@@ -80,7 +80,7 @@ def parse_range_or_number(val):
 
 def interpret_rbc(value):
 # ... (existing code ... no changes in this function) ...
-    return "พบเม็ดเลือดแดงในปัสสาวะ"
+    return "พบเม็ดเลือดแดงในปัสสาววะ"
 
 def interpret_wbc(value):
 # ... (existing code ... no changes in this function) ...
@@ -182,7 +182,32 @@ def display_common_header(person_data):
     
     # --- Prepare data for display ---
     name = person_data.get('ชื่อ-สกุล', '-')
-# ... (existing code ... no changes in this function) ...
+    age = str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person_data.get('อายุ', '-')
+    sex = person_data.get('เพศ', '-')
+    hn = str(int(float(person_data.get('HN')))) if str(person_data.get('HN')).replace('.', '', 1).isdigit() else person_data.get('HN', '-')
+    department = person_data.get('หน่วยงาน', '-')
+    check_date = person_data.get("วันที่ตรวจ", "-")
+    
+    try:
+        sbp_int, dbp_int = int(float(person_data.get("SBP", ""))), int(float(person_data.get("DBP", "")))
+        bp_val = f"{sbp_int}/{dbp_int}"
+        bp_desc = interpret_bp(sbp_int, dbp_int)
+    except: 
+        bp_val = "-"
+        bp_desc = "ไม่มีข้อมูล"
+    
+    try: pulse_val = f"{int(float(person_data.get('pulse', '-')))}"
+    except: pulse_val = "-"
+
+    weight = get_float('น้ำหนัก', person_data)
+    height = get_float('ส่วนสูง', person_data)
+    weight_val = f"{weight}" if weight is not None else "-"
+    height_val = f"{height}" if height is not None else "-"
+    waist_val = f"{person_data.get('รอบเอว', '-')}"
+
+    # --- BMI Calculation and Interpretation ---
+    bmi_val_str = "-"
+    bmi_desc = ""
     if weight is not None and height is not None and height > 0:
         bmi = weight / ((height / 100) ** 2)
         bmi_val_str = f"{bmi:.1f} kg/m²"
@@ -190,67 +215,74 @@ def display_common_header(person_data):
 
 
     # --- Render HTML ---
-    # --- START OF CHANGE: De-indented HTML block to fix SyntaxError ---
-    st.markdown(f"""
-<div class="report-header">
-    <div class="header-left">
-        <h2>รายงานผลการตรวจสุขภาพ</h2>
-        <p>คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย</p>
-        <p>ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167</p>
-    </div>
-    <div class="header-right">
-        <div class="info-card">
-            <div class="info-card-item"><span>ชื่อ-สกุล:</span> {name}</div>
-            <div class="info-card-item"><span>HN:</span> {hn}</div>
-            <div class="info-card-item"><span>อายุ:</span> {age} ปี</div>
-            <div class="info-card-item"><span>เพศ:</span> {sex}</div>
-            <div class="info-card-item"><span>หน่วยงาน:</span> {department}</div>
-            <div class="info-card-item"><span>วันที่ตรวจ:</span> {check_date}</div>
-        </div>
-    </div>
-</div>
+    # --- START OF CHANGE: Replaced multi-line f-string with string list concatenation ---
+    html_lines = []
+    html_lines.append('<div class="report-header">')
+    html_lines.append('    <div class="header-left">')
+    html_lines.append('        <h2>รายงานผลการตรวจสุขภาพ</h2>')
+    html_lines.append('        <p>คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย</p>')
+    html_lines.append('        <p>ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167</p>') # No longer causes parser error
+    html_lines.append('    </div>')
+    html_lines.append('    <div class="header-right">')
+    html_lines.append('        <div class="info-card">')
+    html_lines.append(f'            <div class="info-card-item"><span>ชื่อ-สกุล:</span> {name}</div>')
+    html_lines.append(f'            <div class="info-card-item"><span>HN:</span> {hn}</div>')
+    html_lines.append(f'            <div class="info-card-item"><span>อายุ:</span> {age} ปี</div>')
+    html_lines.append(f'            <div class="info-card-item"><span>เพศ:</span> {sex}</div>')
+    html_lines.append(f'            <div class="info-card-item"><span>หน่วยงาน:</span> {department}</div>')
+    html_lines.append(f'            <div class="info-card-item"><span>วันที่ตรวจ:</span> {check_date}</div>')
+    html_lines.append('        </div>')
+    html_lines.append('    </div>')
+    html_lines.append('</div>')
 
-<div class="vitals-grid">
-    <div class="vital-card">
-        <div class="vital-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="M12 6v6l4 2"></path></svg>
-        </div>
-        <div class="vital-data">
-            <span class="vital-label">น้ำหนัก / ส่วนสูง</span>
-            <span class="vital-value">{weight_val} kg / {height_val} cm</span>
-            <span class="vital-sub-value">BMI: {bmi_val_str} ({bmi_desc})</span>
-        </div>
-    </div>
-    <div class="vital-card">
-        <div class="vital-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="M12 6v6l4 2"></path></svg>
-        </div>
-        <div class="vital-data">
-            <span class="vital-label">รอบเอว</span>
-            <span class="vital-value">{waist_val} cm</span>
-        </div>
-    </div>
-    <div class="vital-card">
-        <div class="vital-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-        </div>
-        <div class="vital-data">
-            <span class="vital-label">ความดัน (mmHg)</span>
-            <span class="vital-value">{bp_val}</span>
-            <span class="vital-sub-value">{bp_desc}</span>
-        </div>
-    </div>
-    <div class="vital-card">
-        <div class="vital-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-        </div>
-        <div class="vital-data">
-            <span class="vital-label">ชีพจร (BPM)</span>
-            <span class="vital-value">{pulse_val}</span>
-        </div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+    html_lines.append('<div class="vitals-grid">')
+    
+    html_lines.append('    <div class="vital-card">')
+    html_lines.append('        <div class="vital-icon">')
+    html_lines.append('            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="M12 6v6l4 2"></path></svg>')
+    html_lines.append('        </div>')
+    html_lines.append('        <div class="vital-data">')
+    html_lines.append('            <span class="vital-label">น้ำหนัก / ส่วนสูง</span>')
+    html_lines.append(f'            <span class="vital-value">{weight_val} kg / {height_val} cm</span>')
+    html_lines.append(f'            <span class="vital-sub-value">BMI: {bmi_val_str} ({bmi_desc})</span>')
+    html_lines.append('        </div>')
+    html_lines.append('    </div>')
+    
+    html_lines.append('    <div class="vital-card">')
+    html_lines.append('        <div class="vital-icon">')
+    html_lines.append('            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="M12 6v6l4 2"></path></svg>')
+    html_lines.append('        </div>')
+    html_lines.append('        <div class="vital-data">')
+    html_lines.append('            <span class="vital-label">รอบเอว</span>')
+    html_lines.append(f'            <span class="vital-value">{waist_val} cm</span>')
+    html_lines.append('        </div>')
+    html_lines.append('    </div>')
+
+    html_lines.append('    <div class="vital-card">')
+    html_lines.append('        <div class="vital-icon">')
+    html_lines.append('            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>')
+    html_lines.append('        </div>')
+    html_lines.append('        <div class="vital-data">')
+    html_lines.append('            <span class="vital-label">ความดัน (mmHg)</span>')
+    html_lines.append(f'            <span class="vital-value">{bp_val}</span>')
+    html_lines.append(f'            <span class="vital-sub-value">{bp_desc}</span>')
+    html_lines.append('        </div>')
+    html_lines.append('    </div>')
+
+    html_lines.append('    <div class="vital-card">')
+    html_lines.append('        <div class="vital-icon">')
+    html_lines.append('            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>')
+    html_lines.append('        </div>')
+    html_lines.append('        <div class="vital-data">')
+    html_lines.append('            <span class="vital-label">ชีพจร (BPM)</span>')
+    html_lines.append(f'            <span class="vital-value">{pulse_val}</span>')
+    html_lines.append('        </div>')
+    html_lines.append('    </div>')
+    
+    html_lines.append('</div>')
+    
+    html_content = "\n".join(html_lines)
+    st.markdown(html_content, unsafe_allow_html=True)
     # --- END OF CHANGE ---
 
 # --- END OF CHANGE ---
