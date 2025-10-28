@@ -926,7 +926,9 @@ def display_admin_panel(df):
 
 
     with st.sidebar:
-        st.markdown("<div class='sidebar-title'>Admin Panel</div>", unsafe_allow_html=True)
+        # --- START OF CHANGE: Added emoji ---
+        st.markdown("<div class='sidebar-title'>👑 Admin Panel</div>", unsafe_allow_html=True)
+        # --- END OF CHANGE ---
 
         # --- Search Form ---
         with st.form(key="admin_search_form"):
