@@ -98,14 +98,14 @@ def plot_historical_trends(history_df):
     history_df = pd.merge(all_years_df, history_df, on='Year', how='left')
     history_df['BMI'] = history_df.apply(lambda row: (get_float(row, 'น้ำหนัก') / ((get_float(row, 'ส่วนสูง') / 100) ** 2)) if get_float(row, 'น้ำหนัก') and get_float(row, 'ส่วนสูง') else np.nan, axis=1)
 
-    # --- START OF CHANGE: Split SBP and DBP ---
+    # --- START OF CHANGE: Updated direction_type ---
     trend_metrics = {
-        'ดัชนีมวลกาย (BMI)': ('BMI', 'kg/m²', 23.0, 'range'),
+        'ดัชนีมวลกาย (BMI)': ('BMI', 'kg/m²', 23.0, 'range'),          # Changed to 'range'
         'ระดับน้ำตาลในเลือด (FBS)': ('FBS', 'mg/dL', 100.0, 'lower'),
         'คอเลสเตอรอล (Cholesterol)': ('CHOL', 'mg/dL', 200.0, 'lower'),
-        'ประสิทธิภาพการกรองของไต (GFR)': ('GFR', 'mL/min', 90.0, 'higher'),
-        'ความดันตัวบน (SBP)': ('SBP', 'mmHg', 130.0, 'lower'), # Target SBP < 130
-        'ความดันตัวล่าง (DBP)': ('DBP', 'mmHg', 80.0, 'lower')   # Target DBP < 80
+        'ประสิทธิภาพการกรองของไต (GFR)': ('GFR', 'mL/min', 90.0, 'higher'), # Correctly 'higher'
+        'ความดันตัวบน (SBP)': ('SBP', 'mmHg', 130.0, 'lower'),
+        'ความดันตัวล่าง (DBP)': ('DBP', 'mmHg', 80.0, 'lower')
     }
     # --- END OF CHANGE ---
 
@@ -121,18 +121,22 @@ def plot_historical_trends(history_df):
 
     # Use a loop to create a responsive grid
     num_metrics = len(metrics_to_plot)
-    # --- START OF CHANGE: Adjust columns based on number of metrics ---
     cols = st.columns(min(num_metrics, 3)) # Max 3 columns, adjust if fewer metrics
-    # --- END OF CHANGE ---
 
     for i in range(num_metrics):
-        # --- START OF CHANGE: Adjust column index ---
         with cols[i % len(cols)]:
-        # --- END OF CHANGE ---
             title, keys, unit, goal, direction_type = metrics_to_plot[i]
-            # --- START OF CHANGE: Remove is_bp check, always treat as single metric ---
-            icon = "🩸" if keys in ['SBP', 'DBP'] else "📊" # Keep BP icon
-            direction_text = "(ควรอยู่ในเกณฑ์)" if direction_type == 'range' else ("(ยิ่งสูงยิ่งดี)" if direction_type == 'higher' else "(ยิ่งต่ำยิ่งดี)")
+            icon = "🩸" if keys in ['SBP', 'DBP'] else "📊"
+
+            # --- START OF CHANGE: Update direction_text based on direction_type ---
+            if direction_type == 'range':
+                direction_text = "(ควรอยู่ในเกณฑ์)"
+            elif direction_type == 'higher':
+                direction_text = "(ยิ่งสูงยิ่งดี)"
+            else: # Default to 'lower'
+                direction_text = "(ยิ่งต่ำยิ่งดี)"
+            # --- END OF CHANGE ---
+
             full_title = f"<h5 style='text-align:center;'>{icon} {title} <br><span style='font-size:0.8em;color:gray;'>{direction_text}</span></h5>"
 
             df_plot = history_df[['Year_str', keys, f'{keys}_interp']].copy() # Ensure using copy
@@ -160,7 +164,6 @@ def plot_historical_trends(history_df):
             fig.update_traces(connectgaps=False)
             fig.update_layout(yaxis_title=unit, xaxis_title='ปี พ.ศ.', legend_title_text="", font_family="Sarabun", template="streamlit", legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
             st.plotly_chart(fig, use_container_width=True)
-            # --- END OF CHANGE ---
 
 
 # --- 2. เกจวัด ---
@@ -438,3 +441,4 @@ def display_visualization_tab(person_data, history_df):
                     plot_audiogram(chart['data'])
                 elif chart['type'] == 'lung':
                     plot_lung_comparison(chart['data'])
+
