@@ -98,14 +98,14 @@ def plot_historical_trends(history_df):
     history_df = pd.merge(all_years_df, history_df, on='Year', how='left')
     history_df['BMI'] = history_df.apply(lambda row: (get_float(row, 'น้ำหนัก') / ((get_float(row, 'ส่วนสูง') / 100) ** 2)) if get_float(row, 'น้ำหนัก') and get_float(row, 'ส่วนสูง') else np.nan, axis=1)
 
-    # --- START OF CHANGE: Updated direction_type ---
+    # --- START OF CHANGE: Updated direction_type for relevant metrics ---
     trend_metrics = {
-        'ดัชนีมวลกาย (BMI)': ('BMI', 'kg/m²', 23.0, 'range'),          # Changed to 'range'
-        'ระดับน้ำตาลในเลือด (FBS)': ('FBS', 'mg/dL', 100.0, 'lower'),
-        'คอเลสเตอรอล (Cholesterol)': ('CHOL', 'mg/dL', 200.0, 'lower'),
-        'ประสิทธิภาพการกรองของไต (GFR)': ('GFR', 'mL/min', 90.0, 'higher'), # Correctly 'higher'
-        'ความดันตัวบน (SBP)': ('SBP', 'mmHg', 130.0, 'lower'),
-        'ความดันตัวล่าง (DBP)': ('DBP', 'mmHg', 80.0, 'lower')
+        'ดัชนีมวลกาย (BMI)': ('BMI', 'kg/m²', 23.0, 'range'),
+        'ระดับน้ำตาลในเลือด (FBS)': ('FBS', 'mg/dL', 100.0, 'target'), # Changed to 'target'
+        'คอเลสเตอรอล (Cholesterol)': ('CHOL', 'mg/dL', 200.0, 'target'), # Changed to 'target'
+        'ประสิทธิภาพการกรองของไต (GFR)': ('GFR', 'mL/min', 90.0, 'higher'),
+        'ความดันตัวบน (SBP)': ('SBP', 'mmHg', 130.0, 'target'), # Changed to 'target'
+        'ความดันตัวล่าง (DBP)': ('DBP', 'mmHg', 80.0, 'target')   # Changed to 'target'
     }
     # --- END OF CHANGE ---
 
@@ -133,7 +133,9 @@ def plot_historical_trends(history_df):
                 direction_text = "(ควรอยู่ในเกณฑ์)"
             elif direction_type == 'higher':
                 direction_text = "(ยิ่งสูงยิ่งดี)"
-            else: # Default to 'lower'
+            elif direction_type == 'target': # New case for target
+                direction_text = "(ไม่ควรสูงเกินเกณฑ์)"
+            else: # Default to 'lower' (though none use this now)
                 direction_text = "(ยิ่งต่ำยิ่งดี)"
             # --- END OF CHANGE ---
 
@@ -149,19 +151,22 @@ def plot_historical_trends(history_df):
 
             fig = px.line(df_plot, x='Year_str', y=keys, title=full_title.replace("<h5 style='text-align:center;'>", "").replace("</h5>",""), markers=True, custom_data=[keys, f'{keys}_interp'])
             fig.update_traces(hovertemplate='<b>%{x}</b><br>%{customdata[0]:.1f} ' + unit + '%{customdata[1]}<extra></extra>')
+            # Add target line (hline)
             fig.add_hline(y=goal, line_width=2, line_dash="dash", line_color="green", annotation_text="เกณฑ์", annotation_position="bottom right")
 
+            # Add trendline prediction if enough data
             clean_df = history_df[['Year', keys]].dropna()
             if len(clean_df) >= 3:
                 model = np.polyfit(clean_df['Year'], clean_df[keys], 1)
                 predict = np.poly1d(model)
                 future_years = np.array([max_year + 1, max_year + 2])
                 predicted_values = predict(future_years)
+                # Extend trendline smoothly from last data point
                 all_future_years = np.insert(future_years, 0, max_year)
-                all_predicted_values = np.insert(predicted_values, 0, predict(max_year))
+                all_predicted_values = np.insert(predicted_values, 0, predict(max_year)) # Use prediction at max_year for continuity
                 fig.add_trace(go.Scatter(x=all_future_years.astype(str), y=all_predicted_values, mode='lines', line=dict(color='rgba(128,128,128,0.7)', width=2, dash='dot'), name='คาดการณ์', hovertemplate='คาดการณ์ปี %{x}: %{y:.1f}<extra></extra>'))
 
-            fig.update_traces(connectgaps=False)
+            fig.update_traces(connectgaps=False) # Don't connect missing years
             fig.update_layout(yaxis_title=unit, xaxis_title='ปี พ.ศ.', legend_title_text="", font_family="Sarabun", template="streamlit", legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
             st.plotly_chart(fig, use_container_width=True)
 
