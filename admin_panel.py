@@ -4,9 +4,10 @@ from collections import OrderedDict
 import json
 from datetime import datetime
 
-# Import shared display functions from app.py
-# (เราจะย้ายฟังก์ชันเหล่านี้ไปไว้นอก main_app ในไฟล์ app.py)
-from app import (
+# Import shared display functions from the NEW shared_ui.py
+from shared_ui import (
+    is_empty,              # Make sure is_empty is imported if used directly here
+    normalize_name,        # Make sure normalize_name is imported
     inject_custom_css,
     display_common_header,
     display_main_report,
@@ -17,7 +18,7 @@ from app import (
     has_lung_data,
     has_visualization_data,
     display_visualization_tab,
-    normalize_name # Helper from app
+    # normalize_name is already imported above
 )
 # Import print functions
 from print_report import generate_printable_report
@@ -39,9 +40,9 @@ def display_admin_panel(df):
         st.session_state.admin_selected_hn = None
     if 'admin_selected_year' not in st.session_state:
         st.session_state.admin_selected_year = None
-    if 'admin_print_trigger' not in st.session_state: 
+    if 'admin_print_trigger' not in st.session_state:
         st.session_state.admin_print_trigger = False
-    if 'admin_print_performance_trigger' not in st.session_state: 
+    if 'admin_print_performance_trigger' not in st.session_state:
         st.session_state.admin_print_performance_trigger = False
     if "admin_person_row" not in st.session_state:
         st.session_state.admin_person_row = None
@@ -49,7 +50,7 @@ def display_admin_panel(df):
 
     with st.sidebar:
         st.markdown("<div class='sidebar-title'>Admin Panel</div>", unsafe_allow_html=True)
-        
+
         # --- Search Form ---
         with st.form(key="admin_search_form"):
             search_term = st.text_input(
@@ -61,7 +62,7 @@ def display_admin_panel(df):
             if submitted:
                 st.session_state.admin_search_term = search_term
                 if search_term:
-                    normalized_search = normalize_name(search_term)
+                    normalized_search = normalize_name(search_term) # Use imported normalize_name
                     # ค้นหาในทั้ง 3 คอลัมน์
                     search_mask = (
                         df['ชื่อ-สกุล'].apply(normalize_name).str.contains(normalized_search, case=False, na=False) |
@@ -69,13 +70,13 @@ def display_admin_panel(df):
                         (df['เลขบัตรประชาชน'].astype(str) == search_term)
                     )
                     results_df = df[search_mask]
-                    
+
                     if not results_df.empty:
                         # ดึง HN ที่ไม่ซ้ำกัน
                         unique_hns = results_df['HN'].unique()
                         # เก็บข้อมูล *ทั้งหมด* ของ HN ที่พบ
                         st.session_state.admin_search_results = df[df['HN'].isin(unique_hns)].copy()
-                        
+
                         if len(unique_hns) == 1:
                             st.session_state.admin_selected_hn = unique_hns[0]
                         else:
@@ -86,7 +87,7 @@ def display_admin_panel(df):
                 else:
                     st.session_state.admin_search_results = None
                     st.session_state.admin_selected_hn = None
-                
+
                 # Reset ค่าเมื่อค้นหาใหม่
                 st.session_state.admin_selected_year = None
                 st.session_state.admin_person_row = None
@@ -99,15 +100,15 @@ def display_admin_panel(df):
             else:
                 # สร้าง list ผู้ป่วยที่ไม่ซ้ำกัน
                 unique_results = st.session_state.admin_search_results.drop_duplicates(subset=['HN']).set_index('HN')
-                
+
                 if len(unique_results) > 1:
                     st.info(f"พบ {len(unique_results)} คน กรุณาเลือก:")
                     options = {hn: f"{row['ชื่อ-สกุล']} (HN: {hn})" for hn, row in unique_results.iterrows()}
-                    
+
                     current_hn = st.session_state.admin_selected_hn
                     hn_list = list(options.keys())
                     index = hn_list.index(current_hn) if current_hn in hn_list else 0
-                    
+
                     # ถ้ายังไม่ได้เลือก ให้เลือกคนแรก
                     if st.session_state.admin_selected_hn is None:
                         index = 0
@@ -126,21 +127,21 @@ def display_admin_panel(df):
                         st.session_state.admin_selected_year = None # Reset ปี
                         st.session_state.admin_person_row = None
                         st.rerun()
-                
+
                 # --- Year selection (แสดงเมื่อเลือกผู้ป่วยแล้ว) ---
                 if st.session_state.admin_selected_hn:
                     hn_to_load = st.session_state.admin_selected_hn
                     all_person_history_df = df[df['HN'] == hn_to_load].copy()
-                    
+
                     available_years = sorted(all_person_history_df["Year"].dropna().unique().astype(int), reverse=True)
-                    
+
                     if available_years:
                         # ตั้งค่าปี default ถ้ายังไม่ได้เลือก
                         if st.session_state.admin_selected_year not in available_years:
                             st.session_state.admin_selected_year = available_years[0]
-                        
+
                         year_idx = available_years.index(st.session_state.admin_selected_year)
-                        
+
                         selected_year = st.selectbox(
                             "เลือกปี พ.ศ. ที่ต้องการดูผลตรวจ",
                             options=available_years,
@@ -148,13 +149,13 @@ def display_admin_panel(df):
                             format_func=lambda y: f"พ.ศ. {y}",
                             key="admin_year_select"
                         )
-                        
+
                         # ถ้าเปลี่ยนปี
                         if selected_year != st.session_state.admin_selected_year:
                             st.session_state.admin_selected_year = selected_year
                             st.session_state.admin_person_row = None # บังคับให้โหลดข้อมูลใหม่
                             st.rerun()
-                        
+
                         # โหลดข้อมูลของปีที่เลือก
                         if st.session_state.admin_person_row is None:
                             person_year_df = all_person_history_df[all_person_history_df["Year"] == st.session_state.admin_selected_year]
@@ -185,7 +186,7 @@ def display_admin_panel(df):
             keys_to_clear = [
                 'authenticated', 'pdpa_accepted', 'user_hn', 'user_name', 'is_admin',
                 'search_result', 'selected_year', 'person_row', 'selected_row_found',
-                'admin_search_term', 'admin_search_results', 'admin_selected_hn', 
+                'admin_search_term', 'admin_search_results', 'admin_selected_hn',
                 'admin_selected_year', 'admin_person_row'
             ]
             for key in keys_to_clear:
@@ -199,7 +200,7 @@ def display_admin_panel(df):
     else:
         person_data = st.session_state.admin_person_row
         all_person_history_df = df[df['HN'] == st.session_state.admin_selected_hn].copy()
-        
+
         # --- ใช้ฟังก์ชันแสดงผลเดียวกับของผู้ใช้ ---
         available_reports = OrderedDict()
         if has_visualization_data(all_person_history_df): available_reports['ภาพรวมสุขภาพ (Graphs)'] = 'visualization_report'
@@ -207,14 +208,14 @@ def display_admin_panel(df):
         if has_vision_data(person_data): available_reports['สมรรถภาพการมองเห็น'] = 'vision_report'
         if has_hearing_data(person_data): available_reports['สมรรถภาพการได้ยิน'] = 'hearing_report'
         if has_lung_data(person_data): available_reports['สมรรถภาพปอด'] = 'lung_report'
-        
+
         if not available_reports:
             display_common_header(person_data)
             st.warning("ไม่พบข้อมูลการตรวจใดๆ สำหรับปีที่เลือก")
         else:
             display_common_header(person_data)
             tabs = st.tabs(list(available_reports.keys()))
-        
+
             for i, (tab_title, page_key) in enumerate(available_reports.items()):
                 with tabs[i]:
                     if page_key == 'visualization_report':
