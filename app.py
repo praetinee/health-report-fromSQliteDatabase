@@ -25,11 +25,24 @@ from print_performance_report import generate_performance_report_html
 from visualization import display_visualization_tab
 # --- END OF CHANGE ---
 
+# --- START OF CHANGE: Import admin panel ---
+from admin_panel import display_admin_panel
+# --- END OF CHANGE ---
 
-# --- Helper Functions (ที่ยังคงใช้งาน) ---
+
+# --- START OF CHANGE: Added helper functions to fix import ---
+# (ย้ายฟังก์ชันเหล่านี้มาจาก auth.py เพื่อให้ admin_panel.py ใช้งานได้)
 def is_empty(val):
     """Check if a value is empty, null, or whitespace."""
     return pd.isna(val) or str(val).strip().lower() in ["", "-", "none", "nan", "null"]
+
+def normalize_name(name):
+    """จัดการการเว้นวรรคในชื่อ-นามสกุลที่ไม่สม่ำเสมอ"""
+    if is_empty(name):
+        return ""
+    return re.sub(r'\s+', '', str(name).strip())
+# --- END OF CHANGE ---
+
 
 THAI_MONTHS_GLOBAL = {1: "มกราคม", 2: "กุมภาพันธ์", 3: "มีนาคม", 4: "เมษายน", 5: "พฤษภาคม", 6: "มิถุนายน", 7: "กรกฎาคม", 8: "สิงหาคม", 9: "กันยายน", 10: "ตุลาคม", 11: "พฤศจิกายน", 12: "ธันวาคม"}
 THAI_MONTH_ABBR_TO_NUM_GLOBAL = {"ม.ค.": 1, "ม.ค": 1, "มกราคม": 1, "ก.พ.": 2, "ก.พ": 2, "กพ": 2, "กุมภาพันธ์": 2, "มี.ค.": 3, "มี.ค": 3, "มีนาคม": 3, "เม.ย.": 4, "เม.ย": 4, "เมษายน": 4, "พ.ค.": 5, "พ.ค": 5, "พฤษภาคม": 5, "มิ.ย.": 6, "มิ.ย": 6, "มิถุนายน": 6, "ก.ค.": 7, "ก.ค": 7, "กรกฎาคม": 7, "ส.ค.": 8, "ส.ค": 8, "สิงหาคม": 8, "ก.ย.": 9, "ก.ย": 9, "กันยายน": 9, "ต.ค.": 10, "ต.ค": 10, "ตุลาคม": 10, "พ.ย.": 11, "พ.ย": 11, "พฤศจิกายน": 11, "ธ.ค.": 12, "ธ.ค": 12, "ธันวาคม": 12}
@@ -965,7 +978,7 @@ def display_performance_report_lung(person_data):
         st.markdown("<br><h5 class='section-subtitle'>คำแนะนำ</h5>", unsafe_allow_html=True)
         st.warning(lung_advice or "ไม่มีคำแนะนำเพิ่มเติม")
 
-        st.markdown("<h5 class='section-subtitle'>ผลเอกซเรย์ทรวงอก</h5>", unsafe_allow_html=True)
+        st.markdown("<h5 class'section-subtitle'>ผลเอกซเรย์ทรวงอก</h5>", unsafe_allow_html=True)
         selected_year = person_data.get("Year")
         cxr_result_interpreted = "ไม่มีข้อมูล"
         if selected_year:
@@ -1109,7 +1122,7 @@ def display_main_report(person_data, all_person_history_df):
                     status_class = 'warning-box'
                 
                 st.markdown(f"""
-                <div class='custom-advice-box {status_class}'>
+                <div class'custom-advice-box {status_class}'>
                     {advice}
                 </div>
                 """, unsafe_allow_html=True)
@@ -1197,7 +1210,7 @@ def main_app(df):
             keys_to_clear = [
                 'authenticated', 'pdpa_accepted', 'user_hn', 'user_name',
                 'search_result', 'selected_year', 'person_row', 
-                'selected_row_found', 'auth_step'
+                'selected_row_found', 'auth_step', 'is_admin' # เพิ่ม is_admin
             ]
             for key in keys_to_clear:
                 if key in st.session_state:
@@ -1318,8 +1331,19 @@ if df is None:
 if not st.session_state['authenticated']:
     authentication_flow(df)
 elif not st.session_state['pdpa_accepted']:
-    pdpa_consent_page()
+    # --- START OF CHANGE: Admin Bypasses PDPA ---
+    if st.session_state.get('is_admin', False):
+        st.session_state['pdpa_accepted'] = True # แอดมินไม่ต้องกดยอมรับ PDPA
+        st.rerun()
+    else:
+        pdpa_consent_page()
+    # --- END OF CHANGE ---
 else:
-    main_app(df)
-# --- END OF CHANGE ---
-
+    # --- START OF CHANGE: Route to Admin or User App ---
+    if st.session_state.get('is_admin', False):
+        # ถ้าเป็นแอดมิน ให้แสดงหน้า admin_panel
+        display_admin_panel(df)
+    else:
+        # ถ้าเป็นผู้ใช้ทั่วไป ให้แสดงหน้า main_app
+        main_app(df)
+    # --- END OF CHANGE ---
