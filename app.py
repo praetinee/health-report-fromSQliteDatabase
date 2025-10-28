@@ -13,24 +13,30 @@ import os
 import json
 from streamlit_js_eval import streamlit_js_eval
 
-# --- START OF CHANGE: Import new authentication module ---
+# --- Import Authentication ---
 from auth import authentication_flow, pdpa_consent_page
-# --- END OF CHANGE ---
 
-# --- Import ฟังก์ชันจากไฟล์อื่น ---
-# (ฟังก์ชันส่วนใหญ่ถูกย้ายไป shared_ui.py)
+# --- Import Print Functions ---
 from print_report import generate_printable_report
 from print_performance_report import generate_performance_report_html
 
-# --- START OF CHANGE: Import admin panel and shared UI functions ---
-from admin_panel import display_admin_panel
-from shared_ui import (
-    is_empty, normalize_name, inject_custom_css, display_common_header,
-    has_basic_health_data, has_vision_data, has_hearing_data, has_lung_data,
-    has_visualization_data, display_main_report, display_performance_report,
+# --- Import Admin Panel and SHARED UI functions FROM admin_panel ---
+from admin_panel import (
+    display_admin_panel,
+    # List all the shared functions that were previously in shared_ui.py
+    is_empty,
+    normalize_name,
+    inject_custom_css,
+    display_common_header,
+    has_basic_health_data,
+    has_vision_data,
+    has_hearing_data,
+    has_lung_data,
+    has_visualization_data,
+    display_main_report,
+    display_performance_report,
     display_visualization_tab
 )
-# --- END OF CHANGE ---
 
 # --- ค่าคงที่ (Constants) ---
 THAI_MONTHS_GLOBAL = {1: "มกราคม", 2: "กุมภาพันธ์", 3: "มีนาคม", 4: "เมษายน", 5: "พฤษภาคม", 6: "มิถุนายน", 7: "กรกฎาคม", 8: "สิงหาคม", 9: "กันยายน", 10: "ตุลาคม", 11: "พฤศจิกายน", 12: "ธันวาคม"}
@@ -76,8 +82,7 @@ def load_sqlite_data():
             os.remove(tmp_path)
 
 
-# --- START OF CHANGE: Main application logic is wrapped in a function ---
-# (ลบฟังก์ชันส่วนใหญ่ที่ย้ายไป shared_ui.py ออกจากส่วนนี้)
+# --- Main Application Logic Wrapper for Regular Users ---
 def main_app(df):
     """
     This function contains the main application logic for displaying health reports for regular users.
@@ -85,7 +90,7 @@ def main_app(df):
     """
     st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
-    inject_custom_css() # ใช้ inject_custom_css จาก shared_ui
+    inject_custom_css() # Use inject_custom_css from admin_panel (where it's now defined)
 
     # --- Logic to handle data for the logged-in user ---
     if 'user_hn' not in st.session_state:
@@ -98,7 +103,6 @@ def main_app(df):
 
     def handle_year_change():
         st.session_state.selected_year = st.session_state.year_select
-        # st.session_state.selected_date = None # ลบ selected_date ถ้าไม่ได้ใช้แล้ว
         st.session_state.pop("person_row", None)
         st.session_state.pop("selected_row_found", None)
 
@@ -116,7 +120,6 @@ def main_app(df):
         if not results_df.empty:
             available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
             if available_years:
-                # Set default year if not selected or invalid
                 if st.session_state.selected_year not in available_years:
                     st.session_state.selected_year = available_years[0]
 
@@ -125,9 +128,7 @@ def main_app(df):
 
                 person_year_df = results_df[results_df["Year"] == st.session_state.selected_year]
 
-                # Load data for the selected year
                 if not person_year_df.empty:
-                    # Use bfill().ffill() to handle potential missing values across rows for the same year
                     merged_series = person_year_df.bfill().ffill().iloc[0]
                     st.session_state.person_row = merged_series.to_dict()
                     st.session_state.selected_row_found = True
@@ -158,12 +159,9 @@ def main_app(df):
         # --- Logout Button ---
         st.markdown("---")
         if st.button("ออกจากระบบ (Logout)", use_container_width=True):
-            # Clear all session state keys related to the user session
             keys_to_clear = [
                 'authenticated', 'pdpa_accepted', 'user_hn', 'user_name', 'is_admin',
-                'search_result', 'selected_year', 'person_row',
-                'selected_row_found',
-                # ลบ state ของ admin ด้วยเผื่อกรณี logout จาก admin mode
+                'search_result', 'selected_year', 'person_row', 'selected_row_found',
                 'admin_search_term', 'admin_search_results', 'admin_selected_hn',
                 'admin_selected_year', 'admin_person_row'
             ]
@@ -177,11 +175,11 @@ def main_app(df):
         st.info("กรุณาเลือกปีที่ต้องการดูผลตรวจจากเมนูด้านข้าง")
     else:
         person_data = st.session_state.person_row
-        all_person_history_df = st.session_state.search_result # ประวัติทั้งหมดของผู้ใช้คนนี้
+        all_person_history_df = st.session_state.search_result
 
         # --- Determine available report tabs ---
         available_reports = OrderedDict()
-        # ใช้ฟังก์ชันจาก shared_ui
+        # Use functions imported from admin_panel (where they are now defined)
         if has_visualization_data(all_person_history_df): available_reports['ภาพรวมสุขภาพ (Graphs)'] = 'visualization_report'
         if has_basic_health_data(person_data): available_reports['สุขภาพพื้นฐาน'] = 'main_report'
         if has_vision_data(person_data): available_reports['สมรรถภาพการมองเห็น'] = 'vision_report'
@@ -190,28 +188,27 @@ def main_app(df):
 
         # --- Display Header and Tabs ---
         if not available_reports:
-            display_common_header(person_data) # ใช้ display_common_header จาก shared_ui
+            display_common_header(person_data)
             st.warning("ไม่พบข้อมูลการตรวจใดๆ สำหรับปีที่เลือก")
         else:
-            display_common_header(person_data) # ใช้ display_common_header จาก shared_ui
+            display_common_header(person_data)
             tabs = st.tabs(list(available_reports.keys()))
 
             # --- Render Content for Each Tab ---
             for i, (tab_title, page_key) in enumerate(available_reports.items()):
                 with tabs[i]:
                     if page_key == 'visualization_report':
-                        display_visualization_tab(person_data, all_person_history_df) # ใช้ display_visualization_tab จาก shared_ui
+                        display_visualization_tab(person_data, all_person_history_df)
                     elif page_key == 'vision_report':
-                        display_performance_report(person_data, 'vision') # ใช้ display_performance_report จาก shared_ui
+                        display_performance_report(person_data, 'vision')
                     elif page_key == 'hearing_report':
-                        display_performance_report(person_data, 'hearing', all_person_history_df=all_person_history_df) # ใช้ display_performance_report จาก shared_ui
+                        display_performance_report(person_data, 'hearing', all_person_history_df=all_person_history_df)
                     elif page_key == 'lung_report':
-                        display_performance_report(person_data, 'lung') # ใช้ display_performance_report จาก shared_ui
+                        display_performance_report(person_data, 'lung')
                     elif page_key == 'main_report':
-                        display_main_report(person_data, all_person_history_df) # ใช้ display_main_report จาก shared_ui
+                        display_main_report(person_data, all_person_history_df)
 
         # --- Print Logic ---
-        # (เก็บ print logic ไว้ที่นี่เหมือนเดิม เพราะไม่เกี่ยวกับ UI rendering โดยตรง)
         if st.session_state.get("print_trigger", False):
             report_html_data = generate_printable_report(person_data, all_person_history_df)
             escaped_html = json.dumps(report_html_data)
@@ -226,14 +223,7 @@ def main_app(df):
                     iframeDoc.open();
                     iframeDoc.write({escaped_html});
                     iframeDoc.close();
-                    iframe.onload = function() {{
-                        setTimeout(function() {{
-                            try {{
-                                iframe.contentWindow.focus();
-                                iframe.contentWindow.print();
-                            }} catch (e) {{ console.error("Printing failed:", e); }}
-                        }}, 500);
-                    }};
+                    iframe.onload = function() {{ setTimeout(function() {{ try {{ iframe.contentWindow.focus(); iframe.contentWindow.print(); }} catch (e) {{ console.error("Printing failed:", e); }} }}, 500); }};
                 }})();
             </script>
             """
@@ -254,14 +244,7 @@ def main_app(df):
                     iframeDoc.open();
                     iframeDoc.write({escaped_html});
                     iframeDoc.close();
-                    iframe.onload = function() {{
-                        setTimeout(function() {{
-                            try {{
-                                iframe.contentWindow.focus();
-                                iframe.contentWindow.print();
-                            }} catch (e) {{ console.error("Printing performance report failed:", e); }}
-                        }}, 500);
-                    }};
+                    iframe.onload = function() {{ setTimeout(function() {{ try {{ iframe.contentWindow.focus(); iframe.contentWindow.print(); }} catch (e) {{ console.error("Printing performance report failed:", e); }} }}, 500); }};
                 }})();
             </script>
             """
@@ -273,20 +256,19 @@ if 'authenticated' not in st.session_state:
     st.session_state['authenticated'] = False
 if 'pdpa_accepted' not in st.session_state:
     st.session_state['pdpa_accepted'] = False
-# Initialize is_admin if it doesn't exist
 if 'is_admin' not in st.session_state:
     st.session_state['is_admin'] = False
 
-
+# Load data once
 df = load_sqlite_data()
 if df is None:
     st.error("ไม่สามารถโหลดฐานข้อมูลได้ กรุณาลองอีกครั้งในภายหลัง")
     st.stop()
 
+# --- Routing Logic ---
 if not st.session_state['authenticated']:
     authentication_flow(df)
 elif not st.session_state['pdpa_accepted']:
-    # Admin Bypasses PDPA
     if st.session_state.get('is_admin', False):
         st.session_state['pdpa_accepted'] = True
         st.rerun()
@@ -295,7 +277,7 @@ elif not st.session_state['pdpa_accepted']:
 else:
     # Route to Admin or User App
     if st.session_state.get('is_admin', False):
-        display_admin_panel(df) # เรียกใช้ฟังก์ชัน admin panel
+        display_admin_panel(df) # Call admin panel function (now defined in admin_panel.py)
     else:
-        main_app(df) # เรียกใช้ฟังก์ชันแอปหลักสำหรับผู้ใช้ทั่วไป
+        main_app(df) # Call main app function for regular users
 
