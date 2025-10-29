@@ -1096,12 +1096,14 @@ def display_admin_panel(df):
         available_reports = OrderedDict()
         if has_visualization_data(all_person_history_df_admin): available_reports['ภาพรวมสุขภาพ (Graphs)'] = 'visualization_report'
         if has_basic_health_data(person_data): available_reports['สุขภาพพื้นฐาน'] = 'main_report'
-        
+
         # --- START OF CHANGE: Add Pyramid Tab ---
-        if has_basic_health_data(person_data): 
-            available_reports['พีระมิดสุขภาพ'] = 'pyramid_report'
+        # --- START OF CHANGE: Change Tab Name ---
+        if has_basic_health_data(person_data):
+            available_reports['พีระมิดปรับพฤติกรรม'] = 'pyramid_report' # Changed Name
         # --- END OF CHANGE ---
-        
+        # --- END OF CHANGE ---
+
         if has_vision_data(person_data): available_reports['สมรรถภาพการมองเห็น'] = 'vision_report'
         if has_hearing_data(person_data): available_reports['สมรรถภาพการได้ยิน'] = 'hearing_report'
         if has_lung_data(person_data): available_reports['สมรรถภาพปอด'] = 'lung_report'
@@ -1185,4 +1187,5 @@ def display_admin_panel(df):
             """
             st.components.v1.html(print_component, height=0, width=0)
             st.session_state.admin_print_performance_trigger = False
+
 
