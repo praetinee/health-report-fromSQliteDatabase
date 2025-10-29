@@ -185,10 +185,12 @@ def main_app(df):
         # Use functions imported from admin_panel (where they are now defined)
         if has_visualization_data(all_person_history_df): available_reports['ภาพรวมสุขภาพ (Graphs)'] = 'visualization_report'
         if has_basic_health_data(person_data): available_reports['สุขภาพพื้นฐาน'] = 'main_report'
-        
+
         # --- START OF CHANGE: Add Pyramid Tab ---
-        if has_basic_health_data(person_data): 
-            available_reports['พีระมิดสุขภาพ'] = 'pyramid_report'
+        # --- START OF CHANGE: Change Tab Name ---
+        if has_basic_health_data(person_data):
+            available_reports['พีระมิดปรับพฤติกรรม'] = 'pyramid_report' # Changed Name
+        # --- END OF CHANGE ---
         # --- END OF CHANGE ---
 
         if has_vision_data(person_data): available_reports['สมรรถภาพการมองเห็น'] = 'vision_report'
@@ -293,4 +295,5 @@ else:
         display_admin_panel(df) # Call admin panel function (now defined in admin_panel.py)
     else:
         main_app(df) # Call main app function for regular users
+
 
