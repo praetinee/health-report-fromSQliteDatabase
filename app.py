@@ -37,6 +37,9 @@ from admin_panel import (
     display_performance_report,
     display_visualization_tab
 )
+# --- START OF CHANGE: Import new pyramid module ---
+from recommendation_pyramid import display_recommendation_pyramid
+# --- END OF CHANGE ---
 
 # --- ค่าคงที่ (Constants) ---
 THAI_MONTHS_GLOBAL = {1: "มกราคม", 2: "กุมภาพันธ์", 3: "มีนาคม", 4: "เมษายน", 5: "พฤษภาคม", 6: "มิถุนายน", 7: "กรกฎาคม", 8: "สิงหาคม", 9: "กันยายน", 10: "ตุลาคม", 11: "พฤศจิกายน", 12: "ธันวาคม"}
@@ -182,6 +185,12 @@ def main_app(df):
         # Use functions imported from admin_panel (where they are now defined)
         if has_visualization_data(all_person_history_df): available_reports['ภาพรวมสุขภาพ (Graphs)'] = 'visualization_report'
         if has_basic_health_data(person_data): available_reports['สุขภาพพื้นฐาน'] = 'main_report'
+        
+        # --- START OF CHANGE: Add Pyramid Tab ---
+        if has_basic_health_data(person_data): 
+            available_reports['พีระมิดสุขภาพ'] = 'pyramid_report'
+        # --- END OF CHANGE ---
+
         if has_vision_data(person_data): available_reports['สมรรถภาพการมองเห็น'] = 'vision_report'
         if has_hearing_data(person_data): available_reports['สมรรถภาพการได้ยิน'] = 'hearing_report'
         if has_lung_data(person_data): available_reports['สมรรถภาพปอด'] = 'lung_report'
@@ -205,6 +214,10 @@ def main_app(df):
                         display_performance_report(person_data, 'hearing', all_person_history_df=all_person_history_df)
                     elif page_key == 'lung_report':
                         display_performance_report(person_data, 'lung')
+                    # --- START OF CHANGE: Add Pyramid Tab render logic ---
+                    elif page_key == 'pyramid_report':
+                        display_recommendation_pyramid(person_data)
+                    # --- END OF CHANGE ---
                     elif page_key == 'main_report':
                         display_main_report(person_data, all_person_history_df)
 
