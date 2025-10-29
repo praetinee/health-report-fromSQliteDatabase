@@ -129,19 +129,19 @@ def interpret_hepatitis(person_data):
 
 # --- Main Recommendation Engine ---
 
-def generate_comprehensive_recommendations(person_data):
+def get_recommendation_data(person_data):
     """
-    สร้างสรุปและคำแนะนำการปฏิบัติตัวแบบองค์รวมจากข้อมูลสุขภาพทั้งหมด
-    โดยจัดลำดับความสำคัญของแต่ละประเด็น
+    วิเคราะห์ข้อมูลสุขภาพทั้งหมดและคืนค่าเป็น Dictionary ของประเด็นต่างๆ
     """
     key_indicators = ['FBS', 'CHOL', 'HCT', 'Cr', 'WBC (cumm)', 'น้ำหนัก', 'ส่วนสูง', 'SBP']
     has_data = any(not is_empty(person_data.get(key)) for key in key_indicators)
 
     if not has_data:
-        return "" 
+        return {}, {}
 
     issues = {'high': [], 'medium': [], 'low': []}
     conditions = set()
+    health_plan = {'nutrition': set(), 'exercise': set(), 'monitoring': set()}
     
     # --- 1. Vital Signs & BMI ---
     weight = get_float(person_data, "น้ำหนัก")
@@ -294,7 +294,48 @@ def generate_comprehensive_recommendations(person_data):
     if ekg_status == 'abnormal':
         issues['high'].append(f"<b>ผลคลื่นไฟฟ้าหัวใจผิดปกติ ({ekg_result}):</b> ควรพบแพทย์โรคหัวใจ")
 
-    # --- Build the final HTML output ---
+    # --- Build Health Plan based on conditions ---
+    if 'diabetes' in conditions or 'prediabetes' in conditions:
+        health_plan['nutrition'].add("ควบคุมอาหารประเภทแป้งและน้ำตาลอย่างจริงจัง")
+        health_plan['monitoring'].add("ตรวจติดตามระดับน้ำตาลในเลือดสม่ำเสมอ")
+    if 'hypertension' in conditions or 'prehypertension' in conditions:
+        health_plan['nutrition'].add("ลดอาหารเค็มและโซเดียมสูง")
+        health_plan['monitoring'].add("วัดความดันโลหิตที่บ้านอย่างสม่ำเสมอ")
+    if 'dyslipidemia' in conditions:
+        health_plan['nutrition'].add("ลดอาหารมัน ของทอด และไขมันอิ่มตัว")
+    if 'obesity' in conditions or 'overweight' in conditions:
+        health_plan['nutrition'].add("ควบคุมปริมาณอาหารและเลือกทานอาหารแคลอรี่ต่ำ")
+    if 'kidney_disease' in conditions:
+        health_plan['nutrition'].add("ลดอาหารเค็มจัดและโปรตีนสูงบางชนิด (ปรึกษาแพทย์)")
+        health_plan['monitoring'].add("ดื่มน้ำให้เพียงพอและหลีกเลี่ยงยาที่มีผลต่อไต")
+    if 'liver' in conditions:
+        health_plan['nutrition'].add("งดเครื่องดื่มแอลกอฮอล์และลดอาหารไขมันสูง")
+    if 'uric_acid' in conditions:
+        health_plan['nutrition'].add("ลดการทานเครื่องในสัตว์, สัตว์ปีก, และยอดผัก")
+    if 'anemia' in conditions:
+        health_plan['nutrition'].add("ทานอาหารที่มีธาตุเหล็กและวิตามินซีสูง เช่น ตับ, เนื้อแดง, ผักใบเขียว")
+
+    if any(c in conditions for c in ['obesity', 'overweight', 'hypertension', 'diabetes', 'prediabetes', 'dyslipidemia']):
+        health_plan['exercise'].add("ออกกำลังกายแบบแอโรบิก (เดินเร็ว, วิ่ง, ว่ายน้ำ) อย่างน้อย 150 นาที/สัปดาห์")
+    else:
+        health_plan['exercise'].add("เคลื่อนไหวร่างกายอย่างสม่ำเสมอ 3-4 วัน/สัปดาห์")
+
+    health_plan['monitoring'].add("นอนหลับพักผ่อนให้เพียงพอ 7-8 ชั่วโมง/คืน")
+    health_plan['monitoring'].add("ตรวจสุขภาพประจำปีเพื่อติดตามผล")
+
+    return issues, health_plan
+
+
+def generate_comprehensive_recommendations(person_data):
+    """
+    สร้างสรุปและคำแนะนำการปฏิบัติตัวแบบองค์รวมจากข้อมูลสุขภาพทั้งหมด
+    (ในรูปแบบ Text HTML เดิม)
+    """
+    
+    issues, health_plan = get_recommendation_data(person_data)
+
+    if not issues and not health_plan:
+        return "" 
     
     if not any(issues.values()):
         return """
@@ -326,36 +367,7 @@ def generate_comprehensive_recommendations(person_data):
 
     # --- Build Right Column (Health Plan) ---
     right_column_parts = []
-    health_plan = {'nutrition': set(), 'exercise': set(), 'monitoring': set()}
     
-    if 'diabetes' in conditions or 'prediabetes' in conditions:
-        health_plan['nutrition'].add("ควบคุมอาหารประเภทแป้งและน้ำตาลอย่างจริงจัง")
-        health_plan['monitoring'].add("ตรวจติดตามระดับน้ำตาลในเลือดสม่ำเสมอ")
-    if 'hypertension' in conditions or 'prehypertension' in conditions:
-        health_plan['nutrition'].add("ลดอาหารเค็มและโซเดียมสูง")
-        health_plan['monitoring'].add("วัดความดันโลหิตที่บ้านอย่างสม่ำเสมอ")
-    if 'dyslipidemia' in conditions:
-        health_plan['nutrition'].add("ลดอาหารมัน ของทอด และไขมันอิ่มตัว")
-    if 'obesity' in conditions or 'overweight' in conditions:
-        health_plan['nutrition'].add("ควบคุมปริมาณอาหารและเลือกทานอาหารแคลอรี่ต่ำ")
-    if 'kidney_disease' in conditions:
-        health_plan['nutrition'].add("ลดอาหารเค็มจัดและโปรตีนสูงบางชนิด (ปรึกษาแพทย์)")
-        health_plan['monitoring'].add("ดื่มน้ำให้เพียงพอและหลีกเลี่ยงยาที่มีผลต่อไต")
-    if 'liver' in conditions:
-        health_plan['nutrition'].add("งดเครื่องดื่มแอลกอฮอล์และลดอาหารไขมันสูง")
-    if 'uric_acid' in conditions:
-        health_plan['nutrition'].add("ลดการทานเครื่องในสัตว์, สัตว์ปีก, และยอดผัก")
-    if 'anemia' in conditions:
-        health_plan['nutrition'].add("ทานอาหารที่มีธาตุเหล็กและวิตามินซีสูง เช่น ตับ, เนื้อแดง, ผักใบเขียว")
-
-    if any(c in conditions for c in ['obesity', 'overweight', 'hypertension', 'diabetes', 'prediabetes', 'dyslipidemia']):
-        health_plan['exercise'].add("ออกกำลังกายแบบแอโรบิก (เดินเร็ว, วิ่ง, ว่ายน้ำ) อย่างน้อย 150 นาที/สัปดาห์")
-    else:
-        health_plan['exercise'].add("เคลื่อนไหวร่างกายอย่างสม่ำเสมอ 3-4 วัน/สัปดาห์")
-
-    health_plan['monitoring'].add("นอนหลับพักผ่อนให้เพียงพอ 7-8 ชั่วโมง/คืน")
-    health_plan['monitoring'].add("ตรวจสุขภาพประจำปีเพื่อติดตามผล")
-
     right_column_parts.append("<div style='border-left: 5px solid #4caf50; padding-left: 15px;'>")
     right_column_parts.append("<h5 style='color: #4caf50; margin-top:0;'>แผนการดูแลสุขภาพเบื้องต้น (Your Health Plan)</h5>")
     
@@ -782,3 +794,4 @@ def generate_holistic_advice(person_data):
         summary_parts.append("<br><b>คำแนะนำ:</b> ควรใส่ใจดูแลสุขภาพและปรับพฤติกรรมเล็กน้อยเพื่อป้องกันไม่ให้ค่าต่างๆ ผิดปกติมากขึ้นในอนาคต")
 
     return "<ul>" + "".join(summary_parts) + "</ul>"
+
