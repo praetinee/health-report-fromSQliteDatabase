@@ -123,7 +123,7 @@ def interpret_hepatitis(person_data):
         results['ไวรัสตับอักเสบบี'] = ('เป็นพาหะหรือกำลังติดเชื้อ', 'high')
     elif "negative" in hbsag and "negative" in hbsab:
         results['ไวรัสตับอักเสบบี'] = ('ไม่มีภูมิคุ้มกัน', 'low')
-        
+
     return results
 
 
@@ -131,18 +131,21 @@ def interpret_hepatitis(person_data):
 
 def get_recommendation_data(person_data):
     """
-    วิเคราะห์ข้อมูลสุขภาพทั้งหมดและคืนค่าเป็น Dictionary ของประเด็นต่างๆ
+    วิเคราะห์ข้อมูลสุขภาพทั้งหมดและคืนค่าเป็น Dictionary ของประเด็นต่างๆ (issues)
+    และ Dictionary ของคำแนะนำการปฏิบัติตัว (health_plan) แยกตามระดับความสำคัญ
     """
     key_indicators = ['FBS', 'CHOL', 'HCT', 'Cr', 'WBC (cumm)', 'น้ำหนัก', 'ส่วนสูง', 'SBP']
     has_data = any(not is_empty(person_data.get(key)) for key in key_indicators)
 
     if not has_data:
-        return {}, {}
+        return {}, {'high': set(), 'medium': set(), 'low': set()} # Return empty sets for plan
 
     issues = {'high': [], 'medium': [], 'low': []}
     conditions = set()
-    health_plan = {'nutrition': set(), 'exercise': set(), 'monitoring': set()}
-    
+    # --- START OF CHANGE: Modify health_plan structure ---
+    health_plan_by_severity = {'high': set(), 'medium': set(), 'low': set()}
+    # --- END OF CHANGE ---
+
     # --- 1. Vital Signs & BMI ---
     weight = get_float(person_data, "น้ำหนัก")
     height = get_float(person_data, "ส่วนสูง")
@@ -293,37 +296,82 @@ def get_recommendation_data(person_data):
     ekg_result, ekg_status = interpret_ekg(person_data.get(ekg_col, ''))
     if ekg_status == 'abnormal':
         issues['high'].append(f"<b>ผลคลื่นไฟฟ้าหัวใจผิดปกติ ({ekg_result}):</b> ควรพบแพทย์โรคหัวใจ")
+        # --- START OF CHANGE: Add associated health plan ---
+        health_plan_by_severity['high'].add("พบแพทย์โรคหัวใจเพื่อตรวจเพิ่มเติม")
+        # --- END OF CHANGE ---
 
-    # --- Build Health Plan based on conditions ---
-    if 'diabetes' in conditions or 'prediabetes' in conditions:
-        health_plan['nutrition'].add("ควบคุมอาหารประเภทแป้งและน้ำตาลอย่างจริงจัง")
-        health_plan['monitoring'].add("ตรวจติดตามระดับน้ำตาลในเลือดสม่ำเสมอ")
-    if 'hypertension' in conditions or 'prehypertension' in conditions:
-        health_plan['nutrition'].add("ลดอาหารเค็มและโซเดียมสูง")
-        health_plan['monitoring'].add("วัดความดันโลหิตที่บ้านอย่างสม่ำเสมอ")
-    if 'dyslipidemia' in conditions:
-        health_plan['nutrition'].add("ลดอาหารมัน ของทอด และไขมันอิ่มตัว")
-    if 'obesity' in conditions or 'overweight' in conditions:
-        health_plan['nutrition'].add("ควบคุมปริมาณอาหารและเลือกทานอาหารแคลอรี่ต่ำ")
-    if 'kidney_disease' in conditions:
-        health_plan['nutrition'].add("ลดอาหารเค็มจัดและโปรตีนสูงบางชนิด (ปรึกษาแพทย์)")
-        health_plan['monitoring'].add("ดื่มน้ำให้เพียงพอและหลีกเลี่ยงยาที่มีผลต่อไต")
-    if 'liver' in conditions:
-        health_plan['nutrition'].add("งดเครื่องดื่มแอลกอฮอล์และลดอาหารไขมันสูง")
-    if 'uric_acid' in conditions:
-        health_plan['nutrition'].add("ลดการทานเครื่องในสัตว์, สัตว์ปีก, และยอดผัก")
-    if 'anemia' in conditions:
-        health_plan['nutrition'].add("ทานอาหารที่มีธาตุเหล็กและวิตามินซีสูง เช่น ตับ, เนื้อแดง, ผักใบเขียว")
+    # --- Build Health Plan based on conditions AND map to severity ---
+    # Nutrition Plans
+    if 'diabetes' in conditions : health_plan_by_severity['high'].add("ควบคุมอาหารประเภทแป้งและน้ำตาลอย่างจริงจัง")
+    elif 'prediabetes' in conditions: health_plan_by_severity['medium'].add("ควบคุมอาหารประเภทแป้งและน้ำตาลอย่างจริงจัง")
 
-    if any(c in conditions for c in ['obesity', 'overweight', 'hypertension', 'diabetes', 'prediabetes', 'dyslipidemia']):
-        health_plan['exercise'].add("ออกกำลังกายแบบแอโรบิก (เดินเร็ว, วิ่ง, ว่ายน้ำ) อย่างน้อย 150 นาที/สัปดาห์")
-    else:
-        health_plan['exercise'].add("เคลื่อนไหวร่างกายอย่างสม่ำเสมอ 3-4 วัน/สัปดาห์")
+    if 'hypertension' in conditions and any(f"ความดันโลหิตสูงรุนแรง" in s for s in issues['high']): health_plan_by_severity['high'].add("ลดอาหารเค็มและโซเดียมสูง")
+    elif 'hypertension' in conditions: health_plan_by_severity['medium'].add("ลดอาหารเค็มและโซเดียมสูง")
+    elif 'prehypertension' in conditions: health_plan_by_severity['low'].add("ลดอาหารเค็มและโซเดียมสูง")
 
-    health_plan['monitoring'].add("นอนหลับพักผ่อนให้เพียงพอ 7-8 ชั่วโมง/คืน")
-    health_plan['monitoring'].add("ตรวจสุขภาพประจำปีเพื่อติดตามผล")
+    if 'dyslipidemia' in conditions and any(f"สูงมาก" in s for s in issues.get('high', []) + issues.get('medium', [])): health_plan_by_severity['high'].add("ลดอาหารมัน ของทอด และไขมันอิ่มตัว")
+    elif 'dyslipidemia' in conditions: health_plan_by_severity['medium'].add("ลดอาหารมัน ของทอด และไขมันอิ่มตัว")
 
-    return issues, health_plan
+    if 'obesity' in conditions: health_plan_by_severity['medium'].add("ควบคุมปริมาณอาหารและเลือกทานอาหารแคลอรี่ต่ำ")
+    elif 'overweight' in conditions: health_plan_by_severity['low'].add("ควบคุมปริมาณอาหารและเลือกทานอาหารแคลอรี่ต่ำ")
+
+    if 'kidney_disease' in conditions and any(f"ระยะ 4-5" in s for s in issues['high']): health_plan_by_severity['high'].add("ลดอาหารเค็มจัดและโปรตีนสูงบางชนิด (ปรึกษาแพทย์)")
+    elif 'kidney_disease' in conditions and any(f"ระยะ 3" in s for s in issues['medium']): health_plan_by_severity['medium'].add("ลดอาหารเค็มจัดและโปรตีนสูงบางชนิด (ปรึกษาแพทย์)")
+    elif 'kidney_disease' in conditions: health_plan_by_severity['low'].add("ดื่มน้ำให้เพียงพอและหลีกเลี่ยงยาที่มีผลต่อไต") # ระยะ 2
+
+    if 'liver' in conditions and any(f"สูงมาก" in s for s in issues['high']): health_plan_by_severity['high'].add("งดเครื่องดื่มแอลกอฮอล์และลดอาหารไขมันสูง")
+    elif 'liver' in conditions: health_plan_by_severity['medium'].add("งดเครื่องดื่มแอลกอฮอล์และลดอาหารไขมันสูง")
+
+    if 'uric_acid' in conditions and any(f"สูงมาก" in s for s in issues['medium']): health_plan_by_severity['medium'].add("ลดการทานเครื่องในสัตว์, สัตว์ปีก, และยอดผัก")
+    elif 'uric_acid' in conditions: health_plan_by_severity['low'].add("ลดการทานเครื่องในสัตว์, สัตว์ปีก, และยอดผัก")
+
+    if 'anemia' in conditions: health_plan_by_severity['medium'].add("ทานอาหารที่มีธาตุเหล็กและวิตามินซีสูง เช่น ตับ, เนื้อแดง, ผักใบเขียว")
+
+    # Exercise Plans
+    exercise_needed_high_medium = any(c in conditions for c in ['obesity', 'hypertension', 'diabetes', 'dyslipidemia']) and (issues['high'] or issues['medium'])
+    exercise_needed_low = any(c in conditions for c in ['overweight', 'prehypertension', 'prediabetes']) and not exercise_needed_high_medium
+
+    if exercise_needed_high_medium:
+        health_plan_by_severity['medium'].add("ออกกำลังกายแบบแอโรบิก (เดินเร็ว, วิ่ง, ว่ายน้ำ) อย่างน้อย 150 นาที/สัปดาห์")
+    elif exercise_needed_low:
+         health_plan_by_severity['low'].add("ออกกำลังกายแบบแอโรบิก (เดินเร็ว, วิ่ง, ว่ายน้ำ) อย่างน้อย 150 นาที/สัปดาห์")
+    else: # General advice if no specific condition trigger but low issues exist
+        if issues['low'] or issues['medium'] or issues['high']: # Add general exercise if any issue exists
+             health_plan_by_severity['low'].add("เคลื่อนไหวร่างกายอย่างสม่ำเสมอ 3-4 วัน/สัปดาห์")
+
+
+    # Monitoring Plans (Generally low priority unless linked to high/medium issue)
+    monitor_sleep = True
+    monitor_checkup = True
+
+    if 'diabetes' in conditions: health_plan_by_severity['high' if 'diabetes' in conditions and fbs >= 126 else 'medium'].add("ตรวจติดตามระดับน้ำตาลในเลือดสม่ำเสมอ")
+    if 'hypertension' in conditions: health_plan_by_severity['high' if 'hypertension' in conditions and (sbp >= 160 or dbp >= 100) else 'medium'].add("วัดความดันโลหิตที่บ้านอย่างสม่ำเสมอ")
+    if 'kidney_disease' in conditions and any(f"ระยะ 3" in s for s in issues['medium']): health_plan_by_severity['medium'].add("ดื่มน้ำให้เพียงพอและหลีกเลี่ยงยาที่มีผลต่อไต") # Add monitoring for medium kidney
+
+    # Assign general monitoring based on highest severity
+    highest_severity = 'low'
+    if issues['high']: highest_severity = 'high'
+    elif issues['medium']: highest_severity = 'medium'
+
+    if monitor_sleep: health_plan_by_severity[highest_severity].add("นอนหลับพักผ่อนให้เพียงพอ 7-8 ชั่วโมง/คืน")
+    if monitor_checkup: health_plan_by_severity[highest_severity].add("ตรวจสุขภาพประจำปีเพื่อติดตามผล")
+
+
+    # Add specific plans based on other interpretations
+    if any("เม็ดเลือดขาวสูง" in s for s in issues['medium']): health_plan_by_severity['medium'].add("ตรวจหาสาเหตุภาวะเม็ดเลือดขาวสูง")
+    if any("เกล็ดเลือดต่ำ" in s for s in issues['medium']): health_plan_by_severity['medium'].add("ปรึกษาแพทย์เรื่องเกล็ดเลือดต่ำ ระวังอุบัติเหตุ")
+    if any("เกล็ดเลือดสูง" in s for s in issues['medium']): health_plan_by_severity['medium'].add("พบแพทย์เพื่อตรวจหาสาเหตุเกล็ดเลือดสูง")
+    if any("โปรตีนในปัสสาวะ" in s for s in issues.get('high', []) + issues.get('medium', [])): health_plan_by_severity['medium'].add("ปรึกษาแพทย์เรื่องโปรตีนรั่วในปัสสาวะ")
+    if any("น้ำตาลในปัสสาวะ" in s for s in issues['high']): health_plan_by_severity['high'].add("ปรึกษาแพทย์เรื่องน้ำตาลในปัสสาวะ (อาจเป็นเบาหวาน)")
+    if any("ผลเพาะเชื้ออุจจาระ" in s for s in issues['high']): health_plan_by_severity['high'].add("พบแพทย์เพื่อรักษาการติดเชื้อในลำไส้")
+    if any("ไวรัสตับอักเสบบี" in s for s in issues['high']): health_plan_by_severity['high'].add("พบแพทย์เพื่อประเมินและติดตามภาวะไวรัสตับอักเสบบี")
+    elif any("ไวรัสตับอักเสบบี" in s for s in issues['low']): health_plan_by_severity['low'].add("ปรึกษาแพทย์เพื่อรับวัคซีนป้องกันไวรัสตับอักเสบบี")
+    if cxr_status == 'abnormal': health_plan_by_severity['high'].add("พบแพทย์เพื่อตรวจเพิ่มเติมเกี่ยวกับผลเอกซเรย์ทรวงอก")
+
+
+    # --- START OF CHANGE: Return plan by severity ---
+    return issues, health_plan_by_severity
+    # --- END OF CHANGE ---
 
 
 def generate_comprehensive_recommendations(person_data):
@@ -794,4 +842,5 @@ def generate_holistic_advice(person_data):
         summary_parts.append("<br><b>คำแนะนำ:</b> ควรใส่ใจดูแลสุขภาพและปรับพฤติกรรมเล็กน้อยเพื่อป้องกันไม่ให้ค่าต่างๆ ผิดปกติมากขึ้นในอนาคต")
 
     return "<ul>" + "".join(summary_parts) + "</ul>"
+
 
