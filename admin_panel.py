@@ -14,6 +14,11 @@ from print_report import generate_printable_report
 from print_performance_report import generate_performance_report_html
 from visualization import display_visualization_tab # Import display_visualization_tab มาที่นี่
 
+# --- START OF CHANGE: Import new pyramid module ---
+from recommendation_pyramid import display_recommendation_pyramid
+# --- END OF CHANGE ---
+
+
 # --- START: Functions moved from shared_ui.py ---
 
 def is_empty(val):
@@ -1091,6 +1096,12 @@ def display_admin_panel(df):
         available_reports = OrderedDict()
         if has_visualization_data(all_person_history_df_admin): available_reports['ภาพรวมสุขภาพ (Graphs)'] = 'visualization_report'
         if has_basic_health_data(person_data): available_reports['สุขภาพพื้นฐาน'] = 'main_report'
+        
+        # --- START OF CHANGE: Add Pyramid Tab ---
+        if has_basic_health_data(person_data): 
+            available_reports['พีระมิดสุขภาพ'] = 'pyramid_report'
+        # --- END OF CHANGE ---
+        
         if has_vision_data(person_data): available_reports['สมรรถภาพการมองเห็น'] = 'vision_report'
         if has_hearing_data(person_data): available_reports['สมรรถภาพการได้ยิน'] = 'hearing_report'
         if has_lung_data(person_data): available_reports['สมรรถภาพปอด'] = 'lung_report'
@@ -1113,6 +1124,10 @@ def display_admin_panel(df):
                         display_performance_report(person_data, 'hearing', all_person_history_df=all_person_history_df_admin)
                     elif page_key == 'lung_report':
                         display_performance_report(person_data, 'lung')
+                    # --- START OF CHANGE: Add Pyramid Tab render logic ---
+                    elif page_key == 'pyramid_report':
+                        display_recommendation_pyramid(person_data)
+                    # --- END OF CHANGE ---
                     elif page_key == 'main_report':
                         # Pass the full history for main report's performance section
                         display_main_report(person_data, all_person_history_df_admin)
