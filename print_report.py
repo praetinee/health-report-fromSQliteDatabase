@@ -678,32 +678,34 @@ def render_other_results_html(person, sex, urine_statuses, doctor_opinion, all_p
     show_hep_b_advice_row = False # Flag to control advice row display
 
     if show_current_hep_b:
+        # แสดงผลปีปัจจุบัน
         hep_b_advice_display, hep_b_status = hepatitis_b_advice(hbsag_display, hbsab_display, hbcab_display)
         show_hep_b_advice_row = True # Show advice for current year results
     elif all_person_history_df is not None and not all_person_history_df.empty:
-        # Find the most recent year with Hep B data
+        # ค้นหาผลล่าสุดจากปีก่อนหน้า
         hep_cols = ["HbsAg", "HbsAb", "HBcAb"]
         prev_hep_df = all_person_history_df[
-            (all_person_history_df['Year'] < current_year) &
-            (all_person_history_df[hep_cols].notna().any(axis=1))
-        ].sort_values(by='Year', ascending=False)
+            (all_person_history_df['Year'] < current_year) & # กรองเอาเฉพาะปีก่อนหน้า
+            (all_person_history_df[hep_cols].notna().any(axis=1)) # ที่มีข้อมูล HepB อย่างน้อย 1 ค่า
+        ].sort_values(by='Year', ascending=False) # เรียงจากปีล่าสุดลงไป
 
         if not prev_hep_df.empty:
-            prev_hep_row = prev_hep_df.iloc[0]
+            # ถ้าเจอข้อมูลปีก่อนหน้า
+            prev_hep_row = prev_hep_df.iloc[0] # เอาแถวแรก (ปีล่าสุดที่มีข้อมูล)
             prev_year = int(prev_hep_row['Year'])
             prev_hbsag = safe_value(prev_hep_row.get("HbsAg"))
             prev_hbsab = safe_value(prev_hep_row.get("HbsAb"))
             prev_hbcab = safe_value(prev_hep_row.get("HBcAb"))
             
-            # Update display values to show previous results
+            # สร้างข้อความแสดงผลแบบใหม่
             hbsag_display = f"ไม่ได้ตรวจ (ล่าสุดปี {prev_year}: {prev_hbsag})"
             hbsab_display = f"ไม่ได้ตรวจ (ล่าสุดปี {prev_year}: {prev_hbsab})"
             hbcab_display = f"ไม่ได้ตรวจ (ล่าสุดปี {prev_year}: {prev_hbcab})"
-            # No advice text when showing previous results
+            # ไม่ต้องแสดงคำแนะนำมาตรฐาน
             hep_b_advice_display = "ข้อมูลเป็นการตรวจจากปีก่อนหน้า"
             show_hep_b_advice_row = False # Do not show standard advice row
         else:
-            # No current or previous data found
+            # ถ้าไม่เจอข้อมูลปีก่อนหน้าเลย
              hbsag_display = "ไม่ได้ตรวจ"
              hbsab_display = "ไม่ได้ตรวจ"
              hbcab_display = "ไม่ได้ตรวจ"
@@ -711,7 +713,7 @@ def render_other_results_html(person, sex, urine_statuses, doctor_opinion, all_p
              show_hep_b_advice_row = False
 
     else:
-        # No current data and no history provided
+        # ไม่มีข้อมูลปีปัจจุบัน และไม่มีข้อมูลประวัติให้ค้นหา
         hbsag_display = "ไม่ได้ตรวจ"
         hbsab_display = "ไม่ได้ตรวจ"
         hbcab_display = "ไม่ได้ตรวจ"
@@ -720,19 +722,24 @@ def render_other_results_html(person, sex, urine_statuses, doctor_opinion, all_p
 
 
     advice_bg_color = '#f8f9fa' # Default background
-    if show_hep_b_advice_row: # Only set color if showing current advice
+    if show_hep_b_advice_row: # กำหนดสีพื้นหลังเฉพาะเมื่อแสดงคำแนะนำของปีปัจจุบัน
          advice_bg_color = {'infection': '#ffdddd', 'no_immune': '#fff8e1', 'immune': '#e8f5e9'}.get(hep_b_status, '#f8f9fa')
 
-    # Build Hep B table rows
+    # สร้าง HTML ของแถวในตาราง Hep B
     hep_b_rows_html = f"""
         <tr><td style="text-align: left; width: 40%;"><b>ไวรัสตับอักเสบ เอ</b></td><td style="text-align: left;">{hep_a_display_text}</td></tr>
         <tr><td style="text-align: left; width: 40%;"><b>ไวรัสตับอักเสบ บี (HBsAg)</b></td><td style="text-align: left;">{hbsag_display}</td></tr>
         <tr><td style="text-align: left; width: 40%;"><b>ภูมิคุ้มกัน (HBsAb)</b></td><td style="text-align: left;">{hbsab_display}</td></tr>
         <tr><td style="text-align: left; width: 40%;"><b>การติดเชื้อ (HBcAb)</b></td><td style="text-align: left;">{hbcab_display}</td></tr>
     """
-    # Conditionally add the advice row
+    # เพิ่มแถวคำแนะนำถ้าจำเป็น (เฉพาะผลปีปัจจุบัน)
     if show_hep_b_advice_row:
          hep_b_rows_html += f'<tr style="background-color: {advice_bg_color};"><td colspan="2" style="text-align: left;"><b>คำแนะนำ:</b> {hep_b_advice_display}</td></tr>'
+    # --- START OF CHANGE: Add note if showing previous year data ---
+    elif not show_current_hep_b and "ล่าสุดปี" in hbsag_display: # Check if we displayed previous data
+        hep_b_rows_html += f'<tr style="background-color: #f0f2f6;"><td colspan="2" style="text-align: left; font-style: italic; font-size: 9px;">หมายเหตุ: แสดงผลการตรวจล่าสุดที่พบ</td></tr>'
+    # --- END OF CHANGE ---
+
 
     hepatitis_html = f"""
     {render_section_header(hepatitis_header_text)}
