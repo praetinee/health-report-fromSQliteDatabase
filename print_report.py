@@ -5,9 +5,7 @@ from collections import OrderedDict
 import json
 
 # --- Import a key function from performance_tests ---
-# --- START OF CHANGE: Update function name ---
-from performance_tests import generate_comprehensive_recommendations
-# --- END OF CHANGE ---
+from performance_tests import generate_holistic_advice
 from print_performance_report import generate_performance_report_html_for_main_report
 
 # ==============================================================================
@@ -275,10 +273,7 @@ def generate_printable_report(person_data, all_person_history_df=None):
     header_vitals_html = render_header_and_vitals(person_data)
     lab_section_html = render_lab_section(person_data, sex)
     other_results_html = render_other_results_html(person_data, sex)
-    
-    # --- START OF CHANGE: Update function name ---
-    doctor_suggestion = generate_comprehensive_recommendations(person_data)
-    # --- END OF CHANGE ---
+    doctor_suggestion = generate_holistic_advice(person_data)
     
     # Adjust summary text for better layout
     doctor_suggestion = doctor_suggestion.replace(
@@ -347,4 +342,3 @@ def generate_printable_report(person_data, all_person_history_df=None):
     </html>
     """
     return final_html
-
