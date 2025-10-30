@@ -18,7 +18,7 @@ from print_performance_report import generate_performance_report_html_for_main_r
 RECOMMENDATION_TEXTS_CBC = {
     "C2": "ให้รับประทานอาหารที่มีประโยชน์ เช่น นม ผักใบเขียว ถั่วเมล็ดแห้ง เนื้อสัตว์ ไข่ เป็นต้น พักผ่อนให้เพียงพอ ถ้ามีหน้ามืดวิงเวียน อ่อนเพลียหรือมีไข้ให้พบแพทย์",
     "C4": "ให้ดูแลสุขภาพให้แข็งแรง ออกกำลังกาย ทานอาหารที่มีประโยชน์ ระมัดระวังป้องกันการเกิดแผลเนื่องจากเลือดอาจออกได้ง่ายและหยุดยาก",
-    "C6": "ให้ดูแลสุขภาพร่างกายให้แข็งแรง หลีกเลี่ยงการอยู่ในที่ชุมชนที่มีโอกาสสัมผัสเชื้อโรคได้ง่าย และให้ทำการรักษาอย่างต่อเนื่องสม่เสมอ",
+    "C6": "ให้ดูแลสุขภาพร่างกายให้แข็งแรง หลีกเลี่ยงการอยู่ในที่ชุมชนที่มีโอกาสสัมผัสเชื้อโรคได้ง่าย และให้ทำการรักษาอย่างต่อเนื่องสม่ำเสมอ",
     "C8": "ให้นำผลตรวจพบแพทย์หาสาเหตุภาวะโลหิตจาง หรือกรณีรู้สาเหตุให้รับการรักษาเดิม",
     "C9": "ให้นำผลตรวจพบแพทย์หาสาเหตุภาวะโลหิตจาง หรือกรณีรู้สาเหตุให้รับการรักษาเดิมและดูแลสุขภาพให้แข็งแรงหลีกเลี่ยงการอยู่ในที่ชุมชนที่มีโอกาสสัมผัสเชื้อโรคได้ง่าย และทำการรักษาอย่างต่อเนื่อง",
     "C10": "ให้นำผลตรวจพบแพทย์หาสาเหตุเกล็ดเลือดสูงกว่าปกติ หรือกรณีรู้สาเหตุให้รับการรักษาเดิม",
@@ -645,7 +645,10 @@ def render_other_results_html(person, sex, urine_statuses, doctor_opinion):
         <tr><td style="text-align: left; width: 40%;"><b>ผลตรวจอุจจาระเพาะเชื้อ</b></td><td style="text-align: left;">{stool_cs_text}</td></tr>
     </table>
     """
-    year = person.get("Year", datetime.now().year + 543)
+    # --- START OF CHANGE: Add year variable ---
+    year_str = str(person.get("Year", ""))
+    year = int(year_str) if year_str.isdigit() else (datetime.now().year + 543)
+    # --- END OF CHANGE ---
     cxr_result = interpret_cxr(person.get(f"CXR{str(year)[-2:]}" if year != (datetime.now().year+543) else "CXR", ""))
     ekg_result = interpret_ekg(person.get(get_ekg_col_name(year), ""))
     other_tests_html = f"""
@@ -660,8 +663,11 @@ def render_other_results_html(person, sex, urine_statuses, doctor_opinion):
     hbsag_raw, hbsab_raw, hbcab_raw = safe_value(person.get("HbsAg")), safe_value(person.get("HbsAb")), safe_value(person.get("HBcAB"))
     hep_b_advice, hep_b_status = hepatitis_b_advice(hbsag_raw, hbsab_raw, hbcab_raw)
     advice_bg_color = {'infection': '#ffdddd', 'no_immunity': '#fff8e1'}.get(hep_b_status, '#f8f9fa')
+    
+    # --- START OF CHANGE: Add year to Hepatitis B header ---
+    hepatitis_header_text = f"ผลตรวจไวรัสตับอักเสบ (Viral Hepatitis) (พ.ศ. {year})"
     hepatitis_html = f"""
-    {render_section_header("ผลตรวจไวรัสตับอักเสบ (Viral Hepatitis)")}
+    {render_section_header(hepatitis_header_text)}
     <table class="print-lab-table">
         <tr><td style="text-align: left; width: 40%;"><b>ไวรัสตับอักเสบ เอ</b></td><td style="text-align: left;">{hep_a_display_text}</td></tr>
         <tr><td style="text-align: left; width: 40%;"><b>ไวรัสตับอักเสบ บี (HBsAg)</b></td><td style="text-align: left;">{hbsag_raw}</td></tr>
@@ -670,6 +676,7 @@ def render_other_results_html(person, sex, urine_statuses, doctor_opinion):
         <tr style="background-color: {advice_bg_color};"><td colspan="2" style="text-align: left;"><b>คำแนะนำ:</b> {hep_b_advice}</td></tr>
     </table>
     """
+    # --- END OF CHANGE ---
     
     # --- START OF CHANGE: Use generated doctor_opinion ---
     doctor_opinion_html = f"""
