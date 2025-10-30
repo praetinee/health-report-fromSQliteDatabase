@@ -116,12 +116,12 @@ def plot_historical_trends(history_df, person_data): # --- START OF CHANGE: Adde
     hct_goal = 36.0 if sex == "หญิง" else 39.0
 
     trend_metrics = {
-        'ฮีโมโกลบิน (Hb)': ('Hb(%)', 'g/dL', hb_goal, 'higher'),
-        'ฮีมาโตคริต (Hct)': ('HCT', '%', hct_goal, 'higher'),
+        'ฮีโมโกลบิน (Hb)': ('Hb(%)', 'g/dL', hb_goal, 'above_threshold'), # Changed 'higher' to 'above_threshold'
+        'ฮีมาโตคริต (Hct)': ('HCT', '%', hct_goal, 'above_threshold'), # Changed 'higher' to 'above_threshold'
         'ดัชนีมวลกาย (BMI)': ('BMI', 'kg/m²', 23.0, 'range'),
         'ระดับน้ำตาลในเลือด (FBS)': ('FBS', 'mg/dL', 100.0, 'target'),
         'คอเลสเตอรอล (Cholesterol)': ('CHOL', 'mg/dL', 200.0, 'target'),
-        'ประสิทธิภาพการกรองของไต (GFR)': ('GFR', 'mL/min', 90.0, 'higher'),
+        'ประสิทธิภาพการกรองของไต (GFR)': ('GFR', 'mL/min', 90.0, 'higher'), # Kept as 'higher'
         'ความดันตัวบน (SBP)': ('SBP', 'mmHg', 130.0, 'target'),
         'ความดันตัวล่าง (DBP)': ('DBP', 'mmHg', 80.0, 'target')
     }
@@ -151,14 +151,18 @@ def plot_historical_trends(history_df, person_data): # --- START OF CHANGE: Adde
             icon = "❤️" if keys in ['Hb(%)', 'HCT'] else ("🩸" if keys in ['SBP', 'DBP'] else "📊")
             # --- END OF CHANGE ---
 
+            # --- START OF CHANGE: Updated direction text logic ---
             if direction_type == 'range':
                 direction_text = "(ควรอยู่ในเกณฑ์)"
             elif direction_type == 'higher':
                 direction_text = "(ยิ่งสูงยิ่งดี)"
             elif direction_type == 'target':
                 direction_text = "(ไม่ควรสูงเกินเกณฑ์)"
+            elif direction_type == 'above_threshold':
+                direction_text = "(ไม่ควรต่ำกว่าเกณฑ์)"
             else:
                 direction_text = "(ยิ่งต่ำยิ่งดี)"
+            # --- END OF CHANGE ---
 
             full_title = f"<h5 style='text-align:center;'>{icon} {title} <br><span style='font-size:0.8em;color:gray;'>{direction_text}</span></h5>"
 
@@ -469,3 +473,4 @@ def display_visualization_tab(person_data, history_df):
                     plot_audiogram(chart['data'])
                 elif chart['type'] == 'lung':
                     plot_lung_comparison(chart['data'])
+
