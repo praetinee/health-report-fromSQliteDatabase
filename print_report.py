@@ -670,55 +670,28 @@ def render_other_results_html(person, sex, urine_statuses, doctor_opinion, all_p
 
     show_current_hep_b = not is_empty(hbsag_current) or not is_empty(hbsab_current) or not is_empty(hbcab_current)
 
-    hbsag_display = safe_value(hbsag_current)
-    hbsab_display = safe_value(hbsab_current)
-    hbcab_display = safe_value(hbcab_current)
+    hbsag_display = "" # Will be set below
+    hbsab_display = "" # Will be set below
+    hbcab_display = "" # Will be set below
     hep_b_advice_display, hep_b_status = "", ""
     hepatitis_header_text = f"ผลตรวจไวรัสตับอักเสบ (Viral Hepatitis) (พ.ศ. {current_year})"
     show_hep_b_advice_row = False # Flag to control advice row display
 
     if show_current_hep_b:
         # แสดงผลปีปัจจุบัน
+        hbsag_display = safe_value(hbsag_current)
+        hbsab_display = safe_value(hbsab_current)
+        hbcab_display = safe_value(hbcab_current)
         hep_b_advice_display, hep_b_status = hepatitis_b_advice(hbsag_display, hbsab_display, hbcab_display)
         show_hep_b_advice_row = True # Show advice for current year results
-    elif all_person_history_df is not None and not all_person_history_df.empty:
-        # ค้นหาผลล่าสุดจากปีก่อนหน้า
-        hep_cols = ["HbsAg", "HbsAb", "HBcAb"]
-        prev_hep_df = all_person_history_df[
-            (all_person_history_df['Year'] < current_year) & # กรองเอาเฉพาะปีก่อนหน้า
-            (all_person_history_df[hep_cols].notna().any(axis=1)) # ที่มีข้อมูล HepB อย่างน้อย 1 ค่า
-        ].sort_values(by='Year', ascending=False) # เรียงจากปีล่าสุดลงไป
-
-        if not prev_hep_df.empty:
-            # ถ้าเจอข้อมูลปีก่อนหน้า
-            prev_hep_row = prev_hep_df.iloc[0] # เอาแถวแรก (ปีล่าสุดที่มีข้อมูล)
-            prev_year = int(prev_hep_row['Year'])
-            prev_hbsag = safe_value(prev_hep_row.get("HbsAg"))
-            prev_hbsab = safe_value(prev_hep_row.get("HbsAb"))
-            prev_hbcab = safe_value(prev_hep_row.get("HBcAb"))
-            
-            # สร้างข้อความแสดงผลแบบใหม่
-            hbsag_display = f"ไม่ได้ตรวจ (ล่าสุดปี {prev_year}: {prev_hbsag})"
-            hbsab_display = f"ไม่ได้ตรวจ (ล่าสุดปี {prev_year}: {prev_hbsab})"
-            hbcab_display = f"ไม่ได้ตรวจ (ล่าสุดปี {prev_year}: {prev_hbcab})"
-            # ไม่ต้องแสดงคำแนะนำมาตรฐาน
-            hep_b_advice_display = "ข้อมูลเป็นการตรวจจากปีก่อนหน้า"
-            show_hep_b_advice_row = False # Do not show standard advice row
-        else:
-            # ถ้าไม่เจอข้อมูลปีก่อนหน้าเลย
-             hbsag_display = "ไม่ได้ตรวจ"
-             hbsab_display = "ไม่ได้ตรวจ"
-             hbcab_display = "ไม่ได้ตรวจ"
-             hep_b_advice_display = "ไม่พบประวัติการตรวจ"
-             show_hep_b_advice_row = False
-
+    
     else:
-        # ไม่มีข้อมูลปีปัจจุบัน และไม่มีข้อมูลประวัติให้ค้นหา
+        # ไม่มีข้อมูลปีปัจจุบัน
         hbsag_display = "ไม่ได้ตรวจ"
         hbsab_display = "ไม่ได้ตรวจ"
         hbcab_display = "ไม่ได้ตรวจ"
-        hep_b_advice_display = "ไม่พบประวัติการตรวจ"
-        show_hep_b_advice_row = False
+        hep_b_advice_display = "ไม่ได้เข้ารับการตรวจในปีนี้" # Simple note
+        show_hep_b_advice_row = False # Do not show standard advice row
 
 
     advice_bg_color = '#f8f9fa' # Default background
@@ -735,10 +708,8 @@ def render_other_results_html(person, sex, urine_statuses, doctor_opinion, all_p
     # เพิ่มแถวคำแนะนำถ้าจำเป็น (เฉพาะผลปีปัจจุบัน)
     if show_hep_b_advice_row:
          hep_b_rows_html += f'<tr style="background-color: {advice_bg_color};"><td colspan="2" style="text-align: left;"><b>คำแนะนำ:</b> {hep_b_advice_display}</td></tr>'
-    # --- START OF CHANGE: Add note if showing previous year data ---
-    elif not show_current_hep_b and "ล่าสุดปี" in hbsag_display: # Check if we displayed previous data
-        hep_b_rows_html += f'<tr style="background-color: #f0f2f6;"><td colspan="2" style="text-align: left; font-style: italic; font-size: 9px;">หมายเหตุ: แสดงผลการตรวจล่าสุดที่พบ</td></tr>'
-    # --- END OF CHANGE ---
+    
+    # --- END OF REFACTOR (Removed the part that showed previous year's data) ---
 
 
     hepatitis_html = f"""
