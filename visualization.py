@@ -153,7 +153,9 @@ def plot_historical_trends(history_df, person_data):
             else:
                 direction_text = "(ยิ่งต่ำยิ่งดี)"
 
-            icon = "❤️" if keys in ['Hb(%)', 'HCT'] else ("🩸" if keys in ['SBP', 'DBP'] else "📊")
+            # --- START OF CHANGE: Set icon to always be graph ---
+            icon = "📊" # Changed from conditional logic
+            # --- END OF CHANGE ---
             full_title = f"<h5 style='text-align:center;'>{icon} {title} <br><span style='font-size:0.8em;color:gray;'>{direction_text}</span></h5>"
 
             df_plot = history_df[['Year_str', keys, f'{keys}_interp']].copy()
