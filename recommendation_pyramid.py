@@ -1,233 +1,191 @@
 import streamlit as st
+import html
+
+# --- Import function to get recommendation data ---
 from performance_tests import get_recommendation_data
 
 def display_recommendation_pyramid(person_data):
     """
-    แสดงผล Infographic พีระมิดปรับพฤติกรรม
+    แสดง Infographic พีระมิดคำแนะนำการปรับพฤติกรรม
     """
-    # --- START OF CHANGE: Use health_plan_by_severity ---
+    # --- ดึงข้อมูล Issues และ Health Plan ที่แยกตามระดับความสำคัญ ---
     issues, health_plan_by_severity = get_recommendation_data(person_data)
 
-    # Check if there are any recommendations at all
-    has_recommendations = any(health_plan_by_severity.values())
+    # --- ตรวจสอบว่ามีคำแนะนำหรือไม่ ---
+    has_high = bool(health_plan_by_severity['high'])
+    has_medium = bool(health_plan_by_severity['medium'])
+    has_low = bool(health_plan_by_severity['low'])
+    has_any_recommendation = has_high or has_medium or has_low
 
-    if not has_recommendations:
-        st.warning("ไม่พบข้อมูลเพียงพอสำหรับสร้างพีระมิดปรับพฤติกรรม")
-        return
-    # --- END OF CHANGE ---
-
-    # --- CSS for the Pyramid ---
+    # --- CSS Styles for the Pyramid ---
     st.markdown("""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap');
-
-        .pyramid-graphic-container {
-            font-family: 'Sarabun', sans-serif !important;
-            display: flex;
-            flex-direction: column; /* Stack layers vertically */
-            align-items: center;
-            margin: 2rem auto;
-            max-width: 600px; /* Adjust width as needed */
-            position: relative; /* Needed for absolute positioning if using triangles */
-        }
-
-        .pyramid-graphic-layer {
-            width: 100%;
-            padding: 1.5rem 2rem;
-            margin-bottom: -20px; /* Overlap layers slightly */
-            clip-path: polygon(10% 0%, 90% 0%, 100% 100%, 0% 100%); /* Basic trapezoid */
-            border-radius: 0; /* Remove rounding for sharp edges */
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-            position: relative; /* Ensure text stays within */
-            z-index: 1; /* Default stack order */
-        }
-
-        /* Adjust clip-path and width for pyramid shape */
-        .layer-graphic-high {
-            background: linear-gradient(135deg, #d32f2f, #b71c1c);
-            color: white;
-            clip-path: polygon(0% 100%, 100% 100%, 90% 0%, 10% 0%); /* Base trapezoid */
-            width: 100%;
-            z-index: 1; /* Base layer */
-             padding-top: 2.5rem; /* Add padding to push content down from clipped top */
-             padding-bottom: 1.5rem;
-        }
-
-        .layer-graphic-medium {
-            background: linear-gradient(135deg, #fbc02d, #f9a825);
-            color: #333;
-            clip-path: polygon(10% 100%, 90% 100%, 80% 0%, 20% 0%); /* Middle trapezoid */
+        .pyramid-container {
             width: 80%;
-            z-index: 2; /* Above base */
-             padding-top: 2.5rem;
-             padding-bottom: 1.5rem;
-        }
-         .layer-graphic-medium ul { color: #504416; }
-
-        .layer-graphic-low {
-            background: linear-gradient(135deg, #1976d2, #0d47a1);
-            color: white;
-            clip-path: polygon(20% 100%, 80% 100%, 70% 0%, 30% 0%); /* Top trapezoid */
-            width: 60%;
-            z-index: 3; /* Top layer */
-            padding-top: 2.5rem;
-            padding-bottom: 1.5rem;
-        }
-
-         /* Single Layer Styling */
-        .single-layer {
-            clip-path: polygon(50% 0%, 100% 100%, 0% 100%); /* Triangle */
-             width: 80%; /* Adjust width for single triangle */
-             margin-bottom: 0; /* No overlap needed */
-             padding-top: 3rem; /* More padding for triangle top */
-             padding-bottom: 1.5rem;
-        }
-         /* Apply single layer colors */
-        .single-layer.layer-graphic-high { background: linear-gradient(135deg, #d32f2f, #b71c1c); color: white; }
-        .single-layer.layer-graphic-medium { background: linear-gradient(135deg, #fbc02d, #f9a825); color: #333; }
-        .single-layer.layer-graphic-low { background: linear-gradient(135deg, #1976d2, #0d47a1); color: white; }
-
-
-        .pyramid-graphic-layer:hover {
-            transform: scale(1.02); /* Slight zoom on hover */
-            z-index: 10; /* Bring hovered layer to front */
-            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-        }
-
-        .pyramid-graphic-layer h3 {
-            margin-top: 0;
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 2px solid rgba(255,255,255,0.4);
+            max-width: 600px;
+            margin: 2rem auto;
+            position: relative;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: center; /* Center title */
-            font-size: 1.3rem; /* Adjust size */
-            font-weight: 700;
-            text-align: center;
         }
-         .layer-graphic-medium h3 { border-bottom-color: rgba(0,0,0,0.2); } /* Darker border for yellow */
-
-
-        .pyramid-graphic-layer h3 svg { margin-right: 10px; }
-
-        .pyramid-graphic-layer ul {
-            margin: 0;
-            padding-left: 20px;
-            list-style-type: '👉 '; /* Emoji bullet point */
-        }
-
-        .pyramid-graphic-layer li {
-            font-size: 0.95rem; /* Adjust font size */
-            margin-bottom: 0.5rem;
-            line-height: 1.6;
-        }
-
-
-        /* --- Healthy/Good Card --- */
-        .layer-graphic-good {
-            background: linear-gradient(135deg, #388e3c, #1b5e20);
+        .pyramid-level {
+            width: 100%;
+            padding: 1.5rem 1rem 1.5rem 1rem; /* Increased padding */
+            margin-bottom: -1px; /* Overlap borders slightly */
+            position: relative;
             color: white;
-            width: 80%; /* Match single layer width */
             text-align: center;
-            clip-path: polygon(50% 0%, 100% 100%, 0% 100%); /* Triangle */
-             margin-bottom: 0;
-             padding-top: 3rem;
-             padding-bottom: 1.5rem;
+            border: 1px solid rgba(0,0,0,0.1);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex; /* Use flexbox for centering */
+            flex-direction: column; /* Stack title and content vertically */
+            justify-content: center; /* Center vertically */
+            align-items: center; /* Center horizontally */
+            min-height: 80px; /* Ensure a minimum height */
         }
-        .layer-graphic-good h3 svg { margin-right: 10px; }
-        .layer-graphic-good p { font-size: 1rem; }
+        .pyramid-level h5 {
+            margin-top: 0;
+            margin-bottom: 0.8rem; /* Increased space below title */
+            font-size: 1.1rem;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            width: 100%; /* Ensure title takes full width */
+        }
+        .pyramid-level ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            text-align: left; /* Align list items left */
+            width: 90%; /* Adjust width for content */
+            max-width: 450px; /* Limit max width for readability */
+        }
+        .pyramid-level li {
+            margin-bottom: 0.5rem; /* Space between list items */
+            font-size: 0.95rem; /* Slightly larger font */
+            line-height: 1.5; /* Improve readability */
+            display: flex; /* Use flex for alignment */
+            align-items: flex-start; /* Align icon with top of text */
+        }
+        .pyramid-level li::before {
+            content: "▹"; /* Use a different bullet */
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: bold;
+            display: inline-block;
+            width: 1em;
+            margin-left: -1em; /* Adjust alignment */
+            margin-right: 0.5em; /* Space after bullet */
+            flex-shrink: 0; /* Prevent bullet from shrinking */
+        }
+        .level-high {
+            background-color: #c62828; /* Red */
+            clip-path: polygon(0% 100%, 100% 100%, 85% 0%, 15% 0%); /* Base Trapezoid */
+            padding-top: 2.5rem; /* More padding for base */
+            padding-bottom: 2rem;
+            z-index: 1;
+        }
+        .level-medium {
+            background-color: #f9a825; /* Yellow */
+            width: 70%;
+             /* clip-path for middle trapezoid depends on whether high exists */
+            z-index: 2;
+        }
+        .level-low {
+            background-color: #1976d2; /* Blue */
+            width: 40%;
+            clip-path: polygon(50% 0%, 100% 100%, 0% 100%); /* Top Triangle */
+            padding-bottom: 2rem; /* More padding for top */
+            z-index: 3;
+        }
+        .level-healthy {
+            background-color: #4CAF50; /* Green */
+            clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+            width: 60%; /* Make healthy pyramid a bit wider */
+            padding-bottom: 2rem;
+            z-index: 1;
+        }
+        /* Adjustments for single level pyramid */
+         .pyramid-level.single-level {
+             width: 60%; /* Make single level pyramids consistent width */
+             clip-path: polygon(50% 0%, 100% 100%, 0% 100%); /* Triangle */
+             padding-bottom: 2rem;
+         }
 
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            .pyramid-container {
+                width: 95%;
+            }
+            .pyramid-level h5 {
+                font-size: 1rem;
+            }
+             .pyramid-level li {
+                 font-size: 0.9rem;
+             }
+        }
     </style>
     """, unsafe_allow_html=True)
 
-    # --- Determine Layers to Display ---
-    layers_to_display = []
-    if health_plan_by_severity['high']:
-        layers_to_display.append('high')
-    if health_plan_by_severity['medium']:
-        layers_to_display.append('medium')
-    if health_plan_by_severity['low']:
-        layers_to_display.append('low')
+    # --- Display Pyramid ---
+    st.subheader("พีระมิดปรับพฤติกรรม")
+    st.caption("คำแนะนำเรียงตามลำดับความสำคัญ จากฐาน (เร่งด่วน) สู่ยอด (ป้องกัน/เฝ้าระวัง)")
 
-    num_layers = len(layers_to_display)
-
-    # --- HTML Structure ---
-    st.markdown('<div class="pyramid-graphic-container">', unsafe_allow_html=True)
-
-    if num_layers == 0:
-        # กรณีสุขภาพดี (ไม่มีคำแนะนำใดๆ)
-        st.markdown("""
-            <div class="pyramid-graphic-layer layer-graphic-good single-layer">
-                <h3>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                    สุขภาพดี เยี่ยมเลย!
-                </h3>
-                <p>ไม่มีคำแนะนำการปรับพฤติกรรมเพิ่มเติม<br>รักษาสุขภาพที่ดีแบบนี้ต่อไปนะครับ</p>
-            </div>
-        """, unsafe_allow_html=True)
-    elif num_layers == 1:
-        # กรณีมีชั้นเดียว
-        severity = layers_to_display[0]
-        items_html = "".join([f"<li>{item}</li>" for item in sorted(list(health_plan_by_severity[severity]))])
-        title_text = {
-            'high': "ฐานที่ 1: ควรพบแพทย์ (เร่งด่วน)",
-            'medium': "ฐานที่ 2: ควรปรับพฤติกรรม (สำคัญ)",
-            'low': "ฐานที่ 3: เฝ้าระวังและป้องกัน"
-        }[severity]
-        icon_svg = {
-            'high': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>',
-            'medium': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg>',
-            'low': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><info-icon><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></info-icon></svg>'
-        }[severity]
-
+    if not has_any_recommendation:
+        # กรณีสุขภาพดี
         st.markdown(f"""
-            <div class="pyramid-graphic-layer layer-graphic-{severity} single-layer">
-                <h3>{icon_svg}{title_text}</h3>
-                <ul>{items_html}</ul>
+        <div class="pyramid-container">
+            <div class="pyramid-level level-healthy">
+                <h5>สุขภาพดีเยี่ยม!</h5>
+                <ul><li>ขอแนะนำให้รักษาสุขภาพที่ดีเช่นนี้ต่อไป และมาตรวจสุขภาพประจำปีอย่างสม่ำเสมอ</li></ul>
             </div>
-            """, unsafe_allow_html=True)
-
+        </div>
+        """, unsafe_allow_html=True)
     else:
-        # กรณีมีหลายชั้น (แสดงผลจาก low -> medium -> high เพราะ CSS ใช้ column-reverse)
-        if 'low' in layers_to_display and health_plan_by_severity['low']:
-            items_html = "".join([f"<li>{item}</li>" for item in sorted(list(health_plan_by_severity['low']))])
-            st.markdown(f"""
-            <div class="pyramid-graphic-layer layer-graphic-low">
-                <h3>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><info-icon><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></info-icon></svg>
-                    ฐานที่ 3: เฝ้าระวังและป้องกัน
-                </h3>
-                <ul>{items_html}</ul>
-            </div>
-            """, unsafe_allow_html=True)
+        # กรณีมีคำแนะนำ
+        pyramid_html = '<div class="pyramid-container">'
+        levels_present = [level for level in ['high', 'medium', 'low'] if health_plan_by_severity[level]]
+        num_levels = len(levels_present)
 
-        if 'medium' in layers_to_display and health_plan_by_severity['medium']:
-            items_html = "".join([f"<li>{item}</li>" for item in sorted(list(health_plan_by_severity['medium']))])
-            st.markdown(f"""
-            <div class="pyramid-graphic-layer layer-graphic-medium">
-                <h3>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg>
-                    ฐานที่ 2: ควรปรับพฤติกรรม (สำคัญ)
-                </h3>
-                <ul>{items_html}</ul>
-            </div>
-            """, unsafe_allow_html=True)
+        # Function to generate list items
+        def generate_list_items(plans):
+            return "".join([f"<li>{html.escape(plan)}</li>" for plan in sorted(list(plans))])
 
-        if 'high' in layers_to_display and health_plan_by_severity['high']:
-            items_html = "".join([f"<li>{item}</li>" for item in sorted(list(health_plan_by_severity['high']))])
-            st.markdown(f"""
-            <div class="pyramid-graphic-layer layer-graphic-high">
-                <h3>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>
-                    ฐานที่ 1: ควรพบแพทย์ (เร่งด่วน)
-                </h3>
-                <ul>{items_html}</ul>
-            </div>
-            """, unsafe_allow_html=True)
+        # Define titles for each level
+        titles = {
+            'high': "ต้องทำ/พบแพทย์",
+            'medium': "ควรปรับเปลี่ยน",
+            'low': "ป้องกัน/เฝ้าระวัง"
+        }
 
-    st.markdown('</div>', unsafe_allow_html=True)
+        # Build levels from bottom (high) to top (low)
+        if has_high:
+            clip_path_medium = "polygon(0% 100%, 100% 100%, 85% 0%, 15% 0%)" if not has_low else "polygon(0% 100%, 100% 100%, 75% 0%, 25% 0%)"
+            pyramid_html += f"""
+            <div class="pyramid-level level-high {'single-level' if num_levels == 1 else ''}">
+                <h5>{titles['high']}</h5>
+                <ul>{generate_list_items(health_plan_by_severity['high'])}</ul>
+            </div>"""
+        if has_medium:
+            clip_path = "polygon(50% 0%, 100% 100%, 0% 100%)" # Default top triangle if low is missing
+            if has_high and has_low:
+                 clip_path = "polygon(0% 100%, 100% 100%, 75% 0%, 25% 0%)" # Middle trapezoid
+            elif has_high and not has_low:
+                 clip_path = "polygon(0% 100%, 100% 100%, 85% 0%, 15% 0%)" # Top trapezoid (wider)
+            # If only medium exists, it uses the single-level class for triangle shape
 
-    # --- Remove the separate Health Plan Section ---
+            pyramid_html += f"""
+            <div class="pyramid-level level-medium {'single-level' if num_levels == 1 else ''}" style="clip-path: {clip_path if num_levels > 1 else 'none'};">
+                <h5>{titles['medium']}</h5>
+                <ul>{generate_list_items(health_plan_by_severity['medium'])}</ul>
+            </div>"""
+        if has_low:
+            # Low level is always the top triangle if present with others,
+            # or a single triangle if it's the only one.
+            pyramid_html += f"""
+            <div class="pyramid-level level-low {'single-level' if num_levels == 1 else ''}">
+                <h5>{titles['low']}</h5>
+                <ul>{generate_list_items(health_plan_by_severity['low'])}</ul>
+            </div>"""
 
+        pyramid_html += '</div>'
+        st.markdown(pyramid_html, unsafe_allow_html=True)
