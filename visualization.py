@@ -93,107 +93,178 @@ def get_bp_classification(sbp, dbp):
     if sbp < 120 and dbp < 80: return "ปกติ"
     return "ไม่สามารถจำแนกได้"
 
-# --- 1. กราฟแสดงแนวโน้มย้อนหลัง ---
-def plot_historical_trends(history_df, person_data): # --- START OF CHANGE: Added person_data ---
+# --- START OF CHANGE: Refactored plot_historical_trends ---
+
+def _plot_single_trend(title, keys, unit, goal, direction_type, history_df, max_year):
     """
-    สร้างกราฟเส้น/ตารางแสดงแนวโน้มข้อมูลสุขภาพย้อนหลัง
+    ฟังก์ชันย่อยสำหรับพล็อตกราฟแนวโน้มเดี่ยว (ใช้โดย Selector และ Accordion)
     """
-    st.caption("กราฟนี้แสดงการเปลี่ยนแปลงของค่าต่างๆ ในแต่ละปีที่มีการตรวจ พร้อมเส้นคาดการณ์แนวโน้มในอีก 2 ปีข้างหน้า (เส้นประ) และเส้นเกณฑ์สุขภาพ (เส้นสีเขียว)")
+    sex = 'ชาย' # Default sex, will be overwritten by history_df if available
+    if 'เพศ' in history_df.columns:
+        sex_series = history_df['เพศ'].dropna()
+        if not sex_series.empty:
+            sex = sex_series.iloc[0]
+
+    # --- กำหนดคำอธิบายทิศทาง ---
+    if direction_type == 'range':
+        direction_text = "(ควรอยู่ในเกณฑ์)"
+    elif direction_type == 'higher':
+        direction_text = "(ยิ่งสูงยิ่งดี)"
+    elif direction_type == 'target':
+        direction_text = "(ไม่ควรสูงเกินเกณฑ์)"
+    elif direction_type == 'above_threshold':
+        direction_text = "(ไม่ควรต่ำกว่าเกณฑ์)"
+    else:
+        direction_text = "(ยิ่งต่ำยิ่งดี)"
+
+    icon = "❤️" if keys in ['Hb(%)', 'HCT'] else ("🩸" if keys in ['SBP', 'DBP'] else "📊")
+    full_title = f"<h5 style='text-align:center;'>{icon} {title} <br><span style='font-size:0.8em;color:gray;'>{direction_text}</span></h5>"
+
+    df_plot = history_df[['Year_str', keys, f'{keys}_interp']].copy()
+
+    # --- ตรวจสอบว่ามีข้อมูลหรือไม่ ---
+    if df_plot[keys].isnull().all():
+        st.markdown(full_title, unsafe_allow_html=True)
+        st.info(f"ไม่มีข้อมูล {title} เพียงพอที่จะแสดงผล")
+        return
+
+    # --- สร้างกราฟ ---
+    fig = px.line(df_plot, x='Year_str', y=keys, title=full_title.replace("<h5 style='text-align:center;'>", "").replace("</h5>",""), markers=True, custom_data=[keys, f'{keys}_interp'])
+    fig.update_traces(hovertemplate='<b>%{x}</b><br>%{customdata[0]:.1f} ' + unit + '%{customdata[1]}<extra></extra>')
+    fig.add_hline(y=goal, line_width=2, line_dash="dash", line_color="green", annotation_text="เกณฑ์", annotation_position="bottom right")
+
+    # --- เพิ่มเส้นคาดการณ์ ---
+    clean_df = history_df[['Year', keys]].dropna()
+    if len(clean_df) >= 3:
+        model = np.polyfit(clean_df['Year'], clean_df[keys], 1)
+        predict = np.poly1d(model)
+        future_years = np.array([max_year + 1, max_year + 2])
+        predicted_values = predict(future_years)
+        all_future_years = np.insert(future_years, 0, max_year)
+        all_predicted_values = np.insert(predicted_values, 0, predict(max_year))
+        fig.add_trace(go.Scatter(x=all_future_years.astype(str), y=all_predicted_values, mode='lines', line=dict(color='rgba(128,128,128,0.7)', width=2, dash='dot'), name='คาดการณ์', hovertemplate='คาดการณ์ปี %{x}: %{y:.1f}<extra></extra>'))
+
+    fig.update_traces(connectgaps=False)
+    fig.update_layout(yaxis_title=unit, xaxis_title='ปี พ.ศ.', legend_title_text="", font_family="Sarabun", template="streamlit", legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def plot_historical_trends(history_df, person_data):
+    """
+    สร้างกราฟเส้นแสดงแนวโน้มข้อมูลสุขภาพย้อนหลัง
+    พร้อมตัวเลือกให้เปลี่ยน Layout (Grid, Selector, Accordion)
+    """
+    st.subheader("📈 กราฟแสดงแนวโน้มผลสุขภาพย้อนหลัง")
+    st.caption("แสดงการเปลี่ยนแปลงของค่าต่างๆ ในแต่ละปี พร้อมเส้นเกณฑ์สุขภาพ (สีเขียว) และเส้นคาดการณ์แนวโน้ม (เส้นประ)")
 
     if history_df.shape[0] < 2:
         st.info("ข้อมูลย้อนหลังไม่เพียงพอที่จะสร้างกราฟแนวโน้ม (ต้องการอย่างน้อย 2 ปี)")
         return
 
+    # --- 1. Data Preparation (ทำครั้งเดียว) ---
     history_df = history_df.sort_values(by="Year", ascending=True).copy()
     min_year, max_year = int(history_df['Year'].min()), int(history_df['Year'].max())
     all_years_df = pd.DataFrame({'Year': range(min_year, max_year + 1)})
     history_df = pd.merge(all_years_df, history_df, on='Year', how='left')
     history_df['BMI'] = history_df.apply(lambda row: (get_float(row, 'น้ำหนัก') / ((get_float(row, 'ส่วนสูง') / 100) ** 2)) if get_float(row, 'น้ำหนัก') and get_float(row, 'ส่วนสูง') else np.nan, axis=1)
 
-    # --- START OF CHANGE: Added Hb and HCT metrics and dynamic goals ---
-    sex = person_data.get("เพศ", "ชาย") # Get sex from person_data
+    sex = person_data.get("เพศ", "ชาย")
     hb_goal = 12.0 if sex == "หญิง" else 13.0
     hct_goal = 36.0 if sex == "หญิง" else 39.0
 
     trend_metrics = {
-        'ฮีโมโกลบิน (Hb)': ('Hb(%)', 'g/dL', hb_goal, 'above_threshold'), # Changed 'higher' to 'above_threshold'
-        'ฮีมาโตคริต (Hct)': ('HCT', '%', hct_goal, 'above_threshold'), # Changed 'higher' to 'above_threshold'
+        'ฮีโมโกลบิน (Hb)': ('Hb(%)', 'g/dL', hb_goal, 'above_threshold'),
+        'ฮีมาโตคริต (Hct)': ('HCT', '%', hct_goal, 'above_threshold'),
         'ดัชนีมวลกาย (BMI)': ('BMI', 'kg/m²', 23.0, 'range'),
         'ระดับน้ำตาลในเลือด (FBS)': ('FBS', 'mg/dL', 100.0, 'target'),
         'คอเลสเตอรอล (Cholesterol)': ('CHOL', 'mg/dL', 200.0, 'target'),
-        'ประสิทธิภาพการกรองของไต (GFR)': ('GFR', 'mL/min', 90.0, 'higher'), # Kept as 'higher'
+        'ประสิทธิภาพการกรองของไต (GFR)': ('GFR', 'mL/min', 90.0, 'higher'),
         'ความดันตัวบน (SBP)': ('SBP', 'mmHg', 130.0, 'target'),
         'ความดันตัวล่าง (DBP)': ('DBP', 'mmHg', 80.0, 'target')
     }
-    # --- END OF CHANGE ---
 
-    # Prepare interpretation text columns
+    # เพิ่มคอลัมน์ Interpretation text
     for title, (keys, unit, goal, *_) in trend_metrics.items():
-         # --- START OF CHANGE: Pass sex to interpretation function ---
          history_df[f'{keys}_interp'] = history_df[keys].apply(lambda x: get_interpretation_text(keys, x, sex))
-         # --- END OF CHANGE ---
-
     history_df['Year_str'] = history_df['Year'].astype(str)
 
-    # Create a list of metrics to plot
-    metrics_to_plot = [ (title, keys, unit, goal, direction_type)
-                        for title, (keys, unit, goal, direction_type) in trend_metrics.items() ]
+    # --- 2. Layout Selector (ตัวเลือก Layout) ---
+    layout_choice = st.radio(
+        "เลือกรูปแบบการแสดงผล:",
+        ["แบบตาราง (Grid)", "แบบเลือกทีละตัว (Selector)", "แบบแถบขยาย (Accordion)"],
+        horizontal=True,
+        label_visibility="collapsed"
+    )
 
-    # Use a loop to create a responsive grid
-    num_metrics = len(metrics_to_plot)
-    cols = st.columns(min(num_metrics, 3)) # Max 3 columns, adjust if fewer metrics
+    # --- 3. Render Based on Choice (แสดงผลตามที่เลือก) ---
 
-    for i in range(num_metrics):
-        with cols[i % len(cols)]:
-            title, keys, unit, goal, direction_type = metrics_to_plot[i]
-            
-            # --- START OF CHANGE: Added icon logic for Hb/Hct ---
-            icon = "❤️" if keys in ['Hb(%)', 'HCT'] else ("🩸" if keys in ['SBP', 'DBP'] else "📊")
-            # --- END OF CHANGE ---
+    # --- Layout 1: Grid (แบบตาราง) ---
+    if layout_choice == "แบบตาราง (Grid)":
+        metrics_to_plot = [ (title, keys, unit, goal, direction_type)
+                            for title, (keys, unit, goal, direction_type) in trend_metrics.items() ]
+        num_metrics = len(metrics_to_plot)
+        cols = st.columns(min(num_metrics, 3))
 
-            # --- START OF CHANGE: Updated direction text logic ---
-            if direction_type == 'range':
-                direction_text = "(ควรอยู่ในเกณฑ์)"
-            elif direction_type == 'higher':
-                direction_text = "(ยิ่งสูงยิ่งดี)"
-            elif direction_type == 'target':
-                direction_text = "(ไม่ควรสูงเกินเกณฑ์)"
-            elif direction_type == 'above_threshold':
-                direction_text = "(ไม่ควรต่ำกว่าเกณฑ์)"
-            else:
-                direction_text = "(ยิ่งต่ำยิ่งดี)"
-            # --- END OF CHANGE ---
+        for i in range(num_metrics):
+            with cols[i % len(cols)]:
+                title, keys, unit, goal, direction_type = metrics_to_plot[i]
+                _plot_single_trend(title, keys, unit, goal, direction_type, history_df, max_year)
 
-            full_title = f"<h5 style='text-align:center;'>{icon} {title} <br><span style='font-size:0.8em;color:gray;'>{direction_text}</span></h5>"
+    # --- Layout 2: Selector (แบบเลือกทีละตัว) ---
+    elif layout_choice == "แบบเลือกทีละตัว (Selector)":
+        metric_titles = list(trend_metrics.keys())
+        selected_title = st.selectbox("เลือกกราฟที่ต้องการดู:", metric_titles)
+        
+        (keys, unit, goal, direction_type) = trend_metrics[selected_title]
+        
+        _plot_single_trend(selected_title, keys, unit, goal, direction_type, history_df, max_year)
 
-            df_plot = history_df[['Year_str', keys, f'{keys}_interp']].copy() # Ensure using copy
+    # --- Layout 3: Accordion (แบบแถบขยาย) ---
+    elif layout_choice == "แบบแถบขยาย (Accordion)":
+        st.caption("คลิกที่หัวข้อเพื่อขยายดูกราฟที่เกี่ยวข้อง")
+        
+        with st.expander("❤️ ผลเลือด (CBC)", expanded=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                title = 'ฮีโมโกลบิน (Hb)'
+                (keys, unit, goal, direction_type) = trend_metrics[title]
+                _plot_single_trend(title, keys, unit, goal, direction_type, history_df, max_year)
+            with col2:
+                title = 'ฮีมาโตคริต (Hct)'
+                (keys, unit, goal, direction_type) = trend_metrics[title]
+                _plot_single_trend(title, keys, unit, goal, direction_type, history_df, max_year)
 
-            # Check if there's any non-NaN data to plot for this metric
-            if df_plot[keys].isnull().all():
-                st.markdown(full_title, unsafe_allow_html=True)
-                st.info(f"ไม่มีข้อมูล {title} เพียงพอที่จะแสดงผล")
-                continue # Skip to the next metric if no data
+        with st.expander("📊 การเผาผลาญ (Metabolic)"):
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                title = 'ดัชนีมวลกาย (BMI)'
+                (keys, unit, goal, direction_type) = trend_metrics[title]
+                _plot_single_trend(title, keys, unit, goal, direction_type, history_df, max_year)
+            with col2:
+                title = 'ระดับน้ำตาลในเลือด (FBS)'
+                (keys, unit, goal, direction_type) = trend_metrics[title]
+                _plot_single_trend(title, keys, unit, goal, direction_type, history_df, max_year)
+            with col3:
+                title = 'คอเลสเตอรอล (Cholesterol)'
+                (keys, unit, goal, direction_type) = trend_metrics[title]
+                _plot_single_trend(title, keys, unit, goal, direction_type, history_df, max_year)
 
-            fig = px.line(df_plot, x='Year_str', y=keys, title=full_title.replace("<h5 style='text-align:center;'>", "").replace("</h5>",""), markers=True, custom_data=[keys, f'{keys}_interp'])
-            fig.update_traces(hovertemplate='<b>%{x}</b><br>%{customdata[0]:.1f} ' + unit + '%{customdata[1]}<extra></extra>')
-            # Add target line (hline)
-            fig.add_hline(y=goal, line_width=2, line_dash="dash", line_color="green", annotation_text="เกณฑ์", annotation_position="bottom right")
+        with st.expander("🩸 หัวใจและไต (Cardio-Renal)"):
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                title = 'ประสิทธิภาพการกรองของไต (GFR)'
+                (keys, unit, goal, direction_type) = trend_metrics[title]
+                _plot_single_trend(title, keys, unit, goal, direction_type, history_df, max_year)
+            with col2:
+                title = 'ความดันตัวบน (SBP)'
+                (keys, unit, goal, direction_type) = trend_metrics[title]
+                _plot_single_trend(title, keys, unit, goal, direction_type, history_df, max_year)
+            with col3:
+                title = 'ความดันตัวล่าง (DBP)'
+                (keys, unit, goal, direction_type) = trend_metrics[title]
+                _plot_single_trend(title, keys, unit, goal, direction_type, history_df, max_year)
 
-            # Add trendline prediction if enough data
-            clean_df = history_df[['Year', keys]].dropna()
-            if len(clean_df) >= 3:
-                model = np.polyfit(clean_df['Year'], clean_df[keys], 1)
-                predict = np.poly1d(model)
-                future_years = np.array([max_year + 1, max_year + 2])
-                predicted_values = predict(future_years)
-                # Extend trendline smoothly from last data point
-                all_future_years = np.insert(future_years, 0, max_year)
-                all_predicted_values = np.insert(predicted_values, 0, predict(max_year)) # Use prediction at max_year for continuity
-                fig.add_trace(go.Scatter(x=all_future_years.astype(str), y=all_predicted_values, mode='lines', line=dict(color='rgba(128,128,128,0.7)', width=2, dash='dot'), name='คาดการณ์', hovertemplate='คาดการณ์ปี %{x}: %{y:.1f}<extra></extra>'))
-
-            fig.update_traces(connectgaps=False) # Don't connect missing years
-            fig.update_layout(yaxis_title=unit, xaxis_title='ปี พ.ศ.', legend_title_text="", font_family="Sarabun", template="streamlit", legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
-            st.plotly_chart(fig, use_container_width=True)
+# --- END OF CHANGE ---
 
 
 # --- 2. เกจวัด ---
@@ -453,8 +524,8 @@ def display_visualization_tab(person_data, history_df):
 
     # Section 2: Trends (Historical View)
     with st.container(border=True):
-        st.subheader("📈 กราฟแสดงแนวโน้มผลสุขภาพย้อนหลัง")
-        # --- START OF CHANGE: Pass person_data to handle gender-specific goals ---
+        # --- START OF CHANGE: Refactored this section ---
+        # ย้าย st.subheader และ st.caption เข้าไปใน plot_historical_trends
         plot_historical_trends(history_df, person_data)
         # --- END OF CHANGE ---
 
