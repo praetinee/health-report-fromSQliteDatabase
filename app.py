@@ -37,9 +37,6 @@ from admin_panel import (
     display_performance_report,
     display_visualization_tab
 )
-# --- Import Recommendation Pyramid ---
-from recommendation_pyramid import display_recommendation_pyramid
-
 
 # --- ค่าคงที่ (Constants) ---
 THAI_MONTHS_GLOBAL = {1: "มกราคม", 2: "กุมภาพันธ์", 3: "มีนาคม", 4: "เมษายน", 5: "พฤษภาคม", 6: "มิถุนายน", 7: "กรกฎาคม", 8: "สิงหาคม", 9: "กันยายน", 10: "ตุลาคม", 11: "พฤศจิกายน", 12: "ธันวาคม"}
@@ -184,15 +181,10 @@ def main_app(df):
         available_reports = OrderedDict()
         # Use functions imported from admin_panel (where they are now defined)
         if has_visualization_data(all_person_history_df): available_reports['ภาพรวมสุขภาพ (Graphs)'] = 'visualization_report'
-        if has_basic_health_data(person_data):
-            available_reports['สุขภาพพื้นฐาน'] = 'main_report'
-            # --- START OF CHANGE: Add pyramid tab only if basic data exists ---
-            available_reports['พีระมิดปรับพฤติกรรม'] = 'recommendation_pyramid'
-            # --- END OF CHANGE ---
+        if has_basic_health_data(person_data): available_reports['สุขภาพพื้นฐาน'] = 'main_report'
         if has_vision_data(person_data): available_reports['สมรรถภาพการมองเห็น'] = 'vision_report'
         if has_hearing_data(person_data): available_reports['สมรรถภาพการได้ยิน'] = 'hearing_report'
         if has_lung_data(person_data): available_reports['สมรรถภาพปอด'] = 'lung_report'
-
 
         # --- Display Header and Tabs ---
         if not available_reports:
@@ -207,11 +199,6 @@ def main_app(df):
                 with tabs[i]:
                     if page_key == 'visualization_report':
                         display_visualization_tab(person_data, all_person_history_df)
-                    # --- START OF CHANGE: Add pyramid tab display logic ---
-                    elif page_key == 'recommendation_pyramid':
-                         with st.container(border=True):
-                             display_recommendation_pyramid(person_data)
-                    # --- END OF CHANGE ---
                     elif page_key == 'vision_report':
                         display_performance_report(person_data, 'vision')
                     elif page_key == 'hearing_report':
@@ -293,3 +280,4 @@ else:
         display_admin_panel(df) # Call admin panel function (now defined in admin_panel.py)
     else:
         main_app(df) # Call main app function for regular users
+
