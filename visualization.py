@@ -42,10 +42,22 @@ def get_gfr_desc(gfr):
     return "ไตวายระยะสุดท้าย"
 
 
-def get_interpretation_text(metric, value):
+def get_interpretation_text(metric, value, sex):
     """สร้างข้อความแปลผลสำหรับใช้ใน hover tooltip ของกราฟ"""
     if pd.isna(value):
         return ""
+        
+    # --- START OF CHANGE: Added Hb and HCT interpretation ---
+    if metric == 'Hb(%)':
+        goal = 12.0 if sex == "หญิง" else 13.0
+        if value < goal: return f" (ต่ำกว่าเกณฑ์ {goal})"
+        return " (ปกติ)"
+    if metric == 'HCT':
+        goal = 36.0 if sex == "หญิง" else 39.0
+        if value < goal: return f" (ต่ำกว่าเกณฑ์ {goal})"
+        return " (ปกติ)"
+    # --- END OF CHANGE ---
+        
     if metric == 'BMI':
         return f" ({get_bmi_desc(value)})"
     if metric == 'FBS':
@@ -58,15 +70,15 @@ def get_interpretation_text(metric, value):
         return f" ({get_gfr_desc(value)})"
     if metric == 'SBP':
         if value < 120: return " (ปกติ)"
-        if value < 130: return " (เริ่มสูง)" # Changed from 120
-        if value < 140: return " (สูงระดับ 1)" # Changed from 130
-        if value < 160: return " (สูงระดับ 2)" # Changed from 140
-        return " (สูงมาก)" # >= 160
+        if value < 130: return " (เริ่มสูง)"
+        if value < 140: return " (สูงระดับ 1)"
+        if value < 160: return " (สูงระดับ 2)"
+        return " (สูงมาก)"
     if metric == 'DBP':
         if value < 80: return " (ปกติ)"
-        if value < 90: return " (สูงระดับ 1)" # Changed from 80
-        if value < 100: return " (สูงระดับ 2)" # Changed from 90
-        return " (สูงมาก)" # >= 100
+        if value < 90: return " (สูงระดับ 1)"
+        if value < 100: return " (สูงระดับ 2)"
+        return " (สูงมาก)"
     return ""
 
 def get_bp_classification(sbp, dbp):
@@ -82,7 +94,7 @@ def get_bp_classification(sbp, dbp):
     return "ไม่สามารถจำแนกได้"
 
 # --- 1. กราฟแสดงแนวโน้มย้อนหลัง ---
-def plot_historical_trends(history_df):
+def plot_historical_trends(history_df, person_data): # --- START OF CHANGE: Added person_data ---
     """
     สร้างกราฟเส้น/ตารางแสดงแนวโน้มข้อมูลสุขภาพย้อนหลัง
     """
@@ -98,20 +110,28 @@ def plot_historical_trends(history_df):
     history_df = pd.merge(all_years_df, history_df, on='Year', how='left')
     history_df['BMI'] = history_df.apply(lambda row: (get_float(row, 'น้ำหนัก') / ((get_float(row, 'ส่วนสูง') / 100) ** 2)) if get_float(row, 'น้ำหนัก') and get_float(row, 'ส่วนสูง') else np.nan, axis=1)
 
-    # --- START OF CHANGE: Updated direction_type for relevant metrics ---
+    # --- START OF CHANGE: Added Hb and HCT metrics and dynamic goals ---
+    sex = person_data.get("เพศ", "ชาย") # Get sex from person_data
+    hb_goal = 12.0 if sex == "หญิง" else 13.0
+    hct_goal = 36.0 if sex == "หญิง" else 39.0
+
     trend_metrics = {
+        'ฮีโมโกลบิน (Hb)': ('Hb(%)', 'g/dL', hb_goal, 'higher'),
+        'ฮีมาโตคริต (Hct)': ('HCT', '%', hct_goal, 'higher'),
         'ดัชนีมวลกาย (BMI)': ('BMI', 'kg/m²', 23.0, 'range'),
-        'ระดับน้ำตาลในเลือด (FBS)': ('FBS', 'mg/dL', 100.0, 'target'), # Changed to 'target'
-        'คอเลสเตอรอล (Cholesterol)': ('CHOL', 'mg/dL', 200.0, 'target'), # Changed to 'target'
+        'ระดับน้ำตาลในเลือด (FBS)': ('FBS', 'mg/dL', 100.0, 'target'),
+        'คอเลสเตอรอล (Cholesterol)': ('CHOL', 'mg/dL', 200.0, 'target'),
         'ประสิทธิภาพการกรองของไต (GFR)': ('GFR', 'mL/min', 90.0, 'higher'),
-        'ความดันตัวบน (SBP)': ('SBP', 'mmHg', 130.0, 'target'), # Changed to 'target'
-        'ความดันตัวล่าง (DBP)': ('DBP', 'mmHg', 80.0, 'target')   # Changed to 'target'
+        'ความดันตัวบน (SBP)': ('SBP', 'mmHg', 130.0, 'target'),
+        'ความดันตัวล่าง (DBP)': ('DBP', 'mmHg', 80.0, 'target')
     }
     # --- END OF CHANGE ---
 
     # Prepare interpretation text columns
     for title, (keys, unit, goal, *_) in trend_metrics.items():
-         history_df[f'{keys}_interp'] = history_df[keys].apply(lambda x: get_interpretation_text(keys, x))
+         # --- START OF CHANGE: Pass sex to interpretation function ---
+         history_df[f'{keys}_interp'] = history_df[keys].apply(lambda x: get_interpretation_text(keys, x, sex))
+         # --- END OF CHANGE ---
 
     history_df['Year_str'] = history_df['Year'].astype(str)
 
@@ -126,18 +146,19 @@ def plot_historical_trends(history_df):
     for i in range(num_metrics):
         with cols[i % len(cols)]:
             title, keys, unit, goal, direction_type = metrics_to_plot[i]
-            icon = "🩸" if keys in ['SBP', 'DBP'] else "📊"
+            
+            # --- START OF CHANGE: Added icon logic for Hb/Hct ---
+            icon = "❤️" if keys in ['Hb(%)', 'HCT'] else ("🩸" if keys in ['SBP', 'DBP'] else "📊")
+            # --- END OF CHANGE ---
 
-            # --- START OF CHANGE: Update direction_text based on direction_type ---
             if direction_type == 'range':
                 direction_text = "(ควรอยู่ในเกณฑ์)"
             elif direction_type == 'higher':
                 direction_text = "(ยิ่งสูงยิ่งดี)"
-            elif direction_type == 'target': # New case for target
+            elif direction_type == 'target':
                 direction_text = "(ไม่ควรสูงเกินเกณฑ์)"
-            else: # Default to 'lower' (though none use this now)
+            else:
                 direction_text = "(ยิ่งต่ำยิ่งดี)"
-            # --- END OF CHANGE ---
 
             full_title = f"<h5 style='text-align:center;'>{icon} {title} <br><span style='font-size:0.8em;color:gray;'>{direction_text}</span></h5>"
 
@@ -429,7 +450,9 @@ def display_visualization_tab(person_data, history_df):
     # Section 2: Trends (Historical View)
     with st.container(border=True):
         st.subheader("📈 กราฟแสดงแนวโน้มผลสุขภาพย้อนหลัง")
-        plot_historical_trends(history_df)
+        # --- START OF CHANGE: Pass person_data to handle gender-specific goals ---
+        plot_historical_trends(history_df, person_data)
+        # --- END OF CHANGE ---
 
     # Section 3: Performance graphs (Current Year Details)
     with st.container(border=True):
@@ -446,4 +469,3 @@ def display_visualization_tab(person_data, history_df):
                     plot_audiogram(chart['data'])
                 elif chart['type'] == 'lung':
                     plot_lung_comparison(chart['data'])
-
