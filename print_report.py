@@ -5,7 +5,7 @@ from collections import OrderedDict
 import json
 
 # --- Import a key function from performance_tests ---
-from performance_tests import generate_holistic_advice
+from performance_tests import generate_holistic_advice # (ยังคง import ไว้เผื่อใช้ในอนาคต แต่เราจะไม่เรียกใช้)
 from print_performance_report import generate_performance_report_html_for_main_report
 
 # ==============================================================================
@@ -129,6 +129,68 @@ def hepatitis_b_advice(hbsag, hbsab, hbcab):
     if "positive" in hbcab and "positive" not in hbsab: return "เคยติดเชื้อแต่ไม่มีภูมิคุ้มกันในปัจจุบัน", "unclear"
     if all(x == "negative" for x in [hbsag, hbsab, hbcab]): return "ไม่มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี ควรปรึกษาแพทย์เพื่อรับวัคซีน", "no_immune"
     return "ไม่สามารถสรุปผลชัดเจน แนะนำให้พบแพทย์เพื่อประเมินซ้ำ", "unclear"
+
+# --- START OF CHANGE: New function for fixed recommendations ---
+def generate_fixed_recommendations(person_data):
+    """
+    สร้างคำแนะนำแบบคงที่ตามตรรกะ Google Sheet ที่กำหนด
+    """
+    recommendations = []
+
+    # 1. คำแนะนำ chem1 (น้ำตาล)
+    # เงื่อนไข: DF (FBS) > 100
+    try:
+        fbs_val = get_float("FBS", person_data)
+        if fbs_val is not None and fbs_val > 100:
+            recommendations.append("ตรวจพบน้ำตาลในเลือดสูงให้หลีกเลี่ยงการทานขนมหวาน /อาหารหวาน/ผลไม้รสหวานจัด เช่น ทุเรียน เงาะ ลำไย มะม่วงสุก ให้ทานอาหารที่มีเส้นใย เช่นผักต่างๆ ออกกำลังกายสม่ำเสมอ")
+    except Exception:
+        pass # ป้องกันข้อผิดพลาดหากข้อมูล FBS ไม่ถูกต้อง
+
+    # 2. คำแนะนำ chem2 (ไขมัน)
+    # เงื่อนไข: DO (ผลไขมันในเลือด) = "ไขมันในเลือดสูง" หรือ "ไขมันในเลือดสูงเล็กน้อย"
+    try:
+        lipid_str = str(person_data.get("ผลไขมันในเลือด", "")).strip()
+        if lipid_str in ["ไขมันในเลือดสูง", "ไขมันในเลือดสูงเล็กน้อย"]:
+            recommendations.append("ตรวจพบไขมันในเลือดสูงให้ลดอาหารไขมันสูงเช่น อาหารทอด/ไข่แดง/เครื่องในสัตว์/อาหารทะเล งดสุรา ให้รับประทานผักผลไม้ ออกกำลังกาย ควบคุมน้ำหนักอย่าให้อ้วน")
+    except Exception:
+        pass
+
+    # 3. คำแนะนำ chem3 (ตับ)
+    # เงื่อนไข: DK (ผลเอ็มไซม์ตับ) = "การทำงานของตับสูงกว่าเกณฑ์ปกติเล็กน้อย" หรือ "การทำงานของตับสูงกว่าเกณฑ์ปกติ"
+    try:
+        liver_str = str(person_data.get("ผลเอ็มไซม์ตับ", "")).strip()
+        if liver_str in ["การทำงานของตับสูงกว่าเกณฑ์ปกติเล็กน้อย", "การทำงานของตับสูงกว่าเกณฑ์ปกติ"]:
+            recommendations.append("ตรวจพบการทำงานของตับสูงเล็กน้อย งดสุรา/ลดอาหารไขมัน/อาหารที่ย่อยยาก/ใช้ยาในการดูแลของแพทย์ พักผ่อนให้เพียงพอ ถ้ามีอาการตัวเหลือง/ตาเหลือง/เหนื่อยเพลียผิดปกติควรไปพบแพทย์")
+    except Exception:
+        pass
+
+    # 4. คำแนะนำ chem4 (ยูริก)
+    # เงื่อนไข: DL (ผลยูริค) = "กรดยูริคสูงกว่าเกณฑ์ปกติเล็กน้อย" หรือ "กรดยูริคสูงกว่าเกณฑ์ปกติ"
+    try:
+        uric_str = str(person_data.get("ผลยูริค", "")).strip()
+        if uric_str in ["กรดยูริคสูงกว่าเกณฑ์ปกติเล็กน้อย", "กรดยูริคสูงกว่าเกณฑ์ปกติ"]:
+            recommendations.append("ตรวจพบกรดยูริคสูง(สาเหตุของโรคเก๊าท์) ลดอาหารเครื่องในสัตว์ หน่อไม้ หัวผักกาดขาว ยอดผัก สัตว์ปีกเช่น ไก่ เป็ด ดื่มน้ำมากๆ งดสุรา ถ้ามีปวดข้อ มีก้อนปุ่มตามข้อควรไปพบแพทย์")
+    except Exception:
+        pass
+
+    # 5. คำแนะนำ chem5 (ไต)
+    # เงื่อนไข: DM (แปลผล GFR) = "การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย"
+    try:
+        gfr_str = str(person_data.get("แปลผล GFR", "")).strip()
+        if gfr_str == "การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย":
+            recommendations.append("การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย ลดอาหารเค็ม อาหารโปรตีนสูงย่อยยาก ดื่มน้ำ 8-10 แก้วต่อวันและไม่ควรกลั้นปัสสาวะมีอาการบวมผิดปกติให้พบแพทย์")
+    except Exception:
+        pass
+
+    # --- สรุปผลลัพธ์ ---
+    if not recommendations:
+        return "ผลการตรวจสุขภาพโดยรวมอยู่ในเกณฑ์ปกติ ควรดูแลรักษาสุขภาพที่ดีเช่นนี้ต่อไป"
+    else:
+        # จัดรูปแบบเป็น HTML list (<ul>...</ul>)
+        list_items = "".join([f"<li>{html.escape(rec)}</li>" for rec in recommendations])
+        return f"ผลตรวจสุขภาพโดยรวมพบประเด็นที่ควรให้ความสำคัญดังนี้:<ul>{list_items}</ul>"
+# --- END OF CHANGE ---
+
 
 # --- HTML Rendering Functions ---
 
@@ -273,9 +335,17 @@ def generate_printable_report(person_data, all_person_history_df=None):
     header_vitals_html = render_header_and_vitals(person_data)
     lab_section_html = render_lab_section(person_data, sex)
     other_results_html = render_other_results_html(person_data, sex)
-    doctor_suggestion = generate_holistic_advice(person_data)
     
-    # Adjust summary text for better layout
+    # --- START OF CHANGE: Replace recommendation logic ---
+    # Comment out the old auto-generated advice
+    # doctor_suggestion = generate_holistic_advice(person_data)
+    
+    # Call the new function based on fixed Google Sheet logic
+    doctor_suggestion = generate_fixed_recommendations(person_data)
+    # --- END OF CHANGE ---
+
+    # Adjust summary text for better layout (if it's the old format)
+    # This might not be needed for the new list format, but it doesn't hurt
     doctor_suggestion = doctor_suggestion.replace(
         "ผลตรวจสุขภาพโดยรวมพบประเด็นที่ควรให้ความสำคัญดังนี้:",
         "ผลตรวจสุขภาพโดยรวมพบประเด็นที่ควรให้ความสำคัญดังนี้:<br>"
