@@ -7,8 +7,6 @@ from collections import OrderedDict
 # - เพิ่มฟังก์ชัน generate_comprehensive_recommendations เพื่อสร้างคำแนะนำแบบองค์รวม
 # - ย้ายและรวมตรรกะการแปลผลจากไฟล์ app.py และ print_report.py มาไว้ที่นี่
 #   เพื่อให้เป็นศูนย์กลางของการสร้างคำแนะนำทั้งหมด
-# - แยกตรรกะการสร้างข้อมูลคำแนะนำ (get_recommendation_data)
-#   ออกจากส่วนการแสดงผล HTML (generate_comprehensive_recommendations)
 # ==============================================================================
 
 
@@ -56,7 +54,7 @@ def interpret_urine(person_data):
 
     results = {}
     sex = person_data.get("เพศ", "ชาย")
-
+    
     # Protein (Albumin)
     alb = str(person_data.get("Alb", "")).strip().lower()
     if alb in ["3+", "4+"]: results['โปรตีนในปัสสาวะ'] = ('พบโปรตีนปริมาณมาก', 'high')
@@ -73,7 +71,7 @@ def interpret_urine(person_data):
         try:
             if "-" in rbc_val: high_rbc = float(rbc_val.split('-')[1].strip())
             else: high_rbc = float(rbc_val)
-
+            
             if high_rbc > 5:
                 issue = "พบเม็ดเลือดแดงในปัสสาวะ"
                 if sex == "หญิง": issue += " (อาจเกิดจากประจำเดือน)"
@@ -105,10 +103,10 @@ def interpret_stool(person_data):
 
     if "wbc" in exam or "เม็ดเลือดขาว" in exam:
         results['ผลตรวจอุจจาระ'] = ('พบเม็ดเลือดขาว (อาจมีการอักเสบ)', 'medium')
-
+    
     if "ไม่พบ" not in culture and "ปกติ" not in culture and not is_empty(culture):
          results['ผลเพาะเชื้ออุจจาระ'] = ('พบการติดเชื้อ', 'high')
-
+         
     return results
 
 def interpret_hepatitis(person_data):
@@ -125,30 +123,26 @@ def interpret_hepatitis(person_data):
         results['ไวรัสตับอักเสบบี'] = ('เป็นพาหะหรือกำลังติดเชื้อ', 'high')
     elif "negative" in hbsag and "negative" in hbsab:
         results['ไวรัสตับอักเสบบี'] = ('ไม่มีภูมิคุ้มกัน', 'low')
-
+        
     return results
 
 
 # --- Main Recommendation Engine ---
 
-# --- START OF CHANGE: Extracted logic into a reusable function ---
-def get_recommendation_data(person_data):
+def generate_comprehensive_recommendations(person_data):
     """
-    วิเคราะห์ข้อมูลสุขภาพและคืนค่า issues และ health plans ที่จัดกลุ่มตามความรุนแรง
+    สร้างสรุปและคำแนะนำการปฏิบัติตัวแบบองค์รวมจากข้อมูลสุขภาพทั้งหมด
+    โดยจัดลำดับความสำคัญของแต่ละประเด็น
     """
     key_indicators = ['FBS', 'CHOL', 'HCT', 'Cr', 'WBC (cumm)', 'น้ำหนัก', 'ส่วนสูง', 'SBP']
     has_data = any(not is_empty(person_data.get(key)) for key in key_indicators)
 
+    if not has_data:
+        return "" 
+
     issues = {'high': [], 'medium': [], 'low': []}
     conditions = set()
-
-    # health_plan ถูกย้ายไปอยู่ข้างล่าง และเปลี่ยนชื่อเป็น health_plan_by_severity
-    health_plan_by_severity = {'high': set(), 'medium': set(), 'low': set()}
-
-
-    if not has_data:
-        return issues, health_plan_by_severity
-
+    
     # --- 1. Vital Signs & BMI ---
     weight = get_float(person_data, "น้ำหนัก")
     height = get_float(person_data, "ส่วนสูง")
@@ -163,7 +157,7 @@ def get_recommendation_data(person_data):
         elif bmi >= 25:
             issues['low'].append(f"<b>น้ำหนักเกินเกณฑ์ (BMI 25-29.9):</b> ควรเริ่มควบคุมอาหารและออกกำลังกาย")
             conditions.add('overweight')
-
+    
     if sbp and dbp:
         if sbp >= 160 or dbp >= 100:
             issues['high'].append(f"<b>ความดันโลหิตสูงรุนแรง ({int(sbp)}/{int(dbp)} mmHg):</b> มีความเสี่ยงอันตราย ควรพบแพทย์โดยเร็ว")
@@ -192,7 +186,7 @@ def get_recommendation_data(person_data):
     hdl = get_float(person_data, "HDL")
     lipid_issues_text = []
     is_lipid_high_risk = False
-
+    
     if chol:
         if chol >= 240:
             lipid_issues_text.append("คอเลสเตอรอลสูงมาก")
@@ -262,16 +256,16 @@ def get_recommendation_data(person_data):
     hb = get_float(person_data, "Hb(%)")
     wbc = get_float(person_data, "WBC (cumm)")
     platelet = get_float(person_data, "Plt (/mm)")
-
+    
     hb_limit = 12 if sex == "หญิง" else 13
     if hb and hb < hb_limit:
         issues['medium'].append("<b>ภาวะโลหิตจาง:</b> ควรทานอาหารที่มีธาตุเหล็กสูงและตรวจหาสาเหตุเพิ่มเติม")
         conditions.add('anemia')
-
+        
     if wbc:
         if wbc > 10000: issues['medium'].append("<b>เม็ดเลือดขาวสูง:</b> อาจมีการอักเสบหรือติดเชื้อในร่างกาย ควรตรวจหาสาเหตุ")
         if wbc < 4000: issues['low'].append("<b>เม็ดเลือดขาวต่ำ:</b> อาจส่งผลต่อภูมิคุ้มกัน ควรพักผ่อนให้เพียงพอ")
-
+        
     if platelet:
         if platelet < 150000: issues['medium'].append("<b>เกล็ดเลือดต่ำ:</b> อาจเสี่ยงเลือดออกง่าย ควรระมัดระวังอุบัติเหตุและปรึกษาแพทย์")
         if platelet > 500000: issues['medium'].append("<b>เกล็ดเลือดสูง:</b> ควรพบแพทย์เพื่อตรวจหาสาเหตุ")
@@ -280,115 +274,29 @@ def get_recommendation_data(person_data):
     urine_issues = interpret_urine(person_data)
     for issue, (text, level) in urine_issues.items():
         issues[level].append(f"<b>{issue}:</b> {text}")
-        if level == 'high': conditions.add('urine_infection')
-        if level == 'medium': conditions.add('urine_issue')
-
 
     stool_issues = interpret_stool(person_data)
     for issue, (text, level) in stool_issues.items():
         issues[level].append(f"<b>{issue}:</b> {text}")
-        if level == 'high': conditions.add('stool_infection')
-
+        
     hep_issues = interpret_hepatitis(person_data)
     for issue, (text, level) in hep_issues.items():
         issues[level].append(f"<b>{issue}:</b> {text}")
-        if level == 'high': conditions.add('hepatitis') # เป็นพาหะ
-        if level == 'low': conditions.add('no_hep_immune') # ไม่มีภูมิ
-
 
     year = person_data.get("Year", "")
     cxr_col = f"CXR{str(year)[-2:]}" if str(year) != "" and str(year) != str(np.datetime64('now', 'Y').astype(int) + 1970 + 543) else "CXR"
     cxr_result, cxr_status = interpret_cxr(person_data.get(cxr_col, ''))
     if cxr_status == 'abnormal':
         issues['high'].append(f"<b>ผลเอกซเรย์ทรวงอกผิดปกติ ({cxr_result}):</b> ควรพบแพทย์เพื่อตรวจวินิจฉัยเพิ่มเติม")
-        conditions.add('cxr_abnormal')
 
     ekg_col = f"EKG{str(year)[-2:]}" if str(year) != "" and str(year) != str(np.datetime64('now', 'Y').astype(int) + 1970 + 543) else "EKG"
     ekg_result, ekg_status = interpret_ekg(person_data.get(ekg_col, ''))
     if ekg_status == 'abnormal':
         issues['high'].append(f"<b>ผลคลื่นไฟฟ้าหัวใจผิดปกติ ({ekg_result}):</b> ควรพบแพทย์โรคหัวใจ")
-        conditions.add('ekg_abnormal')
 
-
-    # --- 5. Build Health Plan (by Severity) ---
-
-    # High Severity Plans (ต้องทำ/พบแพทย์)
-    if 'diabetes' in conditions:
-        health_plan_by_severity['high'].add("พบแพทย์เพื่อยืนยันผลและรับการรักษาเบาหวาน")
-    if 'hypertension' in conditions and (sbp >= 160 or dbp >= 100):
-        health_plan_by_severity['high'].add("พบแพทย์เพื่อประเมินและรักษาภาวะความดันโลหิตสูงรุนแรง")
-    if 'kidney_disease' in conditions and gfr < 30:
-        health_plan_by_severity['high'].add("พบแพทย์ผู้เชี่ยวชาญโรคไตโดยด่วน")
-    if 'liver' in conditions and ((sgot and sgot > sgot_upper * 3) or (sgpt and sgpt > sgpt_upper * 3)):
-         health_plan_by_severity['high'].add("พบแพทย์เพื่อตรวจหาสาเหตุภาวะตับอักเสบ")
-    if 'cxr_abnormal' in conditions:
-        health_plan_by_severity['high'].add("พบแพทย์เพื่อตรวจวินิจฉัยผลเอกซเรย์ทรวงอกเพิ่มเติม")
-    if 'ekg_abnormal' in conditions:
-        health_plan_by_severity['high'].add("พบแพทย์โรคหัวใจเพื่อตรวจประเมิน")
-    if 'hepatitis' in conditions:
-        health_plan_by_severity['high'].add("พบแพทย์เพื่อประเมินภาวะพาหะไวรัสตับอักเสบบี")
-    if 'urine_infection' in conditions or 'stool_infection' in conditions:
-        health_plan_by_severity['high'].add("พบแพทย์เพื่อตรวจและรักษาการติดเชื้อ")
-
-    # Medium Severity Plans (ควรปรับพฤติกรรมจริงจัง)
-    if 'prediabetes' in conditions:
-        health_plan_by_severity['medium'].add("ควบคุมอาหารประเภทแป้งและน้ำตาลอย่างจริงจัง")
-    if 'hypertension' in conditions:
-        health_plan_by_severity['medium'].add("ลดอาหารเค็มและโซเดียมสูง")
-        health_plan_by_severity['medium'].add("วัดความดันโลหิตที่บ้านอย่างสม่ำเสมอ")
-    if 'dyslipidemia' in conditions:
-        health_plan_by_severity['medium'].add("ลดอาหารมัน ของทอด และไขมันอิ่มตัว")
-    if 'obesity' in conditions:
-        health_plan_by_severity['medium'].add("ควบคุมปริมาณอาหาร (ลดแคลอรี่) เพื่อลดน้ำหนัก")
-    if 'kidney_disease' in conditions and gfr < 60:
-        health_plan_by_severity['medium'].add("ลดอาหารเค็มจัดและโปรตีนสูง (ปรึกษาแพทย์)")
-    if 'liver' in conditions:
-        health_plan_by_severity['medium'].add("งดเครื่องดื่มแอลกอฮอล์ และลดอาหารไขมันสูง")
-    if 'uric_acid' in conditions and uric > 9.0:
-        health_plan_by_severity['medium'].add("ปรึกษาแพทย์เรื่องยาลดกรดยูริก และงดอาหารเสี่ยงสูง")
-    if 'anemia' in conditions:
-        health_plan_by_severity['medium'].add("ทานอาหารที่มีธาตุเหล็กสูง (ตับ, เนื้อแดง, ผักใบเขียว) และตรวจหาสาเหตุ")
-    if 'urine_issue' in conditions:
-        health_plan_by_severity['medium'].add("ดื่มน้ำให้เพียงพอ และตรวจติดตามผลปัสสาวะซ้ำ")
-
-    # Low Severity Plans (เฝ้าระวัง/ป้องกัน)
-    if 'prehypertension' in conditions:
-        health_plan_by_severity['low'].add("เริ่มลดอาหารเค็มและหมั่นวัดความดันโลหิต")
-    if 'overweight' in conditions:
-        health_plan_by_severity['low'].add("เริ่มควบคุมอาหารและเพิ่มการเคลื่อนไหวร่างกาย")
-    if 'kidney_disease' in conditions and gfr < 90:
-         health_plan_by_severity['low'].add("ดื่มน้ำให้เพียงพอ หลีกเลี่ยงยาที่มีผลต่อไต")
-    if 'uric_acid' in conditions:
-        health_plan_by_severity['low'].add("ลดการทานเครื่องในสัตว์, สัตว์ปีก, และยอดผัก")
-    if 'no_hep_immune' in conditions:
-        health_plan_by_severity['low'].add("ปรึกษาแพทย์เพื่อรับวัคซีนไวรัสตับอักเสบบี")
-
-    # General Plans (เพิ่มเข้าไปตามความเหมาะสม)
-    if any(c in conditions for c in ['obesity', 'overweight', 'hypertension', 'diabetes', 'prediabetes', 'dyslipidemia']):
-        health_plan_by_severity['medium'].add("ออกกำลังกายแบบแอโรบิก (เดินเร็ว, วิ่ง, ว่ายน้ำ) อย่างน้อย 150 นาที/สัปดาห์")
-    else:
-        health_plan_by_severity['low'].add("เคลื่อนไหวร่างกายอย่างสม่ำเสมอ 3-4 วัน/สัปดาห์")
-
-    health_plan_by_severity['low'].add("นอนหลับพักผ่อนให้เพียงพอ 7-8 ชั่วโมง/คืน")
-    health_plan_by_severity['low'].add("ตรวจสุขภาพประจำปีเพื่อติดตามผล")
-
-    return issues, health_plan_by_severity
-    # --- END OF CHANGE ---
-
-
-def generate_comprehensive_recommendations(person_data):
-    """
-    สร้างสรุปและคำแนะนำการปฏิบัติตัวแบบองค์รวมจากข้อมูลสุขภาพทั้งหมด
-    (ในรูปแบบ Text HTML เดิม)
-    """
-    # --- START OF CHANGE: Use health_plan_by_severity ---
-    issues, health_plan_by_severity = get_recommendation_data(person_data)
-
-    if not issues and not any(health_plan_by_severity.values()): # Check if any severity level has plans
-        return ""
-
-    if not any(issues.values()) and not any(health_plan_by_severity.values()): # Double check if completely empty
-    # --- END OF CHANGE ---
+    # --- Build the final HTML output ---
+    
+    if not any(issues.values()):
         return """
         <div style='background-color: #e8f5e9; color: #1b5e20; padding: 1rem; border-radius: 8px; text-align: center;'>
             <h4 style='margin:0;'>ผลการตรวจสุขภาพโดยรวมอยู่ในเกณฑ์ดี</h4>
@@ -418,34 +326,53 @@ def generate_comprehensive_recommendations(person_data):
 
     # --- Build Right Column (Health Plan) ---
     right_column_parts = []
-    # --- START OF CHANGE: Aggregate health plans from severity levels ---
-    all_health_plans = health_plan_by_severity['high'].union(health_plan_by_severity['medium']).union(health_plan_by_severity['low'])
-    # Heuristically categorize based on keywords for the old display format
-    nutrition_specific = {p for p in all_health_plans if any(k in p for k in ["อาหาร", "ทาน", "งด", "ลด", "ดื่ม", "โภชนาการ", "โปรตีน", "ไขมัน", "น้ำตาล", "เค็ม", "แอลกอฮอล์", "เหล็ก"])}
-    exercise_specific = {p for p in all_health_plans if any(k in p for k in ["ออกกำลังกาย", "เคลื่อนไหว"])}
-    monitoring_specific = all_health_plans - nutrition_specific - exercise_specific # Assume the rest are monitoring/general
-    # --- END OF CHANGE ---
+    health_plan = {'nutrition': set(), 'exercise': set(), 'monitoring': set()}
+    
+    if 'diabetes' in conditions or 'prediabetes' in conditions:
+        health_plan['nutrition'].add("ควบคุมอาหารประเภทแป้งและน้ำตาลอย่างจริงจัง")
+        health_plan['monitoring'].add("ตรวจติดตามระดับน้ำตาลในเลือดสม่ำเสมอ")
+    if 'hypertension' in conditions or 'prehypertension' in conditions:
+        health_plan['nutrition'].add("ลดอาหารเค็มและโซเดียมสูง")
+        health_plan['monitoring'].add("วัดความดันโลหิตที่บ้านอย่างสม่ำเสมอ")
+    if 'dyslipidemia' in conditions:
+        health_plan['nutrition'].add("ลดอาหารมัน ของทอด และไขมันอิ่มตัว")
+    if 'obesity' in conditions or 'overweight' in conditions:
+        health_plan['nutrition'].add("ควบคุมปริมาณอาหารและเลือกทานอาหารแคลอรี่ต่ำ")
+    if 'kidney_disease' in conditions:
+        health_plan['nutrition'].add("ลดอาหารเค็มจัดและโปรตีนสูงบางชนิด (ปรึกษาแพทย์)")
+        health_plan['monitoring'].add("ดื่มน้ำให้เพียงพอและหลีกเลี่ยงยาที่มีผลต่อไต")
+    if 'liver' in conditions:
+        health_plan['nutrition'].add("งดเครื่องดื่มแอลกอฮอล์และลดอาหารไขมันสูง")
+    if 'uric_acid' in conditions:
+        health_plan['nutrition'].add("ลดการทานเครื่องในสัตว์, สัตว์ปีก, และยอดผัก")
+    if 'anemia' in conditions:
+        health_plan['nutrition'].add("ทานอาหารที่มีธาตุเหล็กและวิตามินซีสูง เช่น ตับ, เนื้อแดง, ผักใบเขียว")
 
+    if any(c in conditions for c in ['obesity', 'overweight', 'hypertension', 'diabetes', 'prediabetes', 'dyslipidemia']):
+        health_plan['exercise'].add("ออกกำลังกายแบบแอโรบิก (เดินเร็ว, วิ่ง, ว่ายน้ำ) อย่างน้อย 150 นาที/สัปดาห์")
+    else:
+        health_plan['exercise'].add("เคลื่อนไหวร่างกายอย่างสม่ำเสมอ 3-4 วัน/สัปดาห์")
+
+    health_plan['monitoring'].add("นอนหลับพักผ่อนให้เพียงพอ 7-8 ชั่วโมง/คืน")
+    health_plan['monitoring'].add("ตรวจสุขภาพประจำปีเพื่อติดตามผล")
 
     right_column_parts.append("<div style='border-left: 5px solid #4caf50; padding-left: 15px;'>")
     right_column_parts.append("<h5 style='color: #4caf50; margin-top:0;'>แผนการดูแลสุขภาพเบื้องต้น (Your Health Plan)</h5>")
-
-    # --- START OF CHANGE: Check aggregated sets ---
-    if nutrition_specific:
+    
+    if health_plan['nutrition']:
         right_column_parts.append("<b>ด้านโภชนาการ:</b><ul>")
-        for item in sorted(list(nutrition_specific)): right_column_parts.append(f"<li>{item}</li>")
+        for item in sorted(list(health_plan['nutrition'])): right_column_parts.append(f"<li>{item}</li>")
         right_column_parts.append("</ul>")
-
-    if exercise_specific:
+        
+    if health_plan['exercise']:
         right_column_parts.append("<b>ด้านการออกกำลังกาย:</b><ul>")
-        for item in sorted(list(exercise_specific)): right_column_parts.append(f"<li>{item}</li>")
+        for item in sorted(list(health_plan['exercise'])): right_column_parts.append(f"<li>{item}</li>")
         right_column_parts.append("</ul>")
 
-    if monitoring_specific:
+    if health_plan['monitoring']:
         right_column_parts.append("<b>การติดตามและดูแลทั่วไป:</b><ul>")
-        for item in sorted(list(monitoring_specific)): right_column_parts.append(f"<li>{item}</li>")
+        for item in sorted(list(health_plan['monitoring'])): right_column_parts.append(f"<li>{item}</li>")
         right_column_parts.append("</ul>")
-    # --- END OF CHANGE ---
 
     right_column_parts.append("</div>")
 
@@ -463,11 +390,10 @@ def generate_comprehensive_recommendations(person_data):
         </div>
     </div>
     """
-
+    
     return final_html
-
+    
 def interpret_vision(vision_raw, color_blindness_raw):
-# ... (โค้ดส่วนที่เหลือของ interpret_vision, interpret_hearing, interpret_audiogram, interpret_lung_capacity, generate_holistic_advice ไม่มีการเปลี่ยนแปลง) ...
     """
     แปลผลตรวจสมรรถภาพการมองเห็นและตาบอดสี
     Args:
@@ -596,7 +522,7 @@ def interpret_audiogram(current_year_data, all_person_history_df=None):
     if has_explicit_baseline:
         results['baseline_source'] = 'explicit'
         results['baseline_year'] = current_year_data.get('Year') # Assume explicit baseline is for the current year context
-
+    
     # 2.2 หากไม่มี Baseline ที่ระบุ, ให้ค้นหาจากปีแรกที่มีการตรวจ
     elif all_person_history_df is not None and not all_person_history_df.empty:
         # กรองหาปีที่มีข้อมูลการได้ยิน (อย่างน้อยหนึ่งค่า)
@@ -605,16 +531,16 @@ def interpret_audiogram(current_year_data, all_person_history_df=None):
             subset=hearing_cols,
             how='all'
         ).copy()
-
+        
         if not hearing_test_years_df.empty:
             hearing_test_years_df = hearing_test_years_df.sort_values(by='Year', ascending=True)
             first_test_row = hearing_test_years_df.iloc[0]
-
+            
             # ตรวจสอบว่าปีที่เลือกไม่ใช่ปีเดียวกับปีแรก (ถ้าใช่ ก็ไม่มี baseline ให้เทียบ)
             if int(first_test_row['Year']) != int(current_year_data['Year']):
                 results['baseline_source'] = 'first_year'
                 results['baseline_year'] = int(first_test_row['Year'])
-
+                
                 for freq, (r_col, l_col) in freq_columns.items():
                     results['baseline_values'][freq] = {
                         'right': to_int(first_test_row.get(r_col)),
@@ -626,7 +552,7 @@ def interpret_audiogram(current_year_data, all_person_history_df=None):
     results['averages']['left_500_2000'] = to_int(current_year_data.get('AVLต่ำ'))
     results['averages']['right_3000_6000'] = to_int(current_year_data.get('AVRสูง'))
     results['averages']['left_3000_6000'] = to_int(current_year_data.get('AVLสูง'))
-
+    
     summary_r = current_year_data.get('ระดับการได้ยินหูขวา', '')
     summary_l = current_year_data.get('ระดับการได้ยินหูซ้าย', '')
     results['summary']['right'] = "N/A" if is_empty(summary_r) else summary_r
@@ -640,28 +566,28 @@ def interpret_audiogram(current_year_data, all_person_history_df=None):
     if results['baseline_source'] != 'none':
         sts_freqs = ['2000 Hz', '3000 Hz', '4000 Hz']
         shifts_r_for_avg, shifts_l_for_avg = [], []
-
+        
         for freq, values in results['raw_values'].items():
             base_vals = results['baseline_values'][freq]
             shift_r, shift_l = None, None
-
+            
             if values['right'] is not None and base_vals['right'] is not None:
                 shift_r = values['right'] - base_vals['right']
             if values['left'] is not None and base_vals['left'] is not None:
                 shift_l = values['left'] - base_vals['left']
-
+            
             results['shift_values'][freq] = {'right': shift_r, 'left': shift_l}
 
             if freq in sts_freqs:
                 if shift_r is not None: shifts_r_for_avg.append(shift_r)
                 if shift_l is not None: shifts_l_for_avg.append(shift_l)
-
+        
         avg_shift_r = np.mean(shifts_r_for_avg) if shifts_r_for_avg else 0
         avg_shift_l = np.mean(shifts_l_for_avg) if shifts_l_for_avg else 0
 
         if avg_shift_r >= 10 or avg_shift_l >= 10:
             results['sts_detected'] = True
-
+    
     # 5. ดึงข้อมูลสรุปอื่นๆ
     other_keys = [
         'ผลการได้ยินเปรียบเทียบALLFq', 'ผลการได้ยินเปรียบเทียบAVRFqต่ำ',
@@ -749,15 +675,14 @@ def interpret_lung_capacity(person_data):
         advice = "เพิ่มสมรรถภาพปอดด้วยการออกกำลังกาย หลีกเลี่ยงการสัมผัสสารเคมี ฝุ่น และควัน"
     else:
         advice = "ให้พบแพทย์เพื่อตรวจวินิจฉัย รักษาเพิ่มเติม"
-
+        
     return summary, advice, raw_values
 
 def generate_holistic_advice(person_data):
     """
     สร้างสรุปความเห็นของแพทย์แบบองค์รวมโดยอัตโนมัติจากข้อมูลสุขภาพทั้งหมด
-    (ฟังก์ชันนี้เก่ากว่า generate_comprehensive_recommendations แต่ถูกเรียกใช้โดย print_report.py)
     """
-    def get_float_local(val): # Renamed to avoid conflict
+    def get_float(val):
         if is_empty(val): return None
         try: return float(str(val).replace(",", "").strip())
         except: return None
@@ -765,10 +690,10 @@ def generate_holistic_advice(person_data):
     issues = {'high': [], 'medium': [], 'low': []}
 
     # 1. BMI and Blood Pressure
-    weight = get_float_local(person_data.get("น้ำหนัก"))
-    height = get_float_local(person_data.get("ส่วนสูง"))
-    sbp = get_float_local(person_data.get("SBP"))
-    dbp = get_float_local(person_data.get("DBP"))
+    weight = get_float(person_data.get("น้ำหนัก"))
+    height = get_float(person_data.get("ส่วนสูง"))
+    sbp = get_float(person_data.get("SBP"))
+    dbp = get_float(person_data.get("DBP"))
 
     if weight and height and height > 0:
         bmi = weight / ((height / 100) ** 2)
@@ -786,7 +711,7 @@ def generate_holistic_advice(person_data):
             issues['low'].append(f"ความดันโลหิตเริ่มสูง ({int(sbp)}/{int(dbp)} mmHg)")
 
     # 2. Blood Sugar (FBS)
-    fbs = get_float_local(person_data.get("FBS"))
+    fbs = get_float(person_data.get("FBS"))
     if fbs:
         if fbs >= 126:
             issues['high'].append(f"ระดับน้ำตาลในเลือดสูง เข้าเกณฑ์เบาหวาน ({int(fbs)} mg/dL)")
@@ -794,10 +719,10 @@ def generate_holistic_advice(person_data):
             issues['medium'].append(f"ภาวะเสี่ยงเบาหวาน ({int(fbs)} mg/dL)")
 
     # 3. Lipids (ไขมัน)
-    chol = get_float_local(person_data.get("CHOL"))
-    tgl = get_float_local(person_data.get("TGL"))
-    ldl = get_float_local(person_data.get("LDL"))
-    hdl = get_float_local(person_data.get("HDL"))
+    chol = get_float(person_data.get("CHOL"))
+    tgl = get_float(person_data.get("TGL"))
+    ldl = get_float(person_data.get("LDL"))
+    hdl = get_float(person_data.get("HDL"))
     lipid_issues = []
     if chol and chol >= 240: lipid_issues.append("Cholesterol สูง")
     if tgl and tgl >= 200: lipid_issues.append("Triglyceride สูง")
@@ -807,7 +732,7 @@ def generate_holistic_advice(person_data):
         issues['medium'].append(f"ภาวะไขมันในเลือดผิดปกติ ({', '.join(lipid_issues)})")
 
     # 4. Kidney Function (GFR)
-    gfr = get_float_local(person_data.get("GFR"))
+    gfr = get_float(person_data.get("GFR"))
     if gfr:
         if gfr < 30:
             issues['high'].append("การทำงานของไตลดลงอย่างมาก")
@@ -815,20 +740,20 @@ def generate_holistic_advice(person_data):
             issues['medium'].append("การทำงานของไตเริ่มเสื่อม")
 
     # 5. Liver Function (SGOT/SGPT)
-    sgot = get_float_local(person_data.get("SGOT"))
-    sgpt = get_float_local(person_data.get("SGPT"))
+    sgot = get_float(person_data.get("SGOT"))
+    sgpt = get_float(person_data.get("SGPT"))
     if (sgot and sgot > 37) or (sgpt and sgpt > 41):
         issues['medium'].append("ค่าเอนไซม์ตับสูงกว่าปกติ")
 
     # 6. Uric Acid
-    uric = get_float_local(person_data.get("Uric Acid"))
+    uric = get_float(person_data.get("Uric Acid"))
     if uric and uric > 7.2:
         issues['low'].append("ระดับกรดยูริกสูง")
 
     # 7. CBC (Anemia)
     sex = person_data.get("เพศ", "ชาย")
-    hb = get_float_local(person_data.get("Hb(%)"))
-    hct = get_float_local(person_data.get("HCT"))
+    hb = get_float(person_data.get("Hb(%)"))
+    hct = get_float(person_data.get("HCT"))
     hb_limit = 12 if sex == "หญิง" else 13
     hct_limit = 36 if sex == "หญิง" else 39
     if (hb and hb < hb_limit) or (hct and hct < hct_limit):
@@ -840,7 +765,7 @@ def generate_holistic_advice(person_data):
         return "ผลการตรวจสุขภาพโดยรวมอยู่ในเกณฑ์ปกติ ควรดูแลรักษาสุขภาพที่ดีเช่นนี้ต่อไป และมาตรวจสุขภาพประจำปีอย่างสม่ำเสมอ"
 
     summary_parts.append("ผลตรวจสุขภาพโดยรวมพบประเด็นที่ควรให้ความสำคัญดังนี้:")
-
+    
     if issues['high']:
         summary_parts.append("<b><u>ประเด็นสำคัญเร่งด่วน:</u></b> " + " ".join([f"<li>{i}</li>" for i in issues['high']]))
     if issues['medium']:
@@ -857,4 +782,3 @@ def generate_holistic_advice(person_data):
         summary_parts.append("<br><b>คำแนะนำ:</b> ควรใส่ใจดูแลสุขภาพและปรับพฤติกรรมเล็กน้อยเพื่อป้องกันไม่ให้ค่าต่างๆ ผิดปกติมากขึ้นในอนาคต")
 
     return "<ul>" + "".join(summary_parts) + "</ul>"
-
