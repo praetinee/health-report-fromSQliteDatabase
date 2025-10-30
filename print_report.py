@@ -212,9 +212,12 @@ def generate_fixed_recommendations(person_data):
 # --- END OF CHANGE ---
 
 # --- START OF CHANGE: Add new function for CBC logic ---
+# --- START OF REFACTOR: Return dictionary with statuses ---
 def generate_cbc_recommendations(person_data, sex):
     """
     สร้างสรุปผลและคำแนะนำสำหรับ CBC ตามตรรกะ Google Sheet
+    Returns:
+        dict: {'summary': html_string, 'status_ce': text, 'status_cf': text, 'status_cg': text}
     """
     # รับค่า
     hb = get_float("Hb(%)", person_data)
@@ -253,7 +256,7 @@ def generate_cbc_recommendations(person_data, sex):
         
     # ตรวจสอบว่ามีข้อมูลหรือไม่ (ตามสูตร CD และ CH)
     if not status_ce and not status_cf and not status_cg:
-        return "ไม่ได้ตรวจ"
+        return {'summary': "ไม่ได้ตรวจ", 'status_ce': "", 'status_cf': "", 'status_cg': ""}
 
     # 4. ตรรกะ CD: สรุปผลรวม
     status_cd = "ความสมบูรณ์ของเลือดปกติ"
@@ -284,17 +287,24 @@ def generate_cbc_recommendations(person_data, sex):
         advice_text = RECOMMENDATION_TEXTS_CBC["C2"]
     # (อาจมีเงื่อนไขซ้อนอื่นๆ ที่สูตร CH ไม่ได้ครอบคลุม แต่ logic หลักอยู่ครบแล้ว)
 
-    # 6. ประกอบร่าง
+    # 6. ประกอบร่าง HTML
+    summary_html = ""
     if not advice_text:
-        return f"<b>{status_cd}</b>" # แสดงแค่สถานะ ถ้าปกติ
+        summary_html = f"<b>{status_cd}</b>" # แสดงแค่สถานะ ถ้าปกติ
     else:
-        return f"<b>{status_cd}</b>: {html.escape(advice_text)}"
+        summary_html = f"<b>{status_cd}</b>: {html.escape(advice_text)}"
+        
+    return {'summary': summary_html, 'status_ce': status_ce, 'status_cf': status_cf, 'status_cg': status_cg}
+# --- END OF REFACTOR ---
 # --- END OF CHANGE ---
 
 # --- START OF CHANGE: Add new function for Urine logic ---
+# --- START OF REFACTOR: Return dictionary with statuses ---
 def generate_urine_recommendations(person_data, sex):
     """
     สร้างสรุปผลและคำแนะนำสำหรับ Urinalysis ตามตรรกะ Google Sheet
+    Returns:
+        dict: {'summary': html_string, 'status_ct': text, 'status_cu': text, 'status_cv': text, 'status_cw': text}
     """
     # รับค่า
     alb_raw = str(person_data.get("Alb", "")).strip().lower()
@@ -332,7 +342,7 @@ def generate_urine_recommendations(person_data, sex):
 
     # ตรวจสอบว่ามีข้อมูลหรือไม่ (ตามสูตร CS และ CX)
     if not status_ct and not status_cu and not status_cv and not status_cw:
-        return "ไม่ได้ตรวจ"
+        return {'summary': "ไม่ได้ตรวจ", 'status_ct': "", 'status_cu': "", 'status_cv': "", 'status_cw': ""}
 
     # 5. ตรรกะ CS: สรุปผลรวม
     is_abnormal = False
@@ -363,12 +373,139 @@ def generate_urine_recommendations(person_data, sex):
     elif status_ct_ok and status_cu_ok and status_cv_ok and status_cw == "พบเม็ดเลือดขาวในปัสสาวะเล็กน้อย":
         advice_text = RECOMMENDATION_TEXTS_URINE["E2"]
     
-    # 7. ประกอบร่าง
+    # 7. ประกอบร่าง HTML
+    summary_html = ""
     if not advice_text:
-        return f"<b>{status_cs}</b>" # แสดงแค่สถานะ ถ้าปกติ
+        summary_html = f"<b>{status_cs}</b>" # แสดงแค่สถานะ ถ้าปกติ
     else:
-        return f"<b>{status_cs}</b>: {html.escape(advice_text)}"
+        summary_html = f"<b>{status_cs}</b>: {html.escape(advice_text)}"
+        
+    return {'summary': summary_html, 'status_ct': status_ct, 'status_cu': status_cu, 'status_cv': status_cv, 'status_cw': status_cw}
+# --- END OF REFACTOR ---
 # --- END OF CHANGE ---
+
+# --- START OF CHANGE: Add new function for Doctor Opinion logic ---
+def generate_doctor_opinion(person_data, sex, cbc_statuses, urine_statuses):
+    """
+    สร้างสรุปความคิดเห็นของแพทย์ตามตรรกะ Google Sheet (DP-EF)
+    """
+    opinion_parts = []
+
+    # DP: สรุปความดัน
+    # --- START OF CHANGE: Use SBP/DBP directly ---
+    sbp = get_float("SBP", person_data)
+    dbp = get_float("DBP", person_data)
+    if sbp is not None and dbp is not None:
+        if 140 <= sbp < 160 or 90 <= dbp < 100:
+             opinion_parts.append("ความดันโลหิตสูงเล็กน้อย")
+        elif sbp >= 160 or dbp >= 100:
+             opinion_parts.append("ความดันโลหิตสูง")
+    # --- END OF CHANGE ---
+
+    # DQ: สรุปน้ำตาล
+    fbs = get_float("FBS", person_data)
+    if fbs is not None:
+        if 100 <= fbs < 106: opinion_parts.append("น้ำตาลในเลือดเริ่มสูงเล็กน้อย")
+        elif 106 <= fbs < 126: opinion_parts.append("น้ำตาลในเลือดสูงเล็กน้อย")
+        elif fbs >= 126: opinion_parts.append("น้ำตาลในเลือดสูง")
+
+    # DR: สรุปไขมัน
+    chol = get_float("CHOL", person_data)
+    tgl = get_float("TGL", person_data)
+    ldl = get_float("LDL", person_data)
+    lipid_overall_status = str(person_data.get("ผลไขมันในเลือด", "")).strip() # DO2
+    if lipid_overall_status != "ปกติ":
+        # ตรวจสอบค่าดิบ (DG2=CHOL, DH2=TGL, DJ2=LDL)
+        chol_raw = get_float("CHOL", person_data)
+        tgl_raw = get_float("TGL", person_data)
+        ldl_raw = get_float("LDL", person_data)
+        # เช็คว่ามีค่าใดค่าหนึ่งที่ไม่ใช่ค่าว่าง
+        has_lipid_values = not (is_empty(chol_raw) and is_empty(tgl_raw)) # ใช้ CHOL/TGL เป็นหลักตามสูตร
+        
+        if has_lipid_values:
+            # เงื่อนไข 'ไขมันในเลือดสูง'
+            is_high = (chol_raw is not None and chol_raw > 250) or \
+                      (tgl_raw is not None and tgl_raw > 150) or \
+                      (ldl_raw is not None and ldl_raw > 180) # เพิ่มเช็ค ldl_raw is not None
+            # เงื่อนไข 'ปกติ' (จากค่าดิบ)
+            is_normal_raw = (chol_raw is not None and chol_raw <= 200) and \
+                            (tgl_raw is not None and tgl_raw <= 150)
+            
+            if is_high:
+                opinion_parts.append("ไขมันในเลือดสูง")
+            elif is_normal_raw:
+                pass # ถ้าค่าดิบปกติ แต่ DO2 ไม่ปกติ อาจไม่ต้องแสดงอะไร หรือแสดงตาม DO2? - ยึดตาม GSheet คือไม่แสดงอะไร
+            else: # กรณีอื่นๆ ที่ไม่เข้าข่าย สูง หรือ ปกติ (จากค่าดิบ)
+                opinion_parts.append("ไขมันในเลือดสูงเล็กน้อย")
+        # กรณีไม่มีค่าดิบ แต่ DO2 ไม่ปกติ (อาจจะดึงค่ามาจากระบบอื่น?) - ใช้ค่า DO2 โดยตรง
+        elif lipid_overall_status == "ไขมันในเลือดสูง":
+             opinion_parts.append("ไขมันในเลือดสูง")
+        elif lipid_overall_status == "ไขมันในเลือดสูงเล็กน้อย":
+             opinion_parts.append("ไขมันในเลือดสูงเล็กน้อย")
+
+
+    # DS: สรุปตับ
+    alp = get_float("ALP", person_data) # CY2 -> ALP
+    sgot = get_float("SGOT", person_data) # CZ2 -> SGOT
+    sgpt = get_float("SGPT", person_data) # DA2 -> SGPT
+    if (alp is not None and alp > 120) or \
+       (sgot is not None and sgot > 36) or \
+       (sgpt is not None and sgpt > 40): # แก้ไขเกณฑ์ SGOT/SGPT ตาม GSheet
+        opinion_parts.append("การทำงานของตับสูงกว่าเกณฑ์ปกติเล็กน้อย")
+
+    # DT: สรุปยูริค
+    uric = get_float("Uric Acid", person_data) # DB2 -> Uric Acid
+    if uric is not None and uric > 7.2:
+        opinion_parts.append("กรดยูริคสูงกว่าเกณฑ์ปกติเล็กน้อย")
+
+    # DU: สรุปไต
+    gfr = get_float("GFR", person_data) # DE2 -> GFR
+    if gfr is not None and gfr < 60:
+        opinion_parts.append("การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย")
+
+    # DV: สรุป HB HCT (ใช้ status จาก cbc_statuses)
+    if cbc_statuses.get('status_ce') == "พบภาวะโลหิตจาง":
+        opinion_parts.append("พบภาวะโลหิตจาง")
+
+    # DW: สรุป WBC (ใช้ status จาก cbc_statuses)
+    if cbc_statuses.get('status_cf') in ["เม็ดเลือดขาวสูงกว่าเกณฑ์ปกติ", "เม็ดเลือดขาวต่ำกว่าเกณฑ์ปกติ"]:
+        opinion_parts.append("เม็ดเลือดขาวผิดปกติ")
+
+    # DX: สรุป Platelet (ใช้ status จาก cbc_statuses)
+    if cbc_statuses.get('status_cg') in ["เกร็ดเลือดสูงกว่าเกณฑ์ปกติ", "เกร็ดเลือดต่ำกว่าเกณฑ์ปกติ"]:
+        opinion_parts.append("เกร็ดเลือดผิดปกติ")
+
+    # DY: สรุป Albumin UA (ใช้ status จาก urine_statuses)
+    if urine_statuses.get('status_ct') == "พบโปรตีนในปัสสาวะ":
+        opinion_parts.append("พบโปรตีนในปัสสาวะ")
+
+    # DZ: สรุป Sugar UA (ใช้ status จาก urine_statuses)
+    if urine_statuses.get('status_cu') == "พบน้ำตาลในปัสสาวะ":
+        opinion_parts.append("พบน้ำตาลในปัสสาวะ")
+
+    # EA: สรุป RBC UA (ใช้ status จาก urine_statuses)
+    if urine_statuses.get('status_cv') == "พบเม็ดเลือดแดงในปัสสาวะ":
+        opinion_parts.append("พบเม็ดเลือดแดงในปัสสาวะ")
+
+    # EB: สรุป WBC UA (ใช้ status จาก urine_statuses)
+    if urine_statuses.get('status_cw') == "พบเม็ดเลือดขาวในปัสสาวะ":
+        opinion_parts.append("พบเม็ดเลือดขาวในปัสสาวะ")
+
+    # EC: สรุปปัญหาอื่น (ค่าว่าง) - ไม่ต้องทำอะไร
+
+    # EF: DOCTER suggest (ดึงค่าโดยตรง)
+    doctor_suggest = str(person_data.get("DOCTER suggest", "")).strip() # ใช้ชื่อคอลัมน์ที่คุณยืนยัน
+    if not is_empty(doctor_suggest):
+        opinion_parts.append(doctor_suggest)
+
+    # รวมผลลัพธ์
+    final_opinion = " ".join(filter(None, opinion_parts)) # Join เฉพาะส่วนที่ไม่ใช่ค่าว่าง
+
+    # เพิ่มเว้นวรรค 3 ช่องด้านหน้าตามสูตร GSheet
+    return f"   {final_opinion}" if final_opinion else "-" # ถ้าไม่มีอะไรเลย ให้แสดง "-"
+
+# --- END OF CHANGE ---
+
 
 # --- HTML Rendering Functions ---
 
@@ -395,7 +532,9 @@ def render_lab_table_html(title, subtitle, headers, rows, table_class="print-lab
     html_content += "</tbody>" # Close tbody
     
     if footer_html:
+        # --- START OF CHANGE: Ensure footer_html is treated as HTML ---
         html_content += f"<tfoot><tr class='recommendation-row'><td colspan='{len(headers)}' style='text-align: left;'><b>สรุปผล/คำแนะนำ:</b><br>{footer_html}</td></tr></tfoot>"
+        # --- END OF CHANGE ---
         
     html_content += "</table>" # Close table
     return html_content
@@ -448,7 +587,9 @@ def render_header_and_vitals(person_data):
     <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 0.5rem 0;">
     """
 
-def render_lab_section(person, sex):
+# --- START OF CHANGE: Pass cbc_statuses to render ---
+def render_lab_section(person, sex, cbc_statuses):
+# --- END OF CHANGE ---
     hb_low, hct_low = (12, 36) if sex == "หญิง" else (13, 39)
     cbc_config = [("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None), ("ฮีมาโตคริต (Hct)", "HCT", "ชาย > 39%, หญิง > 36%", hct_low, None), ("เม็ดเลือดขาว (wbc)", "WBC (cumm)", "4,000 - 10,000 /cu.mm", 4000, 10000), ("นิวโทรฟิล (Neutrophil)", "Ne (%)", "43 - 70%", 43, 70), ("ลิมโฟไซต์ (Lymphocyte)", "Ly (%)", "20 - 44%", 20, 44), ("โมโนไซต์ (Monocyte)", "M", "3 - 9%", 3, 9), ("อีโอซิโนฟิล (Eosinophil)", "Eo", "0 - 9%", 0, 9), ("เบโซฟิล (Basophil)", "BA", "0 - 3%", 0, 3), ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150,000 - 500,000 /cu.mm", 150000, 500000)]
     cbc_rows = [[(label, is_abn), (result, is_abn), (norm, is_abn)] for label, col, norm, low, high in cbc_config for val in [get_float(col, person)] for result, is_abn in [flag(val, low, high)]]
@@ -457,7 +598,9 @@ def render_lab_section(person, sex):
 
     # --- START OF CHANGE: Add footers ---
     # 1. CBC Footer (Logic)
-    cbc_footer = generate_cbc_recommendations(person, sex)
+    # --- START OF CHANGE: Use summary from passed dictionary ---
+    cbc_footer = cbc_statuses.get('summary', '[Error: CBC Status Missing]')
+    # --- END OF CHANGE ---
     
     # 2. Blood Chemistry Footer (Logic)
     recommendations_list = generate_fixed_recommendations(person)
@@ -480,12 +623,16 @@ def render_lab_section(person, sex):
     </table>
     """
 
-def render_other_results_html(person, sex):
+# --- START OF CHANGE: Pass urine_statuses and doctor_opinion to render ---
+def render_other_results_html(person, sex, urine_statuses, doctor_opinion):
+# --- END OF CHANGE ---
     urine_data = [("สี (Colour)", "Color", "Yellow, Pale Yellow"), ("น้ำตาล (Sugar)", "sugar", "Negative"), ("โปรตีน (Albumin)", "Alb", "Negative, trace"), ("กรด-ด่าง (pH)", "pH", "5.0 - 8.0"), ("ความถ่วงจำเพาะ (Sp.gr)", "Spgr", "1.003 - 1.030"), ("เม็ดเลือดแดง (RBC)", "RBC1", "0 - 2 cell/HPF"), ("เม็ดเลือดขาว (WBC)", "WBC1", "0 - 5 cell/HPF"), ("เซลล์เยื่อบุผิว (Squam.epit.)", "SQ-epi", "0 - 10 cell/HPF"), ("อื่นๆ", "ORTER", "-")]
     urine_rows = [[(label, is_abn), (safe_value(val), is_abn), (norm, is_abn)] for label, key, norm in urine_data for val in [person.get(key, "-")] for is_abn in [is_urine_abnormal(label, val, norm)]]
     
     # --- START OF CHANGE: Add Urine footer ---
-    urine_footer = generate_urine_recommendations(person, sex)
+    # --- START OF CHANGE: Use summary from passed dictionary ---
+    urine_footer = urine_statuses.get('summary', '[Error: Urine Status Missing]')
+    # --- END OF CHANGE ---
     urine_html = render_lab_table_html("ผลการตรวจปัสสาวะ", "Urinalysis", ["การตรวจ", "ผลตรวจ", "ค่าปกติ"], urine_rows, "print-lab-table", footer_html=urine_footer)
     # --- END OF CHANGE ---
     
@@ -524,11 +671,11 @@ def render_other_results_html(person, sex):
     </table>
     """
     
-    # --- START OF CHANGE: Add Doctor's Opinion Placeholder ---
+    # --- START OF CHANGE: Use generated doctor_opinion ---
     doctor_opinion_html = f"""
     {render_section_header("สรุปความคิดเห็นของแพทย์")}
     <div class="doctor-opinion-box">
-        [รอการปรับปรุงสูตร สรุปความคิดเห็นแพทย์]
+        {html.escape(doctor_opinion)}
     </div>
     """
     # --- END OF CHANGE ---
@@ -547,9 +694,17 @@ def generate_printable_report(person_data, all_person_history_df=None):
     sex = str(person_data.get("เพศ", "")).strip()
     if sex not in ["ชาย", "หญิง"]: sex = "ไม่ระบุ"
     
+    # --- START OF CHANGE: Call generation functions once ---
+    cbc_results = generate_cbc_recommendations(person_data, sex)
+    urine_results = generate_urine_recommendations(person_data, sex)
+    doctor_opinion = generate_doctor_opinion(person_data, sex, cbc_results, urine_results)
+    # --- END OF CHANGE ---
+    
     header_vitals_html = render_header_and_vitals(person_data)
-    lab_section_html = render_lab_section(person_data, sex)
-    other_results_html = render_other_results_html(person_data, sex)
+    # --- START OF CHANGE: Pass statuses to render functions ---
+    lab_section_html = render_lab_section(person_data, sex, cbc_results)
+    other_results_html = render_other_results_html(person_data, sex, urine_results, doctor_opinion)
+    # --- END OF CHANGE ---
     
     # --- START OF CHANGE: Remove the green recommendation box ---
     # The logic is now inside render_lab_section and render_other_results_html
@@ -616,6 +771,7 @@ def generate_printable_report(person_data, all_person_history_df=None):
             line-height: 1.5;
             margin-top: 0.5rem;
             page-break-inside: avoid;
+            font-size: 9px; /* Adjust font size if needed */
         }
         
         .perf-section { margin-top: 0.5rem; page-break-inside: avoid; border: 1px solid #e0e0e0; border-radius: 8px; padding: 0.5rem; }
