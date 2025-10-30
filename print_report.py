@@ -13,6 +13,18 @@ from print_performance_report import generate_performance_report_html_for_main_r
 # The header is compact, while the body retains the original layout.
 # ==============================================================================
 
+# --- START OF CHANGE: Add CBC Recommendation Texts ---
+# เก็บข้อความคำแนะนำ CBC จาก Google Sheet
+RECOMMENDATION_TEXTS_CBC = {
+    "C2": "ให้รับประทานอาหารที่มีประโยชน์ เช่น นม ผักใบเขียว ถั่วเมล็ดแห้ง เนื้อสัตว์ ไข่ เป็นต้น พักผ่อนให้เพียงพอ ถ้ามีหน้ามืดวิงเวียน อ่อนเพลียหรือมีไข้ให้พบแพทย์",
+    "C4": "ให้ดูแลสุขภาพให้แข็งแรง ออกกำลังกาย ทานอาหารที่มีประโยชน์ ระมัดระวังป้องกันการเกิดแผลเนื่องจากเลือดอาจออกได้ง่ายและหยุดยาก",
+    "C6": "ให้ดูแลสุขภาพร่างกายให้แข็งแรง หลีกเลี่ยงการอยู่ในที่ชุมชนที่มีโอกาสสัมผัสเชื้อโรคได้ง่าย และให้ทำการรักษาอย่างต่อเนื่องสม่เสมอ",
+    "C8": "ให้นำผลตรวจพบแพทย์หาสาเหตุภาวะโลหิตจาง หรือกรณีรู้สาเหตุให้รับการรักษาเดิม",
+    "C9": "ให้นำผลตรวจพบแพทย์หาสาเหตุภาวะโลหิตจาง หรือกรณีรู้สาเหตุให้รับการรักษาเดิมและดูแลสุขภาพให้แข็งแรงหลีกเลี่ยงการอยู่ในที่ชุมชนที่มีโอกาสสัมผัสเชื้อโรคได้ง่าย และทำการรักษาอย่างต่อเนื่อง",
+    "C10": "ให้นำผลตรวจพบแพทย์หาสาเหตุเกล็ดเลือดสูงกว่าปกติ หรือกรณีรู้สาเหตุให้รับการรักษาเดิม",
+    "C13": "ให้รับประทานอาหารที่มีประโยชน์ เช่น นม ผักใบเขียว ถั่วเมล็ดแห้ง เนื้อสัตว์ ไข่ เป็นต้น พักผ่อนให้เพียงพอ หลีกเลี่ยงการอยู่ในที่ชุมชนที่มีโอกาสสัมผัสเชื้อโรคได้ง่าย ดูแลสุขภาพร่างกายให้แข็งแรง ถ้ามีหน้ามืดวิงเวียน อ่อนเพลียหรือมีไข้ให้พบแพทย์",
+}
+# --- END OF CHANGE ---
 
 # --- Helper Functions (adapted from app.py for printing) ---
 
@@ -188,6 +200,85 @@ def generate_fixed_recommendations(person_data):
     return recommendations # คืนค่าเป็น list ของ strings
 # --- END OF CHANGE ---
 
+# --- START OF CHANGE: Add new function for CBC logic ---
+def generate_cbc_recommendations(person_data, sex):
+    """
+    สร้างสรุปผลและคำแนะนำสำหรับ CBC ตามตรรกะ Google Sheet
+    """
+    # รับค่า
+    hb = get_float("Hb(%)", person_data)
+    wbc = get_float("WBC (cumm)", person_data)
+    plt = get_float("Plt (/mm)", person_data)
+    
+    # 1. ตรรกะ CE: ผล Hb/Hct
+    status_ce = ""
+    if hb is not None:
+        if sex == "ชาย":
+            if hb < 12: status_ce = "พบภาวะโลหิตจาง"
+            elif hb < 13: status_ce = "พบภาวะโลหิตจางเล็กน้อย"
+            else: status_ce = "ความเข้มข้นของเลือดปกติ"
+        elif sex == "หญิง":
+            if hb < 11: status_ce = "พบภาวะโลหิตจาง"
+            elif hb < 12: status_ce = "พบภาวะโลหิตจางเล็กน้อย"
+            else: status_ce = "ความเข้มข้นของเลือดปกติ"
+
+    # 2. ตรรกะ CF: ผล WBC
+    status_cf = ""
+    if wbc is not None:
+        if 4000 <= wbc <= 10000: status_cf = "เม็ดเลือดขาวปกติ"
+        elif 10000 < wbc < 13000: status_cf = "เม็ดเลือดขาวสูงกว่าเกณฑ์ปกติเล็กน้อย"
+        elif wbc >= 13000: status_cf = "เม็ดเลือดขาวสูงกว่าเกณฑ์ปกติ"
+        elif 3000 < wbc < 4000: status_cf = "เม็ดเลือดขาวต่ำกว่าเกณฑ์ปกติเล็กน้อย"
+        elif wbc <= 3000: status_cf = "เม็ดเลือดขาวต่ำกว่าเกณฑ์ปกติ"
+            
+    # 3. ตรรกะ CG: ผล Platelet
+    status_cg = ""
+    if plt is not None:
+        if 150000 <= plt <= 500000: status_cg = "เกร็ดเลือดปกติ"
+        elif 500000 < plt < 600000: status_cg = "เกร็ดเลือดสูงกว่าเกณฑ์ปกติเล็กน้อย"
+        elif plt >= 600000: status_cg = "เกร็ดเลือดสูงกว่าเกณฑ์ปกติ"
+        elif 100000 <= plt < 150000: status_cg = "เกร็ดเลือดต่ำกว่าเกณฑ์ปกติเล็กน้อย"
+        elif plt < 100000: status_cg = "เกร็ดเลือดต่ำกว่าเกณฑ์ปกติ"
+        
+    # ตรวจสอบว่ามีข้อมูลหรือไม่ (ตามสูตร CD และ CH)
+    if not status_ce and not status_cf and not status_cg:
+        return "ไม่ได้ตรวจ"
+
+    # 4. ตรรกะ CD: สรุปผลรวม
+    status_cd = "ความสมบูรณ์ของเลือดปกติ"
+    if ("พบภาวะโลหิตจาง" in status_ce) or \
+       ("เม็ดเลือดขาว" in status_cf and "ปกติ" not in status_cf) or \
+       ("เกร็ดเลือด" in status_cg and "ปกติ" not in status_cg):
+        status_cd = "พบความสมบูรณ์ของเลือดผิดปกติ"
+
+    # 5. ตรรกะ CH: เลือกคำแนะนำ
+    advice_text = ""
+    if status_ce == "ความเข้มข้นของเลือดปกติ" and status_cf == "เม็ดเลือดขาวปกติ" and status_cg == "เกร็ดเลือดปกติ":
+        advice_text = "" # ปกติทั้งหมด
+    elif status_ce == "พบภาวะโลหิตจาง" and status_cf == "เม็ดเลือดขาวปกติ" and status_cg == "เกร็ดเลือดปกติ":
+        advice_text = RECOMMENDATION_TEXTS_CBC["C8"]
+    elif status_ce == "พบภาวะโลหิตจาง" and ("เม็ดเลือดขาวต่ำ" in status_cf or "เม็ดเลือดขาวสูง" in status_cf):
+        advice_text = RECOMMENDATION_TEXTS_CBC["C9"]
+    elif status_ce == "พบภาวะโลหิตจางเล็กน้อย" and status_cf == "เม็ดเลือดขาวปกติ" and status_cg == "เกร็ดเลือดปกติ":
+        advice_text = RECOMMENDATION_TEXTS_CBC["C2"]
+    elif status_ce == "ความเข้มข้นของเลือดปกติ" and ("เม็ดเลือดขาวต่ำ" in status_cf or "เม็ดเลือดขาวสูง" in status_cf):
+        advice_text = RECOMMENDATION_TEXTS_CBC["C6"]
+    elif "เกร็ดเลือดต่ำ" in status_cg:
+        advice_text = RECOMMENDATION_TEXTS_CBC["C4"]
+    elif status_cg == "เกร็ดเลือดสูงกว่าเกณฑ์ปกติ":
+        advice_text = RECOMMENDATION_TEXTS_CBC["C10"]
+    elif status_ce == "พบภาวะโลหิตจางเล็กน้อย" and ("เม็ดเลือดขาวต่ำ" in status_cf or "เม็ดเลือดขาวสูง" in status_cf) and status_cg == "เกร็ดเลือดปกติ":
+        advice_text = RECOMMENDATION_TEXTS_CBC["C13"]
+    elif status_ce == "พบภาวะโลหิตจางเล็กน้อย" and status_cf == "เม็ดเลือดขาวปกติ" and status_cg == "เกร็ดเลือดสูงกว่าเกณฑ์ปกติเล็กน้อย":
+        advice_text = RECOMMENDATION_TEXTS_CBC["C2"]
+    # (อาจมีเงื่อนไขซ้อนอื่นๆ ที่สูตร CH ไม่ได้ครอบคลุม แต่ logic หลักอยู่ครบแล้ว)
+
+    # 6. ประกอบร่าง
+    if not advice_text:
+        return f"<b>{status_cd}</b>" # แสดงแค่สถานะ ถ้าปกติ
+    else:
+        return f"<b>{status_cd}</b>: {html.escape(advice_text)}"
+# --- END OF CHANGE ---
 
 # --- HTML Rendering Functions ---
 
@@ -275,8 +366,8 @@ def render_lab_section(person, sex):
     blood_rows = [[(label, is_abn), (result, is_abn), (norm, is_abn)] for label, col, norm, low, high, *opt in blood_config for higher in [opt[0] if opt else False] for val in [get_float(col, person)] for result, is_abn in [flag(val, low, high, higher)]]
 
     # --- START OF CHANGE: Add footers ---
-    # 1. CBC Footer (Placeholder)
-    cbc_footer = "[รอการปรับปรุงสูตร CBC]"
+    # 1. CBC Footer (Logic)
+    cbc_footer = generate_cbc_recommendations(person, sex)
     
     # 2. Blood Chemistry Footer (Logic)
     recommendations_list = generate_fixed_recommendations(person)
