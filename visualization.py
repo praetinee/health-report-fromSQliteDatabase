@@ -46,8 +46,7 @@ def get_interpretation_text(metric, value, sex):
     """สร้างข้อความแปลผลสำหรับใช้ใน hover tooltip ของกราฟ"""
     if pd.isna(value):
         return ""
-        
-    # --- START OF CHANGE: Added Hb and HCT interpretation ---
+
     if metric == 'Hb(%)':
         goal = 12.0 if sex == "หญิง" else 13.0
         if value < goal: return f" (ต่ำกว่าเกณฑ์ {goal})"
@@ -56,8 +55,7 @@ def get_interpretation_text(metric, value, sex):
         goal = 36.0 if sex == "หญิง" else 39.0
         if value < goal: return f" (ต่ำกว่าเกณฑ์ {goal})"
         return " (ปกติ)"
-    # --- END OF CHANGE ---
-        
+
     if metric == 'BMI':
         return f" ({get_bmi_desc(value)})"
     if metric == 'FBS':
@@ -214,15 +212,15 @@ def plot_historical_trends(history_df, person_data):
     elif layout_choice == "แบบเลือกทีละตัว (Selector)":
         metric_titles = list(trend_metrics.keys())
         selected_title = st.selectbox("เลือกกราฟที่ต้องการดู:", metric_titles)
-        
+
         (keys, unit, goal, direction_type) = trend_metrics[selected_title]
-        
+
         _plot_single_trend(selected_title, keys, unit, goal, direction_type, history_df, max_year)
 
     # --- Layout 3: Accordion (แบบแถบขยาย) ---
     elif layout_choice == "แบบแถบขยาย (Accordion)":
         st.caption("คลิกที่หัวข้อเพื่อขยายดูกราฟที่เกี่ยวข้อง")
-        
+
         with st.expander("❤️ ผลเลือด (CBC)", expanded=True):
             col1, col2 = st.columns(2)
             with col1:
@@ -524,10 +522,7 @@ def display_visualization_tab(person_data, history_df):
 
     # Section 2: Trends (Historical View)
     with st.container(border=True):
-        # --- START OF CHANGE: Refactored this section ---
-        # ย้าย st.subheader และ st.caption เข้าไปใน plot_historical_trends
         plot_historical_trends(history_df, person_data)
-        # --- END OF CHANGE ---
 
     # Section 3: Performance graphs (Current Year Details)
     with st.container(border=True):
