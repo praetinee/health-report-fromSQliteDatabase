@@ -26,6 +26,17 @@ RECOMMENDATION_TEXTS_CBC = {
 }
 # --- END OF CHANGE ---
 
+# --- START OF CHANGE: Add Urine Recommendation Texts ---
+RECOMMENDATION_TEXTS_URINE = {
+    "E11": "ให้หลีกเลี่ยงการทานอาหารที่มีน้ำตาลสูง",
+    "E4": "แนะนำให้ตรวจปัสสาวะซ้ำ อาจมีการปนเปื้อนของประจำเดือน กรณีตรวจแล้วพบผิดปกติให้พบแพทย์เพื่อตรวจรักษาเพิ่มเติม",
+    "E10": "แนะนำให้ตรวจปัสสาวะซ้ำ กรณีตรวจแล้วพบผิดปกติให้พบแพทย์เพื่อตรวจรักษาเพิ่มเติม",
+    "F3": "", # เป็นค่าว่างตามที่คุณแจ้ง
+    "E2": "อาจเกิดจากการปนเปื้อนในการเก็บปัสสาวะหรือมีการติดเชื้อในระบบทางเดินปัสสาวะให้ดื่มน้ำมากๆ ไม่ควรกลั้นปัสสาวะ ถ้ามีอาการ ผิดปกติ ปัสสาวะแสบขัด ขุ่น ปวดท้องน้อย ปวดบั้นเอว กลั้นปัสสาวะไม่อยู่ ไข้สูง หนาวสั่น ควรรีบไปพบแพทย์",
+}
+# --- END OF CHANGE ---
+
+
 # --- Helper Functions (adapted from app.py for printing) ---
 
 def is_empty(val):
@@ -280,6 +291,85 @@ def generate_cbc_recommendations(person_data, sex):
         return f"<b>{status_cd}</b>: {html.escape(advice_text)}"
 # --- END OF CHANGE ---
 
+# --- START OF CHANGE: Add new function for Urine logic ---
+def generate_urine_recommendations(person_data, sex):
+    """
+    สร้างสรุปผลและคำแนะนำสำหรับ Urinalysis ตามตรรกะ Google Sheet
+    """
+    # รับค่า
+    alb_raw = str(person_data.get("Alb", "")).strip().lower()
+    sugar_raw = str(person_data.get("sugar", "")).strip().lower()
+    rbc_raw = str(person_data.get("RBC1", "")).strip().lower()
+    wbc_raw = str(person_data.get("WBC1", "")).strip().lower()
+    
+    # 1. ตรรกะ CT: ผล Albumin
+    status_ct = ""
+    if is_empty(alb_raw): status_ct = ""
+    elif alb_raw == "negative": status_ct = "ไม่พบโปรตีนในปัสสาวะ"
+    elif alb_raw in ["trace", "2+", "1+"]: status_ct = "พบโปรตีนในปัสสาวะเล็กน้อย"
+    elif alb_raw == "3+": status_ct = "พบโปรตีนในปัสสาวะ"
+        
+    # 2. ตรรกะ CU: ผล Sugar
+    status_cu = ""
+    if is_empty(sugar_raw): status_cu = ""
+    elif sugar_raw == "negative": status_cu = "ไม่พบน้ำตาลในปัสสาวะ"
+    elif sugar_raw == "trace": status_cu = "พบน้ำตาลในปัสสาวะเล็กน้อย"
+    elif sugar_raw in ["1+", "2+", "3+", "4+", "5+", "6+"]: status_cu = "พบน้ำตาลในปัสสาวะ"
+
+    # 3. ตรรกะ CV: ผล RBC
+    status_cv = ""
+    if is_empty(rbc_raw): status_cv = ""
+    elif rbc_raw in ["0-1", "negative", "1-2", "2-3", "3-5"]: status_cv = "เม็ดเลือดแดงในปัสสาวะปกติ"
+    elif rbc_raw in ["5-10", "10-20"]: status_cv = "พบเม็ดเลือดแดงในปัสสาวะเล็กน้อย"
+    else: status_cv = "พบเม็ดเลือดแดงในปัสสาวะ" # ค่าอื่นๆ ที่ไม่ใช่ค่าว่าง
+        
+    # 4. ตรรกะ CW: ผล WBC
+    status_cw = ""
+    if is_empty(wbc_raw): status_cw = ""
+    elif wbc_raw in ["0-1", "negative", "1-2", "2-3", "3-5"]: status_cw = "เม็ดเลือดขาวในปัสสาวะปกติ"
+    elif wbc_raw in ["5-10", "10-20"]: status_cw = "พบเม็ดเลือดขาวในปัสสาวะเล็กน้อย"
+    else: status_cw = "พบเม็ดเลือดขาวในปัสสาวะ" # ค่าอื่นๆ ที่ไม่ใช่ค่าว่าง
+
+    # ตรวจสอบว่ามีข้อมูลหรือไม่ (ตามสูตร CS และ CX)
+    if not status_ct and not status_cu and not status_cv and not status_cw:
+        return "ไม่ได้ตรวจ"
+
+    # 5. ตรรกะ CS: สรุปผลรวม
+    is_abnormal = False
+    if status_ct == "พบโปรตีนในปัสสาวะ": is_abnormal = True # เล็กน้อยไม่นับ
+    if "น้ำตาล" in status_cu and "ไม่พบ" not in status_cu: is_abnormal = True
+    if "เม็ดเลือดแดง" in status_cv and "ปกติ" not in status_cv: is_abnormal = True
+    if status_cw == "พบเม็ดเลือดขาวในปัสสาวะ": is_abnormal = True # เล็กน้อยไม่นับ
+    
+    status_cs = "ผลปัสสาวะผิดปกติ" if is_abnormal else "ปัสสาวะปกติ"
+
+    # 6. ตรรกะ CX: เลือกคำแนะนำ
+    advice_text = ""
+    status_ct_ok = status_ct in ["ไม่พบโปรตีนในปัสสาวะ", "พบโปรตีนในปัสสาวะเล็กน้อย"]
+    status_cu_ok = status_cu == "ไม่พบน้ำตาลในปัสสาวะ"
+    status_cv_ok = status_cv == "เม็ดเลือดแดงในปัสสาวะปกติ"
+    status_cw_ok = status_cw == "เม็ดเลือดขาวในปัสสาวะปกติ"
+
+    if status_ct_ok and status_cu_ok and status_cv_ok and status_cw_ok:
+        advice_text = "" # ปกติทั้งหมด
+    elif "น้ำตาล" in status_cu and "ไม่พบ" not in status_cu:
+        advice_text = RECOMMENDATION_TEXTS_URINE["E11"]
+    elif sex == "หญิง" and status_ct_ok and status_cu_ok and ("เม็ดเลือดแดง" in status_cv and "ปกติ" not in status_cv) and status_cw_ok:
+        advice_text = RECOMMENDATION_TEXTS_URINE["E4"]
+    elif sex == "ชาย" and status_ct_ok and status_cu_ok and ("เม็ดเลือดแดง" in status_cv and "ปกติ" not in status_cv) and status_cw_ok:
+        advice_text = RECOMMENDATION_TEXTS_URINE["E10"]
+    elif status_ct_ok and status_cu_ok and status_cv_ok and status_cw == "พบเม็ดเลือดขาวในปัสสาวะ":
+        advice_text = RECOMMENDATION_TEXTS_URINE["F3"] # ซึ่งเป็น ""
+    elif status_ct_ok and status_cu_ok and status_cv_ok and status_cw == "พบเม็ดเลือดขาวในปัสสาวะเล็กน้อย":
+        advice_text = RECOMMENDATION_TEXTS_URINE["E2"]
+    
+    # 7. ประกอบร่าง
+    if not advice_text:
+        return f"<b>{status_cs}</b>" # แสดงแค่สถานะ ถ้าปกติ
+    else:
+        return f"<b>{status_cs}</b>: {html.escape(advice_text)}"
+# --- END OF CHANGE ---
+
 # --- HTML Rendering Functions ---
 
 def render_section_header(title, subtitle=None):
@@ -395,7 +485,7 @@ def render_other_results_html(person, sex):
     urine_rows = [[(label, is_abn), (safe_value(val), is_abn), (norm, is_abn)] for label, key, norm in urine_data for val in [person.get(key, "-")] for is_abn in [is_urine_abnormal(label, val, norm)]]
     
     # --- START OF CHANGE: Add Urine footer ---
-    urine_footer = "[รอการปรับปรุงสูตร ปัสสาวะ]"
+    urine_footer = generate_urine_recommendations(person, sex)
     urine_html = render_lab_table_html("ผลการตรวจปัสสาวะ", "Urinalysis", ["การตรวจ", "ผลตรวจ", "ค่าปกติ"], urine_rows, "print-lab-table", footer_html=urine_footer)
     # --- END OF CHANGE ---
     
