@@ -130,10 +130,12 @@ def hepatitis_b_advice(hbsag, hbsab, hbcab):
     if all(x == "negative" for x in [hbsag, hbsab, hbcab]): return "ไม่มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี ควรปรึกษาแพทย์เพื่อรับวัคซีน", "no_immune"
     return "ไม่สามารถสรุปผลชัดเจน แนะนำให้พบแพทย์เพื่อประเมินซ้ำ", "unclear"
 
-# --- START OF CHANGE: New function for fixed recommendations ---
+# --- START OF CHANGE: Modified function to return a list ---
 def generate_fixed_recommendations(person_data):
     """
-    สร้างคำแนะนำแบบคงที่ตามตรรกะ Google Sheet ที่กำหนด
+    สร้างรายการคำแนะนำแบบคงที่ตามตรรกะ Google Sheet ที่กำหนด
+    Returns:
+        list: รายการ (list) ของคำแนะนำ (strings)
     """
     recommendations = []
 
@@ -183,12 +185,7 @@ def generate_fixed_recommendations(person_data):
         pass
 
     # --- สรุปผลลัพธ์ ---
-    if not recommendations:
-        return "ผลการตรวจสุขภาพโดยรวมอยู่ในเกณฑ์ปกติ ควรดูแลรักษาสุขภาพที่ดีเช่นนี้ต่อไป"
-    else:
-        # จัดรูปแบบเป็น HTML list (<ul>...</ul>)
-        list_items = "".join([f"<li>{html.escape(rec)}</li>" for rec in recommendations])
-        return f"ผลตรวจสุขภาพโดยรวมพบประเด็นที่ควรให้ความสำคัญดังนี้:<ul>{list_items}</ul>"
+    return recommendations # คืนค่าเป็น list ของ strings
 # --- END OF CHANGE ---
 
 
@@ -202,7 +199,8 @@ def render_section_header(title, subtitle=None):
     </div>
     """
 
-def render_lab_table_html(title, subtitle, headers, rows, table_class="print-lab-table"):
+# --- START OF CHANGE: Modified function to accept footer_html ---
+def render_lab_table_html(title, subtitle, headers, rows, table_class="print-lab-table", footer_html=None):
     header_html = render_section_header(title, subtitle)
     html_content = f"{header_html}<table class='{table_class}'><colgroup><col style='width: 40%;'><col style='width: 20%;'><col style='width: 40%;'></colgroup><thead><tr>"
     for i, h in enumerate(headers):
@@ -213,8 +211,14 @@ def render_lab_table_html(title, subtitle, headers, rows, table_class="print-lab
         is_abn = any(flag for _, flag in row)
         row_class = f"{table_class}-abn" if is_abn else ""
         html_content += f"<tr class='{row_class}'><td style='text-align: left;'>{row[0][0]}</td><td>{row[1][0]}</td><td style='text-align: left;'>{row[2][0]}</td></tr>"
-    html_content += "</tbody></table>"
+    html_content += "</tbody>" # Close tbody
+    
+    if footer_html:
+        html_content += f"<tfoot><tr class='recommendation-row'><td colspan='{len(headers)}' style='text-align: left;'><b>สรุปผล/คำแนะนำ:</b><br>{footer_html}</td></tr></tfoot>"
+        
+    html_content += "</table>" # Close table
     return html_content
+# --- END OF CHANGE ---
 
 def render_header_and_vitals(person_data):
     """Renders the compact header and personal info table for the print report."""
@@ -269,8 +273,23 @@ def render_lab_section(person, sex):
     cbc_rows = [[(label, is_abn), (result, is_abn), (norm, is_abn)] for label, col, norm, low, high in cbc_config for val in [get_float(col, person)] for result, is_abn in [flag(val, low, high)]]
     blood_config = [("น้ำตาลในเลือด (FBS)", "FBS", "74 - 106 mg/dl", 74, 106), ("กรดยูริก (Uric Acid)", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2), ("การทำงานของเอนไซม์ตับ (ALK)", "ALP", "30 - 120 U/L", 30, 120), ("การทำงานของเอนไซม์ตับ (SGOT)", "SGOT", "< 37 U/L", None, 37), ("การทำงานของเอนไซม์ตับ (SGPT)", "SGPT", "< 41 U/L", None, 41), ("คลอเรสเตอรอล (CHOL)", "CHOL", "150 - 200 mg/dl", 150, 200), ("ไตรกลีเซอไรด์ (TGL)", "TGL", "35 - 150 mg/dl", 35, 150), ("ไขมันดี (HDL)", "HDL", "> 40 mg/dl", 40, None, True), ("ไขมันเลว (LDL)", "LDL", "0 - 160 mg/dl", 0, 160), ("การทำงานของไต (BUN)", "BUN", "7.9 - 20 mg/dl", 7.9, 20), ("การทำงานของไต (Cr)", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17), ("ประสิทธิภาพการกรองของไต (GFR)", "GFR", "> 60 mL/min", 60, None, True)]
     blood_rows = [[(label, is_abn), (result, is_abn), (norm, is_abn)] for label, col, norm, low, high, *opt in blood_config for higher in [opt[0] if opt else False] for val in [get_float(col, person)] for result, is_abn in [flag(val, low, high, higher)]]
-    cbc_html = render_lab_table_html("ผลตรวจ CBC (Complete Blood Count)", None, ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows, "print-lab-table")
-    blood_html = render_lab_table_html("ผลตรวจเลือด (Blood Chemistry)", None, ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows, "print-lab-table")
+
+    # --- START OF CHANGE: Add footers ---
+    # 1. CBC Footer (Placeholder)
+    cbc_footer = "[รอการปรับปรุงสูตร CBC]"
+    
+    # 2. Blood Chemistry Footer (Logic)
+    recommendations_list = generate_fixed_recommendations(person)
+    if not recommendations_list:
+        blood_footer = "ผลการตรวจโดยรวมอยู่ในเกณฑ์ปกติ"
+    else:
+        list_items = "".join([f"<li>{html.escape(rec)}</li>" for rec in recommendations_list])
+        blood_footer = f"<ul>{list_items}</ul>"
+        
+    cbc_html = render_lab_table_html("ผลตรวจ CBC (Complete Blood Count)", None, ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows, "print-lab-table", footer_html=cbc_footer)
+    blood_html = render_lab_table_html("ผลตรวจเลือด (Blood Chemistry)", None, ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows, "print-lab-table", footer_html=blood_footer)
+    # --- END OF CHANGE ---
+    
     return f"""
     <table style="width: 100%; border-collapse: collapse; page-break-inside: avoid;">
         <tr>
@@ -283,7 +302,12 @@ def render_lab_section(person, sex):
 def render_other_results_html(person, sex):
     urine_data = [("สี (Colour)", "Color", "Yellow, Pale Yellow"), ("น้ำตาล (Sugar)", "sugar", "Negative"), ("โปรตีน (Albumin)", "Alb", "Negative, trace"), ("กรด-ด่าง (pH)", "pH", "5.0 - 8.0"), ("ความถ่วงจำเพาะ (Sp.gr)", "Spgr", "1.003 - 1.030"), ("เม็ดเลือดแดง (RBC)", "RBC1", "0 - 2 cell/HPF"), ("เม็ดเลือดขาว (WBC)", "WBC1", "0 - 5 cell/HPF"), ("เซลล์เยื่อบุผิว (Squam.epit.)", "SQ-epi", "0 - 10 cell/HPF"), ("อื่นๆ", "ORTER", "-")]
     urine_rows = [[(label, is_abn), (safe_value(val), is_abn), (norm, is_abn)] for label, key, norm in urine_data for val in [person.get(key, "-")] for is_abn in [is_urine_abnormal(label, val, norm)]]
-    urine_html = render_lab_table_html("ผลการตรวจปัสสาวะ", "Urinalysis", ["การตรวจ", "ผลตรวจ", "ค่าปกติ"], urine_rows, "print-lab-table")
+    
+    # --- START OF CHANGE: Add Urine footer ---
+    urine_footer = "[รอการปรับปรุงสูตร ปัสสาวะ]"
+    urine_html = render_lab_table_html("ผลการตรวจปัสสาวะ", "Urinalysis", ["การตรวจ", "ผลตรวจ", "ค่าปกติ"], urine_rows, "print-lab-table", footer_html=urine_footer)
+    # --- END OF CHANGE ---
+    
     stool_exam_text = interpret_stool_exam(person.get("Stool exam", ""))
     stool_cs_text = interpret_stool_cs(person.get("Stool C/S", ""))
     stool_html = f"""
@@ -318,11 +342,21 @@ def render_other_results_html(person, sex):
         <tr style="background-color: {advice_bg_color};"><td colspan="2" style="text-align: left;"><b>คำแนะนำ:</b> {hep_b_advice}</td></tr>
     </table>
     """
+    
+    # --- START OF CHANGE: Add Doctor's Opinion Placeholder ---
+    doctor_opinion_html = f"""
+    {render_section_header("สรุปความคิดเห็นของแพทย์")}
+    <div class="doctor-opinion-box">
+        [รอการปรับปรุงสูตร สรุปความคิดเห็นแพทย์]
+    </div>
+    """
+    # --- END OF CHANGE ---
+    
     return f"""
     <table style="width: 100%; border-collapse: collapse; page-break-inside: avoid;">
         <tr>
             <td style="width: 50%; vertical-align: top; padding-right: 5px;">{urine_html}{stool_html}</td>
-            <td style="width: 50%; vertical-align: top; padding-left: 5px;">{other_tests_html}{hepatitis_html}</td>
+            <td style="width: 50%; vertical-align: top; padding-left: 5px;">{other_tests_html}{hepatitis_html}{doctor_opinion_html}</td>
         </tr>
     </table>
     """
@@ -336,30 +370,10 @@ def generate_printable_report(person_data, all_person_history_df=None):
     lab_section_html = render_lab_section(person_data, sex)
     other_results_html = render_other_results_html(person_data, sex)
     
-    # --- START OF CHANGE: Replace recommendation logic ---
-    # Comment out the old auto-generated advice
-    # doctor_suggestion = generate_holistic_advice(person_data)
-    
-    # Call the new function based on fixed Google Sheet logic
-    doctor_suggestion = generate_fixed_recommendations(person_data)
+    # --- START OF CHANGE: Remove the green recommendation box ---
+    # The logic is now inside render_lab_section and render_other_results_html
+    doctor_suggestion_html = ""
     # --- END OF CHANGE ---
-
-    # Adjust summary text for better layout (if it's the old format)
-    # This might not be needed for the new list format, but it doesn't hurt
-    doctor_suggestion = doctor_suggestion.replace(
-        "ผลตรวจสุขภาพโดยรวมพบประเด็นที่ควรให้ความสำคัญดังนี้:",
-        "ผลตรวจสุขภาพโดยรวมพบประเด็นที่ควรให้ความสำคัญดังนี้:<br>"
-    )
-
-    doctor_suggestion_html = f"""
-    <div class="advice-box" style="background-color: #e8f5e9; border-color: #a5d6a7;">
-        <div class="advice-title" style="color: #1b5e20;">สรุปและคำแนะนำจากแพทย์ (Doctor's Summary & Recommendations)</div>
-        <div class="advice-content">{doctor_suggestion}</div>
-    </div>
-    """
-    
-    # Remove the performance report section
-    # performance_report_html = generate_performance_report_html_for_main_report(person_data, all_person_history_df)
 
     signature_html = """
     <div style="margin-top: 2rem; text-align: right; padding-right: 1rem; page-break-inside: avoid;">
@@ -371,6 +385,8 @@ def generate_printable_report(person_data, all_person_history_df=None):
         </div>
     </div>
     """
+    
+    # --- START OF CHANGE: Add CSS for new elements ---
     css_html = """
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
@@ -380,20 +396,54 @@ def generate_printable_report(person_data, all_person_history_df=None):
         .print-lab-table td, .print-lab-table th { padding: 2px 4px; border: 1px solid #ccc; text-align: center; vertical-align: middle; }
         .print-lab-table th { background-color: #f2f2f2; font-weight: bold; }
         .print-lab-table-abn { background-color: #fff1f0 !important; }
+        
+        .print-lab-table tfoot .recommendation-row td {
+            background-color: #fcf8e3; /* Light yellow */
+            font-size: 9px;
+            line-height: 1.3;
+            border: 1px solid #ccc;
+            text-align: left;
+            padding: 4px 6px;
+        }
+        .print-lab-table tfoot ul {
+            padding-left: 15px;
+            margin-top: 2px;
+            margin-bottom: 2px;
+        }
+        .print-lab-table tfoot li {
+            margin-bottom: 2px;
+        }
+        
         .header-grid { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 0.5rem; }
         .header-left { text-align: left; }
         .header-right { text-align: right; }
         .info-table { font-size: 9.5px; text-align: left; }
         .info-table td { padding: 1px 5px; border: none; }
+        
+        /* This green box is no longer used, but CSS remains just in case */
         .advice-box { padding: 0.5rem 1rem; border-radius: 8px; line-height: 1.5; margin-top: 0.5rem; border: 1px solid #ddd; page-break-inside: avoid; }
         .advice-title { font-weight: bold; margin-bottom: 0.3rem; font-size: 11px; }
         .advice-content ul { padding-left: 20px; margin: 0; }
-        .advice-content li { margin-bottom: 4px; }
+        .advice-content ul li { margin-bottom: 4px; }
+        
+        .doctor-opinion-box {
+            background-color: #e8f5e9; /* Light green */
+            border-color: #a5d6a7;
+            border: 1px solid #ddd;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            line-height: 1.5;
+            margin-top: 0.5rem;
+            page-break-inside: avoid;
+        }
+        
         .perf-section { margin-top: 0.5rem; page-break-inside: avoid; border: 1px solid #e0e0e0; border-radius: 8px; padding: 0.5rem; }
         .summary-box { background-color: #f8f9fa; border-radius: 4px; padding: 4px 8px; margin-top: 2px; font-size: 9px; }
         @media print { body { -webkit-print-color-adjust: exact; margin: 0; } }
     </style>
     """
+    # --- END OF CHANGE ---
+    
     final_html = f"""
     <!DOCTYPE html>
     <html lang="th">
@@ -412,3 +462,4 @@ def generate_printable_report(person_data, all_person_history_df=None):
     </html>
     """
     return final_html
+
