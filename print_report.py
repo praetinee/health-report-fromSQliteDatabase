@@ -624,7 +624,9 @@ def render_lab_section(person, sex, cbc_statuses):
     """
 
 # --- START OF CHANGE: Pass urine_statuses and doctor_opinion to render ---
-def render_other_results_html(person, sex, urine_statuses, doctor_opinion):
+# --- START OF REFACTOR: Add all_person_history_df ---
+def render_other_results_html(person, sex, urine_statuses, doctor_opinion, all_person_history_df=None):
+# --- END OF REFACTOR ---
 # --- END OF CHANGE ---
     urine_data = [("สี (Colour)", "Color", "Yellow, Pale Yellow"), ("น้ำตาล (Sugar)", "sugar", "Negative"), ("โปรตีน (Albumin)", "Alb", "Negative, trace"), ("กรด-ด่าง (pH)", "pH", "5.0 - 8.0"), ("ความถ่วงจำเพาะ (Sp.gr)", "Spgr", "1.003 - 1.030"), ("เม็ดเลือดแดง (RBC)", "RBC1", "0 - 2 cell/HPF"), ("เม็ดเลือดขาว (WBC)", "WBC1", "0 - 5 cell/HPF"), ("เซลล์เยื่อบุผิว (Squam.epit.)", "SQ-epi", "0 - 10 cell/HPF"), ("อื่นๆ", "ORTER", "-")]
     urine_rows = [[(label, is_abn), (safe_value(val), is_abn), (norm, is_abn)] for label, key, norm in urine_data for val in [person.get(key, "-")] for is_abn in [is_urine_abnormal(label, val, norm)]]
@@ -647,10 +649,10 @@ def render_other_results_html(person, sex, urine_statuses, doctor_opinion):
     """
     # --- START OF CHANGE: Add year variable ---
     year_str = str(person.get("Year", ""))
-    year = int(year_str) if year_str.isdigit() else (datetime.now().year + 543)
+    current_year = int(year_str) if year_str.isdigit() else (datetime.now().year + 543)
     # --- END OF CHANGE ---
-    cxr_result = interpret_cxr(person.get(f"CXR{str(year)[-2:]}" if year != (datetime.now().year+543) else "CXR", ""))
-    ekg_result = interpret_ekg(person.get(get_ekg_col_name(year), ""))
+    cxr_result = interpret_cxr(person.get(f"CXR{str(current_year)[-2:]}" if current_year != (datetime.now().year+543) else "CXR", ""))
+    ekg_result = interpret_ekg(person.get(get_ekg_col_name(current_year), ""))
     other_tests_html = f"""
     {render_section_header("ผลตรวจอื่นๆ")}
     <table class="print-lab-table">
@@ -660,24 +662,86 @@ def render_other_results_html(person, sex, urine_statuses, doctor_opinion):
     """
     hep_a_value = person.get("Hepatitis A")
     hep_a_display_text = "ไม่ได้เข้ารับการตรวจไวรัสตับอักเสบเอ" if is_empty(hep_a_value) else safe_value(hep_a_value)
-    hbsag_raw, hbsab_raw, hbcab_raw = safe_value(person.get("HbsAg")), safe_value(person.get("HbsAb")), safe_value(person.get("HBcAB"))
-    hep_b_advice, hep_b_status = hepatitis_b_advice(hbsag_raw, hbsab_raw, hbcab_raw)
-    advice_bg_color = {'infection': '#ffdddd', 'no_immunity': '#fff8e1'}.get(hep_b_status, '#f8f9fa')
-    
-    # --- START OF CHANGE: Add year to Hepatitis B header ---
-    hepatitis_header_text = f"ผลตรวจไวรัสตับอักเสบ (Viral Hepatitis) (พ.ศ. {year})"
+
+    # --- START OF REFACTOR: Logic to display current or previous Hep B ---
+    hbsag_current = person.get("HbsAg")
+    hbsab_current = person.get("HbsAb")
+    hbcab_current = person.get("HBcAb")
+
+    show_current_hep_b = not is_empty(hbsag_current) or not is_empty(hbsab_current) or not is_empty(hbcab_current)
+
+    hbsag_display = safe_value(hbsag_current)
+    hbsab_display = safe_value(hbsab_current)
+    hbcab_display = safe_value(hbcab_current)
+    hep_b_advice_display, hep_b_status = "", ""
+    hepatitis_header_text = f"ผลตรวจไวรัสตับอักเสบ (Viral Hepatitis) (พ.ศ. {current_year})"
+    show_hep_b_advice_row = False # Flag to control advice row display
+
+    if show_current_hep_b:
+        hep_b_advice_display, hep_b_status = hepatitis_b_advice(hbsag_display, hbsab_display, hbcab_display)
+        show_hep_b_advice_row = True # Show advice for current year results
+    elif all_person_history_df is not None and not all_person_history_df.empty:
+        # Find the most recent year with Hep B data
+        hep_cols = ["HbsAg", "HbsAb", "HBcAb"]
+        prev_hep_df = all_person_history_df[
+            (all_person_history_df['Year'] < current_year) &
+            (all_person_history_df[hep_cols].notna().any(axis=1))
+        ].sort_values(by='Year', ascending=False)
+
+        if not prev_hep_df.empty:
+            prev_hep_row = prev_hep_df.iloc[0]
+            prev_year = int(prev_hep_row['Year'])
+            prev_hbsag = safe_value(prev_hep_row.get("HbsAg"))
+            prev_hbsab = safe_value(prev_hep_row.get("HbsAb"))
+            prev_hbcab = safe_value(prev_hep_row.get("HBcAb"))
+            
+            # Update display values to show previous results
+            hbsag_display = f"ไม่ได้ตรวจ (ล่าสุดปี {prev_year}: {prev_hbsag})"
+            hbsab_display = f"ไม่ได้ตรวจ (ล่าสุดปี {prev_year}: {prev_hbsab})"
+            hbcab_display = f"ไม่ได้ตรวจ (ล่าสุดปี {prev_year}: {prev_hbcab})"
+            # No advice text when showing previous results
+            hep_b_advice_display = "ข้อมูลเป็นการตรวจจากปีก่อนหน้า"
+            show_hep_b_advice_row = False # Do not show standard advice row
+        else:
+            # No current or previous data found
+             hbsag_display = "ไม่ได้ตรวจ"
+             hbsab_display = "ไม่ได้ตรวจ"
+             hbcab_display = "ไม่ได้ตรวจ"
+             hep_b_advice_display = "ไม่พบประวัติการตรวจ"
+             show_hep_b_advice_row = False
+
+    else:
+        # No current data and no history provided
+        hbsag_display = "ไม่ได้ตรวจ"
+        hbsab_display = "ไม่ได้ตรวจ"
+        hbcab_display = "ไม่ได้ตรวจ"
+        hep_b_advice_display = "ไม่พบประวัติการตรวจ"
+        show_hep_b_advice_row = False
+
+
+    advice_bg_color = '#f8f9fa' # Default background
+    if show_hep_b_advice_row: # Only set color if showing current advice
+         advice_bg_color = {'infection': '#ffdddd', 'no_immune': '#fff8e1', 'immune': '#e8f5e9'}.get(hep_b_status, '#f8f9fa')
+
+    # Build Hep B table rows
+    hep_b_rows_html = f"""
+        <tr><td style="text-align: left; width: 40%;"><b>ไวรัสตับอักเสบ เอ</b></td><td style="text-align: left;">{hep_a_display_text}</td></tr>
+        <tr><td style="text-align: left; width: 40%;"><b>ไวรัสตับอักเสบ บี (HBsAg)</b></td><td style="text-align: left;">{hbsag_display}</td></tr>
+        <tr><td style="text-align: left; width: 40%;"><b>ภูมิคุ้มกัน (HBsAb)</b></td><td style="text-align: left;">{hbsab_display}</td></tr>
+        <tr><td style="text-align: left; width: 40%;"><b>การติดเชื้อ (HBcAb)</b></td><td style="text-align: left;">{hbcab_display}</td></tr>
+    """
+    # Conditionally add the advice row
+    if show_hep_b_advice_row:
+         hep_b_rows_html += f'<tr style="background-color: {advice_bg_color};"><td colspan="2" style="text-align: left;"><b>คำแนะนำ:</b> {hep_b_advice_display}</td></tr>'
+
     hepatitis_html = f"""
     {render_section_header(hepatitis_header_text)}
     <table class="print-lab-table">
-        <tr><td style="text-align: left; width: 40%;"><b>ไวรัสตับอักเสบ เอ</b></td><td style="text-align: left;">{hep_a_display_text}</td></tr>
-        <tr><td style="text-align: left; width: 40%;"><b>ไวรัสตับอักเสบ บี (HBsAg)</b></td><td style="text-align: left;">{hbsag_raw}</td></tr>
-        <tr><td style="text-align: left; width: 40%;"><b>ภูมิคุ้มกัน (HBsAb)</b></td><td style="text-align: left;">{hbsab_raw}</td></tr>
-        <tr><td style="text-align: left; width: 40%;"><b>การติดเชื้อ (HBcAb)</b></td><td style="text-align: left;">{hbcab_raw}</td></tr>
-        <tr style="background-color: {advice_bg_color};"><td colspan="2" style="text-align: left;"><b>คำแนะนำ:</b> {hep_b_advice}</td></tr>
+        {hep_b_rows_html}
     </table>
     """
-    # --- END OF CHANGE ---
-    
+    # --- END OF REFACTOR ---
+
     # --- START OF CHANGE: Use generated doctor_opinion ---
     doctor_opinion_html = f"""
     {render_section_header("สรุปความคิดเห็นของแพทย์")}
@@ -708,9 +772,9 @@ def generate_printable_report(person_data, all_person_history_df=None):
     # --- END OF CHANGE ---
     
     header_vitals_html = render_header_and_vitals(person_data)
-    # --- START OF CHANGE: Pass statuses to render functions ---
+    # --- START OF CHANGE: Pass statuses AND history to render functions ---
     lab_section_html = render_lab_section(person_data, sex, cbc_results)
-    other_results_html = render_other_results_html(person_data, sex, urine_results, doctor_opinion)
+    other_results_html = render_other_results_html(person_data, sex, urine_results, doctor_opinion, all_person_history_df)
     # --- END OF CHANGE ---
     
     # --- START OF CHANGE: Remove the green recommendation box ---
