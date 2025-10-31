@@ -674,7 +674,16 @@ def render_other_results_html(person, sex, urine_statuses, doctor_opinion, all_p
     hbsab_display = "" # Will be set below
     hbcab_display = "" # Will be set below
     hep_b_advice_display, hep_b_status = "", ""
-    hepatitis_header_text = f"ผลตรวจไวรัสตับอักเสบ (Viral Hepatitis) (พ.ศ. {current_year})"
+    
+    # --- START OF CHANGE: Use "ปีตรวจHEP" column ---
+    hep_test_date_str = str(person.get("ปีตรวจHEP", "")).strip() # สมมติชื่อคอลัมน์ "ปีตรวจHEP"
+    if not is_empty(hep_test_date_str):
+        hepatitis_header_text = f"ผลตรวจไวรัสตับอักเสบ (Viral Hepatitis) (ตรวจเมื่อ: {hep_test_date_str})"
+    else:
+        # Fallback to current year if "ปีตรวจHEP" is empty
+        hepatitis_header_text = f"ผลตรวจไวรัสตับอักเสบ (Viral Hepatitis) (พ.ศ. {current_year})"
+    # --- END OF CHANGE ---
+        
     show_hep_b_advice_row = False # Flag to control advice row display
 
     if show_current_hep_b:
