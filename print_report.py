@@ -146,12 +146,19 @@ def interpret_ekg(val):
     return val
 
 def hepatitis_b_advice(hbsag, hbsab, hbcab):
-    hbsag, hbsab, hbcab = hbsag.lower(), hbsab.lower(), hbcab.lower()
-    if "positive" in hbsag: return "ติดเชื้อไวรัสตับอักเสบบี", "infection"
-    if "positive" in hbsab and "positive" not in hbsag: return "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี", "immune"
-    if "positive" in hbcab and "positive" not in hbsab: return "เคยติดเชื้อแต่ไม่มีภูมิคุ้มกันในปัจจุบัน", "unclear"
-    if all(x == "negative" for x in [hbsag, hbsab, hbcab]): return "ไม่มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี ควรปรึกษาแพทย์เพื่อรับวัคซีน", "no_immune"
+    # --- START OF CHANGE: Treat '-' as 'negative' for HBcAb logic ---
+    hbsag_logic = hbsag.lower()
+    hbsab_logic = hbsab.lower()
+    hbcab_logic = hbcab.lower()
+    if hbcab_logic == "-":
+        hbcab_logic = "negative" # แปลงค่า '-' เป็น 'negative' สำหรับการเปรียบเทียบตรรกะ
+
+    if "positive" in hbsag_logic: return "ติดเชื้อไวรัสตับอักเสบบี", "infection"
+    if "positive" in hbsab_logic and "positive" not in hbsag_logic: return "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี", "immune"
+    if "positive" in hbcab_logic and "positive" not in hbsab_logic: return "เคยติดเชื้อแต่ไม่มีภูมิคุ้มกันในปัจจุบัน", "unclear"
+    if all(x == "negative" for x in [hbsag_logic, hbsab_logic, hbcab_logic]): return "ไม่มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี ควรปรึกษาแพทย์เพื่อรับวัคซีน", "no_immune"
     return "ไม่สามารถสรุปผลชัดเจน แนะนำให้พบแพทย์เพื่อประเมินซ้ำ", "unclear"
+    # --- END OF CHANGE ---
 
 # --- START OF CHANGE: Modified function to return a list ---
 def generate_fixed_recommendations(person_data):
@@ -857,4 +864,5 @@ def generate_printable_report(person_data, all_person_history_df=None):
     </html>
     """
     return final_html
+
 
