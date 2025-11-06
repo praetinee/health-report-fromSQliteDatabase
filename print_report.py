@@ -847,7 +847,7 @@ def generate_printable_report(person_data, all_person_history_df=None):
             background-color: #e8f5e9; /* Light green */
             border-color: #a5d6a7;
             border: 1px solid #ddd;
-            padding: 0.1rem 0.5rem; /* <-- ปรับลด padding อีกครั้ง จาก 0.2rem 0.6rem */
+            padding: 0rem 0.5rem; /* <-- ปรับลด padding บน/ล่าง เป็น 0 */
             border-radius: 8px;
             line-height: 1.5;
             margin-top: 0.5rem;
