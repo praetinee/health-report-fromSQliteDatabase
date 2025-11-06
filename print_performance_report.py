@@ -448,14 +448,14 @@ def generate_performance_report_html(person_data, all_person_history_df):
             .header-right {{ text-align: right; }}
 
             /* --- START OF CHANGE: Reduced margin-bottom --- */
-            .report-section {{ margin-bottom: 0.8rem; page-break-inside: avoid; }} 
+            .report-section {{ margin-bottom: 0.5rem; page-break-inside: avoid; }} 
             /* --- END OF CHANGE --- */
             
             .section-header {{
                 background-color: #00796B; 
                 color: white; text-align: center;
                 padding: 0.4rem; font-weight: bold; border-radius: 8px;
-                margin-bottom: 1rem;
+                margin-bottom: 0.7rem; /* --- CHANGED --- */
                 font-size: 12px;
             }}
 
@@ -506,7 +506,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
                 border: 1px solid #e0e0e0;
                 background-color: #f9f9f9;
                 border-radius: 6px;
-                margin-bottom: 0.8rem;
+                margin-bottom: 0.5rem; /* --- CHANGED --- */
                 font-size: 11px;
                 font-weight: bold;
                 page-break-inside: avoid; /* Ensure this box doesn't break */
