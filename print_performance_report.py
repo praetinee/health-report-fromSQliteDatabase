@@ -447,7 +447,10 @@ def generate_performance_report_html(person_data, all_person_history_df):
             .header-left {{ text-align: left; }}
             .header-right {{ text-align: right; }}
 
-            .report-section {{ margin-bottom: 1.5rem; page-break-inside: avoid; }}
+            /* --- START OF CHANGE: Reduced margin-bottom --- */
+            .report-section {{ margin-bottom: 0.8rem; page-break-inside: avoid; }} 
+            /* --- END OF CHANGE --- */
+            
             .section-header {{
                 background-color: #00796B; 
                 color: white; text-align: center;
