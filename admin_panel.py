@@ -553,7 +553,7 @@ def render_vision_details_table(person_data):
         {'display': '13. ลานสายตา (Visual field)', 'type': 'value', 'col': 'ป.ลานสายตา', 'normal_keywords': ['ปกติ'], 'outcomes': ['ปกติ', 'ผิดปกติ']},
         {'display': '7. ความสมดุลกล้ามเนื้อตาแนวดิ่ง (Far vertical phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง', 'related_keyword': 'แนวตั้งระยะไกล', 'outcomes': ['ปกติ', 'ผิดปกติ']},
         {'display': '8. ความสมดุลกล้ามเนื้อตาแนวนอน (Far lateral phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน', 'related_keyword': 'แนวนอนระยะไกล', 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '12. ความสมดุลกล้ามเนื้อตาแนวนอน (Near lateral phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'related_keyword': 'แนวนอนระยะใกล้', 'outcomes': ['ปกติ', 'ผิดปกติ']}
+        {'display': '12. ความสมดุลกล้ามเนื้อตาแนวนอน (Near lateral phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'related_keyword': 'แนวนอนระยะไกล', 'outcomes': ['ปกติ', 'ผิดปกติ']}
     ]
 
     vision_tests.sort(key=lambda x: int(x['display'].split('.')[0]))
@@ -952,7 +952,16 @@ def display_main_report(person_data, all_person_history_df):
             </div>
             """, unsafe_allow_html=True)
 
-            st.markdown("<h5 class='section-subtitle'>ผลการตรวจไวรัสตับอักเสบบี (Viral hepatitis B)</h5>", unsafe_allow_html=True)
+            # --- START: (นี่คือส่วนที่แก้ไข) เพิ่มตรรกะดึงวันที่ตรวจ Hep B ---
+            hep_test_date_str = str(person.get("ปีตรวจHEP", "")).strip()
+            if not is_empty(hep_test_date_str):
+                hepatitis_header_text = f"ผลการตรวจไวรัสตับอักเสบบี (Viral hepatitis B) (ตรวจเมื่อ: {hep_test_date_str})"
+            else:
+                hepatitis_header_text = f"ผลการตรวจไวรัสตับอักเสบบี (Viral hepatitis B) (พ.ศ. {selected_year})" # ใช้ selected_year เป็น fallback
+            
+            st.markdown(f"<h5 class='section-subtitle'>{hepatitis_header_text}</h5>", unsafe_allow_html=True)
+            # --- END: (นี่คือส่วนที่แก้ไข) เพิ่มตรรกะดึงวันที่ตรวจ Hep B ---
+
             hbsag, hbsab, hbcab = safe_text(person.get("HbsAg")), safe_text(person.get("HbsAb")), safe_text(person.get("HBcAB"))
             st.markdown(f"""<div class="table-container"><table class='lab-table'>
                 <thead><tr><th style='text-align: center;'>HBsAg</th><th style='text-align: center;'>HBsAb</th><th style='text-align: center;'>HBcAb</th></tr></thead>
