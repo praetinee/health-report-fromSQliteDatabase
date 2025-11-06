@@ -525,7 +525,7 @@ def generate_doctor_opinion(person_data, sex, cbc_statuses, urine_statuses):
 def render_section_header(title, subtitle=None):
     full_title = f"{title} <span style='font-weight: normal;'>({subtitle})</span>" if subtitle else title
     return f"""
-    <div style='background-color: #f0f2f6; color: #333; text-align: center; padding: 0.2rem 0.4rem; font-weight: bold; border-radius: 6px; margin-top: 1rem; margin-bottom: 0.4rem; font-size: 11px; border: 1px solid #ddd;'>
+    <div style='background-color: #f0f2f6; color: #333; text-align: center; padding: 0.2rem 0.4rem; font-weight: bold; border-radius: 6px; margin-top: 0.5rem; margin-bottom: 0.2rem; font-size: 11px; border: 1px solid #ddd;'>
         {full_title}
     </div>
     """
@@ -802,7 +802,7 @@ def generate_printable_report(person_data, all_person_history_df=None):
         body {{ 
             font-family: 'Sarabun', sans-serif !important; 
             font-size: 9.5px; 
-            margin: 0.5cm 0.7cm; /* <-- ปรับจาก 10mm เป็น 0.5cm (top/bottom) และ 0.7cm (left/right) */
+            margin: 0.5cm; /* <-- ปรับ margin ทุกด้านเป็น 0.5cm */
             color: #333; 
             background-color: #fff; 
         }}
