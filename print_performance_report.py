@@ -435,14 +435,14 @@ def generate_performance_report_html(person_data, all_person_history_df):
             body {{
                 font-family: 'Sarabun', sans-serif !important;
                 /* --- ADJUSTED: font-size and margin --- */
-                font-size: 11px;
+                font-size: 12px; /* <--- ปรับขนาดตัวอักษรหลักขึ้น */
                 margin: 0.5cm 0.7cm; 
                 /* --- END ADJUSTMENT --- */
                 color: #333;
                 background-color: #fff;
             }}
             hr {{ border: 0; border-top: 1px solid #e0e0e0; margin: 0.5rem 0; }}
-            .info-table {{ width: 100%; font-size: 9.5px; text-align: left; border-collapse: collapse; }}
+            .info-table {{ width: 100%; font-size: 10.5px; text-align: left; border-collapse: collapse; }} /* <--- ปรับขนาด */
             .info-table td {{ padding: 1px 5px; }}
             
             .header-grid {{ display: flex; align-items: flex-end; justify-content: space-between; }}
@@ -458,7 +458,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
                 color: white; text-align: center;
                 padding: 0.4rem; font-weight: bold; border-radius: 8px;
                 margin-bottom: 0.7rem; /* --- CHANGED --- */
-                font-size: 12px;
+                font-size: 13px; /* <--- ปรับขนาด */
             }}
 
             .content-columns {{ display: flex; gap: 15px; align-items: flex-start; }}
@@ -466,7 +466,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
             .side-content {{ flex: 1; min-width: 0; }}
             .main-content-full {{ width: 100%; }}
 
-            .data-table {{ width: 100%; font-size: 9.5px; border-collapse: collapse; }}
+            .data-table {{ width: 100%; font-size: 10.5px; border-collapse: collapse; }} /* <--- ปรับขนาด */
             .data-table.hearing-table {{ table-layout: fixed; }}
             .data-table th, .data-table td {{
                 border: 1px solid #e0e0e0; padding: 4px; text-align: center;
@@ -488,7 +488,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
                 background-color: #f9f9f9;
                 border-radius: 6px;
                 margin-bottom: 0.5rem; /* --- CHANGED --- */
-                font-size: 11px;
+                font-size: 12px; /* <--- ปรับขนาด */
                 font-weight: bold;
                 page-break-inside: avoid; 
             }}
@@ -503,11 +503,11 @@ def generate_performance_report_html(person_data, all_person_history_df):
             .summary-title-lung {{
                 text-align: center;
                 font-weight: bold;
-                font-size: 12px;
+                font-size: 13px; /* <--- ปรับขนาด */
                 margin-bottom: 10px;
             }}
             .advice-box {{
-                border-radius: 6px; padding: 8px 12px; font-size: 9.5px;
+                border-radius: 6px; padding: 8px 12px; font-size: 10.5px; /* <--- ปรับขนาด */
                 line-height: 1.5; border: 1px solid;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.05);
                 margin-bottom: 5px; 
@@ -542,7 +542,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
             }}
             .signature-line .name, .signature-line .title, .signature-line .license {{
                 white-space: nowrap;
-                font-size: 10px;
+                font-size: 11px; /* <--- ปรับขนาด */
             }}
 
             @media print {{
