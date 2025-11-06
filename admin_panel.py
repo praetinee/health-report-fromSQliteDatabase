@@ -10,7 +10,7 @@ import numpy as np # Add numpy import
 # --- Import ฟังก์ชันจากไฟล์อื่นที่จำเป็น ---
 # (จำเป็นต้อง import มาที่นี่ เพราะฟังก์ชันที่ย้ายมาอาจต้องใช้)
 from performance_tests import interpret_audiogram, interpret_lung_capacity, generate_comprehensive_recommendations
-from print_report import generate_printable_report
+from print_report import generate_printable_report_html # แก้ไข: เปลี่ยนชื่อฟังก์ชันที่ import
 from print_performance_report import generate_performance_report_html
 from visualization import display_visualization_tab # Import display_visualization_tab มาที่นี่
 
@@ -553,7 +553,7 @@ def render_vision_details_table(person_data):
         {'display': '13. ลานสายตา (Visual field)', 'type': 'value', 'col': 'ป.ลานสายตา', 'normal_keywords': ['ปกติ'], 'outcomes': ['ปกติ', 'ผิดปกติ']},
         {'display': '7. ความสมดุลกล้ามเนื้อตาแนวดิ่ง (Far vertical phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง', 'related_keyword': 'แนวตั้งระยะไกล', 'outcomes': ['ปกติ', 'ผิดปกติ']},
         {'display': '8. ความสมดุลกล้ามเนื้อตาแนวนอน (Far lateral phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน', 'related_keyword': 'แนวนอนระยะไกล', 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '12. ความสมดุลกล้ามเนื้อตาแนวนอน (Near lateral phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'related_keyword': 'แนวนอนระยะไกล', 'outcomes': ['ปกติ', 'ผิดปกติ']}
+        {'display': '12. ความสมดุลกล้ามเนื้อตาแนวนอน (Near lateral phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'related_keyword': 'แนวนอนระยะใกล้', 'outcomes': ['ปกติ', 'ผิดปกติ']}
     ]
 
     vision_tests.sort(key=lambda x: int(x['display'].split('.')[0]))
@@ -1217,7 +1217,7 @@ def display_admin_panel(df):
 
         # --- Print Logic for Admin ---
         if st.session_state.get("admin_print_trigger", False):
-            report_html_data = generate_printable_report(person_data, all_person_history_df_admin)
+            report_html_data = generate_printable_report_html(person_data, all_person_history_df_admin) # แก้ไข: เปลี่ยนชื่อฟังก์ชันที่เรียกใช้
             escaped_html = json.dumps(report_html_data)
             iframe_id = f"print-iframe-admin-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
             print_component = f"""
