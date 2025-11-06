@@ -852,7 +852,7 @@ def generate_printable_report(person_data, all_person_history_df=None):
             line-height: 1.5;
             margin-top: 0.5rem;
             page-break-inside: avoid;
-            font-size: 9px; /* Adjust font size if needed */
+            font-size: 9.5px; /* <-- ปรับจาก 9px เป็น 9.5px */
             white-space: pre-wrap; /* เพิ่ม white-space pre-wrap */
         }}
         
