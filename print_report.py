@@ -340,7 +340,7 @@ def generate_urine_recommendations(person_data, sex):
     status_cv = ""
     if is_empty(rbc_raw): status_cv = ""
     elif rbc_raw in ["0-1", "negative", "1-2", "2-3", "3-5"]: status_cv = "เม็ดเลือดแดงในปัสสาวะปกติ"
-    elif rbc_raw in ["5-10", "10-20"]: status_cv = "พบเม็ดเลือดแดงในปัสสาวะเล็กน้อย"
+    elif rbc_raw in ["5-10", "10-20"]: status_cv = "พบเม็ดเลือดแดงในปัสสาววะเล็กน้อย" # แก้ไข: เพิ่ม "ว"
     else: status_cv = "พบเม็ดเลือดแดงในปัสสาวะ" # ค่าอื่นๆ ที่ไม่ใช่ค่าว่าง
         
     # 4. ตรรกะ CW: ผล WBC
@@ -689,7 +689,7 @@ def render_other_results_html(person, sex, urine_statuses, doctor_opinion, all_p
     hep_b_advice_display, hep_b_status = "", ""
     
     # --- START OF CHANGE: Use "ปีตรวจHEP" column ---
-    hep_test_date_str = str(person.get("ปีตรวจHEP", "")).strip() # สมมติชื่อคอลัมน์ "ปีตรวจHEP"
+    hep_test_date_str = str(person_data.get("ปีตรวจHEP", "")).strip() # สมมติชื่อคอลัมน์ "ปีตรวจHEP"
     if not is_empty(hep_test_date_str):
         hepatitis_header_text = f"ผลตรวจไวรัสตับอักเสบ (Viral Hepatitis) (ตรวจเมื่อ: {hep_test_date_str})"
     else:
@@ -762,26 +762,130 @@ def render_other_results_html(person, sex, urine_statuses, doctor_opinion, all_p
 
 def generate_printable_report(person_data, all_person_history_df=None):
     """Generates a full, self-contained HTML string for the health report."""
+    
+    # --- START: CSS Multi-column Modification ---
+    
     sex = str(person_data.get("เพศ", "")).strip()
     if sex not in ["ชาย", "หญิง"]: sex = "ไม่ระบุ"
     
-    # --- START OF CHANGE: Call generation functions once ---
+    # --- 1. Call generation functions once ---
     cbc_results = generate_cbc_recommendations(person_data, sex)
     urine_results = generate_urine_recommendations(person_data, sex)
     doctor_opinion = generate_doctor_opinion(person_data, sex, cbc_results, urine_results)
-    # --- END OF CHANGE ---
     
     header_vitals_html = render_header_and_vitals(person_data)
-    # --- START OF CHANGE: Pass statuses AND history to render functions ---
-    lab_section_html = render_lab_section(person_data, sex, cbc_results)
-    other_results_html = render_other_results_html(person_data, sex, urine_results, doctor_opinion, all_person_history_df)
-    # --- END OF CHANGE ---
     
-    # --- START OF CHANGE: Remove the green recommendation box ---
-    # The logic is now inside render_lab_section and render_other_results_html
-    doctor_suggestion_html = ""
-    # --- END OF CHANGE ---
+    # --- 2. Inline logic from render_lab_section ---
+    hb_low, hct_low = (12, 36) if sex == "หญิง" else (13, 39)
+    cbc_config = [("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None), ("ฮีมาโตคริต (Hct)", "HCT", "ชาย > 39%, หญิง > 36%", hct_low, None), ("เม็ดเลือดขาว (wbc)", "WBC (cumm)", "4,000 - 10,000 /cu.mm", 4000, 10000), ("นิวโทรฟิล (Neutrophil)", "Ne (%)", "43 - 70%", 43, 70), ("ลิมโฟไซต์ (Lymphocyte)", "Ly (%)", "20 - 44%", 20, 44), ("โมโนไซต์ (Monocyte)", "M", "3 - 9%", 3, 9), ("อีโอซิโนฟิล (Eosinophil)", "Eo", "0 - 9%", 0, 9), ("เบโซฟิล (Basophil)", "BA", "0 - 3%", 0, 3), ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150,000 - 500,000 /cu.mm", 150000, 500000)]
+    cbc_rows = [[(label, is_abn), (result, is_abn), (norm, is_abn)] for label, col, norm, low, high in cbc_config for val in [get_float(col, person_data)] for result, is_abn in [flag(val, low, high)]]
+    blood_config = [("น้ำตาลในเลือด (FBS)", "FBS", "74 - 106 mg/dl", 74, 106), ("กรดยูริก (Uric Acid)", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2), ("การทำงานของเอนไซม์ตับ (ALK)", "ALP", "30 - 120 U/L", 30, 120), ("การทำงานของเอนไซม์ตับ (SGOT)", "SGOT", "< 37 U/L", None, 37), ("การทำงานของเอนไซม์ตับ (SGPT)", "SGPT", "< 41 U/L", None, 41), ("คลอเรสเตอรอล (CHOL)", "CHOL", "150 - 200 mg/dl", 150, 200), ("ไตรกลีเซอไรด์ (TGL)", "TGL", "35 - 150 mg/dl", 35, 150), ("ไขมันดี (HDL)", "HDL", "> 40 mg/dl", 40, None, True), ("ไขมันเลว (LDL)", "LDL", "0 - 160 mg/dl", 0, 160), ("การทำงานของไต (BUN)", "BUN", "7.9 - 20 mg/dl", 7.9, 20), ("การทำงานของไต (Cr)", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17), ("ประสิทธิภาพการกรองของไต (GFR)", "GFR", "> 60 mL/min", 60, None, True)]
+    blood_rows = [[(label, is_abn), (result, is_abn), (norm, is_abn)] for label, col, norm, low, high, *opt in blood_config for higher in [opt[0] if opt else False] for val in [get_float(col, person_data)] for result, is_abn in [flag(val, low, high, higher)]]
 
+    cbc_footer = cbc_results.get('summary', '[Error: CBC Status Missing]')
+    recommendations_list = generate_fixed_recommendations(person_data)
+    if not recommendations_list:
+        blood_footer = "ผลการตรวจโดยรวมอยู่ในเกณฑ์ปกติ"
+    else:
+        list_items = "".join([f"<li>{html.escape(rec)}</li>" for rec in recommendations_list])
+        blood_footer = f"<ul>{list_items}</ul>"
+        
+    cbc_html = render_lab_table_html("ผลตรวจ CBC (Complete Blood Count)", None, ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows, "print-lab-table", footer_html=cbc_footer)
+    blood_html = render_lab_table_html("ผลตรวจเลือด (Blood Chemistry)", None, ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows, "print-lab-table", footer_html=blood_footer)
+
+    # --- 3. Inline logic from render_other_results_html ---
+    urine_data = [("สี (Colour)", "Color", "Yellow, Pale Yellow"), ("น้ำตาล (Sugar)", "sugar", "Negative"), ("โปรตีน (Albumin)", "Alb", "Negative, trace"), ("กรด-ด่าง (pH)", "pH", "5.0 - 8.0"), ("ความถ่วงจำเพาะ (Sp.gr)", "Spgr", "1.003 - 1.030"), ("เม็ดเลือดแดง (RBC)", "RBC1", "0 - 2 cell/HPF"), ("เม็ดเลือดขาว (WBC)", "WBC1", "0 - 5 cell/HPF"), ("เซลล์เยื่อบุผิว (Squam.epit.)", "SQ-epi", "0 - 10 cell/HPF"), ("อื่นๆ", "ORTER", "-")]
+    urine_rows = [[(label, is_abn), (safe_value(val), is_abn), (norm, is_abn)] for label, key, norm in urine_data for val in [person_data.get(key, "-")] for is_abn in [is_urine_abnormal(label, val, norm)]]
+    
+    urine_footer = urine_results.get('summary', '[Error: Urine Status Missing]')
+    urine_html = render_lab_table_html("ผลการตรวจปัสสาวะ", "Urinalysis", ["การตรวจ", "ผลตรวจ", "ค่าปกติ"], urine_rows, "print-lab-table", footer_html=urine_footer)
+    
+    stool_exam_text = interpret_stool_exam(person_data.get("Stool exam", ""))
+    stool_cs_text = interpret_stool_cs(person_data.get("Stool C/S", ""))
+    stool_html = f"""
+    {render_section_header("ผลตรวจอุจจาระ (Stool Examination)")}
+    <table class="print-lab-table">
+        <tr><td style="text-align: left; width: 40%;"><b>ผลตรวจอุจจาระทั่วไป</b></td><td style="text-align: left;">{stool_exam_text}</td></tr>
+        <tr><td style="text-align: left; width: 40%;"><b>ผลตรวจอุจจาระเพาะเชื้อ</b></td><td style="text-align: left;">{stool_cs_text}</td></tr>
+    </table>
+    """
+
+    year_str = str(person_data.get("Year", ""))
+    current_year = int(year_str) if year_str.isdigit() else (datetime.now().year + 543)
+    
+    cxr_result = interpret_cxr(person_data.get(f"CXR{str(current_year)[-2:]}" if current_year != (datetime.now().year+543) else "CXR", ""))
+    ekg_result = interpret_ekg(person_data.get(get_ekg_col_name(current_year), ""))
+    other_tests_html = f"""
+    {render_section_header("ผลตรวจอื่นๆ")}
+    <table class="print-lab-table">
+        <tr><td style="text-align: left; width: 40%;"><b>ผลเอกซเรย์ (Chest X-ray)</b></td><td style="text-align: left;">{cxr_result}</td></tr>
+        <tr><td style="text-align: left; width: 40%;"><b>ผลคลื่นไฟฟ้าหัวใจ (EKG)</b></td><td style="text-align: left;">{ekg_result}</td></tr>
+    </table>
+    """
+
+    hep_a_value = person_data.get("Hepatitis A")
+    hep_a_display_text = "ไม่ได้เข้ารับการตรวจไวรัสตับอักเสบเอ" if is_empty(hep_a_value) else safe_value(hep_a_value)
+    
+    hbsag_current = person_data.get("HbsAg")
+    hbsab_current = person_data.get("HbsAb")
+    hbcab_current = person_data.get("HBcAb")
+
+    show_current_hep_b = not is_empty(hbsag_current) or not is_empty(hbsab_current) or not is_empty(hbcab_current)
+
+    hbsag_display = ""
+    hbsab_display = ""
+    hbcab_display = ""
+    hep_b_advice_display, hep_b_status = "", ""
+    
+    hep_test_date_str = str(person_data.get("ปีตรวจHEP", "")).strip()
+    if not is_empty(hep_test_date_str):
+        hepatitis_header_text = f"ผลตรวจไวรัสตับอักเสบ (Viral Hepatitis) (ตรวจเมื่อ: {hep_test_date_str})"
+    else:
+        hepatitis_header_text = f"ผลตรวจไวรัสตับอักเสบ (Viral Hepatitis) (พ.ศ. {current_year})"
+        
+    show_hep_b_advice_row = False 
+
+    if show_current_hep_b:
+        hbsag_display = safe_value(hbsag_current)
+        hbsab_display = safe_value(hbsab_current)
+        hbcab_display = safe_value(hbcab_current)
+        hep_b_advice_display, hep_b_status = hepatitis_b_advice(hbsag_display, hbsab_display, hbcab_display)
+        show_hep_b_advice_row = True
+    else:
+        hbsag_display = "ไม่ได้ตรวจ"
+        hbsab_display = "ไม่ได้ตรวจ"
+        hbcab_display = "ไม่ได้ตรวจ"
+        hep_b_advice_display = "ไม่ได้เข้ารับการตรวจในปีนี้"
+        show_hep_b_advice_row = False
+
+    advice_bg_color = '#f8f9fa'
+    if show_hep_b_advice_row:
+         advice_bg_color = {'infection': '#ffdddd', 'no_immune': '#fff8e1', 'immune': '#e8f5e9'}.get(hep_b_status, '#f8f9fa')
+
+    hep_b_rows_html = f"""
+        <tr><td style="text-align: left; width: 40%;"><b>ไวรัสตับอักเสบ เอ</b></td><td style="text-align: left;">{hep_a_display_text}</td></tr>
+        <tr><td style="text-align: left; width: 40%;"><b>ไวรัสตับอักเสบ บี (HBsAg)</b></td><td style="text-align: left;">{hbsag_display}</td></tr>
+        <tr><td style="text-align: left; width: 40%;"><b>ภูมิคุ้มกัน (HBsAb)</b></td><td style="text-align: left;">{hbsab_display}</td></tr>
+        <tr><td style="text-align: left; width: 40%;"><b>การติดเชื้อ (HBcAb)</b></td><td style="text-align: left;">{hbcab_display}</td></tr>
+    """
+    if show_hep_b_advice_row:
+         hep_b_rows_html += f'<tr style="background-color: {advice_bg_color};"><td colspan="2" style="text-align: left;"><b>คำแนะนำ:</b> {hep_b_advice_display}</td></tr>'
+
+    hepatitis_html = f"""
+    {render_section_header(hepatitis_header_text)}
+    <table class="print-lab-table">
+        {hep_b_rows_html}
+    </table>
+    """
+    
+    doctor_opinion_html = f"""
+    {render_section_header("สรุปความคิดเห็นของแพทย์")}
+    <div class="doctor-opinion-box">
+        {html.escape(doctor_opinion)}
+    </div>
+    """
+    
+    # --- 4. Signature ---
     signature_html = """
     <div style="margin-top: 2rem; text-align: right; padding-right: 1rem; page-break-inside: avoid;">
         <div style="display: inline-block; text-align: center; width: 280px;">
@@ -793,7 +897,7 @@ def generate_printable_report(person_data, all_person_history_df=None):
     </div>
     """
     
-    # --- START OF CHANGE: Add CSS for new elements ---
+    # --- 5. CSS ---
     css_html = """
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
@@ -827,7 +931,17 @@ def generate_printable_report(person_data, all_person_history_df=None):
         .info-table { font-size: 9.5px; text-align: left; }
         .info-table td { padding: 1px 5px; border: none; }
         
-        /* This green box is no longer used, but CSS remains just in case */
+        /* --- START: CSS for Multi-column --- */
+        .multi-column-container {
+            column-count: 2;
+            column-gap: 15px; /* ระยะห่างระหว่างคอลัมน์ */
+        }
+        .column-break-avoid {
+            break-inside: avoid;
+            page-break-inside: avoid; /* ป้องกันการตัดข้ามหน้า (เผื่อไว้) */
+        }
+        /* --- END: CSS for Multi-column --- */
+
         .advice-box { padding: 0.5rem 1rem; border-radius: 8px; line-height: 1.5; margin-top: 0.5rem; border: 1px solid #ddd; page-break-inside: avoid; }
         .advice-title { font-weight: bold; margin-bottom: 0.3rem; font-size: 11px; }
         .advice-content ul { padding-left: 20px; margin: 0; }
@@ -842,8 +956,8 @@ def generate_printable_report(person_data, all_person_history_df=None):
             line-height: 1.5;
             margin-top: 0.5rem;
             page-break-inside: avoid;
-            font-size: 9px; /* Adjust font size if needed */
-            white-space: pre-wrap; /* เพิ่ม white-space pre-wrap */
+            font-size: 9px;
+            white-space: pre-wrap;
         }
         
         .perf-section { margin-top: 0.5rem; page-break-inside: avoid; border: 1px solid #e0e0e0; border-radius: 8px; padding: 0.5rem; }
@@ -851,8 +965,8 @@ def generate_printable_report(person_data, all_person_history_df=None):
         @media print { body { -webkit-print-color-adjust: exact; margin: 0; } }
     </style>
     """
-    # --- END OF CHANGE ---
     
+    # --- 6. Final HTML Assembly ---
     final_html = f"""
     <!DOCTYPE html>
     <html lang="th">
@@ -863,11 +977,21 @@ def generate_printable_report(person_data, all_person_history_df=None):
     </head>
     <body>
         {header_vitals_html}
-        {lab_section_html}
-        {other_results_html}
-        {doctor_suggestion_html}
+        
+        <div class="multi-column-container">
+            <div class="column-break-avoid">{cbc_html}</div>
+            <div class="column-break-avoid">{blood_html}</div>
+            <div class="column-break-avoid">{urine_html}</div>
+            <div class="column-break-avoid">{stool_html}</div>
+            <div class="column-break-avoid">{other_tests_html}</div>
+            <div class="column-break-avoid">{hepatitis_html}</div>
+            <div class="column-break-avoid">{doctor_opinion_html}</div>
+        </div>
+        
         {signature_html}
     </body>
     </html>
     """
+    # --- END: CSS Multi-column Modification ---
+    
     return final_html
