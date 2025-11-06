@@ -533,7 +533,8 @@ def render_section_header(title, subtitle=None):
 # --- START OF CHANGE: Modified function to accept footer_html ---
 def render_lab_table_html(title, subtitle, headers, rows, table_class="print-lab-table", footer_html=None):
     header_html = render_section_header(title, subtitle)
-    html_content = f"{header_html}<table class='{table_class}'><colgroup><col style='width: 40%;'><col style='width: 20%;'><col style='width: 40%;'></colgroup><thead><tr>"
+    # --- START: Wrap content in a single table, not header + table ---
+    html_content = f"<table class='{table_class}'><colgroup><col style='width: 40%;'><col style='width: 20%;'><col style='width: 40%;'></colgroup><thead><tr>"
     for i, h in enumerate(headers):
         align = "left" if i == 0 or i == 2 else "center"
         html_content += f"<th style='text-align: {align};'>{h}</th>"
@@ -550,7 +551,9 @@ def render_lab_table_html(title, subtitle, headers, rows, table_class="print-lab
         # --- END OF CHANGE ---
         
     html_content += "</table>" # Close table
-    return html_content
+    # --- START: Wrap the whole block in the break-avoid div ---
+    return f"<div class='column-break-avoid'>{header_html}{html_content}</div>"
+    # --- END: Wrap the whole block in the break-avoid div ---
 # --- END OF CHANGE ---
 
 def render_header_and_vitals(person_data):
@@ -664,164 +667,33 @@ def render_other_results_html(person, sex, urine_statuses, doctor_opinion, all_p
     year_str = str(person.get("Year", ""))
     current_year = int(year_str) if year_str.isdigit() else (datetime.now().year + 543)
     # --- END OF CHANGE ---
-    cxr_result = interpret_cxr(person.get(f"CXR{str(current_year)[-2:]}" if current_year != (datetime.now().year+543) else "CXR", ""))
-    ekg_result = interpret_ekg(person.get(get_ekg_col_name(current_year), ""))
-    other_tests_html = f"""
-    {render_section_header("ผลตรวจอื่นๆ")}
-    <table class="print-lab-table">
-        <tr><td style="text-align: left; width: 40%;"><b>ผลเอกซเรย์ (Chest X-ray)</b></td><td style="text-align: left;">{cxr_result}</td></tr>
-        <tr><td style="text-align: left; width: 40%;"><b>ผลคลื่นไฟฟ้าหัวใจ (EKG)</b></td><td style="text-align: left;">{ekg_result}</td></tr>
-    </table>
-    """
-    hep_a_value = person.get("Hepatitis A")
-    hep_a_display_text = "ไม่ได้เข้ารับการตรวจไวรัสตับอักเสบเอ" if is_empty(hep_a_value) else safe_value(hep_a_value)
-
-    # --- START OF REFACTOR: Logic to display current or previous Hep B ---
-    hbsag_current = person.get("HbsAg")
-    hbsab_current = person.get("HbsAb")
-    hbcab_current = person.get("HBcAb")
-
-    show_current_hep_b = not is_empty(hbsag_current) or not is_empty(hbsab_current) or not is_empty(hbcab_current)
-
-    hbsag_display = "" # Will be set below
-    hbsab_display = "" # Will be set below
-    hbcab_display = "" # Will be set below
-    hep_b_advice_display, hep_b_status = "", ""
     
-    # --- START OF CHANGE: Use "ปีตรวจHEP" column ---
-    hep_test_date_str = str(person_data.get("ปีตรวจHEP", "")).strip() # สมมติชื่อคอลัมน์ "ปีตรวจHEP"
-    if not is_empty(hep_test_date_str):
-        hepatitis_header_text = f"ผลตรวจไวรัสตับอักเสบ (Viral Hepatitis) (ตรวจเมื่อ: {hep_test_date_str})"
-    else:
-        # Fallback to current year if "ปีตรวจHEP" is empty
-        hepatitis_header_text = f"ผลตรวจไวรัสตับอักเสบ (Viral Hepatitis) (พ.ศ. {current_year})"
-    # --- END OF CHANGE ---
-        
-    show_hep_b_advice_row = False # Flag to control advice row display
-
-    if show_current_hep_b:
-        # แสดงผลปีปัจจุบัน
-        hbsag_display = safe_value(hbsag_current)
-        hbsab_display = safe_value(hbsab_current)
-        hbcab_display = safe_value(hbcab_current)
-        hep_b_advice_display, hep_b_status = hepatitis_b_advice(hbsag_display, hbsab_display, hbcab_display)
-        show_hep_b_advice_row = True # Show advice for current year results
-    
-    else:
-        # ไม่มีข้อมูลปีปัจจุบัน
-        hbsag_display = "ไม่ได้ตรวจ"
-        hbsab_display = "ไม่ได้ตรวจ"
-        hbcab_display = "ไม่ได้ตรวจ"
-        hep_b_advice_display = "ไม่ได้เข้ารับการตรวจในปีนี้" # Simple note
-        show_hep_b_advice_row = False # Do not show standard advice row
-
-
-    advice_bg_color = '#f8f9fa' # Default background
-    if show_hep_b_advice_row: # กำหนดสีพื้นหลังเฉพาะเมื่อแสดงคำแนะนำของปีปัจจุบัน
-         advice_bg_color = {'infection': '#ffdddd', 'no_immune': '#fff8e1', 'immune': '#e8f5e9'}.get(hep_b_status, '#f8f9fa')
-
-    # สร้าง HTML ของแถวในตาราง Hep B
-    hep_b_rows_html = f"""
-        <tr><td style="text-align: left; width: 40%;"><b>ไวรัสตับอักเสบ เอ</b></td><td style="text-align: left;">{hep_a_display_text}</td></tr>
-        <tr><td style="text-align: left; width: 40%;"><b>ไวรัสตับอักเสบ บี (HBsAg)</b></td><td style="text-align: left;">{hbsag_display}</td></tr>
-        <tr><td style="text-align: left; width: 40%;"><b>ภูมิคุ้มกัน (HBsAb)</b></td><td style="text-align: left;">{hbsab_display}</td></tr>
-        <tr><td style="text-align: left; width: 40%;"><b>การติดเชื้อ (HBcAb)</b></td><td style="text-align: left;">{hbcab_display}</td></tr>
-    """
-    # เพิ่มแถวคำแนะนำถ้าจำเป็น (เฉพาะผลปีปัจจุบัน)
-    if show_hep_b_advice_row:
-         hep_b_rows_html += f'<tr style="background-color: {advice_bg_color};"><td colspan="2" style="text-align: left;"><b>คำแนะนำ:</b> {hep_b_advice_display}</td></tr>'
-    
-    # --- END OF REFACTOR (Removed the part that showed previous year's data) ---
-
-
-    hepatitis_html = f"""
-    {render_section_header(hepatitis_header_text)}
-    <table class="print-lab-table">
-        {hep_b_rows_html}
-    </table>
-    """
-    # --- END OF REFACTOR ---
-
-    # --- START OF CHANGE: Use generated doctor_opinion ---
-    doctor_opinion_html = f"""
-    {render_section_header("สรุปความคิดเห็นของแพทย์")}
-    <div class="doctor-opinion-box">
-        {html.escape(doctor_opinion)}
-    </div>
-    """
-    # --- END OF CHANGE ---
-    
-    return f"""
-    <table style="width: 100%; border-collapse: collapse; page-break-inside: avoid;">
-        <tr>
-            <td style="width: 50%; vertical-align: top; padding-right: 5px;">{urine_html}{stool_html}</td>
-            <td style="width: 50%; vertical-align: top; padding-left: 5px;">{other_tests_html}{hepatitis_html}{doctor_opinion_html}</td>
-        </tr>
-    </table>
-    """
-
-def generate_printable_report(person_data, all_person_history_df=None):
-    """Generates a full, self-contained HTML string for the health report."""
-    
-    # --- START: CSS Multi-column Modification ---
-    
-    sex = str(person_data.get("เพศ", "")).strip()
-    if sex not in ["ชาย", "หญิง"]: sex = "ไม่ระบุ"
-    
-    # --- 1. Call generation functions once ---
-    cbc_results = generate_cbc_recommendations(person_data, sex)
-    urine_results = generate_urine_recommendations(person_data, sex)
-    doctor_opinion = generate_doctor_opinion(person_data, sex, cbc_results, urine_results)
-    
-    header_vitals_html = render_header_and_vitals(person_data)
-    
-    # --- 2. Inline logic from render_lab_section ---
-    hb_low, hct_low = (12, 36) if sex == "หญิง" else (13, 39)
-    cbc_config = [("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None), ("ฮีมาโตคริต (Hct)", "HCT", "ชาย > 39%, หญิง > 36%", hct_low, None), ("เม็ดเลือดขาว (wbc)", "WBC (cumm)", "4,000 - 10,000 /cu.mm", 4000, 10000), ("นิวโทรฟิล (Neutrophil)", "Ne (%)", "43 - 70%", 43, 70), ("ลิมโฟไซต์ (Lymphocyte)", "Ly (%)", "20 - 44%", 20, 44), ("โมโนไซต์ (Monocyte)", "M", "3 - 9%", 3, 9), ("อีโอซิโนฟิล (Eosinophil)", "Eo", "0 - 9%", 0, 9), ("เบโซฟิล (Basophil)", "BA", "0 - 3%", 0, 3), ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150,000 - 500,000 /cu.mm", 150000, 500000)]
-    cbc_rows = [[(label, is_abn), (result, is_abn), (norm, is_abn)] for label, col, norm, low, high in cbc_config for val in [get_float(col, person_data)] for result, is_abn in [flag(val, low, high)]]
-    blood_config = [("น้ำตาลในเลือด (FBS)", "FBS", "74 - 106 mg/dl", 74, 106), ("กรดยูริก (Uric Acid)", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2), ("การทำงานของเอนไซม์ตับ (ALK)", "ALP", "30 - 120 U/L", 30, 120), ("การทำงานของเอนไซม์ตับ (SGOT)", "SGOT", "< 37 U/L", None, 37), ("การทำงานของเอนไซม์ตับ (SGPT)", "SGPT", "< 41 U/L", None, 41), ("คลอเรสเตอรอล (CHOL)", "CHOL", "150 - 200 mg/dl", 150, 200), ("ไตรกลีเซอไรด์ (TGL)", "TGL", "35 - 150 mg/dl", 35, 150), ("ไขมันดี (HDL)", "HDL", "> 40 mg/dl", 40, None, True), ("ไขมันเลว (LDL)", "LDL", "0 - 160 mg/dl", 0, 160), ("การทำงานของไต (BUN)", "BUN", "7.9 - 20 mg/dl", 7.9, 20), ("การทำงานของไต (Cr)", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17), ("ประสิทธิภาพการกรองของไต (GFR)", "GFR", "> 60 mL/min", 60, None, True)]
-    blood_rows = [[(label, is_abn), (result, is_abn), (norm, is_abn)] for label, col, norm, low, high, *opt in blood_config for higher in [opt[0] if opt else False] for val in [get_float(col, person_data)] for result, is_abn in [flag(val, low, high, higher)]]
-
-    cbc_footer = cbc_results.get('summary', '[Error: CBC Status Missing]')
-    recommendations_list = generate_fixed_recommendations(person_data)
-    if not recommendations_list:
-        blood_footer = "ผลการตรวจโดยรวมอยู่ในเกณฑ์ปกติ"
-    else:
-        list_items = "".join([f"<li>{html.escape(rec)}</li>" for rec in recommendations_list])
-        blood_footer = f"<ul>{list_items}</ul>"
-        
-    cbc_html = render_lab_table_html("ผลตรวจ CBC (Complete Blood Count)", None, ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows, "print-lab-table", footer_html=cbc_footer)
-    blood_html = render_lab_table_html("ผลตรวจเลือด (Blood Chemistry)", None, ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows, "print-lab-table", footer_html=blood_footer)
-
-    # --- 3. Inline logic from render_other_results_html ---
-    urine_data = [("สี (Colour)", "Color", "Yellow, Pale Yellow"), ("น้ำตาล (Sugar)", "sugar", "Negative"), ("โปรตีน (Albumin)", "Alb", "Negative, trace"), ("กรด-ด่าง (pH)", "pH", "5.0 - 8.0"), ("ความถ่วงจำเพาะ (Sp.gr)", "Spgr", "1.003 - 1.030"), ("เม็ดเลือดแดง (RBC)", "RBC1", "0 - 2 cell/HPF"), ("เม็ดเลือดขาว (WBC)", "WBC1", "0 - 5 cell/HPF"), ("เซลล์เยื่อบุผิว (Squam.epit.)", "SQ-epi", "0 - 10 cell/HPF"), ("อื่นๆ", "ORTER", "-")]
-    urine_rows = [[(label, is_abn), (safe_value(val), is_abn), (norm, is_abn)] for label, key, norm in urine_data for val in [person_data.get(key, "-")] for is_abn in [is_urine_abnormal(label, val, norm)]]
-    
-    urine_footer = urine_results.get('summary', '[Error: Urine Status Missing]')
-    urine_html = render_lab_table_html("ผลการตรวจปัสสาวะ", "Urinalysis", ["การตรวจ", "ผลตรวจ", "ค่าปกติ"], urine_rows, "print-lab-table", footer_html=urine_footer)
-    
-    stool_exam_text = interpret_stool_exam(person_data.get("Stool exam", ""))
-    stool_cs_text = interpret_stool_cs(person_data.get("Stool C/S", ""))
+    # --- START: Wrap in break-avoid div ---
     stool_html = f"""
+    <div class='column-break-avoid'>
     {render_section_header("ผลตรวจอุจจาระ (Stool Examination)")}
     <table class="print-lab-table">
         <tr><td style="text-align: left; width: 40%;"><b>ผลตรวจอุจจาระทั่วไป</b></td><td style="text-align: left;">{stool_exam_text}</td></tr>
         <tr><td style="text-align: left; width: 40%;"><b>ผลตรวจอุจจาระเพาะเชื้อ</b></td><td style="text-align: left;">{stool_cs_text}</td></tr>
     </table>
+    </div>
     """
+    # --- END: Wrap in break-avoid div ---
 
-    year_str = str(person_data.get("Year", ""))
-    current_year = int(year_str) if year_str.isdigit() else (datetime.now().year + 543)
-    
+    # --- START OF CHANGE: Add year variable ---
     cxr_result = interpret_cxr(person_data.get(f"CXR{str(current_year)[-2:]}" if current_year != (datetime.now().year+543) else "CXR", ""))
     ekg_result = interpret_ekg(person_data.get(get_ekg_col_name(current_year), ""))
+    # --- START: Wrap in break-avoid div ---
     other_tests_html = f"""
+    <div class='column-break-avoid'>
     {render_section_header("ผลตรวจอื่นๆ")}
     <table class="print-lab-table">
         <tr><td style="text-align: left; width: 40%;"><b>ผลเอกซเรย์ (Chest X-ray)</b></td><td style="text-align: left;">{cxr_result}</td></tr>
         <tr><td style="text-align: left; width: 40%;"><b>ผลคลื่นไฟฟ้าหัวใจ (EKG)</b></td><td style="text-align: left;">{ekg_result}</td></tr>
     </table>
+    </div>
     """
+    # --- END: Wrap in break-avoid div ---
 
     hep_a_value = person_data.get("Hepatitis A")
     hep_a_display_text = "ไม่ได้เข้ารับการตรวจไวรัสตับอักเสบเอ" if is_empty(hep_a_value) else safe_value(hep_a_value)
@@ -870,25 +742,35 @@ def generate_printable_report(person_data, all_person_history_df=None):
     """
     if show_hep_b_advice_row:
          hep_b_rows_html += f'<tr style="background-color: {advice_bg_color};"><td colspan="2" style="text-align: left;"><b>คำแนะนำ:</b> {hep_b_advice_display}</td></tr>'
+    
+    # --- END OF REFACTOR (Removed the part that showed previous year's data) ---
 
+    # --- START: Wrap in break-avoid div ---
     hepatitis_html = f"""
+    <div class='column-break-avoid'>
     {render_section_header(hepatitis_header_text)}
     <table class="print-lab-table">
         {hep_b_rows_html}
     </table>
+    </div>
     """
-    
+    # --- END: Wrap in break-avoid div ---
+    # --- END OF REFACTOR ---
+
+    # --- START OF CHANGE: Use generated doctor_opinion ---
+    # --- START: Wrap in break-avoid div ---
     doctor_opinion_html = f"""
+    <div class='column-break-avoid'>
     {render_section_header("สรุปความคิดเห็นของแพทย์")}
     <div class="doctor-opinion-box">
         {html.escape(doctor_opinion)}
     </div>
+    </div>
     """
+    # --- END: Wrap in break-avoid div ---
+    # --- END OF CHANGE ---
     
-    # --- 4. Signature ---
-    signature_html = """
-    <div style="margin-top: 2rem; text-align: right; padding-right: 1rem; page-break-inside: avoid;">
-        <div style="display: inline-block; text-align: center; width: 280px;">
+    return f"""
             <div style="border-bottom: 1px dotted #333; margin-bottom: 0.4rem; width: 100%;"></div>
             <div style="white-space: nowrap;">นายแพทย์นพรัตน์ รัชฎาพร</div>
             <div style="white-space: nowrap;">แพทย์อาชีวเวชศาสตร์</div>
@@ -979,13 +861,13 @@ def generate_printable_report(person_data, all_person_history_df=None):
         {header_vitals_html}
         
         <div class="multi-column-container">
-            <div class="column-break-avoid">{cbc_html}</div>
-            <div class="column-break-avoid">{blood_html}</div>
-            <div class="column-break-avoid">{urine_html}</div>
-            <div class="column-break-avoid">{stool_html}</div>
-            <div class="column-break-avoid">{other_tests_html}</div>
-            <div class="column-break-avoid">{hepatitis_html}</div>
-            <div class="column-break-avoid">{doctor_opinion_html}</div>
+            {cbc_html}
+            {blood_html}
+            {urine_html}
+            {stool_html}
+            {other_tests_html}
+            {hepatitis_html}
+            {doctor_opinion_html}
         </div>
         
         {signature_html}
