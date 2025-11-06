@@ -228,21 +228,26 @@ def render_print_hearing(person_data, all_person_history_df):
     summary_r_raw = person_data.get('ผลตรวจการได้ยินหูขวา', 'N/A')
     summary_l_raw = person_data.get('ผลตรวจการได้ยินหูซ้าย', 'N/A')
     
+    # --- START OF CHANGE: Updated get_summary_class function ---
     def get_summary_class(summary_text):
-        if "ปกติ" in summary_text: return "status-ok"
-        if "N/A" in summary_text or "ไม่ได้" in summary_text: return "status-nt"
-        return "status-abn"
+        if "ปกติ" in summary_text: return "status-ok-text"
+        if "N/A" in summary_text or "ไม่ได้" in summary_text: return "status-nt-text"
+        return "status-abn-text"
+    # --- END OF CHANGE ---
 
+    # --- START OF CHANGE: Replaced summary_cards_html with summary_single_line_box ---
     summary_cards_html = f"""
-    <div class="summary-cards">
-        <div class="card {get_summary_class(summary_r_raw)}">
-            <div class="card-body"><b>หูขวา (Right Ear):</b> {html.escape(summary_r_raw)}</div>
-        </div>
-        <div class="card {get_summary_class(summary_l_raw)}">
-            <div class="card-body"><b>หูซ้าย (Left Ear):</b> {html.escape(summary_l_raw)}</div>
-        </div>
+    <div class="summary-single-line-box">
+        <span class="{get_summary_class(summary_r_raw)}">
+            <b>หูขวา (Right Ear):</b> {html.escape(summary_r_raw)}
+        </span>
+        <span style="color: #ccc; margin: 0 15px;">|</span>
+        <span class="{get_summary_class(summary_l_raw)}">
+            <b>หูซ้าย (Left Ear):</b> {html.escape(summary_l_raw)}
+        </span>
     </div>
     """
+    # --- END OF CHANGE ---
     
     # --- START OF CHANGE: Handle None for advice ---
     advice = results.get('advice', '') or 'ไม่มีคำแนะนำเพิ่มเติม'
@@ -465,6 +470,8 @@ def generate_performance_report_html(person_data, all_person_history_df):
             .data-table th {{ background-color: #f5f5f5; font-weight: bold; }}
             .data-table td:first-child {{ text-align: left; }}
 
+            /* --- START OF CHANGE: Remove old card styles, add new line-box style --- */
+            /*
             .summary-cards {{ display: flex; gap: 10px; margin-bottom: 0.8rem; }}
             .card {{ 
                 flex: 1; border-radius: 6px; padding: 8px; text-align: center; 
@@ -474,7 +481,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
                 flex-direction: column;
                 justify-content: center;
                 align-items: center;
-                min-height: 40px; /* Reduced height */
+                min-height: 40px;
             }}
             .card-title {{
                 font-weight: bold;
@@ -488,6 +495,20 @@ def generate_performance_report_html(person_data, all_person_history_df):
                 text-align: center;
                 width: 100%;
             }}
+            */
+            
+            .summary-single-line-box {{
+                text-align: center;
+                padding: 8px;
+                border: 1px solid #e0e0e0;
+                background-color: #f9f9f9;
+                border-radius: 6px;
+                margin-bottom: 0.8rem;
+                font-size: 11px;
+                font-weight: bold;
+                page-break-inside: avoid; /* Ensure this box doesn't break */
+            }}
+            /* --- END OF CHANGE --- */
 
             .summary-container {{ margin-top: 0; }}
             .summary-container-lung {{ margin-top: 10px; }}
@@ -513,6 +534,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
             
             .status-ok-text {{ color: #1b5e20; }}
             .status-abn-text {{ color: #b71c1c; }}
+            .status-nt-text {{ color: #555; }} /* --- ADDED THIS --- */
             
             .signature-section {{
                 margin-top: 2rem;
