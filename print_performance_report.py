@@ -228,14 +228,11 @@ def render_print_hearing(person_data, all_person_history_df):
     summary_r_raw = person_data.get('ผลตรวจการได้ยินหูขวา', 'N/A')
     summary_l_raw = person_data.get('ผลตรวจการได้ยินหูซ้าย', 'N/A')
     
-    # --- START OF CHANGE: Updated get_summary_class function ---
     def get_summary_class(summary_text):
         if "ปกติ" in summary_text: return "status-ok-text"
         if "N/A" in summary_text or "ไม่ได้" in summary_text: return "status-nt-text"
         return "status-abn-text"
-    # --- END OF CHANGE ---
 
-    # --- START OF CHANGE: Replaced summary_cards_html with summary_single_line_box ---
     summary_cards_html = f"""
     <div class="summary-single-line-box">
         <span class="{get_summary_class(summary_r_raw)}">
@@ -247,12 +244,9 @@ def render_print_hearing(person_data, all_person_history_df):
         </span>
     </div>
     """
-    # --- END OF CHANGE ---
     
-    # --- START OF CHANGE: Handle None for advice ---
     advice = results.get('advice', '') or 'ไม่มีคำแนะนำเพิ่มเติม'
     advice_box_html = f"<div class='advice-box'><b>คำแนะนำ:</b> {html.escape(advice)}</div>"
-    # --- END OF CHANGE ---
     if results.get('sts_detected'):
         advice_box_html = f"<div class='advice-box'><b>⚠️ พบการเปลี่ยนแปลงระดับการได้ยินอย่างมีนัยสำคัญ (STS)</b><br>{html.escape(advice)}</div>"
 
@@ -330,21 +324,24 @@ def render_print_hearing(person_data, all_person_history_df):
     </div>
     """
     
+    # --- START OF CHANGE: Moved summary_cards_html into side-content ---
     return f"""
     <div class="report-section">
         {render_section_header("ผลการตรวจสมรรถภาพการได้ยิน (Audiometry)")}
-        {summary_cards_html}
+        
         <div class="content-columns">
             <div class="main-content">
                 {data_table_html}
             </div>
             <div class="side-content">
+                {summary_cards_html} 
                 {averages_html}
                 {advice_box_html}
             </div>
         </div>
     </div>
     """
+    # --- END OF CHANGE ---
 
 def render_print_lung(person_data):
     """Renders the Lung Capacity (Spirometry) section for the print report."""
