@@ -333,18 +333,86 @@ def render_print_hearing(person_data, all_person_history_df):
     <div class="report-section">
         {render_section_header("ผลการตรวจสมรรถภาพการได้ยิน (Audiometry)")}
         
-        
-
         <div class="content-columns">
             <div class="main-content">
-                {summary_cards_html} 
                 {data_table_html}
             </div>
             <div class="side-content">
-                
-                 
+                {summary_cards_html} 
                 {averages_html}
                 {advice_box_html}
+            </div>
+        </div>
+    </div>
+    """
+
+def render_print_lung(person_data):
+    """Renders the Lung Capacity (Spirometry) section for the print report."""
+    if not has_lung_data(person_data):
+        return ""
+        
+    summary, advice, raw = interpret_lung_capacity(person_data)
+
+    def format_val(key, spec='.1f'):
+        val = raw.get(key)
+        return f"{val:{spec}}" if val is not None else "-"
+
+    def get_status_class(val, low_threshold):
+        if val is None: return "" 
+        return "status-ok-text" if val >= low_threshold else "status-abn-text"
+    
+    summary_class = "status-ok-text" if "ปกติ" in summary else "status-abn-text"
+    if "ไม่ได้" in summary or "คลาดเคลื่อน" in summary:
+        summary_class = ""
+
+    summary_title_html = f"""
+    <div class="summary-title-lung {summary_class}">
+        {html.escape(summary)}
+    </div>
+    """
+    
+    advice_box_html = f"<div class='advice-box'><b>คำแนะนำ:</b> {html.escape(advice)}</div>"
+    
+    year = person_data.get("Year")
+    cxr_result_text = "ไม่มีข้อมูล"
+    if year:
+        cxr_col = f"CXR{str(year)[-2:]}" if year != (datetime.now().year + 543) else "CXR"
+        cxr_result, cxr_status = interpret_cxr(person_data.get(cxr_col, ''))
+        cxr_result_text = cxr_result
+    cxr_html = f"""
+    <div class="advice-box" style="margin-bottom: 5px;">
+        <b>ผลเอกซเรย์ทรวงอก (CXR):</b><br>{html.escape(cxr_result_text)}
+    </div>
+    """
+    
+    data_table_html = f"""
+    <table class="data-table">
+        <thead>
+            <tr><th>การทดสอบ</th><th>ค่าที่วัดได้ (Actual)</th><th>ค่ามาตรฐาน (Pred)</th><th>% เทียบค่ามาตรฐาน (%Pred)</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>FVC (L)</td><td>{format_val('FVC', '.2f')}</td><td>{format_val('FVC predic', '.2f')}</td><td class='{get_status_class(raw.get("FVC %"), 80)}'>{format_val('FVC %')} %</td></tr>
+            <tr><td>FEV1 (L)</td><td>{format_val('FEV1', '.2f')}</td><td>{format_val('FEV1 predic', '.2f')}</td><td class='{get_status_class(raw.get("FEV1 %"), 80)}'>{format_val('FEV1 %')} %</td></tr>
+            <tr><td>FEV1/FVC (%)</td><td class='{get_status_class(raw.get("FEV1/FVC %"), 70)}'>{format_val('FEV1/FVC %')} %</td><td>{format_val('FEV1/FVC % pre')} %</td><td>-</td></tr>
+        </tbody>
+    </table>
+    """
+
+    side_content_html = f"""
+    {cxr_html}
+    {advice_box_html}
+    """
+
+    return f"""
+    <div class="report-section">
+        {render_section_header("ผลการตรวจสมรรถภาพปอด (Spirometry)")}
+        {summary_title_html}
+        <div class="content-columns">
+            <div class="main-content">
+                {data_table_html}
+            </div>
+            <div class="side-content">
+                {side_content_html}
             </div>
         </div>
     </div>
@@ -408,7 +476,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
             .data-table td:first-child {{ text-align: left; }}
 
             /* --- START OF CHANGE: CSS for flexbox layout --- */
-            .summary-single-line-box {
+            .summary-single-line-box {{
                 display: flex;
                 justify-content: space-between; /* ชิดซ้าย-ขวา */
                 align-items: center;
@@ -423,11 +491,11 @@ def generate_performance_report_html(person_data, all_person_history_df):
                 font-size: 12px; /* <--- ปรับขนาด */
                 font-weight: bold;
                 page-break-inside: avoid; 
-            }
+            }}
             
-            .summary-single-line-box span {
+            .summary-single-line-box span {{
                 text-align: left; /* จัดข้อความในแต่ละ span ให้ชิดซ้าย */
-            }
+            }}
             /* --- END OF CHANGE --- */
 
             .summary-container {{ margin-top: 0; }}
