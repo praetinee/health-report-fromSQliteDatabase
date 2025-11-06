@@ -236,10 +236,10 @@ def render_print_hearing(person_data, all_person_history_df):
     summary_cards_html = f"""
     <div class="summary-single-line-box">
         <span class="{get_summary_class(summary_r_raw)}">
-            <b>หูขวา (Right Ear):</b> {html.escape(summary_r_raw)}
+            <b>หูขวา:</b> {html.escape(summary_r_raw)}
         </span>
         <span class="{get_summary_class(summary_l_raw)}">
-            <b>หูซ้าย (Left Ear):</b> {html.escape(summary_l_raw)}
+            <b>หูซ้าย:</b> {html.escape(summary_l_raw)}
         </span>
     </div>
     """
