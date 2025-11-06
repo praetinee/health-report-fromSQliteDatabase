@@ -233,7 +233,6 @@ def render_print_hearing(person_data, all_person_history_df):
         if "N/A" in summary_text or "ไม่ได้" in summary_text: return "status-nt-text"
         return "status-abn-text"
 
-    # --- START OF CHANGE: Removed the | separator span ---
     summary_cards_html = f"""
     <div class="summary-single-line-box">
         <span class="{get_summary_class(summary_r_raw)}">
@@ -244,7 +243,6 @@ def render_print_hearing(person_data, all_person_history_df):
         </span>
     </div>
     """
-    # --- END OF CHANGE ---
     
     advice = results.get('advice', '') or 'ไม่มีคำแนะนำเพิ่มเติม'
     advice_box_html = f"<div class='advice-box'><b>คำแนะนำ:</b> {html.escape(advice)}</div>"
@@ -280,12 +278,17 @@ def render_print_hearing(person_data, all_person_history_df):
         </tr>
         """
 
+    # --- START OF CHANGE: Updated table_header_html ---
+    baseline_header_line1 = "การเปลี่ยนแปลงเทียบกับ Baseline"
+    baseline_header_line2 = f"(พ.ศ. {baseline_year})" if has_baseline else "(ไม่มี Baseline)"
+    baseline_header_html = f"{baseline_header_line1}<br>{baseline_header_line2}"
+
     table_header_html = f"""
     <thead>
         <tr>
             <th rowspan="2" style="vertical-align: middle;">ความถี่ (Hz)</th>
             <th colspan="2">ผลการตรวจปัจจุบัน (dB)</th>
-            <th colspan="2">การเปลี่ยนแปลงเทียบกับ Baseline{' (พ.ศ. ' + str(baseline_year) + ')' if has_baseline else ''}</th>
+            <th colspan="2" style="vertical-align: middle;">{baseline_header_html}</th>
         </tr>
         <tr>
             <th>หูขวา</th>
@@ -295,6 +298,7 @@ def render_print_hearing(person_data, all_person_history_df):
         </tr>
     </thead>
     """
+    # --- END OF CHANGE ---
     
     data_table_html = f"""
     <table class="data-table hearing-table">
@@ -325,7 +329,6 @@ def render_print_hearing(person_data, all_person_history_df):
     </div>
     """
     
-    # --- START OF CHANGE: Moved summary_cards_html into side-content ---
     return f"""
     <div class="report-section">
         {render_section_header("ผลการตรวจสมรรถภาพการได้ยิน (Audiometry)")}
@@ -342,7 +345,6 @@ def render_print_hearing(person_data, all_person_history_df):
         </div>
     </div>
     """
-    # --- END OF CHANGE ---
 
 def render_print_lung(person_data):
     """Renders the Lung Capacity (Spirometry) section for the print report."""
