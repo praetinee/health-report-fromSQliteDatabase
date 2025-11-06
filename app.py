@@ -17,7 +17,7 @@ from streamlit_js_eval import streamlit_js_eval
 from auth import authentication_flow, pdpa_consent_page
 
 # --- Import Print Functions ---
-from print_report import generate_printable_report
+from print_report import generate_printable_report_html # แก้ไข: เปลี่ยนชื่อฟังก์ชันที่ import
 from print_performance_report import generate_performance_report_html
 
 # --- Import Admin Panel and SHARED UI functions FROM admin_panel ---
@@ -210,7 +210,7 @@ def main_app(df):
 
         # --- Print Logic ---
         if st.session_state.get("print_trigger", False):
-            report_html_data = generate_printable_report(person_data, all_person_history_df)
+            report_html_data = generate_printable_report_html(person_data, all_person_history_df) # แก้ไข: เปลี่ยนชื่อฟังก์ชันที่เรียกใช้
             escaped_html = json.dumps(report_html_data)
             iframe_id = f"print-iframe-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
             print_component = f"""
@@ -280,4 +280,3 @@ else:
         display_admin_panel(df) # Call admin panel function (now defined in admin_panel.py)
     else:
         main_app(df) # Call main app function for regular users
-
