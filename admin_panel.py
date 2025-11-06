@@ -14,6 +14,16 @@ from print_report import generate_printable_report
 from print_performance_report import generate_performance_report_html
 from visualization import display_visualization_tab # Import display_visualization_tab มาที่นี่
 
+# --- START: Import ตรรกะการแปลผลจาก print_report.py ---
+from print_report import (
+    generate_fixed_recommendations,
+    generate_cbc_recommendations,
+    generate_urine_recommendations,
+    generate_doctor_opinion
+)
+# --- END: Import ตรรกะการแปลผลจาก print_report.py ---
+
+
 # --- START: Functions moved from shared_ui.py ---
 
 def is_empty(val):
@@ -52,7 +62,8 @@ def render_section_header(title):
     """Renders a new, modern section header."""
     st.markdown(f"<h4>{title}</h4>", unsafe_allow_html=True)
 
-def render_lab_table_html(title, headers, rows, table_class="lab-table"):
+# --- START: แก้ไข render_lab_table_html ให้รับ footer_html ---
+def render_lab_table_html(title, headers, rows, table_class="lab-table", footer_html=None):
     """Generates HTML for a lab result table with a new header style."""
     header_html = f"<h5 class='section-subtitle'>{title}</h5>"
     html_content = f"{header_html}<div class='table-container'><table class='{table_class}'><colgroup><col style='width:40%;'><col style='width:20%;'><col style='width:40%;'></colgroup><thead><tr>"
@@ -64,8 +75,15 @@ def render_lab_table_html(title, headers, rows, table_class="lab-table"):
         is_abn = any(flag_val for _, flag_val in row) # Corrected variable name
         row_class = f"abnormal-row" if is_abn else ""
         html_content += f"<tr class='{row_class}'><td style='text-align: left;'>{row[0][0]}</td><td>{row[1][0]}</td><td style='text-align: left;'>{row[2][0]}</td></tr>"
-    html_content += "</tbody></table></div>"
+    html_content += "</tbody>" # ปิด tbody
+    
+    # เพิ่มส่วน footer ถ้ามี
+    if footer_html:
+        html_content += f"<tfoot><tr class='recommendation-row'><td colspan='{len(headers)}' style='text-align: left;'><b>สรุปผล/คำแนะนำ:</b><br>{footer_html}</td></tr></tfoot>"
+        
+    html_content += "</table></div>" # ปิด table
     return html_content
+# --- END: แก้ไข render_lab_table_html ให้รับ footer_html ---
 
 def safe_text(val): return "-" if str(val).strip().lower() in ["", "none", "nan", "-"] else str(val).strip()
 def safe_value(val):
@@ -113,13 +131,15 @@ def is_urine_abnormal(test_name, value, normal_range):
     if test_name == "สี (Colour)": return val not in ["yellow", "pale yellow", "colorless", "paleyellow", "light yellow"]
     return False
 
-def render_urine_section(person_data, sex, year_selected):
+# --- START: แก้ไข render_urine_section ให้รับ footer_html ---
+def render_urine_section(person_data, sex, year_selected, footer_html=None):
     """Renders the urinalysis section and returns a summary."""
     urine_data = [("สี (Colour)", person_data.get("Color", "-"), "Yellow, Pale Yellow"), ("น้ำตาล (Sugar)", person_data.get("sugar", "-"), "Negative"), ("โปรตีน (Albumin)", person_data.get("Alb", "-"), "Negative, trace"), ("กรด-ด่าง (pH)", person_data.get("pH", "-"), "5.0 - 8.0"), ("ความถ่วงจำเพาะ (Sp.gr)", person_data.get("Spgr", "-"), "1.003 - 1.030"), ("เม็ดเลือดแดง (RBC)", person_data.get("RBC1", "-"), "0 - 2 cell/HPF"), ("เม็ดเลือดขาว (WBC)", person_data.get("WBC1", "-"), "0 - 5 cell/HPF"), ("เซลล์เยื่อบุผิว (Squam.epit.)", person_data.get("SQ-epi", "-"), "0 - 10 cell/HPF"), ("อื่นๆ", person_data.get("ORTER", "-"), "-")]
     df_urine = pd.DataFrame(urine_data, columns=["การตรวจ", "ผลตรวจ", "ค่าปกติ"])
-    html_content = render_lab_table_html("ผลการตรวจปัสสาวะ (Urinalysis)", ["การตรวจ", "ผล", "ค่าปกติ"], [[(row["การตรวจ"], is_urine_abnormal(row["การตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"])), (safe_value(row["ผลตรวจ"]), is_urine_abnormal(row["การตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"])), (row["ค่าปกติ"], is_urine_abnormal(row["การตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"]))] for _, row in df_urine.iterrows()], table_class="lab-table")
+    html_content = render_lab_table_html("ผลการตรวจปัสสาวะ (Urinalysis)", ["การตรวจ", "ผล", "ค่าปกติ"], [[(row["การตรวจ"], is_urine_abnormal(row["การตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"])), (safe_value(row["ผลตรวจ"]), is_urine_abnormal(row["การตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"])), (row["ค่าปกติ"], is_urine_abnormal(row["การตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"]))] for _, row in df_urine.iterrows()], table_class="lab-table", footer_html=footer_html)
     st.markdown(html_content, unsafe_allow_html=True)
     return any(not is_empty(val) for _, val, _ in urine_data)
+# --- END: แก้ไข render_urine_section ให้รับ footer_html ---
 
 def interpret_stool_exam(val):
     """Interprets stool examination results."""
@@ -444,10 +464,45 @@ def inject_custom_css():
         .lab-table tbody tr:hover { background-color: rgba(128, 128, 128, 0.1); }
         .lab-table .abnormal-row { background-color: var(--abnormal-bg-color); color: var(--abnormal-text-color); font-weight: 600; }
         .info-detail-table th { width: 35%; }
+        
+        /* --- START: เพิ่ม CSS สำหรับ recommendation-row --- */
+        .lab-table tfoot .recommendation-row td {
+            background-color: var(--warning-bg-color); /* ใช้สีเหลืองอ่อนจาก Theme */
+            color: var(--text-color); /* ใช้สีตัวอักษรหลัก */
+            opacity: 0.9;
+            font-weight: normal;
+            font-size: 13px;
+            line-height: 1.5;
+            text-align: left;
+            padding: 10px 15px;
+            border-top: 1px solid var(--border-color);
+        }
+        .lab-table tfoot ul {
+            padding-left: 20px;
+            margin-top: 5px;
+            margin-bottom: 5px;
+        }
+        .lab-table tfoot li {
+            margin-bottom: 4px;
+        }
+        /* --- END: เพิ่ม CSS สำหรับ recommendation-row --- */
 
         .recommendation-container { border-left: 5px solid var(--primary-color); padding: 1.5rem; border-radius: 0 8px 8px 0; background-color: var(--background-color); }
         .recommendation-container ul { padding-left: 20px; }
         .recommendation-container li { margin-bottom: 0.5rem; }
+
+        /* --- START: เพิ่ม CSS สำหรับ doctor-opinion-box --- */
+        .doctor-opinion-box {
+            background-color: var(--normal-bg-color); /* ใช้สีเขียวอ่อนจาก Theme */
+            border-color: rgba(40, 167, 69, 0.2);
+            border: 1px solid transparent;
+            padding: 1.5rem;
+            border-radius: 8px;
+            line-height: 1.6;
+            color: var(--text-color);
+            white-space: pre-wrap; /* เพื่อเคารพการเว้นวรรคจาก print_report */
+        }
+        /* --- END: เพิ่ม CSS สำหรับ doctor-opinion-box --- */
 
         .status-summary-card { padding: 1rem; border-radius: 8px; text-align: center; height: 100%; }
         .status-normal-bg { background-color: var(--normal-bg-color); }
@@ -823,10 +878,33 @@ def display_performance_report(person_data, report_type, all_person_history_df=N
         elif report_type == 'hearing':
             display_performance_report_hearing(person_data, all_person_history_df)
 
+# --- START: แก้ไข display_main_report ทั้งหมด ---
 def display_main_report(person_data, all_person_history_df):
     person = person_data
     sex = str(person.get("เพศ", "")).strip()
     if sex not in ["ชาย", "หญิง"]: sex = "ไม่ระบุ"
+    
+    # --- START: สร้างคำแนะนำจาก print_report ---
+    # 1. สร้างผลลัพธ์จากตรรกะของ print_report
+    cbc_results = generate_cbc_recommendations(person, sex)
+    urine_results = generate_urine_recommendations(person, sex)
+    doctor_opinion_text = generate_doctor_opinion(person, sex, cbc_results, urine_results)
+    
+    # 2. สร้าง HTML Footer สำหรับตาราง CBC
+    cbc_footer_html = cbc_results.get('summary', 'ไม่ได้ตรวจ')
+
+    # 3. สร้าง HTML Footer สำหรับตาราง Blood Chemistry
+    chem_recs_list = generate_fixed_recommendations(person)
+    if not chem_recs_list:
+        blood_footer_html = "ผลการตรวจโดยรวมอยู่ในเกณฑ์ปกติ"
+    else:
+        list_items = "".join([f"<li>{html.escape(rec)}</li>" for rec in chem_recs_list])
+        blood_footer_html = f"<ul>{list_items}</ul>"
+
+    # 4. สร้าง HTML Footer สำหรับตาราง Urine
+    urine_footer_html = urine_results.get('summary', 'ไม่ได้ตรวจ')
+    # --- END: สร้างคำแนะนำจาก print_report ---
+
     hb_low, hct_low = (12, 36) if sex == "หญิง" else (13, 39)
     cbc_config = [("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None), ("ฮีมาโตคริต (Hct)", "HCT", "ชาย > 39%, หญิง > 36%", hct_low, None), ("เม็ดเลือดขาว (wbc)", "WBC (cumm)", "4,000 - 10,000 /cu.mm", 4000, 10000), ("นิวโทรฟิล (Neutrophil)", "Ne (%)", "43 - 70%", 43, 70), ("ลิมโฟไซต์ (Lymphocyte)", "Ly (%)", "20 - 44%", 20, 44), ("โมโนไซต์ (Monocyte)", "M", "3 - 9%", 3, 9), ("อีโอซิโนฟิล (Eosinophil)", "Eo", "0 - 9%", 0, 9), ("เบโซฟิล (Basophil)", "BA", "0 - 3%", 0, 3), ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150,000 - 500,000 /cu.mm", 150000, 500000)]
     cbc_rows = [([(label, is_abn), (result, is_abn), (norm, is_abn)]) for label, col, norm, low, high in cbc_config for val in [get_float(col, person)] for result, is_abn in [flag(val, low, high)]]
@@ -837,8 +915,10 @@ def display_main_report(person_data, all_person_history_df):
     with st.container(border=True):
         render_section_header("ผลการตรวจทางห้องปฏิบัติการ (Laboratory Results)")
         col1, col2 = st.columns(2)
-        with col1: st.markdown(render_lab_table_html("ผลตรวจความสมบูรณ์ของเม็ดเลือด (CBC)", ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows), unsafe_allow_html=True)
-        with col2: st.markdown(render_lab_table_html("ผลตรวจเลือด (Blood Chemistry)", ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows), unsafe_allow_html=True)
+        # --- START: ส่ง footer_html ไปยัง render_lab_table_html ---
+        with col1: st.markdown(render_lab_table_html("ผลตรวจความสมบูรณ์ของเม็ดเลือด (CBC)", ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows, footer_html=cbc_footer_html), unsafe_allow_html=True)
+        with col2: st.markdown(render_lab_table_html("ผลตรวจเลือด (Blood Chemistry)", ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows, footer_html=blood_footer_html), unsafe_allow_html=True)
+        # --- END: ส่ง footer_html ไปยัง render_lab_table_html ---
 
     selected_year = person.get("Year", datetime.now().year + 543)
 
@@ -846,7 +926,10 @@ def display_main_report(person_data, all_person_history_df):
         render_section_header("ผลการตรวจอื่นๆ (Other Examinations)")
         col_ua_left, col_ua_right = st.columns(2)
         with col_ua_left:
-            render_urine_section(person, sex, selected_year)
+            # --- START: ส่ง footer_html ไปยัง render_urine_section ---
+            render_urine_section(person, sex, selected_year, footer_html=urine_footer_html)
+            # --- END: ส่ง footer_html ไปยัง render_urine_section ---
+            
             st.markdown("<h5 class='section-subtitle'>ผลตรวจอุจจาระ (Stool Examination)</h5>", unsafe_allow_html=True)
             st.markdown(render_stool_html_table(interpret_stool_exam(person.get("Stool exam", "")), interpret_stool_cs(person.get("Stool C/S", ""))), unsafe_allow_html=True)
 
@@ -892,10 +975,15 @@ def display_main_report(person_data, all_person_history_df):
                 </div>
                 """, unsafe_allow_html=True)
 
+    # --- START: เปลี่ยนกล่องสรุปสุดท้ายให้ใช้ doctor_opinion_text ---
     with st.container(border=True):
-        render_section_header("สรุปและคำแนะนำการปฏิบัติตัว (Summary & Recommendations)")
-        recommendations_html = generate_comprehensive_recommendations(person_data)
-        st.markdown(f"<div class='recommendation-container'>{recommendations_html}</div>", unsafe_allow_html=True)
+        render_section_header("สรุปความคิดเห็นของแพทย์ (Doctor's Opinion)")
+        # ใช้ doctor_opinion_text ที่สร้างจากตรรกะ print_report
+        escaped_opinion = html.escape(doctor_opinion_text)
+        st.markdown(f"<div class='doctor-opinion-box'>{escaped_opinion}</div>", unsafe_allow_html=True)
+    # --- END: เปลี่ยนกล่องสรุปสุดท้าย ---
+
+# --- END: แก้ไข display_main_report ทั้งหมด ---
 
 
 # --- END: Functions moved from shared_ui.py ---
@@ -1170,4 +1258,3 @@ def display_admin_panel(df):
             """
             st.components.v1.html(print_component, height=0, width=0)
             st.session_state.admin_print_performance_trigger = False
-
