@@ -503,8 +503,9 @@ def generate_performance_report_html(person_data, all_person_history_df):
             .summary-title-lung {{
                 text-align: center;
                 font-weight: bold;
-                font-size: 13px; /* <--- ปรับขนาด */
-                margin-bottom: 10px;
+                font-size: 11px; /* <--- ปรับลดจาก 13px */
+                margin-bottom: 8px; /* <--- ปรับลด margin-bottom */
+                line-height: 1.2; /* <--- เพิ่ม line-height ให้ชิดขึ้น */
             }}
             .advice-box {{
                 border-radius: 6px; padding: 8px 12px; font-size: 10.5px; /* <--- ปรับขนาด */
