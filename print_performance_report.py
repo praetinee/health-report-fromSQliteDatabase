@@ -434,8 +434,10 @@ def generate_performance_report_html(person_data, all_person_history_df):
             @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
             body {{
                 font-family: 'Sarabun', sans-serif !important;
-                font-size: 10px;
-                margin: 1cm;
+                /* --- ADJUSTED: font-size and margin --- */
+                font-size: 11px;
+                margin: 0.5cm 0.7cm; 
+                /* --- END ADJUSTMENT --- */
                 color: #333;
                 background-color: #fff;
             }}
