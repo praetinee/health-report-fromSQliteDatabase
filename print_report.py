@@ -794,46 +794,56 @@ def generate_printable_report(person_data, all_person_history_df=None):
     """
     
     # --- START OF CHANGE: Add CSS for new elements ---
-    css_html = """
+    css_html = f"""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
-        body { font-family: 'Sarabun', sans-serif !important; font-size: 9.5px; margin: 10mm; color: #333; background-color: #fff; }
-        p, div, span, td, th { line-height: 1.4; }
-        table { border-collapse: collapse; width: 100%; }
-        .print-lab-table td, .print-lab-table th { padding: 2px 4px; border: 1px solid #ccc; text-align: center; vertical-align: middle; }
-        .print-lab-table th { background-color: #f2f2f2; font-weight: bold; }
-        .print-lab-table-abn { background-color: #fff1f0 !important; }
         
-        .print-lab-table tfoot .recommendation-row td {
+        /* --- START OF CHANGE: Adjust body margin --- */
+        body {{ 
+            font-family: 'Sarabun', sans-serif !important; 
+            font-size: 9.5px; 
+            margin: 0.5cm 0.7cm; /* <-- ปรับจาก 10mm เป็น 0.5cm (top/bottom) และ 0.7cm (left/right) */
+            color: #333; 
+            background-color: #fff; 
+        }}
+        /* --- END OF CHANGE --- */
+
+        p, div, span, td, th {{ line-height: 1.4; }}
+        table {{ border-collapse: collapse; width: 100%; }}
+        .print-lab-table td, .print-lab-table th {{ padding: 2px 4px; border: 1px solid #ccc; text-align: center; vertical-align: middle; }}
+        .print-lab-table th {{ background-color: #f2f2f2; font-weight: bold; }}
+        .print-lab-table-abn {{ background-color: #fff1f0 !important; }}
+        
+        .print-lab-table tfoot .recommendation-row td {{
             background-color: #fcf8e3; /* Light yellow */
             font-size: 9px;
             line-height: 1.3;
             border: 1px solid #ccc;
             text-align: left;
             padding: 4px 6px;
-        }
-        .print-lab-table tfoot ul {
+        }}
+        .print-lab-table tfoot ul {{
             padding-left: 15px;
             margin-top: 2px;
             margin-bottom: 2px;
-        }
-        .print-lab-table tfoot li {
+        }}
+        .print-lab-table tfoot li {{
             margin-bottom: 2px;
-        }
+        }}
         
-        .header-grid { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 0.5rem; }
-        .header-left { text-align: left; }
-        .header-right { text-align: right; }
-        .info-table { font-size: 9.5px; text-align: left; }
-        .info-table td { padding: 1px 5px; border: none; }
+        .header-grid {{ display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 0.5rem; }}
+        .header-left {{ text-align: left; }}
+        .header-right {{ text-align: right; }}
+        .info-table {{ font-size: 9.5px; text-align: left; }}
+        .info-table td {{ padding: 1px 5px; border: none; }}
         
         /* This green box is no longer used, but CSS remains just in case */
-        .advice-box { padding: 0.5rem 1rem; border-radius: 8px; line-height: 1.5; margin-top: 0.5rem; border: 1px solid #ddd; page-break-inside: avoid; }
-        .advice-title { font-weight: bold; margin-bottom: 0.3rem; font-size: 11px; }
-        .advice-content ul { padding-left: 20px; margin: 0; }
-        .advice-content ul li { margin-bottom: 4px; }
+        .advice-box {{ padding: 0.5rem 1rem; border-radius: 8px; line-height: 1.5; margin-top: 0.5rem; border: 1px solid #ddd; page-break-inside: avoid; }}
+        .advice-title {{ font-weight: bold; margin-bottom: 0.3rem; font-size: 11px; }}
+        .advice-content ul {{ padding-left: 20px; margin: 0; }}
+        .advice-content ul li {{ margin-bottom: 4px; }}
         
-        .doctor-opinion-box {
+        .doctor-opinion-box {{
             background-color: #e8f5e9; /* Light green */
             border-color: #a5d6a7;
             border: 1px solid #ddd;
@@ -844,11 +854,11 @@ def generate_printable_report(person_data, all_person_history_df=None):
             page-break-inside: avoid;
             font-size: 9px; /* Adjust font size if needed */
             white-space: pre-wrap; /* เพิ่ม white-space pre-wrap */
-        }
+        }}
         
-        .perf-section { margin-top: 0.5rem; page-break-inside: avoid; border: 1px solid #e0e0e0; border-radius: 8px; padding: 0.5rem; }
-        .summary-box { background-color: #f8f9fa; border-radius: 4px; padding: 4px 8px; margin-top: 2px; font-size: 9px; }
-        @media print { body { -webkit-print-color-adjust: exact; margin: 0; } }
+        .perf-section {{ margin-top: 0.5rem; page-break-inside: avoid; border: 1px solid #e0e0e0; border-radius: 8px; padding: 0.5rem; }}
+        .summary-box {{ background-color: #f8f9fa; border-radius: 4px; padding: 4px 8px; margin-top: 2px; font-size: 9px; }}
+        @media print {{ body {{ -webkit-print-color-adjust: exact; margin: 0; }} }}
     </style>
     """
     # --- END OF CHANGE ---
