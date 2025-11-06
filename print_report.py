@@ -681,8 +681,8 @@ def render_other_results_html(person, sex, urine_statuses, doctor_opinion, all_p
     # --- END: Wrap in break-avoid div ---
 
     # --- START OF CHANGE: Add year variable ---
-    cxr_result = interpret_cxr(person_data.get(f"CXR{str(current_year)[-2:]}" if current_year != (datetime.now().year+543) else "CXR", ""))
-    ekg_result = interpret_ekg(person_data.get(get_ekg_col_name(current_year), ""))
+    cxr_result = interpret_cxr(person.get(f"CXR{str(current_year)[-2:]}" if current_year != (datetime.now().year+543) else "CXR", ""))
+    ekg_result = interpret_ekg(person.get(get_ekg_col_name(current_year), ""))
     # --- START: Wrap in break-avoid div ---
     other_tests_html = f"""
     <div class='column-break-avoid'>
@@ -695,21 +695,20 @@ def render_other_results_html(person, sex, urine_statuses, doctor_opinion, all_p
     """
     # --- END: Wrap in break-avoid div ---
 
-    hep_a_value = person_data.get("Hepatitis A")
+    hep_a_value = person.get("Hepatitis A")
     hep_a_display_text = "ไม่ได้เข้ารับการตรวจไวรัสตับอักเสบเอ" if is_empty(hep_a_value) else safe_value(hep_a_value)
     
-    hbsag_current = person_data.get("HbsAg")
-    hbsab_current = person_data.get("HbsAb")
-    hbcab_current = person_data.get("HBcAb")
+    hbsag_current = person.get("HbsAg")
+    hbsab_current = person.get("HbsAb")
+    hbcab_current = person.get("HBcAb")
 
     show_current_hep_b = not is_empty(hbsag_current) or not is_empty(hbsab_current) or not is_empty(hbcab_current)
 
     hbsag_display = ""
     hbsab_display = ""
-    hbcab_display = ""
     hep_b_advice_display, hep_b_status = "", ""
     
-    hep_test_date_str = str(person_data.get("ปีตรวจHEP", "")).strip()
+    hep_test_date_str = str(person.get("ปีตรวจHEP", "")).strip()
     if not is_empty(hep_test_date_str):
         hepatitis_header_text = f"ผลตรวจไวรัสตับอักเสบ (Viral Hepatitis) (ตรวจเมื่อ: {hep_test_date_str})"
     else:
