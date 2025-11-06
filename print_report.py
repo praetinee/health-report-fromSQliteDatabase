@@ -294,12 +294,15 @@ def generate_cbc_recommendations(person_data, sex):
         advice_text = RECOMMENDATION_TEXTS_CBC["C2"]
     # (อาจมีเงื่อนไขซ้อนอื่นๆ ที่สูตร CH ไม่ได้ครอบคลุม แต่ logic หลักอยู่ครบแล้ว)
 
-    # 6. ประกอบร่าง HTML
-    summary_html = ""
-    if not advice_text:
-        summary_html = f"<b>{status_cd}</b>" # แสดงแค่สถานะ ถ้าปกติ
-    else:
-        summary_html = f"<b>{status_cd}</b>: {html.escape(advice_text)}"
+    # 6. ประกอบร่าง HTML (*** นี่คือส่วนที่แก้ไข ***)
+    summary_parts = []
+    summary_parts.append(f"<li>{html.escape(status_cd)}</li>") # 1. สรุปผล
+    
+    if advice_text: # 2. คำแนะนำ (ถ้ามี)
+        summary_parts.append(f"<li>{html.escape(advice_text)}</li>")
+    
+    # ใช้ <ul> เพื่อสร้าง bullet points และจัดสไตล์เล็กน้อย
+    summary_html = f"<ul style='margin: 0; padding-left: 20px;'>{''.join(summary_parts)}</ul>"
         
     return {'summary': summary_html, 'status_ce': status_ce, 'status_cf': status_cf, 'status_cg': status_cg}
 # --- END OF REFACTOR ---
@@ -380,12 +383,15 @@ def generate_urine_recommendations(person_data, sex):
     elif status_ct_ok and status_cu_ok and status_cv_ok and status_cw == "พบเม็ดเลือดขาวในปัสสาวะเล็กน้อย":
         advice_text = RECOMMENDATION_TEXTS_URINE["E2"]
     
-    # 7. ประกอบร่าง HTML
-    summary_html = ""
-    if not advice_text:
-        summary_html = f"<b>{status_cs}</b>" # แสดงแค่สถานะ ถ้าปกติ
-    else:
-        summary_html = f"<b>{status_cs}</b>: {html.escape(advice_text)}"
+    # 7. ประกอบร่าง HTML (*** นี่คือส่วนที่แก้ไข ***)
+    summary_parts = []
+    summary_parts.append(f"<li>{html.escape(status_cs)}</li>") # 1. สรุปผล
+    
+    if advice_text: # 2. คำแนะนำ (ถ้ามี)
+        summary_parts.append(f"<li>{html.escape(advice_text)}</li>")
+    
+    # ใช้ <ul> เพื่อสร้าง bullet points และจัดสไตล์เล็กน้อย
+    summary_html = f"<ul style='margin: 0; padding-left: 20px;'>{''.join(summary_parts)}</ul>"
         
     return {'summary': summary_html, 'status_ct': status_ct, 'status_cu': status_cu, 'status_cv': status_cv, 'status_cw': status_cw}
 # --- END OF REFACTOR ---
@@ -837,6 +843,7 @@ def generate_printable_report(person_data, all_person_history_df=None):
             margin-top: 0.5rem;
             page-break-inside: avoid;
             font-size: 9px; /* Adjust font size if needed */
+            white-space: pre-wrap; /* เพิ่ม white-space pre-wrap */
         }
         
         .perf-section { margin-top: 0.5rem; page-break-inside: avoid; border: 1px solid #e0e0e0; border-radius: 8px; padding: 0.5rem; }
@@ -864,5 +871,3 @@ def generate_printable_report(person_data, all_person_history_df=None):
     </html>
     """
     return final_html
-
-
