@@ -233,17 +233,18 @@ def render_print_hearing(person_data, all_person_history_df):
         if "N/A" in summary_text or "ไม่ได้" in summary_text: return "status-nt-text"
         return "status-abn-text"
 
+    # --- START OF CHANGE: Removed the | separator span ---
     summary_cards_html = f"""
     <div class="summary-single-line-box">
         <span class="{get_summary_class(summary_r_raw)}">
             <b>หูขวา (Right Ear):</b> {html.escape(summary_r_raw)}
         </span>
-        <span style="color: #ccc; margin: 0 15px;">|</span>
         <span class="{get_summary_class(summary_l_raw)}">
             <b>หูซ้าย (Left Ear):</b> {html.escape(summary_l_raw)}
         </span>
     </div>
     """
+    # --- END OF CHANGE ---
     
     advice = results.get('advice', '') or 'ไม่มีคำแนะนำเพิ่มเติม'
     advice_box_html = f"<div class='advice-box'><b>คำแนะนำ:</b> {html.escape(advice)}</div>"
@@ -470,35 +471,14 @@ def generate_performance_report_html(person_data, all_person_history_df):
             .data-table th {{ background-color: #f5f5f5; font-weight: bold; }}
             .data-table td:first-child {{ text-align: left; }}
 
-            /* --- START OF CHANGE: Remove old card styles, add new line-box style --- */
-            /*
-            .summary-cards {{ display: flex; gap: 10px; margin-bottom: 0.8rem; }}
-            .card {{ 
-                flex: 1; border-radius: 6px; padding: 8px; text-align: center; 
-                border: 1px solid #e0e0e0; background-color: #f9f9f9;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                align-items: center;
-                min-height: 40px;
-            }}
-            .card-title {{
-                font-weight: bold;
-                font-size: 10px;
-                margin-bottom: 4px;
-                color: #555;
-            }}
-            .card-body {{ 
-                font-size: 11px;
-                font-weight: bold; 
-                text-align: center;
-                width: 100%;
-            }}
-            */
-            
+            /* --- START OF CHANGE: CSS for flexbox layout --- */
             .summary-single-line-box {{
-                text-align: center;
+                display: flex;
+                justify-content: space-between; /* ชิดซ้าย-ขวา */
+                align-items: center;
+                flex-wrap: wrap; /* เผื่อไว้กรณีข้อความยาวมาก */
+                gap: 10px; /* ระยะห่างถ้ามีการ wrap */
+                
                 padding: 8px;
                 border: 1px solid #e0e0e0;
                 background-color: #f9f9f9;
@@ -506,7 +486,11 @@ def generate_performance_report_html(person_data, all_person_history_df):
                 margin-bottom: 0.5rem; /* --- CHANGED --- */
                 font-size: 11px;
                 font-weight: bold;
-                page-break-inside: avoid; /* Ensure this box doesn't break */
+                page-break-inside: avoid; 
+            }}
+            
+            .summary-single-line-box span {{
+                text-align: left; /* จัดข้อความในแต่ละ span ให้ชิดซ้าย */
             }}
             /* --- END OF CHANGE --- */
 
