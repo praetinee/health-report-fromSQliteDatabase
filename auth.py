@@ -49,25 +49,41 @@ def display_primary_login(df):
             normalized_input_name = normalize_name(name_input)
             input_password = str(id_input).strip()
             
-            # ค้นหาผู้ใช้โดยใช้ 'เลขบัตรประชาชน' หรือ 'HN'
-            user_record = df[
-                (df['ชื่อ-สกุล'].apply(normalize_name) == normalized_input_name) &
-                (
-                    (df['เลขบัตรประชาชน'].astype(str) == input_password) |
-                    (df['HN'].astype(str) == input_password)
-                )
-            ]
+            # --- START OF MODIFICATION ---
+            # 1. ค้นหาผู้ใช้ด้วยชื่อก่อน (Find user by name first)
+            name_records = df[df['ชื่อ-สกุล'].apply(normalize_name) == normalized_input_name]
             
-            if not user_record.empty:
-                st.session_state['authenticated'] = True
-                st.session_state['is_admin'] = False # Set user as not admin
-                # ยังคงเก็บ HN ไว้ใน session เพื่อให้ส่วนที่เหลือของแอปทำงานได้ตามปกติ
-                st.session_state['user_hn'] = user_record.iloc[0]['HN'] 
-                st.session_state['user_name'] = user_record.iloc[0]['ชื่อ-สกุล']
-                st.success("ลงชื่อเข้าใช้สำเร็จ!")
-                st.rerun()
+            if not name_records.empty:
+                # 2. ถ้าเจอชื่อ, รวบรวม HN และ เลขบัตรประชาชน ทั้งหมดที่เชื่อมโยงกับชื่อนี้
+                # (Get all HNs and National IDs associated with this name from all years)
+                
+                # รวบรวม HN ทั้งหมด (ควรจะเป็นค่าเดียวกัน)
+                all_hns_for_name = name_records['HN'].astype(str).str.strip().unique()
+                
+                # รวบรวมเลขบัตรประชาชนทั้งหมด, กรองค่าว่าง/nan ออกก่อน
+                valid_ids_series = name_records[~name_records['เลขบัตรประชาชน'].apply(is_empty)]['เลขบัตรประชาชน'].astype(str).str.strip()
+                all_ids_for_name = valid_ids_series.unique()
+                
+                # 3. ตรวจสอบว่า id_input ที่กรอกมา ตรงกับ HN หรือ เลขบัตร อันใดอันหนึ่งหรือไม่
+                is_hn_match = input_password in all_hns_for_name
+                is_id_match = input_password in all_ids_for_name
+                
+                if is_hn_match or is_id_match:
+                    # 4. ถ้าตรง, เข้าระบบสำเร็จ
+                    st.session_state['authenticated'] = True
+                    st.session_state['is_admin'] = False
+                    # ใช้ HN แรกที่เจอ (ซึ่งควรจะเป็น HN ของคนนั้น)
+                    st.session_state['user_hn'] = name_records.iloc[0]['HN'] 
+                    st.session_state['user_name'] = name_records.iloc[0]['ชื่อ-สกุล']
+                    st.success("ลงชื่อเข้าใช้สำเร็จ!")
+                    st.rerun()
+                else:
+                    # ชื่อถูก แต่รหัส (HN/ID) ผิด
+                    st.error("ชื่อ-นามสกุล หรือ รหัสผ่าน (เลขบัตร/HN) ไม่ถูกต้อง")
             else:
+                # ไม่พบชื่อนี้ในระบบ
                 st.error("ชื่อ-นามสกุล หรือ รหัสผ่าน (เลขบัตร/HN) ไม่ถูกต้อง")
+            # --- END OF MODIFICATION ---
         else:
             st.warning("กรุณากรอกข้อมูลให้ครบถ้วน")
     # --- END OF CHANGE ---
@@ -187,4 +203,3 @@ def pdpa_consent_page():
         if st.button("ยอมรับและดำเนินการต่อ (Accept & Continue)"):
             st.session_state['pdpa_accepted'] = True
             st.rerun()
-
