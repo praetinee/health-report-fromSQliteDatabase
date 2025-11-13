@@ -10,7 +10,6 @@ from print_performance_report import generate_performance_report_html_for_main_r
 
 # ==============================================================================
 # NOTE: This file generates the printable health report.
-# The header is compact, while the body retains the original layout.
 # ==============================================================================
 
 # --- START OF CHANGE: Add CBC Recommendation Texts ---
@@ -74,7 +73,7 @@ def safe_value(val):
     return "-" if val.lower() in ["", "nan", "none", "-"] else val
 
 def parse_range_or_number(val):
-    val = val.replace("cell/hpf", "").replace("cells/hpf", "").replace("cell", "").strip().lower()
+    val = str(val).replace("cell/hpf", "").replace("cells/hpf", "").replace("cell", "").strip().lower()
     try:
         if "-" in val: return map(float, val.split("-"))
         else: num = float(val); return num, num
@@ -147,9 +146,9 @@ def interpret_ekg(val):
 
 def hepatitis_b_advice(hbsag, hbsab, hbcab):
     # --- START OF CHANGE: Treat '-' as 'negative' for HBcAb logic ---
-    hbsag_logic = hbsag.lower()
-    hbsab_logic = hbsab.lower()
-    hbcab_logic = hbcab.lower()
+    hbsag_logic = str(hbsag).lower() # Add str()
+    hbsab_logic = str(hbsab).lower() # Add str()
+    hbcab_logic = str(hbcab).lower() # Add str()
     if hbcab_logic == "-":
         hbcab_logic = "negative" # แปลงค่า '-' เป็น 'negative' สำหรับการเปรียบเทียบตรรกะ
 
@@ -241,6 +240,9 @@ def generate_cbc_recommendations(person_data, sex):
         elif sex == "หญิง":
             if hb < 11: status_ce = "พบภาวะโลหิตจาง"
             elif hb < 12: status_ce = "พบภาวะโลหิตจางเล็กน้อย"
+            else: status_ce = "ความเข้มข้นของเลือดปกติ"
+        else: # กรณีไม่ระบุเพศ
+            if hb < 12: status_ce = "พบภาวะโลหิตจาง" # ใช้เกณฑ์ผู้หญิง/ทั่วไป
             else: status_ce = "ความเข้มข้นของเลือดปกติ"
 
     # 2. ตรรกะ CF: ผล WBC
@@ -376,7 +378,7 @@ def generate_urine_recommendations(person_data, sex):
         advice_text = RECOMMENDATION_TEXTS_URINE["E11"]
     elif sex == "หญิง" and status_ct_ok and status_cu_ok and ("เม็ดเลือดแดง" in status_cv and "ปกติ" not in status_cv) and status_cw_ok:
         advice_text = RECOMMENDATION_TEXTS_URINE["E4"]
-    elif sex == "ชาย" and status_ct_ok and status_cu_ok and ("เม็ดเลือดแดง" in status_cv and "ปกติ" not in status_cv) and status_cw_ok:
+    elif sex != "หญิง" and status_ct_ok and status_cu_ok and ("เม็ดเลือดแดง" in status_cv and "ปกติ" not in status_cv) and status_cw_ok: # ใช้ 'sex != "หญิง"' เพื่อรวม "ชาย" และ "ไม่ระบุ"
         advice_text = RECOMMENDATION_TEXTS_URINE["E10"]
     elif status_ct_ok and status_cu_ok and status_cv_ok and status_cw == "พบเม็ดเลือดขาวในปัสสาวะ":
         advice_text = RECOMMENDATION_TEXTS_URINE["F3"] # ซึ่งเป็น ""
@@ -556,9 +558,11 @@ def render_lab_table_html(title, subtitle, headers, rows, table_class="print-lab
 def render_header_and_vitals(person_data):
     """Renders the compact header and personal info table for the print report."""
     name = person_data.get('ชื่อ-สกุล', '-')
-    age = str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person_data.get('อายุ', '-')
+    age_raw = person_data.get('อายุ', '-') # Get raw value
+    age = str(int(float(age_raw))) if isinstance(age_raw, (int, float)) or (isinstance(age_raw, str) and age_raw.replace('.', '', 1).isdigit()) else age_raw
     sex = person_data.get('เพศ', '-')
-    hn = str(int(float(person_data.get('HN')))) if str(person_data.get('HN')).replace('.', '', 1).isdigit() else person_data.get('HN', '-')
+    hn_raw = person_data.get('HN', '-') # Get raw value
+    hn = str(int(float(hn_raw))) if isinstance(hn_raw, (int, float)) or (isinstance(hn_raw, str) and hn_raw.replace('.', '', 1).isdigit()) else hn_raw
     department = person_data.get('หน่วยงาน', '-')
     check_date = person_data.get("วันที่ตรวจ", "-")
     sbp, dbp = get_float("SBP", person_data), get_float("DBP", person_data)
@@ -604,6 +608,8 @@ def render_header_and_vitals(person_data):
 def render_lab_section(person, sex, cbc_statuses):
 # --- END OF CHANGE ---
     hb_low, hct_low = (12, 36) if sex == "หญิง" else (13, 39)
+    if sex not in ["ชาย", "หญิง"]: hb_low, hct_low = (12, 36) # Default to female/lower threshold
+        
     cbc_config = [("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None), ("ฮีมาโตคริต (Hct)", "HCT", "ชาย > 39%, หญิง > 36%", hct_low, None), ("เม็ดเลือดขาว (wbc)", "WBC (cumm)", "4,000 - 10,000 /cu.mm", 4000, 10000), ("นิวโทรฟิล (Neutrophil)", "Ne (%)", "43 - 70%", 43, 70), ("ลิมโฟไซต์ (Lymphocyte)", "Ly (%)", "20 - 44%", 20, 44), ("โมโนไซต์ (Monocyte)", "M", "3 - 9%", 3, 9), ("อีโอซิโนฟิล (Eosinophil)", "Eo", "0 - 9%", 0, 9), ("เบโซฟิล (Basophil)", "BA", "0 - 3%", 0, 3), ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150,000 - 500,000 /cu.mm", 150000, 500000)]
     cbc_rows = [[(label, is_abn), (result, is_abn), (norm, is_abn)] for label, col, norm, low, high in cbc_config for val in [get_float(col, person)] for result, is_abn in [flag(val, low, high)]]
     blood_config = [("น้ำตาลในเลือด (FBS)", "FBS", "74 - 106 mg/dl", 74, 106), ("กรดยูริก (Uric Acid)", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2), ("การทำงานของเอนไซม์ตับ (ALK)", "ALP", "30 - 120 U/L", 30, 120), ("การทำงานของเอนไซม์ตับ (SGOT)", "SGOT", "< 37 U/L", None, 37), ("การทำงานของเอนไซม์ตับ (SGPT)", "SGPT", "< 41 U/L", None, 41), ("คลอเรสเตอรอล (CHOL)", "CHOL", "150 - 200 mg/dl", 150, 200), ("ไตรกลีเซอไรด์ (TGL)", "TGL", "35 - 150 mg/dl", 35, 150), ("ไขมันดี (HDL)", "HDL", "> 40 mg/dl", 40, None, True), ("ไขมันเลว (LDL)", "LDL", "0 - 160 mg/dl", 0, 160), ("การทำงานของไต (BUN)", "BUN", "7.9 - 20 mg/dl", 7.9, 20), ("การทำงานของไต (Cr)", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17), ("ประสิทธิภาพการกรองของไต (GFR)", "GFR", "> 60 mL/min", 60, None, True)]
@@ -679,7 +685,7 @@ def render_other_results_html(person, sex, urine_statuses, doctor_opinion, all_p
     # --- START OF REFACTOR: Logic to display current or previous Hep B ---
     hbsag_current = person.get("HbsAg")
     hbsab_current = person.get("HbsAb")
-    hbcab_current = person.get("HBcAb")
+    hbcab_current = person.get("HBcAB") # Corrected key
 
     show_current_hep_b = not is_empty(hbsag_current) or not is_empty(hbsab_current) or not is_empty(hbcab_current)
 
@@ -760,8 +766,79 @@ def render_other_results_html(person, sex, urine_statuses, doctor_opinion, all_p
     </table>
     """
 
-def generate_printable_report(person_data, all_person_history_df=None):
-    """Generates a full, self-contained HTML string for the health report."""
+# --- START: New function to get CSS ---
+def get_main_report_css():
+    """Returns the CSS string for the main health report."""
+    return """
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
+        
+        /* --- START OF CHANGE: Adjust body margin --- */
+        body { 
+            font-family: 'Sarabun', sans-serif !important; 
+            font-size: 9.5px; 
+            margin: 0.5cm; /* <-- ปรับ margin ทุกด้านเป็น 0.5cm */
+            color: #333; 
+            background-color: #fff; 
+        }
+        /* --- END OF CHANGE --- */
+
+        p, div, span, td, th { line-height: 1.4; }
+        table { border-collapse: collapse; width: 100%; }
+        .print-lab-table td, .print-lab-table th { padding: 2px 4px; border: 1px solid #ccc; text-align: center; vertical-align: middle; }
+        .print-lab-table th { background-color: #f2f2f2; font-weight: bold; }
+        .print-lab-table-abn { background-color: #fff1f0 !important; }
+        
+        .print-lab-table tfoot .recommendation-row td {
+            background-color: #fcf8e3; /* Light yellow */
+            font-size: 9px;
+            line-height: 1.3;
+            border: 1px solid #ccc;
+            text-align: left;
+            padding: 4px 6px;
+        }
+        .print-lab-table tfoot ul {
+            padding-left: 15px;
+            margin-top: 2px;
+            margin-bottom: 2px;
+        }
+        .print-lab-table tfoot li {
+            margin-bottom: 2px;
+        }
+        
+        .header-grid { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 0.5rem; }
+        .header-left { text-align: left; }
+        .header-right { text-align: right; }
+        .info-table { font-size: 9.5px; text-align: left; }
+        .info-table td { padding: 1px 5px; border: none; }
+        
+        .doctor-opinion-box {
+            background-color: #e8f5e9; /* Light green */
+            border-color: #a5d6a7;
+            border: 1px solid #ddd;
+            padding: 0rem 0.5rem; /* <-- ปรับลด padding บน/ล่าง เป็น 0 */
+            border-radius: 8px;
+            line-height: 1.5;
+            margin-top: 0.5rem;
+            page-break-inside: avoid;
+            font-size: 9.5px; /* <-- ปรับจาก 9px เป็น 9.5px */
+            white-space: pre-wrap; /* เพิ่ม white-space pre-wrap */
+        }
+        
+        .perf-section { margin-top: 0.5rem; page-break-inside: avoid; border: 1px solid #e0e0e0; border-radius: 8px; padding: 0.5rem; }
+        .summary-box { background-color: #f8f9fa; border-radius: 4px; padding: 4px 8px; margin-top: 2px; font-size: 9px; }
+        @media print { body { -webkit-print-color-adjust: exact; margin: 0; } }
+    </style>
+    """
+# --- END: New function to get CSS ---
+
+# --- START: Renamed function from generate_printable_report ---
+def render_printable_report_body(person_data, all_person_history_df=None):
+    """
+    Generates the HTML <body> content for the health report.
+    This function is called by batch_print.py
+    """
+# --- END: Renamed function ---
     sex = str(person_data.get("เพศ", "")).strip()
     if sex not in ["ชาย", "หญิง"]: sex = "ไม่ระบุ"
     
@@ -793,75 +870,30 @@ def generate_printable_report(person_data, all_person_history_df=None):
     </div>
     """
     
-    # --- START OF CHANGE: Add CSS for new elements ---
-    css_html = f"""
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
-        
-        /* --- START OF CHANGE: Adjust body margin --- */
-        body {{ 
-            font-family: 'Sarabun', sans-serif !important; 
-            font-size: 9.5px; 
-            margin: 0.5cm; /* <-- ปรับ margin ทุกด้านเป็น 0.5cm */
-            color: #333; 
-            background-color: #fff; 
-        }}
-        /* --- END OF CHANGE --- */
-
-        p, div, span, td, th {{ line-height: 1.4; }}
-        table {{ border-collapse: collapse; width: 100%; }}
-        .print-lab-table td, .print-lab-table th {{ padding: 2px 4px; border: 1px solid #ccc; text-align: center; vertical-align: middle; }}
-        .print-lab-table th {{ background-color: #f2f2f2; font-weight: bold; }}
-        .print-lab-table-abn {{ background-color: #fff1f0 !important; }}
-        
-        .print-lab-table tfoot .recommendation-row td {{
-            background-color: #fcf8e3; /* Light yellow */
-            font-size: 9px;
-            line-height: 1.3;
-            border: 1px solid #ccc;
-            text-align: left;
-            padding: 4px 6px;
-        }}
-        .print-lab-table tfoot ul {{
-            padding-left: 15px;
-            margin-top: 2px;
-            margin-bottom: 2px;
-        }}
-        .print-lab-table tfoot li {{
-            margin-bottom: 2px;
-        }}
-        
-        .header-grid {{ display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 0.5rem; }}
-        .header-left {{ text-align: left; }}
-        .header-right {{ text-align: right; }}
-        .info-table {{ font-size: 9.5px; text-align: left; }}
-        .info-table td {{ padding: 1px 5px; border: none; }}
-        
-        /* This green box is no longer used, but CSS remains just in case */
-        .advice-box {{ padding: 0.5rem 1rem; border-radius: 8px; line-height: 1.5; margin-top: 0.5rem; border: 1px solid #ddd; page-break-inside: avoid; }}
-        .advice-title {{ font-weight: bold; margin-bottom: 0.3rem; font-size: 11px; }}
-        .advice-content ul {{ padding-left: 20px; margin: 0; }}
-        .advice-content ul li {{ margin-bottom: 4px; }}
-        
-        .doctor-opinion-box {{
-            background-color: #e8f5e9; /* Light green */
-            border-color: #a5d6a7;
-            border: 1px solid #ddd;
-            padding: 0rem 0.5rem; /* <-- ปรับลด padding บน/ล่าง เป็น 0 */
-            border-radius: 8px;
-            line-height: 1.5;
-            margin-top: 0.5rem;
-            page-break-inside: avoid;
-            font-size: 9.5px; /* <-- ปรับจาก 9px เป็น 9.5px */
-            white-space: pre-wrap; /* เพิ่ม white-space pre-wrap */
-        }}
-        
-        .perf-section {{ margin-top: 0.5rem; page-break-inside: avoid; border: 1px solid #e0e0e0; border-radius: 8px; padding: 0.5rem; }}
-        .summary-box {{ background-color: #f8f9fa; border-radius: 4px; padding: 4px 8px; margin-top: 2px; font-size: 9px; }}
-        @media print {{ body {{ -webkit-print-color-adjust: exact; margin: 0; }} }}
-    </style>
+    # --- START: Combine body elements ---
+    body_html = f"""
+    <body>
+        {header_vitals_html}
+        {lab_section_html}
+        {other_results_html}
+        {doctor_suggestion_html}
+        {signature_html}
+    </body>
     """
-    # --- END OF CHANGE ---
+    # --- END: Combine body elements ---
+    
+    return body_html
+# --- END: Renamed function ---
+
+
+# --- START: New wrapper function for single print ---
+def generate_printable_report(person_data, all_person_history_df=None):
+    """
+    Generates a full, self-contained HTML string for the main health report.
+    This function is called for single prints (by app.py and admin_panel.py).
+    """
+    css_html = get_main_report_css()
+    body_html = render_printable_report_body(person_data, all_person_history_df)
     
     final_html = f"""
     <!DOCTYPE html>
@@ -871,13 +903,8 @@ def generate_printable_report(person_data, all_person_history_df=None):
         <title>รายงานผลการตรวจสุขภาพ - {html.escape(person_data.get('ชื่อ-สกุล', ''))}</title>
         {css_html}
     </head>
-    <body>
-        {header_vitals_html}
-        {lab_section_html}
-        {other_results_html}
-        {doctor_suggestion_html}
-        {signature_html}
-    </body>
+    {body_html}
     </html>
     """
     return final_html
+# --- END: New wrapper function for single print ---
