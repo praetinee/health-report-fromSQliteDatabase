@@ -14,6 +14,10 @@ from print_report import generate_printable_report
 from print_performance_report import generate_performance_report_html
 from visualization import display_visualization_tab # Import display_visualization_tab มาที่นี่
 
+# --- START: Import โมดูลใหม่ ---
+from batch_print import display_batch_print_ui
+# --- END: Import โมดูลใหม่ ---
+
 # --- START: Import ตรรกะการแปลผลจาก print_report.py ---
 from print_report import (
     generate_fixed_recommendations,
@@ -553,7 +557,7 @@ def render_vision_details_table(person_data):
         {'display': '13. ลานสายตา (Visual field)', 'type': 'value', 'col': 'ป.ลานสายตา', 'normal_keywords': ['ปกติ'], 'outcomes': ['ปกติ', 'ผิดปกติ']},
         {'display': '7. ความสมดุลกล้ามเนื้อตาแนวดิ่ง (Far vertical phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง', 'related_keyword': 'แนวตั้งระยะไกล', 'outcomes': ['ปกติ', 'ผิดปกติ']},
         {'display': '8. ความสมดุลกล้ามเนื้อตาแนวนอน (Far lateral phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน', 'related_keyword': 'แนวนอนระยะไกล', 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '12. ความสมดุลกล้ามเนื้อตาแนวนอน (Near lateral phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'related_keyword': 'แนวนอนระยะไกล', 'outcomes': ['ปกติ', 'ผิดปกติ']}
+        {'display': '12. ความสมดุลกล้ามเนื้อตาแนวนอน (Near lateral phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'related_keyword': 'แนวนอนระยะใกล้', 'outcomes': ['ปกติ', 'ผิดปกติ']}
     ]
 
     vision_tests.sort(key=lambda x: int(x['display'].split('.')[0]))
@@ -1020,6 +1024,12 @@ def display_admin_panel(df):
         st.session_state.admin_print_performance_trigger = False
     if "admin_person_row" not in st.session_state:
         st.session_state.admin_person_row = None
+    # --- START: เพิ่ม session state สำหรับ Batch Print ---
+    if "batch_print_trigger" not in st.session_state:
+        st.session_state.batch_print_trigger = False
+    if "batch_print_html_content" not in st.session_state:
+        st.session_state.batch_print_html_content = None
+    # --- END: เพิ่ม session state ---
 
 
     with st.sidebar:
@@ -1151,15 +1161,20 @@ def display_admin_panel(df):
 
                 # --- Print Buttons for Admin ---
                 st.markdown("---")
-                st.markdown('<div class="sidebar-title" style="font-size: 1.2rem; margin-top: 1rem;">พิมพ์รายงาน</div>', unsafe_allow_html=True)
+                st.markdown('<div class="sidebar-title" style="font-size: 1.2rem; margin-top: 1rem;">พิมพ์รายงาน (รายบุคคล)</div>', unsafe_allow_html=True)
                 if st.session_state.admin_person_row:
                     if st.button("พิมพ์รายงานสุขภาพ", use_container_width=True, key="admin_print_main"):
-                        st.session_state.admin_print_trigger = True
+                         st.session_state.admin_print_trigger = True
                     if st.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True, key="admin_print_perf"):
                         st.session_state.admin_print_performance_trigger = True
                 else:
                     st.button("พิมพ์รายงานสุขภาพ", use_container_width=True, disabled=True)
                     st.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True, disabled=True)
+
+        # --- START: เรียกใช้ UI ของ Batch Print ---
+        st.markdown("---")
+        display_batch_print_ui(df) # เรียกฟังก์ชัน UI จากโมดูลใหม่
+        # --- END: เรียกใช้ UI ของ Batch Print ---
 
         st.markdown("---")
         # --- Logout Button ---
@@ -1215,7 +1230,7 @@ def display_admin_panel(df):
                         display_main_report(person_data, all_person_history_df_admin)
 
 
-        # --- Print Logic for Admin ---
+        # --- Print Logic for Admin (Single Print) ---
         if st.session_state.get("admin_print_trigger", False):
             report_html_data = generate_printable_report(person_data, all_person_history_df_admin)
             escaped_html = json.dumps(report_html_data)
@@ -1267,3 +1282,32 @@ def display_admin_panel(df):
             """
             st.components.v1.html(print_component, height=0, width=0)
             st.session_state.admin_print_performance_trigger = False
+        
+        # --- START: เพิ่ม Print Logic สำหรับ Batch Print ---
+        if st.session_state.get("batch_print_trigger", False):
+            report_html_data = st.session_state.batch_print_html_content
+            escaped_html = json.dumps(report_html_data)
+            iframe_id = f"print-batch-iframe-admin-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
+            print_component = f"""
+            <iframe id="{iframe_id}" style="display:none;"></iframe>
+            <script>
+                (function() {{
+                    const iframe = document.getElementById('{iframe_id}');
+                    if (!iframe) return;
+                    const iframeDoc = iframe.contentWindow.document;
+                    iframeDoc.open();
+                    iframeDoc.write({escaped_html});
+                    iframeDoc.close();
+                    iframe.onload = function() {{
+                        setTimeout(function() {{
+                            try {{ iframe.contentWindow.focus(); iframe.contentWindow.print(); }}
+                            catch (e) {{ console.error("Batch printing failed:", e); }}
+                        }}, 500);
+                    }};
+                }})();
+            </script>
+            """
+            st.components.v1.html(print_component, height=0, width=0)
+            st.session_state.batch_print_trigger = False
+            st.session_state.batch_print_html_content = None # ล้าง HTML ออกจาก memory
+        # --- END: เพิ่ม Print Logic ---
