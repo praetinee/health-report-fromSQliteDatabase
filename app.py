@@ -20,23 +20,51 @@ from auth import authentication_flow, pdpa_consent_page
 from print_report import generate_printable_report
 from print_performance_report import generate_performance_report_html
 
-# --- Import Admin Panel and SHARED UI functions FROM admin_panel ---
-from admin_panel import (
-    display_admin_panel,
-    # List all the shared functions that were previously in shared_ui.py
+# --- START: Import Admin Panel ---
+from admin_panel import display_admin_panel
+# --- END: Import Admin Panel ---
+
+# --- START: Import SHARED UI functions FROM shared_ui.py ---
+from shared_ui import (
     is_empty,
     normalize_name,
-    inject_custom_css,
-    display_common_header,
+    get_float,
+    flag,
+    render_section_header,
+    render_lab_table_html,
+    safe_text,
+    safe_value,
+    parse_range_or_number,
+    interpret_rbc,
+    interpret_wbc,
+    is_urine_abnormal,
+    render_urine_section,
+    interpret_stool_exam,
+    interpret_stool_cs,
+    render_stool_html_table,
+    get_ekg_col_name,
+    interpret_ekg,
+    hepatitis_b_advice,
     has_basic_health_data,
     has_vision_data,
     has_hearing_data,
     has_lung_data,
     has_visualization_data,
-    display_main_report,
+    interpret_bp,
+    interpret_cxr,
+    interpret_bmi,
+    display_common_header,
+    inject_custom_css,
+    display_performance_report_hearing,
+    display_performance_report_lung,
+    display_performance_report_vision,
+    render_vision_details_table,
     display_performance_report,
+    display_main_report,
     display_visualization_tab
 )
+# --- END: Import SHARED UI functions FROM shared_ui.py ---
+
 
 # --- ค่าคงที่ (Constants) ---
 THAI_MONTHS_GLOBAL = {1: "มกราคม", 2: "กุมภาพันธ์", 3: "มีนาคม", 4: "เมษายน", 5: "พฤษภาคม", 6: "มิถุนายน", 7: "กรกฎาคม", 8: "สิงหาคม", 9: "กันยายน", 10: "ตุลาคม", 11: "พฤศจิกายน", 12: "ธันวาคม"}
@@ -90,7 +118,7 @@ def main_app(df):
     """
     st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
-    inject_custom_css() # Use inject_custom_css from admin_panel (where it's now defined)
+    inject_custom_css() # Use inject_custom_css from shared_ui.py
 
     # --- Logic to handle data for the logged-in user ---
     if 'user_hn' not in st.session_state:
@@ -179,7 +207,7 @@ def main_app(df):
 
         # --- Determine available report tabs ---
         available_reports = OrderedDict()
-        # Use functions imported from admin_panel (where they are now defined)
+        # Use functions imported from shared_ui.py
         if has_visualization_data(all_person_history_df): available_reports['ภาพรวมสุขภาพ (Graphs)'] = 'visualization_report'
         if has_basic_health_data(person_data): available_reports['สุขภาพพื้นฐาน'] = 'main_report'
         if has_vision_data(person_data): available_reports['สมรรถภาพการมองเห็น'] = 'vision_report'
@@ -277,7 +305,6 @@ elif not st.session_state['pdpa_accepted']:
 else:
     # Route to Admin or User App
     if st.session_state.get('is_admin', False):
-        display_admin_panel(df) # Call admin panel function (now defined in admin_panel.py)
+        display_admin_panel(df) # Call admin panel function
     else:
         main_app(df) # Call main app function for regular users
-
