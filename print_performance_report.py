@@ -581,15 +581,15 @@ def render_performance_report_body(person_data, all_person_history_df):
     </div>
     """
     
+    # --- START: Return only content, no <body> tag ---
     return f"""
-    <body>
-        {header_html}
-        {vision_html}
-        {hearing_html}
-        {lung_html}
-        {signature_html}
-    </body>
+    {header_html}
+    {vision_html}
+    {hearing_html}
+    {lung_html}
+    {signature_html}
     """
+    # --- END: Return only content ---
 # --- END: New function to generate body content ---
 
 
@@ -601,7 +601,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
     """
     
     css = get_performance_report_css()
-    body = render_performance_report_body(person_data, all_person_history_df)
+    body_content = render_performance_report_body(person_data, all_person_history_df)
     title = f"รายงานผลการตรวจสมรรถภาพ - {html.escape(person_data.get('ชื่อ-สกุล', ''))}"
 
     # --- Assemble the final HTML page ---
@@ -613,7 +613,9 @@ def generate_performance_report_html(person_data, all_person_history_df):
         <title>{title}</title>
         {css}
     </head>
-    {body}
+    <body>
+        {body_content}
+    </body>
     </html>
     """
     return final_html
