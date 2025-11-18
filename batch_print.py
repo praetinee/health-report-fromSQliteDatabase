@@ -45,19 +45,36 @@ def generate_batch_html(df, selected_hns, report_type, year_logic):
 
     for hn in selected_hns:
         try:
+            # ดึงประวัติ *ทั้งหมด* ของคนไข้
             person_history_df = df[df['HN'] == hn].copy()
             if person_history_df.empty:
                 continue
 
-            # ตรรกะการเลือกปี: "ใช้ข้อมูลปีล่าสุดของแต่ละคน"
+            # --- (แก้ไข) ตรรกะการเลือกปี ---
             if year_logic == "ใช้ข้อมูลปีล่าสุดของแต่ละคน":
                 # เรียงลำดับจากปีมากไปน้อย และเลือกแถวแรก
                 latest_year_series = person_history_df.sort_values(by='Year', ascending=False).iloc[0]
                 person_data = latest_year_series.to_dict()
             else:
-                # (เผื่อไว้สำหรับตรรกะอื่นๆ เช่น เลือกปีที่ระบุ)
-                latest_year_series = person_history_df.sort_values(by='Year', ascending=False).iloc[0]
-                person_data = latest_year_series.to_dict()
+                # ถ้า year_logic เป็นปีที่ระบุ (เช่น 2568)
+                try:
+                    selected_year = int(year_logic)
+                    person_year_df = person_history_df[person_history_df['Year'] == selected_year]
+
+                    if person_year_df.empty:
+                        # (ควรจะไม่เกิดขึ้น ถ้า UI กรองถูกต้อง แต่ใส่ไว้กันพลาด)
+                        st.warning(f"ไม่พบข้อมูลสำหรับ HN: {hn} ในปี {selected_year} (จะข้ามการพิมพ์)")
+                        continue # ข้ามไป HN ถัดไป
+                    
+                    # ใช้ข้อมูลของปีที่เลือก
+                    person_data_series = person_year_df.iloc[0]
+                    person_data = person_data_series.to_dict()
+                
+                except (ValueError, IndexError) as e:
+                    st.error(f"เกิดข้อผิดพลาดในการดึงข้อมูล HN: {hn} ปี: {year_logic} - {e}")
+                    continue # ข้ามไป HN ถัดไป
+            # --- (จบ) ตรรกะการเลือกปี ---
+
 
             # --- (แก้ไข) สร้าง HTML ทั้งหน้า แล้วดึงส่วนที่ต้องการ ---
             full_html = render_full_html_func(person_data, person_history_df)
@@ -124,34 +141,45 @@ def display_batch_print_ui(df):
         key="batch_dept"
     )
 
-    # 2. กรองคนไข้ตามหน่วยงาน
-    if selected_dept == "(ทั้งหมด)":
-        filtered_df = df
-    else:
-        filtered_df = df[df['หน่วยงาน'] == selected_dept]
-    
-    # สร้าง dict ของคนไข้ในหน่วยงานนั้น
-    patient_options_df = filtered_df.drop_duplicates(subset=['HN']).sort_values(by='ชื่อ-สกุล')
-    options_dict = {
-        row['HN']: f"{row['ชื่อ-สกุล']} (HN: {row['HN']})" 
-        for _, row in patient_options_df.iterrows()
-    }
-
-    # 3. เลือกประเภทรายงาน
+    # 2. เลือกประเภทรายงาน
     report_type = st.selectbox(
         "2. เลือกประเภทรายงาน", 
         ["รายงานสุขภาพ (Main)", "รายงานสมรรถภาพ (Performance)"], 
         key="batch_report_type"
     )
 
-    # 4. เลือกปี (ตอนนี้มีแค่ตัวเลือกเดียว)
+    # --- (แก้ไข) 3. เลือกปี ---
+    all_years_list = sorted(df['Year'].dropna().unique().astype(int), reverse=True)
+    year_options = ["ใช้ข้อมูลปีล่าสุดของแต่ละคน"] + all_years_list
+    
     year_logic = st.selectbox(
         "3. เลือกปี", 
-        ["ใช้ข้อมูลปีล่าสุดของแต่ละคน"], 
+        year_options, 
         key="batch_year_logic",
-        disabled=True,
-        help="ในอนาคตจะสามารถเลือกปีที่ต้องการได้"
+        format_func=lambda x: f"พ.ศ. {x}" if isinstance(x, int) else x
     )
+    # --- (จบ) 3. เลือกปี ---
+
+    # 4. กรองคนไข้ตามหน่วยงานและปี
+    if selected_dept == "(ทั้งหมด)":
+        filtered_df = df
+    else:
+        filtered_df = df[df['หน่วยงาน'] == selected_dept]
+        
+    # กรองตามปีที่เลือก (ถ้าไม่ใช่ "ปีล่าสุด")
+    if year_logic != "ใช้ข้อมูลปีล่าสุดของแต่ละคน":
+        try:
+            selected_year_int = int(year_logic)
+            filtered_df = filtered_df[filtered_df['Year'] == selected_year_int]
+        except ValueError:
+            pass # (ถ้าเกิดข้อผิดพลาด ให้ใช้ df ที่กรองแค่หน่วยงาน)
+    
+    # สร้าง dict ของคนไข้ (หลังจากกรองแล้ว)
+    patient_options_df = filtered_df.drop_duplicates(subset=['HN']).sort_values(by='ชื่อ-สกุล')
+    options_dict = {
+        row['HN']: f"{row['ชื่อ-สกุล']} (HN: {row['HN']})" 
+        for _, row in patient_options_df.iterrows()
+    }
     
     # 5. เลือกคนไข้
     selected_hns = st.multiselect(
@@ -161,12 +189,13 @@ def display_batch_print_ui(df):
         key="batch_patients"
     )
 
-    if st.button("เลือกทั้งหมด", key="batch_select_all", use_container_width=True):
+    # --- (แก้ไข) 6. ปุ่มเลือกทั้งหมด ---
+    if st.button("เลือกทั้งหมด (จากรายการที่กรอง)", key="batch_select_all", use_container_width=True):
         # ตั้งค่า session state ของ multiselect ให้เป็น key ทั้งหมด
         st.session_state.batch_patients = list(options_dict.keys())
-        st.rerun()
+        # st.rerun() # --- (ลบ) st.rerun() เพื่อแก้บั๊ก ---
 
-    # 6. ปุ่มสร้างไฟล์
+    # 7. ปุ่มสร้างไฟล์
     if st.button("สร้างไฟล์สำหรับพิมพ์", key="batch_submit", use_container_width=True, type="primary"):
         if not selected_hns:
             st.warning("กรุณาเลือกคนไข้อย่างน้อย 1 คน")
