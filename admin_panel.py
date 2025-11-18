@@ -557,7 +557,7 @@ def render_vision_details_table(person_data):
         {'display': '13. ลานสายตา (Visual field)', 'type': 'value', 'col': 'ป.ลานสายตา', 'normal_keywords': ['ปกติ'], 'outcomes': ['ปกติ', 'ผิดปกติ']},
         {'display': '7. ความสมดุลกล้ามเนื้อตาแนวดิ่ง (Far vertical phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง', 'related_keyword': 'แนวตั้งระยะไกล', 'outcomes': ['ปกติ', 'ผิดปกติ']},
         {'display': '8. ความสมดุลกล้ามเนื้อตาแนวนอน (Far lateral phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน', 'related_keyword': 'แนวนอนระยะไกล', 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '12. ความสมดุลกล้ามเนื้อตาแนวนอน (Near lateral phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'related_keyword': 'แนวนอนระยะใกล้', 'outcomes': ['ปกติ', 'ผิดปกติ']}
+        {'display': '12. ความสมดุลกล้ามเนื้อตาแนวนอน (Near lateral phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'related_keyword': 'แนวนอนระยะไกล', 'outcomes': ['ปกติ', 'ผิดปกติ']}
     ]
 
     vision_tests.sort(key=lambda x: int(x['display'].split('.')[0]))
@@ -1201,6 +1201,23 @@ def display_admin_panel(df):
             # Ensure we always fetch the full history for the selected HN for display functions
             all_person_history_df_admin = df[df['HN'] == st.session_state.admin_selected_hn].copy()
 
+            # --- (ย้าย) Print Buttons for Admin (ย้ายมาไว้บนสุดของ Tab1) ---
+            st.markdown("---")
+            # --- (แก้ไข) เปลี่ยนหัวข้อให้ชัดเจน ---
+            st.subheader(f"พิมพ์รายงาน (สำหรับ: {person_data.get('ชื่อ-สกุล', 'N/A')})")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                # --- (แก้ไข) เพิ่ม type="primary" ---
+                if st.button("พิมพ์รายงานสุขภาพ", use_container_width=True, key="admin_print_main_tab", type="primary"):
+                    st.session_state.admin_print_trigger = True
+            with col2:
+                # --- (แก้ไข) เพิ่ม type="primary" ---
+                if st.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True, key="admin_print_perf_tab", type="primary"):
+                    st.session_state.admin_print_performance_trigger = True
+            st.markdown("---") # เพิ่มเส้นคั่นหลังปุ่ม
+            # --- (จบ) ย้ายและแก้ไข Print Buttons ---
+
 
             # --- ใช้ฟังก์ชันแสดงผลเดียวกับของผู้ใช้ ---
             available_reports = OrderedDict()
@@ -1232,17 +1249,10 @@ def display_admin_panel(df):
                             # Pass the full history for main report's performance section
                             display_main_report(person_data, all_person_history_df_admin)
 
-            # --- (เพิ่ม) Print Buttons for Admin (ย้ายมาไว้ใน Tab1) ---
-            st.markdown("---")
-            st.markdown('<div class="sidebar-title" style="font-size: 1.2rem; margin-top: 1rem;">พิมพ์รายงาน (สำหรับผู้ป่วยที่เลือก)</div>', unsafe_allow_html=True)
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("พิมพ์รายงานสุขภาพ", use_container_width=True, key="admin_print_main_tab"):
-                    st.session_state.admin_print_trigger = True
-            with col2:
-                if st.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True, key="admin_print_perf_tab"):
-                    st.session_state.admin_print_performance_trigger = True
-            # --- (จบ) เพิ่ม ---
+            # --- (ลบ) Print Buttons for Admin (ย้ายไปไว้ด้านบนแล้ว) ---
+            # st.markdown("---")
+            # ... (โค้ดปุ่ม) ...
+            # --- (จบ) ลบ ---
 
 
             # --- (ย้าย) Print Logic for Admin (Single) (ย้ายมาไว้ใน Tab1) ---
