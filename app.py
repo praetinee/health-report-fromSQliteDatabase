@@ -60,10 +60,17 @@ from shared_ui import (
     display_performance_report_vision,
     render_vision_details_table,
     display_performance_report,
-    display_main_report,
-    display_visualization_tab
+    display_main_report
+    # --- START: (*** นี่คือจุดที่แก้ไข ***) ---
+    # display_visualization_tab # <--- ลบออกจากตรงนี้
+    # --- END: (*** นี่คือจุดที่แก้ไข ***) ---
 )
 # --- END: Import SHARED UI functions FROM shared_ui.py ---
+
+# --- START: (*** นี่คือจุดที่แก้ไข ***) ---
+# (เพิ่มการ import ที่ถูกต้องสำหรับ visualization)
+from visualization import display_visualization_tab
+# --- END: (*** นี่คือจุดที่แก้ไข ***) ---
 
 
 # --- ค่าคงที่ (Constants) ---
