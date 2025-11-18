@@ -197,19 +197,35 @@ def display_batch_print_ui(df):
         for _, row in patient_options_df.iterrows()
     }
     
-    # 5. เลือกคนไข้
+    # --- (แก้ไข) 5. เลือกคนไข้ (ย้ายปุ่ม "เลือกทั้งหมด" ขึ้นมาก่อน) ---
+    
+    # --- (แก้ไข) 6. ปุ่มเลือกทั้งหมด (ใช้ on_click callback) ---
+    
+    # สร้างฟังก์ชัน callback ภายใน (เพื่อให้เข้าถึง options_dict ได้)
+    def _select_all_callback(keys_to_select):
+        st.session_state.batch_patients = keys_to_select
+
+    all_option_keys = list(options_dict.keys()) # ดึงกุญแจทั้งหมด
+    
+    st.button(
+        "เลือกทั้งหมด (จากรายการที่กรอง)", 
+        key="batch_select_all", 
+        use_container_width=True,
+        on_click=_select_all_callback, # --- (แก้ไข) ใช้ on_click
+        args=(all_option_keys,)       # --- (แก้ไข) ส่งกุญแจทั้งหมดเป็นอาร์กิวเมนต์
+    )
+
+    # --- (แก้ไข) 5. (ย้ายลงมา) เลือกคนไข้ ---
     selected_hns = st.multiselect(
         f"4. เลือกคนไข้ ({len(options_dict)} คน)", 
-        options=options_dict.keys(), 
+        options=all_option_keys, # --- (แก้ไข) ใช้ all_option_keys
         format_func=lambda hn: options_dict[hn], 
         key="batch_patients"
     )
 
-    # --- (แก้ไข) 6. ปุ่มเลือกทั้งหมด ---
-    if st.button("เลือกทั้งหมด (จากรายการที่กรอง)", key="batch_select_all", use_container_width=True):
-        # ตั้งค่า session state ของ multiselect ให้เป็น key ทั้งหมด
-        st.session_state.batch_patients = list(options_dict.keys())
-        # st.rerun() # --- (ลบ) st.rerun() เพื่อแก้บั๊ก ---
+    # --- (ลบ) ปุ่มเลือกทั้งหมด (ย้ายไปอยู่ด้านบน) ---
+    # if st.button("เลือกทั้งหมด (จากรายการที่กรอง)", key="batch_select_all", use_container_width=True):
+    #     st.session_state.batch_patients = list(options_dict.keys())
 
     # 7. ปุ่มสร้างไฟล์
     if st.button("สร้างไฟล์สำหรับพิมพ์", key="batch_submit", use_container_width=True, type="primary"):
