@@ -357,15 +357,28 @@ def inject_custom_css():
         }
         
         html, body, [class*="st-"], .st-emotion-cache-10trblm, h1, h2, h3, h4, h5, h6 {
-            /* --- START: (*** นี่คือจุดที่แก้ไข ***) --- */
-            font-family: 'Sarabun', Arial, sans-serif !important; /* สำหรับเนื้อหาหลัก (เพิ่ม Arial เป็น fallback) */
-            /* --- END: (*** นี่คือจุดที่แก้ไข ***) --- */
+            font-family: 'Sarabun', Arial, sans-serif !important; /* สำหรับเนื้อหาหลัก */
         }
 
         /* --- START: (*** นี่คือจุดที่แก้ไข ***) --- */
-        /* (เพิ่ม class สำหรับ icon) */
-        .icon, .symbol {
-          font-family: Arial, sans-serif !important; /* สำหรับปุ่มสัญลักษณ์ */
+        /* (CSS สำหรับไอคอน Material Icons ของ Streamlit) */
+        .st-emotion-cache-p5msec.e1f1d6gn0, /* Streamlit v1.33+ icon */
+        [data-testid="stExpanderIcon"] > span, /* Streamlit < v1.33 icon */
+        .st-emotion-cache-1g8p97v.e1f1d6gn0, /* Streamlit v1.35+ icon */
+        [data-testid="stIcon"] /* ทั่วไป */
+        {
+           font-family: 'Material Icons', Arial, sans-serif !important;
+           font-weight: normal !important;
+           font-style: normal !important;
+           line-height: 1 !important;
+           letter-spacing: normal !important;
+           text-transform: none !important;
+           display: inline-block !important;
+           white-space: nowrap !important;
+           word-wrap: normal !important;
+           direction: ltr !important;
+           -webkit-font-feature-settings: 'liga' !important;
+           -webkit-font-smoothing: antialiased !important;
         }
         /* --- END: (*** นี่คือจุดที่แก้ไข ***) --- */
         
