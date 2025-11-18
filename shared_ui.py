@@ -361,10 +361,69 @@ def inject_custom_css():
         }
 
         /* --- START: (*** นี่คือจุดที่แก้ไข ***) --- */
-        /* * CSS นี้จะบังคับให้ส่วนไอคอนของ Streamlit (เช่น ลูกศร expander)
-         * กลับไปใช้ฟอนต์ 'Material Icons' แทน 'Sarabun'
+        /*
+         * (แก้ไขครั้งที่ 2 - ใช้วิธี Fallback ที่ชัวร์กว่า)
+         * เนื่องจากการบังคับ font-family ('Material Icons') ไม่สำเร็จ
+         * เราจะใช้วิธีซ่อนไอคอนที่เสีย และแทนที่ด้วยสัญลักษณ์ '►' และ '▼'
+         * ซึ่งมีอยู่ในฟอนต์ Sarabun
          */
+
+        /* 1. ซ่อนข้อความ "keyboard_arrow..." ที่เสีย */
         [data-testid="stExpanderIcon"] span,
+        [data-testid="stSidebarCollapseButton"] span
+        {
+            visibility: hidden; /* ซ่อนข้อความ 'keyboard_arrow_...' */
+            position: relative;
+            width: 1.5rem; /* 24px */
+            height: 1.5rem;
+            display: inline-flex; /* ใช้ flex เพื่อจัดกลาง */
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* 2. สร้าง '::before' pseudo-element เพื่อใส่สัญลักษณ์ใหม่ */
+        [data-testid="stExpanderIcon"] span::before,
+        [data-testid="stSidebarCollapseButton"] span::before
+        {
+            visibility: visible; /* ทำให้สัญลักษณ์ใหม่มองเห็น */
+            position: absolute;
+            font-family: 'Sarabun', Arial, sans-serif !important; /* ใช้ฟอนต์ที่ทำงานแน่ๆ */
+            font-size: 1rem; /* 16px */
+            font-weight: bold;
+            color: currentColor; /* ใช้สีเดียวกับที่ Streamlit กำหนด */
+            transition: transform 0.2s ease;
+            line-height: 1; /* ป้องกันการเลื่อน */
+        }
+        
+        /* 3. กำหนดสัญลักษณ์สำหรับ Expander (ปุ่มย่อ-ขยาย) */
+        
+        /* 3.1 สัญลักษณ์เมื่อ Expander 'ปิด' (default) */
+        /* เลือกโดยการอ้างอิง parent ที่มี aria-expanded="false" */
+        [data-testid="stExpander"][aria-expanded="false"] [data-testid="stExpanderIcon"] span::before {
+            content: '►'; /* ลูกศรขวา */
+            transform: rotate(0deg);
+        }
+        
+        /* 3.2 สัญลักษณ์เมื่อ Expander 'เปิด' */
+        /* เลือกโดยการอ้างอิง parent ที่มี aria-expanded="true" */
+        [data-testid="stExpander"][aria-expanded="true"] [data-testid="stExpanderIcon"] span::before {
+            content: '▼'; /* ลูกศรลง */
+            transform: rotate(0deg); /* ไม่ต้องหมุนสัญลักษณ์ของเรา */
+        }
+        
+        /* 4. กำหนดสัญลักษณ์สำหรับ Sidebar (ปุ่มพับ) */
+        
+        /* 4.1 สัญลักษณ์เมื่อ Sidebar 'เปิด' (default) */
+        [data-testid="stSidebar"][aria-expanded="true"] [data-testid="stSidebarCollapseButton"] span::before {
+            content: '◀'; /* ลูกศรซ้าย */
+        }
+        
+        /* 4.2 สัญลักษณ์เมื่อ Sidebar 'ปิด' */
+        [data-testid="stSidebar"][aria-expanded="false"] [data-testid="stSidebarCollapseButton"] span::before {
+            content: '►'; /* ลูกศรขวา */
+        }
+        
+        /* 5. แก้ไขไอคอนทั่วไป (stIcon) - ถ้าจำเป็น (เช่นในปุ่ม) */
         [data-testid="stIcon"] span
         {
            font-family: 'Material Icons', Arial, sans-serif !important;
@@ -381,6 +440,7 @@ def inject_custom_css():
            -webkit-font-feature-settings: 'liga' !important;
            -webkit-font-smoothing: antialiased !important;
         }
+
         /* --- END: (*** นี่คือจุดที่แก้ไข ***) --- */
         
         .main {
