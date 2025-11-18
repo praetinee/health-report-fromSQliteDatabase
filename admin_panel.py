@@ -1171,9 +1171,9 @@ def display_admin_panel(df):
                     st.button("พิมพ์รายงานสุขภาพ", use_container_width=True, disabled=True)
                     st.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True, disabled=True)
 
-        # --- START: (เพิ่ม) เรียกใช้ Batch Print UI ---
-        display_batch_print_ui(df)
-        # --- END: (เพิ่ม) เรียกใช้ Batch Print UI ---
+        # --- START: (ลบ) ลบการเรียกใช้ Batch Print UI จาก Sidebar ---
+        # display_batch_print_ui(df) 
+        # --- END: (ลบ) ลบการเรียกใช้ Batch Print UI จาก Sidebar ---
 
         st.markdown("---")
         # --- Logout Button ---
@@ -1191,97 +1191,109 @@ def display_admin_panel(df):
             st.rerun()
 
     # --- Main Page (for Admin) ---
-    if not st.session_state.admin_person_row:
-        st.info("กรุณาค้นหาและเลือกผู้ป่วยจากเมนูด้านข้าง")
-    else:
-        person_data = st.session_state.admin_person_row
-        # Ensure we always fetch the full history for the selected HN for display functions
-        all_person_history_df_admin = df[df['HN'] == st.session_state.admin_selected_hn].copy()
+    
+    # --- START: (แก้ไข) สร้าง Tabs สำหรับหน้าหลัก ---
+    tab1, tab2 = st.tabs(["🔍 ค้นหาและดูรายบุคคล", "🖨️ พิมพ์รายงานเป็นชุด"])
 
-
-        # --- ใช้ฟังก์ชันแสดงผลเดียวกับของผู้ใช้ ---
-        available_reports = OrderedDict()
-        if has_visualization_data(all_person_history_df_admin): available_reports['ภาพรวมสุขภาพ (Graphs)'] = 'visualization_report'
-        if has_basic_health_data(person_data): available_reports['สุขภาพพื้นฐาน'] = 'main_report'
-        if has_vision_data(person_data): available_reports['สมรรถภาพการมองเห็น'] = 'vision_report'
-        if has_hearing_data(person_data): available_reports['สมรรถภาพการได้ยิน'] = 'hearing_report'
-        if has_lung_data(person_data): available_reports['สมรรถภาพปอด'] = 'lung_report'
-
-        if not available_reports:
-            display_common_header(person_data)
-            st.warning("ไม่พบข้อมูลการตรวจใดๆ สำหรับปีที่เลือก")
+    with tab1:
+        # --- (ย้าย) โค้ดแสดงผลรายงานรายบุคคลมาไว้ใน Tab1 ---
+        if not st.session_state.admin_person_row:
+            st.info("กรุณาค้นหาและเลือกผู้ป่วยจากเมนูด้านข้าง")
         else:
-            display_common_header(person_data)
-            tabs = st.tabs(list(available_reports.keys()))
-
-            for i, (tab_title, page_key) in enumerate(available_reports.items()):
-                with tabs[i]:
-                    if page_key == 'visualization_report':
-                        display_visualization_tab(person_data, all_person_history_df_admin)
-                    elif page_key == 'vision_report':
-                        display_performance_report(person_data, 'vision')
-                    elif page_key == 'hearing_report':
-                        # Pass the full history for hearing interpretation
-                        display_performance_report(person_data, 'hearing', all_person_history_df=all_person_history_df_admin)
-                    elif page_key == 'lung_report':
-                        display_performance_report(person_data, 'lung')
-                    elif page_key == 'main_report':
-                        # Pass the full history for main report's performance section
-                        display_main_report(person_data, all_person_history_df_admin)
+            person_data = st.session_state.admin_person_row
+            # Ensure we always fetch the full history for the selected HN for display functions
+            all_person_history_df_admin = df[df['HN'] == st.session_state.admin_selected_hn].copy()
 
 
-        # --- Print Logic for Admin (Single) ---
-        if st.session_state.get("admin_print_trigger", False):
-            report_html_data = generate_printable_report(person_data, all_person_history_df_admin)
-            escaped_html = json.dumps(report_html_data)
-            iframe_id = f"print-iframe-admin-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
-            print_component = f"""
-            <iframe id="{iframe_id}" style="display:none;"></iframe>
-            <script>
-                (function() {{
-                    const iframe = document.getElementById('{iframe_id}');
-                    if (!iframe) return;
-                    const iframeDoc = iframe.contentWindow.document;
-                    iframeDoc.open();
-                    iframeDoc.write({escaped_html});
-                    iframeDoc.close();
-                    iframe.onload = function() {{
-                        setTimeout(function() {{
-                            try {{ iframe.contentWindow.focus(); iframe.contentWindow.print(); }}
-                            catch (e) {{ console.error("Printing failed:", e); }}
-                        }}, 500);
-                    }};
-                }})();
-            </script>
-            """
-            st.components.v1.html(print_component, height=0, width=0)
-            st.session_state.admin_print_trigger = False
+            # --- ใช้ฟังก์ชันแสดงผลเดียวกับของผู้ใช้ ---
+            available_reports = OrderedDict()
+            if has_visualization_data(all_person_history_df_admin): available_reports['ภาพรวมสุขภาพ (Graphs)'] = 'visualization_report'
+            if has_basic_health_data(person_data): available_reports['สุขภาพพื้นฐาน'] = 'main_report'
+            if has_vision_data(person_data): available_reports['สมรรถภาพการมองเห็น'] = 'vision_report'
+            if has_hearing_data(person_data): available_reports['สมรรถภาพการได้ยิน'] = 'hearing_report'
+            if has_lung_data(person_data): available_reports['สมรรถภาพปอด'] = 'lung_report'
 
-        if st.session_state.get("admin_print_performance_trigger", False):
-            report_html_data = generate_performance_report_html(person_data, all_person_history_df_admin)
-            escaped_html = json.dumps(report_html_data)
-            iframe_id = f"print-perf-iframe-admin-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
-            print_component = f"""
-            <iframe id="{iframe_id}" style="display:none;"></iframe>
-            <script>
-                (function() {{
-                    const iframe = document.getElementById('{iframe_id}');
-                    if (!iframe) return;
-                    const iframeDoc = iframe.contentWindow.document;
-                    iframeDoc.open();
-                    iframeDoc.write({escaped_html});
-                    iframeDoc.close();
-                    iframe.onload = function() {{
-                        setTimeout(function() {{
-                            try {{ iframe.contentWindow.focus(); iframe.contentWindow.print(); }}
-                            catch (e) {{ console.error("Printing performance report failed:", e); }}
-                        }}, 500);
-                    }};
-                }})();
-            </script>
-            """
-            st.components.v1.html(print_component, height=0, width=0)
-            st.session_state.admin_print_performance_trigger = False
+            if not available_reports:
+                display_common_header(person_data)
+                st.warning("ไม่พบข้อมูลการตรวจใดๆ สำหรับปีที่เลือก")
+            else:
+                display_common_header(person_data)
+                tabs = st.tabs(list(available_reports.keys()))
+
+                for i, (tab_title, page_key) in enumerate(available_reports.items()):
+                    with tabs[i]:
+                        if page_key == 'visualization_report':
+                            display_visualization_tab(person_data, all_person_history_df_admin)
+                        elif page_key == 'vision_report':
+                            display_performance_report(person_data, 'vision')
+                        elif page_key == 'hearing_report':
+                            # Pass the full history for hearing interpretation
+                            display_performance_report(person_data, 'hearing', all_person_history_df=all_person_history_df_admin)
+                        elif page_key == 'lung_report':
+                            display_performance_report(person_data, 'lung')
+                        elif page_key == 'main_report':
+                            # Pass the full history for main report's performance section
+                            display_main_report(person_data, all_person_history_df_admin)
+
+
+            # --- Print Logic for Admin (Single) ---
+            if st.session_state.get("admin_print_trigger", False):
+                report_html_data = generate_printable_report(person_data, all_person_history_df_admin)
+                escaped_html = json.dumps(report_html_data)
+                iframe_id = f"print-iframe-admin-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
+                print_component = f"""
+                <iframe id="{iframe_id}" style="display:none;"></iframe>
+                <script>
+                    (function() {{
+                        const iframe = document.getElementById('{iframe_id}');
+                        if (!iframe) return;
+                        const iframeDoc = iframe.contentWindow.document;
+                        iframeDoc.open();
+                        iframeDoc.write({escaped_html});
+                        iframeDoc.close();
+                        iframe.onload = function() {{
+                            setTimeout(function() {{
+                                try {{ iframe.contentWindow.focus(); iframe.contentWindow.print(); }}
+                                catch (e) {{ console.error("Printing failed:", e); }}
+                            }}, 500);
+                        }};
+                    }})();
+                </script>
+                """
+                st.components.v1.html(print_component, height=0, width=0)
+                st.session_state.admin_print_trigger = False
+
+            if st.session_state.get("admin_print_performance_trigger", False):
+                report_html_data = generate_performance_report_html(person_data, all_person_history_df_admin)
+                escaped_html = json.dumps(report_html_data)
+                iframe_id = f"print-perf-iframe-admin-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
+                print_component = f"""
+                <iframe id="{iframe_id}" style="display:none;"></iframe>
+                <script>
+                    (function() {{
+                        const iframe = document.getElementById('{iframe_id}');
+                        if (!iframe) return;
+                        const iframeDoc = iframe.contentWindow.document;
+                        iframeDoc.open();
+                        iframeDoc.write({escaped_html});
+                        iframeDoc.close();
+                        iframe.onload = function() {{
+                            setTimeout(function() {{
+                                try {{ iframe.contentWindow.focus(); iframe.contentWindow.print(); }}
+                                catch (e) {{ console.error("Printing performance report failed:", e); }}
+                            }}, 500);
+                        }};
+                    }})();
+                </script>
+                """
+                st.components.v1.html(print_component, height=0, width=0)
+                st.session_state.admin_print_performance_trigger = False
+
+    with tab2:
+        # --- (ย้าย) เรียกใช้ Batch Print UI มาไว้ใน Tab2 ---
+        display_batch_print_ui(df)
+    # --- END: (แก้ไข) สร้าง Tabs สำหรับหน้าหลัก ---
+
 
     # --- START: (เพิ่ม) Logic สำหรับรับ Trigger การพิมพ์แบบ Batch ---
     # (ต้องอยู่นอก if 'admin_person_row' เพราะเราต้องการให้พิมพ์ได้แม้จะยังไม่ได้เลือกคนไข้)
