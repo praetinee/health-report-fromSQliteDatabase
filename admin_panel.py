@@ -413,7 +413,9 @@ def inject_custom_css():
             color: var(--primary-color);
             margin-bottom: 1rem;
         }
-        .stButton>button {
+        
+        /* --- (ลบ) ลบการ override ปุ่มสีเขียว --- */
+        /* .stButton>button {
             background-color: #00796B;
             color: white !important;
             border-radius: 8px;
@@ -436,7 +438,8 @@ def inject_custom_css():
             border: none;
             box-shadow: none;
             cursor: not-allowed;
-        }
+        } */
+        /* --- (จบ) ลบ --- */
 
         .report-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; }
         .header-left h2 { color: var(--text-color); font-size: 2rem; margin-bottom: 0.25rem;}
