@@ -13,9 +13,11 @@ import json
 # --- Import ฟังก์ชันจากไฟล์อื่นที่จำเป็น ---
 # (จำเป็นต้อง import มาที่นี่ เพราะฟังก์ชันที่ย้ายมาอาจต้องใช้)
 from performance_tests import interpret_audiogram, interpret_lung_capacity, generate_comprehensive_recommendations
-from print_report import generate_printable_report
-from print_performance_report import generate_performance_report_html
-from visualization import display_visualization_tab # Import display_visualization_tab มาที่นี่
+# --- START: Removed circular imports ---
+# from print_report import generate_printable_report # <--- ลบออก
+# from print_performance_report import generate_performance_report_html # <--- ลบออก
+# from visualization import display_visualization_tab # <--- ลบออก
+# --- END: Removed circular imports ---
 
 # --- Helper Functions (ย้ายมาจาก app.py) ---
 def is_empty(val):
