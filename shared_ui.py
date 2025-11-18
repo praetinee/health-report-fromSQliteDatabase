@@ -11,7 +11,6 @@ from datetime import datetime
 import json
 
 # --- Import ฟังก์ชันจากไฟล์อื่นที่จำเป็น ---
-# (จำเป็นต้อง import มาที่นี่ เพราะฟังก์ชันที่ย้ายมาอาจต้องใช้)
 from performance_tests import interpret_audiogram, interpret_lung_capacity, generate_comprehensive_recommendations
 # --- START: Removed circular imports ---
 # from print_report import generate_printable_report # <--- ลบออก
@@ -360,8 +359,8 @@ def inject_custom_css():
             font-family: 'Sarabun', Arial, sans-serif !important; /* สำหรับเนื้อหาหลัก */
         }
 
-        /* --- START: (*** นี่คือจุดที่แก้ไข ***) --- */
-        /* (CSS สำหรับไอคอน Material Icons ของ Streamlit) */
+        /* --- START: จุดแก้ไข fallback สำหรับไอคอนสัญลักษณ์ --- */
+        /* (Fallback สำหรับ icon สัญลักษณ์/Expander ที่ใช้ + - หรือ Material Icons) */
         .st-emotion-cache-p5msec.e1f1d6gn0, /* Streamlit v1.33+ icon */
         [data-testid="stExpanderIcon"] > span, /* Streamlit < v1.33 icon */
         .st-emotion-cache-1g8p97v.e1f1d6gn0, /* Streamlit v1.35+ icon */
@@ -380,7 +379,7 @@ def inject_custom_css():
            -webkit-font-feature-settings: 'liga' !important;
            -webkit-font-smoothing: antialiased !important;
         }
-        /* --- END: (*** นี่คือจุดที่แก้ไข ***) --- */
+        /* --- END: จุดแก้ไข fallback สำหรับไอคอนสัญลักษณ์ --- */
         
         .main {
              background-color: var(--background-color);
