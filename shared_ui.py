@@ -362,10 +362,8 @@ def inject_custom_css():
 
         /* --- START: (*** นี่คือจุดที่แก้ไข ***) --- */
         /*
-         * (แก้ไขครั้งที่ 2 - ใช้วิธี Fallback ที่ชัวร์กว่า)
-         * เนื่องจากการบังคับ font-family ('Material Icons') ไม่สำเร็จ
-         * เราจะใช้วิธีซ่อนไอคอนที่เสีย และแทนที่ด้วยสัญลักษณ์ '►' และ '▼'
-         * ซึ่งมีอยู่ในฟอนต์ Sarabun
+         * (แก้ไขครั้งที่ 3 - ใช้วิธี Fallback ที่ปลอดภัยที่สุด)
+         * ใช้สัญลักษณ์ ASCII (+, -, <, >) ที่มีในทุกฟอนต์
          */
 
         /* 1. ซ่อนข้อความ "keyboard_arrow..." ที่เสีย */
@@ -388,42 +386,42 @@ def inject_custom_css():
             visibility: visible; /* ทำให้สัญลักษณ์ใหม่มองเห็น */
             position: absolute;
             font-family: 'Sarabun', Arial, sans-serif !important; /* ใช้ฟอนต์ที่ทำงานแน่ๆ */
-            font-size: 1rem; /* 16px */
             font-weight: bold;
             color: currentColor; /* ใช้สีเดียวกับที่ Streamlit กำหนด */
-            transition: transform 0.2s ease;
             line-height: 1; /* ป้องกันการเลื่อน */
         }
         
         /* 3. กำหนดสัญลักษณ์สำหรับ Expander (ปุ่มย่อ-ขยาย) */
         
         /* 3.1 สัญลักษณ์เมื่อ Expander 'ปิด' (default) */
-        /* เลือกโดยการอ้างอิง parent ที่มี aria-expanded="false" */
         [data-testid="stExpander"][aria-expanded="false"] [data-testid="stExpanderIcon"] span::before {
-            content: '►'; /* ลูกศรขวา */
-            transform: rotate(0deg);
+            content: '+'; /* --- CHANGED to ASCII --- */
+            font-size: 1.5rem; /* 24px */
         }
         
         /* 3.2 สัญลักษณ์เมื่อ Expander 'เปิด' */
-        /* เลือกโดยการอ้างอิง parent ที่มี aria-expanded="true" */
         [data-testid="stExpander"][aria-expanded="true"] [data-testid="stExpanderIcon"] span::before {
-            content: '▼'; /* ลูกศรลง */
-            transform: rotate(0deg); /* ไม่ต้องหมุนสัญลักษณ์ของเรา */
+            content: '−'; /* --- CHANGED to Minus Sign U+2212 --- */
+            font-size: 1.5rem; /* 24px */
         }
         
         /* 4. กำหนดสัญลักษณ์สำหรับ Sidebar (ปุ่มพับ) */
+        [data-testid="stSidebarCollapseButton"] span::before {
+             font-size: 2rem; /* 32px - make it bigger */
+             font-weight: 300; /* Make it thinner */
+        }
         
         /* 4.1 สัญลักษณ์เมื่อ Sidebar 'เปิด' (default) */
         [data-testid="stSidebar"][aria-expanded="true"] [data-testid="stSidebarCollapseButton"] span::before {
-            content: '◀'; /* ลูกศรซ้าย */
+            content: '<'; /* --- CHANGED to ASCII --- */
         }
         
         /* 4.2 สัญลักษณ์เมื่อ Sidebar 'ปิด' */
         [data-testid="stSidebar"][aria-expanded="false"] [data-testid="stSidebarCollapseButton"] span::before {
-            content: '►'; /* ลูกศรขวา */
+            content: '>'; /* --- CHANGED to ASCII --- */
         }
         
-        /* 5. แก้ไขไอคอนทั่วไป (stIcon) - ถ้าจำเป็น (เช่นในปุ่ม) */
+        /* 5. แก้ไขไอคอนทั่วไป (stIcon) - คงไว้เผื่อไอคอนอื่น */
         [data-testid="stIcon"] span
         {
            font-family: 'Material Icons', Arial, sans-serif !important;
