@@ -10,9 +10,7 @@ from performance_tests import interpret_audiogram, interpret_lung_capacity, inte
 # Module: print_performance_report.py
 # Purpose: Contains functions to generate HTML for performance test reports
 # (Vision, Hearing, Lung) for the standalone printable version.
-#
-# NOTE: This file has been completely redesigned for a more modern,
-# informative, and doctor-friendly printable layout.
+# Refactored for Batch Printing capability.
 # ==============================================================================
 
 
@@ -67,7 +65,6 @@ def render_html_header_and_personal_info(person):
     """Renders the main header and personal info table for the print report."""
     check_date = person.get("วันที่ตรวจ", "-")
     
-    # Vital Signs Formatting
     sbp = person.get("SBP", "")
     dbp = person.get("DBP", "")
     try:
@@ -81,7 +78,6 @@ def render_html_header_and_personal_info(person):
     waist_val = person.get("รอบเอว", "-")
     waist_display = f"{waist_val} ซม." if not is_empty(waist_val) else "-"
 
-    # แก้ไข: จัด Layout ของ Header ใหม่
     header_html = f"""
     <div class="header-grid">
         <div class="header-left">
@@ -278,7 +274,6 @@ def render_print_hearing(person_data, all_person_history_df):
         </tr>
         """
 
-    # --- START OF CHANGE: Updated table_header_html ---
     baseline_header_line1 = "การเปลี่ยนแปลงเทียบกับ Baseline"
     baseline_header_line2 = f"(พ.ศ. {baseline_year})" if has_baseline else "(ไม่มี Baseline)"
     baseline_header_html = f"{baseline_header_line1}<br>{baseline_header_line2}"
@@ -298,7 +293,6 @@ def render_print_hearing(person_data, all_person_history_df):
         </tr>
     </thead>
     """
-    # --- END OF CHANGE ---
     
     data_table_html = f"""
     <table class="data-table hearing-table">
@@ -418,153 +412,171 @@ def render_print_lung(person_data):
     </div>
     """
 
+# --- NEW FUNCTIONS FOR REFACTORING ---
+
+def get_performance_report_css():
+    """Returns the CSS string for the performance report."""
+    return """
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
+        body {
+            font-family: 'Sarabun', sans-serif !important;
+            font-size: 12px;
+            margin: 0.5cm 0.7cm; 
+            color: #333;
+            background-color: #fff;
+        }
+        hr { border: 0; border-top: 1px solid #e0e0e0; margin: 0.5rem 0; }
+        .info-table { width: 100%; font-size: 10.5px; text-align: left; border-collapse: collapse; }
+        .info-table td { padding: 1px 5px; }
+        
+        .header-grid { display: flex; align-items: flex-end; justify-content: space-between; }
+        .header-left { text-align: left; }
+        .header-right { text-align: right; }
+
+        .report-section { margin-bottom: 0.5rem; page-break-inside: avoid; } 
+        
+        .section-header {
+            background-color: #00796B; 
+            color: white; text-align: center;
+            padding: 0.4rem; font-weight: bold; border-radius: 8px;
+            margin-bottom: 0.7rem;
+            font-size: 13px;
+        }
+
+        .content-columns { display: flex; gap: 15px; align-items: flex-start; }
+        .main-content { flex: 2; min-width: 0; }
+        .side-content { flex: 1; min-width: 0; }
+        .main-content-full { width: 100%; }
+
+        .data-table { width: 100%; font-size: 10.5px; border-collapse: collapse; }
+        .data-table.hearing-table { table-layout: fixed; }
+        .data-table th, .data-table td {
+            border: 1px solid #e0e0e0; padding: 4px; text-align: center;
+            vertical-align: middle;
+        }
+        .data-table th { background-color: #f5f5f5; font-weight: bold; }
+        .data-table td:first-child { text-align: left; }
+
+        .summary-single-line-box {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 8px;
+            border: 1px solid #e0e0e0;
+            background-color: #f9f9f9;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            font-size: 12px;
+            font-weight: bold;
+            page-break-inside: avoid; 
+        }
+        
+        .summary-single-line-box span {
+            text-align: left;
+        }
+
+        .summary-container { margin-top: 0; }
+        .summary-container-lung { margin-top: 10px; }
+        .summary-title-lung {
+            text-align: center;
+            font-weight: bold;
+            font-size: 11px;
+            margin-bottom: 8px;
+            line-height: 1.2;
+        }
+        .advice-box {
+            border-radius: 6px; padding: 8px 12px; font-size: 10.5px;
+            line-height: 1.5; border: 1px solid;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 5px; 
+            height: 100%;
+            box-sizing: border-box;
+            background-color: #fff8e1; 
+            border-color: #ffecb3;
+        }
+        .summary-container .advice-box:last-child {
+            margin-bottom: 0;
+        }
+        
+        .status-ok-text { color: #1b5e20; }
+        .status-abn-text { color: #b71c1c; }
+        .status-nt-text { color: #555; }
+        
+        .signature-section {
+            margin-top: 2rem;
+            text-align: right;
+            padding-right: 1rem;
+            page-break-inside: avoid;
+        }
+        .signature-line {
+            display: inline-block;
+            text-align: center;
+            width: 280px;
+        }
+        .signature-line .line {
+            border-bottom: 1px dotted #333;
+            margin-bottom: 0.4rem;
+            width: 100%;
+        }
+        .signature-line .name, .signature-line .title, .signature-line .license {
+            white-space: nowrap;
+            font-size: 11px;
+        }
+
+        @media print {
+            body { -webkit-print-color-adjust: exact; margin: 0; }
+        }
+    </style>
+    """
+
+def render_performance_report_body(person_data, all_person_history_df):
+    """Generates the HTML body content for the performance report."""
+    header_html = render_html_header_and_personal_info(person_data)
+    vision_html = render_print_vision(person_data)
+    hearing_html = render_print_hearing(person_data, all_person_history_df)
+    lung_html = render_print_lung(person_data)
+    
+    signature_html = """
+    <div class="signature-section">
+        <div class="signature-line">
+            <div class="line"></div>
+            <div class="name">นายแพทย์นพรัตน์ รัชฎาพร</div>
+            <div class="title">แพทย์อาชีวเวชศาสตร์</div>
+            <div class="license">ว.26674</div>
+        </div>
+    </div>
+    """
+    
+    return f"""
+    <div class="report-container">
+        {header_html}
+        {vision_html}
+        {hearing_html}
+        {lung_html}
+        {signature_html}
+    </div>
+    """
+
 def generate_performance_report_html(person_data, all_person_history_df):
     """
     Checks for available performance tests and generates the combined HTML for the standalone performance report.
-    This is the main function called to create the printable page.
     """
-    # --- Assemble the final HTML page ---
+    css_html = get_performance_report_css()
+    body_html = render_performance_report_body(person_data, all_person_history_df)
+    
     final_html = f"""
     <!DOCTYPE html>
     <html lang="th">
     <head>
         <meta charset="UTF-8">
         <title>รายงานผลการตรวจสมรรถภาพ - {html.escape(person_data.get('ชื่อ-สกุล', ''))}</title>
-        <style>
-            @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
-            body {{
-                font-family: 'Sarabun', sans-serif !important;
-                /* --- ADJUSTED: font-size and margin --- */
-                font-size: 12px; /* <--- ปรับขนาดตัวอักษรหลักขึ้น */
-                margin: 0.5cm 0.7cm; 
-                /* --- END ADJUSTMENT --- */
-                color: #333;
-                background-color: #fff;
-            }}
-            hr {{ border: 0; border-top: 1px solid #e0e0e0; margin: 0.5rem 0; }}
-            .info-table {{ width: 100%; font-size: 10.5px; text-align: left; border-collapse: collapse; }} /* <--- ปรับขนาด */
-            .info-table td {{ padding: 1px 5px; }}
-            
-            .header-grid {{ display: flex; align-items: flex-end; justify-content: space-between; }}
-            .header-left {{ text-align: left; }}
-            .header-right {{ text-align: right; }}
-
-            /* --- START OF CHANGE: Reduced margin-bottom --- */
-            .report-section {{ margin-bottom: 0.5rem; page-break-inside: avoid; }} 
-            /* --- END OF CHANGE --- */
-            
-            .section-header {{
-                background-color: #00796B; 
-                color: white; text-align: center;
-                padding: 0.4rem; font-weight: bold; border-radius: 8px;
-                margin-bottom: 0.7rem; /* --- CHANGED --- */
-                font-size: 13px; /* <--- ปรับขนาด */
-            }}
-
-            .content-columns {{ display: flex; gap: 15px; align-items: flex-start; }}
-            .main-content {{ flex: 2; min-width: 0; }}
-            .side-content {{ flex: 1; min-width: 0; }}
-            .main-content-full {{ width: 100%; }}
-
-            .data-table {{ width: 100%; font-size: 10.5px; border-collapse: collapse; }} /* <--- ปรับขนาด */
-            .data-table.hearing-table {{ table-layout: fixed; }}
-            .data-table th, .data-table td {{
-                border: 1px solid #e0e0e0; padding: 4px; text-align: center;
-                vertical-align: middle;
-            }}
-            .data-table th {{ background-color: #f5f5f5; font-weight: bold; }}
-            .data-table td:first-child {{ text-align: left; }}
-
-            /* --- START OF CHANGE: CSS for flexbox layout --- */
-            .summary-single-line-box {{
-                display: flex;
-                justify-content: space-between; /* ชิดซ้าย-ขวา */
-                align-items: center;
-                flex-wrap: wrap; /* เผื่อไว้กรณีข้อความยาวมาก */
-                gap: 10px; /* ระยะห่างถ้ามีการ wrap */
-                
-                padding: 8px;
-                border: 1px solid #e0e0e0;
-                background-color: #f9f9f9;
-                border-radius: 6px;
-                margin-bottom: 0.5rem; /* --- CHANGED --- */
-                font-size: 12px; /* <--- ปรับขนาด */
-                font-weight: bold;
-                page-break-inside: avoid; 
-            }}
-            
-            .summary-single-line-box span {{
-                text-align: left; /* จัดข้อความในแต่ละ span ให้ชิดซ้าย */
-            }}
-            /* --- END OF CHANGE --- */
-
-            .summary-container {{ margin-top: 0; }}
-            .summary-container-lung {{ margin-top: 10px; }}
-            .summary-title-lung {{
-                text-align: center;
-                font-weight: bold;
-                font-size: 11px; /* <--- ปรับลดจาก 13px */
-                margin-bottom: 8px; /* <--- ปรับลด margin-bottom */
-                line-height: 1.2; /* <--- เพิ่ม line-height ให้ชิดขึ้น */
-            }}
-            .advice-box {{
-                border-radius: 6px; padding: 8px 12px; font-size: 10.5px; /* <--- ปรับขนาด */
-                line-height: 1.5; border: 1px solid;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-                margin-bottom: 5px; 
-                height: 100%;
-                box-sizing: border-box;
-                background-color: #fff8e1; 
-                border-color: #ffecb3;
-            }}
-            .summary-container .advice-box:last-child {{
-                margin-bottom: 0;
-            }}
-            
-            .status-ok-text {{ color: #1b5e20; }}
-            .status-abn-text {{ color: #b71c1c; }}
-            .status-nt-text {{ color: #555; }} /* --- ADDED THIS --- */
-            
-            .signature-section {{
-                margin-top: 2rem;
-                text-align: right;
-                padding-right: 1rem;
-                page-break-inside: avoid;
-            }}
-            .signature-line {{
-                display: inline-block;
-                text-align: center;
-                width: 280px;
-            }}
-            .signature-line .line {{
-                border-bottom: 1px dotted #333;
-                margin-bottom: 0.4rem;
-                width: 100%;
-            }}
-            .signature-line .name, .signature-line .title, .signature-line .license {{
-                white-space: nowrap;
-                font-size: 11px; /* <--- ปรับขนาด */
-            }}
-
-            @media print {{
-                body {{ -webkit-print-color-adjust: exact; margin: 0; }}
-            }}
-        </style>
+        {css_html}
     </head>
     <body>
-        {render_html_header_and_personal_info(person_data)}
-        {render_print_vision(person_data)}
-        {render_print_hearing(person_data, all_person_history_df)}
-        {render_print_lung(person_data)}
-        
-        <div class="signature-section">
-            <div class="signature-line">
-                <div class="line"></div>
-                <div class="name">นายแพทย์นพรัตน์ รัชฎาพร</div>
-                <div class="title">แพทย์อาชีวเวชศาสตร์</div>
-                <div class="license">ว.26674</div>
-            </div>
-        </div>
+        {body_html}
     </body>
     </html>
     """
@@ -573,11 +585,10 @@ def generate_performance_report_html(person_data, all_person_history_df):
 def generate_performance_report_html_for_main_report(person_data, all_person_history_df):
     """
     Generates a compact version of performance reports to be embedded
-    into the main health report. This function remains for compatibility with the main report print.
+    into the main health report.
     """
     parts = []
     
-    # Vision
     if has_vision_data(person_data):
         vision_advice = person_data.get('สรุปเหมาะสมกับงาน', 'ไม่มีข้อมูลสรุป')
         parts.append(f"""
@@ -586,7 +597,6 @@ def generate_performance_report_html_for_main_report(person_data, all_person_his
         </div>
         """)
 
-    # Hearing
     if has_hearing_data(person_data):
         results = interpret_audiogram(person_data, all_person_history_df)
         summary = results['summary'].get('overall', 'N/A')
@@ -597,7 +607,6 @@ def generate_performance_report_html_for_main_report(person_data, all_person_his
         </div>
         """)
 
-    # Lung
     if has_lung_data(person_data):
         summary, advice, _ = interpret_lung_capacity(person_data)
         parts.append(f"""
