@@ -27,16 +27,22 @@ def has_hearing_data(person_data):
     return any(not is_empty(person_data.get(key)) for key in hearing_keys)
 
 def has_lung_data(person_data):
-# ... (existing code) ...
+    """Check for lung capacity test data."""
+    key_indicators = ['FVC เปอร์เซ็นต์', 'FEV1เปอร์เซ็นต์', 'FEV1/FVC%']
     return any(not is_empty(person_data.get(key)) for key in key_indicators)
 
-# --- HTML Rendering Functions for Standalone Report ---
-
+# --- (เพิ่มฟังก์ชันที่ขาดไป) ---
 def render_section_header(title, subtitle=None):
-# ... (existing code) ...
-    """
+    """Renders a styled section header for the print report."""
+    full_title = f"{title} <span style='font-weight: normal;'>({subtitle})</span>" if subtitle else title
+    return f"""
+    <div class='section-header'>
+        {full_title}
     </div>
     """
+# --- (สิ้นสุดการเพิ่ม) ---
+
+# --- HTML Rendering Functions for Standalone Report ---
 
 def render_html_header_and_personal_info(person):
 # ... (existing code) ...
