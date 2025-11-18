@@ -414,8 +414,8 @@ def inject_custom_css():
             margin-bottom: 1rem;
         }
         
-        /* --- (ลบ) ลบการ override ปุ่มสีเขียว --- */
-        /* .stButton>button {
+        /* --- (แก้ไข) เปิดใช้งาน CSS สำหรับปุ่มสีเขียว --- */
+        .stButton>button {
             background-color: #00796B;
             color: white !important;
             border-radius: 8px;
@@ -438,8 +438,8 @@ def inject_custom_css():
             border: none;
             box-shadow: none;
             cursor: not-allowed;
-        } */
-        /* --- (จบ) ลบ --- */
+        }
+        /* --- (จบ) แก้ไข --- */
 
         .report-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; }
         .header-left h2 { color: var(--text-color); font-size: 2rem; margin-bottom: 0.25rem;}
