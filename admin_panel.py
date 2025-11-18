@@ -23,6 +23,10 @@ from print_report import (
 )
 # --- END: Import ตรรกะการแปลผลจาก print_report.py ---
 
+# --- START: (เพิ่ม) Import ฟังก์ชัน Batch Print UI ---
+from batch_print import display_batch_print_ui
+# --- END: (เพิ่ม) Import ฟังก์ชัน Batch Print UI ---
+
 
 # --- START: Functions moved from shared_ui.py ---
 
@@ -553,7 +557,7 @@ def render_vision_details_table(person_data):
         {'display': '13. ลานสายตา (Visual field)', 'type': 'value', 'col': 'ป.ลานสายตา', 'normal_keywords': ['ปกติ'], 'outcomes': ['ปกติ', 'ผิดปกติ']},
         {'display': '7. ความสมดุลกล้ามเนื้อตาแนวดิ่ง (Far vertical phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง', 'related_keyword': 'แนวตั้งระยะไกล', 'outcomes': ['ปกติ', 'ผิดปกติ']},
         {'display': '8. ความสมดุลกล้ามเนื้อตาแนวนอน (Far lateral phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน', 'related_keyword': 'แนวนอนระยะไกล', 'outcomes': ['ปกติ', 'ผิดปกติ']},
-        {'display': '12. ความสมดุลกล้ามเนื้อตาแนวนอน (Near lateral phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'related_keyword': 'แนวนอนระยะไกล', 'outcomes': ['ปกติ', 'ผิดปกติ']}
+        {'display': '12. ความสมดุลกล้ามเนื้อตาแนวนอน (Near lateral phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'related_keyword': 'แนวนอนระยะใกล้', 'outcomes': ['ปกติ', 'ผิดปกติ']}
     ]
 
     vision_tests.sort(key=lambda x: int(x['display'].split('.')[0]))
@@ -1020,6 +1024,12 @@ def display_admin_panel(df):
         st.session_state.admin_print_performance_trigger = False
     if "admin_person_row" not in st.session_state:
         st.session_state.admin_person_row = None
+        
+    # --- (เพิ่ม) Initialize batch print triggers ---
+    if 'batch_print_trigger' not in st.session_state:
+        st.session_state.batch_print_trigger = False
+    if 'batch_print_html_content' not in st.session_state:
+        st.session_state.batch_print_html_content = None
 
 
     with st.sidebar:
@@ -1151,7 +1161,7 @@ def display_admin_panel(df):
 
                 # --- Print Buttons for Admin ---
                 st.markdown("---")
-                st.markdown('<div class="sidebar-title" style="font-size: 1.2rem; margin-top: 1rem;">พิมพ์รายงาน</div>', unsafe_allow_html=True)
+                st.markdown('<div class="sidebar-title" style="font-size: 1.2rem; margin-top: 1rem;">พิมพ์รายงาน (สำหรับผู้ป่วยที่เลือก)</div>', unsafe_allow_html=True)
                 if st.session_state.admin_person_row:
                     if st.button("พิมพ์รายงานสุขภาพ", use_container_width=True, key="admin_print_main"):
                         st.session_state.admin_print_trigger = True
@@ -1161,6 +1171,10 @@ def display_admin_panel(df):
                     st.button("พิมพ์รายงานสุขภาพ", use_container_width=True, disabled=True)
                     st.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True, disabled=True)
 
+        # --- START: (เพิ่ม) เรียกใช้ Batch Print UI ---
+        display_batch_print_ui(df)
+        # --- END: (เพิ่ม) เรียกใช้ Batch Print UI ---
+
         st.markdown("---")
         # --- Logout Button ---
         if st.button("ออกจากระบบ (Logout)", use_container_width=True):
@@ -1168,7 +1182,8 @@ def display_admin_panel(df):
                 'authenticated', 'pdpa_accepted', 'user_hn', 'user_name', 'is_admin',
                 'search_result', 'selected_year', 'person_row', 'selected_row_found',
                 'admin_search_term', 'admin_search_results', 'admin_selected_hn',
-                'admin_selected_year', 'admin_person_row'
+                'admin_selected_year', 'admin_person_row',
+                'batch_print_trigger', 'batch_print_html_content' # (เพิ่ม) เคลียร์ค่า batch
             ]
             for key in keys_to_clear:
                 if key in st.session_state:
@@ -1215,7 +1230,7 @@ def display_admin_panel(df):
                         display_main_report(person_data, all_person_history_df_admin)
 
 
-        # --- Print Logic for Admin ---
+        # --- Print Logic for Admin (Single) ---
         if st.session_state.get("admin_print_trigger", False):
             report_html_data = generate_printable_report(person_data, all_person_history_df_admin)
             escaped_html = json.dumps(report_html_data)
@@ -1267,3 +1282,41 @@ def display_admin_panel(df):
             """
             st.components.v1.html(print_component, height=0, width=0)
             st.session_state.admin_print_performance_trigger = False
+
+    # --- START: (เพิ่ม) Logic สำหรับรับ Trigger การพิมพ์แบบ Batch ---
+    # (ต้องอยู่นอก if 'admin_person_row' เพราะเราต้องการให้พิมพ์ได้แม้จะยังไม่ได้เลือกคนไข้)
+    if st.session_state.get("batch_print_trigger", False):
+        # ดึง HTML ที่สร้างไว้แล้วจาก session state
+        report_html_data = st.session_state.get("batch_print_html_content", "<p>Error: No batch content found.</p>")
+        escaped_html = json.dumps(report_html_data)
+        iframe_id = f"print-iframe-batch-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
+        
+        print_component = f"""
+        <iframe id="{iframe_id}" style="display:none;"></iframe>
+        <script>
+            (function() {{
+                const iframe = document.getElementById('{iframe_id}');
+                if (!iframe) return;
+                const iframeDoc = iframe.contentWindow.document;
+                iframeDoc.open();
+                iframeDoc.write({escaped_html});
+                iframeDoc.close();
+                iframe.onload = function() {{
+                    setTimeout(function() {{
+                        try {{ 
+                            iframe.contentWindow.focus(); 
+                            iframe.contentWindow.print(); 
+                        }}
+                        catch (e) {{ console.error("Batch printing failed:", e); }}
+                    }}, 500); // Wait for content to render
+                }};
+            }})();
+        </script>
+        """
+        st.components.v1.html(print_component, height=0, width=0)
+        
+        # Reset triggers และ content
+        st.session_state.batch_print_trigger = False
+        if "batch_print_html_content" in st.session_state:
+            del st.session_state["batch_print_html_content"]
+    # --- END: (เพิ่ม) Logic สำหรับรับ Trigger การพิมพ์แบบ Batch ---
