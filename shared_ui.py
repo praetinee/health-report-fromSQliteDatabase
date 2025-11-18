@@ -357,8 +357,18 @@ def inject_custom_css():
         }
         
         html, body, [class*="st-"], .st-emotion-cache-10trblm, h1, h2, h3, h4, h5, h6 {
-            font-family: 'Sarabun', sans-serif !important;
+            /* --- START: (*** นี่คือจุดที่แก้ไข ***) --- */
+            font-family: 'Sarabun', Arial, sans-serif !important; /* สำหรับเนื้อหาหลัก (เพิ่ม Arial เป็น fallback) */
+            /* --- END: (*** นี่คือจุดที่แก้ไข ***) --- */
         }
+
+        /* --- START: (*** นี่คือจุดที่แก้ไข ***) --- */
+        /* (เพิ่ม class สำหรับ icon) */
+        .icon, .symbol {
+          font-family: Arial, sans-serif !important; /* สำหรับปุ่มสัญลักษณ์ */
+        }
+        /* --- END: (*** นี่คือจุดที่แก้ไข ***) --- */
+        
         .main {
              background-color: var(--background-color);
              color: var(--text-color);
