@@ -16,7 +16,7 @@ from performance_tests import interpret_audiogram, interpret_lung_capacity, gene
 # --- START: Removed circular imports ---
 # from print_report import generate_printable_report # <--- ลบออก
 # from print_performance_report import generate_performance_report_html # <--- ลบออก
-# from visualization import display_visualization_tab # <--- ลบออก
+# from visualization import display_visualization_tab # <--- ลบออก (*** นี่คือจุดที่แก้ไข ***)
 # --- END: Removed circular imports ---
 
 # --- Helper Functions (ย้ายมาจาก app.py) ---
