@@ -23,6 +23,10 @@ from print_report import (
 )
 # --- END: Import ตรรกะการแปลผลจาก print_report.py ---
 
+# --- START: (เพิ่ม) Import ฟังก์ชัน Batch Print ---
+from batch_print import display_batch_print_ui
+# --- END: (เพิ่ม) Import ฟังก์ชัน Batch Print ---
+
 
 # --- START: Functions moved from shared_ui.py ---
 
@@ -1020,6 +1024,13 @@ def display_admin_panel(df):
         st.session_state.admin_print_performance_trigger = False
     if "admin_person_row" not in st.session_state:
         st.session_state.admin_person_row = None
+    
+    # --- (เพิ่ม) Initial session state for batch print ---
+    if "batch_print_trigger" not in st.session_state:
+        st.session_state.batch_print_trigger = False
+    if "batch_print_html_content" not in st.session_state:
+        st.session_state.batch_print_html_content = None
+    # --- (เพิ่ม) End ---
 
 
     with st.sidebar:
@@ -1149,9 +1160,14 @@ def display_admin_panel(df):
                         st.error("ผู้ป่วยนี้ไม่มีข้อมูลรายปี")
                         st.session_state.admin_person_row = None
 
+                # --- (เพิ่ม) เรียกใช้ Batch Print UI ---
+                st.markdown("---")
+                display_batch_print_ui(df)
+                # --- (เพิ่ม) End ---
+
                 # --- Print Buttons for Admin ---
                 st.markdown("---")
-                st.markdown('<div class="sidebar-title" style="font-size: 1.2rem; margin-top: 1rem;">พิมพ์รายงาน</div>', unsafe_allow_html=True)
+                st.markdown('<div class="sidebar-title" style="font-size: 1.2rem; margin-top: 1rem;">พิมพ์รายงาน (รายบุคคล)</div>', unsafe_allow_html=True)
                 if st.session_state.admin_person_row:
                     if st.button("พิมพ์รายงานสุขภาพ", use_container_width=True, key="admin_print_main"):
                         st.session_state.admin_print_trigger = True
@@ -1168,7 +1184,8 @@ def display_admin_panel(df):
                 'authenticated', 'pdpa_accepted', 'user_hn', 'user_name', 'is_admin',
                 'search_result', 'selected_year', 'person_row', 'selected_row_found',
                 'admin_search_term', 'admin_search_results', 'admin_selected_hn',
-                'admin_selected_year', 'admin_person_row'
+                'admin_selected_year', 'admin_person_row',
+                'batch_print_trigger', 'batch_print_html_content' # (เพิ่ม) เคลียร์ session state ของ batch print
             ]
             for key in keys_to_clear:
                 if key in st.session_state:
@@ -1267,3 +1284,32 @@ def display_admin_panel(df):
             """
             st.components.v1.html(print_component, height=0, width=0)
             st.session_state.admin_print_performance_trigger = False
+
+        # --- (เพิ่ม) START: Add Batch Print Trigger Logic ---
+        if st.session_state.get("batch_print_trigger", False) and st.session_state.get("batch_print_html_content"):
+            batch_html_data = st.session_state.batch_print_html_content
+            escaped_html = json.dumps(batch_html_data)
+            iframe_id = f"print-batch-iframe-admin-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
+            print_component = f"""
+            <iframe id="{iframe_id}" style="display:none;"></iframe>
+            <script>
+                (function() {{
+                    const iframe = document.getElementById('{iframe_id}');
+                    if (!iframe) return;
+                    const iframeDoc = iframe.contentWindow.document;
+                    iframeDoc.open();
+                    iframeDoc.write({escaped_html});
+                    iframeDoc.close();
+                    iframe.onload = function() {{
+                        setTimeout(function() {{
+                            try {{ iframe.contentWindow.focus(); iframe.contentWindow.print(); }}
+                            catch (e) {{ console.error("Batch printing failed:", e); }}
+                        }}, 500);
+                    }};
+                }})();
+            </script>
+            """
+            st.components.v1.html(print_component, height=0, width=0)
+            st.session_state.batch_print_trigger = False # Reset trigger
+            st.session_state.batch_print_html_content = None # Clear content
+        # --- (เพิ่ม) END: Add Batch Print Trigger Logic ---
