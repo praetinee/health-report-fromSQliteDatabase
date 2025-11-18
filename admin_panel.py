@@ -301,68 +301,6 @@ def display_common_header(person_data):
         bmi_desc = interpret_bmi(bmi)
 
     st.markdown(f"""
-    <div class="report-header">
-        <div class="header-left">
-            <h2>รายงานผลการตรวจสุขภาพ</h2>
-            <p>คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย</p>
-            <p>ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167</p>
-        </div>
-        <div class="header-right">
-            <div class="info-card">
-                <div class="info-card-item"><span>ชื่อ-สกุล:</span> {name}</div>
-                <div class="info-card-item"><span>HN:</span> {hn}</div>
-                <div class="info-card-item"><span>อายุ:</span> {age} ปี</div>
-                <div class="info-card-item"><span>เพศ:</span> {sex}</div>
-                <div class="info-card-item"><span>หน่วยงาน:</span> {department}</div>
-                <div class="info-card-item"><span>วันที่ตรวจ:</span> {check_date}</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="vitals-grid">
-        <div class="vital-card">
-            <div class="vital-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="M12 6v6l4 2"></path></svg>
-            </div>
-            <div class="vital-data">
-                <span class="vital-label">น้ำหนัก / ส่วนสูง</span>
-                <span class="vital-value">{weight_val} kg / {height_val} cm</span>
-                <span class="vital-sub-value">BMI: {bmi_val_str} ({bmi_desc})</span>
-            </div>
-        </div>
-        <div class="vital-card">
-            <div class="vital-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="M12 6v6l4 2"></path></svg>
-            </div>
-            <div class="vital-data">
-                <span class="vital-label">รอบเอว</span>
-                <span class="vital-value">{waist_val} cm</span>
-            </div>
-        </div>
-        <div class="vital-card">
-            <div class="vital-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-            </div>
-            <div class="vital-data">
-                <span class="vital-label">ความดัน (mmHg)</span>
-                <span class="vital-value">{bp_val}</span>
-                <span class="vital-sub-value">{bp_desc}</span>
-            </div>
-        </div>
-        <div class="vital-card">
-            <div class="vital-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-            </div>
-            <div class="vital-data">
-                <span class="vital-label">ชีพจร (BPM)</span>
-                <span class="vital-value">{pulse_val}</span>
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-def inject_custom_css():
-    st.markdown("""
     <style>
         /* ... (CSS rules - keep as is) ... */
          @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap');
@@ -999,7 +937,7 @@ def display_main_report(person_data, all_person_history_df):
         st.markdown(f"<div class='doctor-opinion-box'>{escaped_opinion}</div>", unsafe_allow_html=True)
     # --- END: เปลี่ยนกล่องสรุปสุดท้าย ---
 
-# --- END: แก้ไข display_main_report ทั้งหมด ---
+# ... (โค้ดของ display_main_report ทั้งหมด) ...
 
 
 # --- END: Functions moved from shared_ui.py ---
@@ -1211,12 +1149,12 @@ def display_admin_panel(df):
             
             col1, col2 = st.columns(2)
             with col1:
-                # --- (แก้ไข) เพิ่ม type="primary" ---
-                if st.button("พิมพ์รายงานสุขภาพ", use_container_width=True, key="admin_print_main_tab", type="primary"):
+                # --- (แก้ไข) ลบ type="primary" ---
+                if st.button("พิมพ์รายงานสุขภาพ", use_container_width=True, key="admin_print_main_tab"):
                     st.session_state.admin_print_trigger = True
             with col2:
-                # --- (แก้ไข) เพิ่ม type="primary" ---
-                if st.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True, key="admin_print_perf_tab", type="primary"):
+                # --- (แก้ไข) ลบ type="primary" ---
+                if st.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True, key="admin_print_perf_tab"):
                     st.session_state.admin_print_performance_trigger = True
             st.markdown("---") # เพิ่มเส้นคั่นหลังปุ่ม
             # --- (จบ) ย้ายและแก้ไข Print Buttons ---
