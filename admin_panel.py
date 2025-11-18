@@ -1159,19 +1159,16 @@ def display_admin_panel(df):
                         st.error("ผู้ป่วยนี้ไม่มีข้อมูลรายปี")
                         st.session_state.admin_person_row = None
 
-                # --- Print Buttons for Admin ---
-                st.markdown("---")
-                st.markdown('<div class="sidebar-title" style="font-size: 1.2rem; margin-top: 1rem;">พิมพ์รายงาน (สำหรับผู้ป่วยที่เลือก)</div>', unsafe_allow_html=True)
-                if st.session_state.admin_person_row:
-                    if st.button("พิมพ์รายงานสุขภาพ", use_container_width=True, key="admin_print_main"):
-                        st.session_state.admin_print_trigger = True
-                    if st.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True, key="admin_print_perf"):
-                        st.session_state.admin_print_performance_trigger = True
-                else:
-                    st.button("พิมพ์รายงานสุขภาพ", use_container_width=True, disabled=True)
-                    st.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True, disabled=True)
+                # --- (ลบ) Print Buttons for Admin (ย้ายไปไว้ใน Tab1) ---
+                # st.markdown("---")
+                # st.markdown('<div class="sidebar-title" ...>พิมพ์รายงาน (สำหรับผู้ป่วยที่เลือก)</div>', ...)
+                # if st.session_state.admin_person_row:
+                #     ... (buttons) ...
+                # else:
+                #     ... (disabled buttons) ...
+                # --- (จบ) ลบ ---
 
-        # --- START: (ลบ) ลบการเรียกใช้ Batch Print UI จาก Sidebar ---
+        # --- (ลบ) ลบการเรียกใช้ Batch Print UI จาก Sidebar ---
         # display_batch_print_ui(df) 
         # --- END: (ลบ) ลบการเรียกใช้ Batch Print UI จาก Sidebar ---
 
@@ -1235,8 +1232,20 @@ def display_admin_panel(df):
                             # Pass the full history for main report's performance section
                             display_main_report(person_data, all_person_history_df_admin)
 
+            # --- (เพิ่ม) Print Buttons for Admin (ย้ายมาไว้ใน Tab1) ---
+            st.markdown("---")
+            st.markdown('<div class="sidebar-title" style="font-size: 1.2rem; margin-top: 1rem;">พิมพ์รายงาน (สำหรับผู้ป่วยที่เลือก)</div>', unsafe_allow_html=True)
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("พิมพ์รายงานสุขภาพ", use_container_width=True, key="admin_print_main_tab"):
+                    st.session_state.admin_print_trigger = True
+            with col2:
+                if st.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True, key="admin_print_perf_tab"):
+                    st.session_state.admin_print_performance_trigger = True
+            # --- (จบ) เพิ่ม ---
 
-            # --- Print Logic for Admin (Single) ---
+
+            # --- (ย้าย) Print Logic for Admin (Single) (ย้ายมาไว้ใน Tab1) ---
             if st.session_state.get("admin_print_trigger", False):
                 report_html_data = generate_printable_report(person_data, all_person_history_df_admin)
                 escaped_html = json.dumps(report_html_data)
@@ -1288,6 +1297,7 @@ def display_admin_panel(df):
                 """
                 st.components.v1.html(print_component, height=0, width=0)
                 st.session_state.admin_print_performance_trigger = False
+            # --- (จบ) ย้าย ---
 
     with tab2:
         # --- (ย้าย) เรียกใช้ Batch Print UI มาไว้ใน Tab2 ---
@@ -1295,7 +1305,9 @@ def display_admin_panel(df):
     # --- END: (แก้ไข) สร้าง Tabs สำหรับหน้าหลัก ---
 
 
-    # --- START: (เพิ่ม) Logic สำหรับรับ Trigger การพิมพ์แบบ Batch ---
+    # --- (ย้าย) Logic สำหรับพิมพ์รายคน (ย้ายเข้าไปใน Tab1 แล้ว) ---
+    
+    # --- (คงไว้) Logic สำหรับรับ Trigger การพิมพ์แบบ Batch ---
     # (ต้องอยู่นอก if 'admin_person_row' เพราะเราต้องการให้พิมพ์ได้แม้จะยังไม่ได้เลือกคนไข้)
     if st.session_state.get("batch_print_trigger", False):
         # ดึง HTML ที่สร้างไว้แล้วจาก session state
@@ -1331,4 +1343,4 @@ def display_admin_panel(df):
         st.session_state.batch_print_trigger = False
         if "batch_print_html_content" in st.session_state:
             del st.session_state["batch_print_html_content"]
-    # --- END: (เพิ่ม) Logic สำหรับรับ Trigger การพิมพ์แบบ Batch ---
+    # --- (จบ) คงไว้ ---
