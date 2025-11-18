@@ -8,7 +8,7 @@ from datetime import datetime
 from print_report import render_printable_report_body, get_main_report_css
 from print_performance_report import render_performance_report_body, get_performance_report_css
 
-def generate_batch_html(df, selected_hns, report_type, year_logic):
+def generate_batch_html(df, selected_hns, report_type, selected_years): # <-- เปลี่ยนจาก year_logic
     """
     สร้าง HTML ฉบับยาวสำหรับคนไข้หลายคน
     """
@@ -25,25 +25,35 @@ def generate_batch_html(df, selected_hns, report_type, year_logic):
 
     for hn in selected_hns:
         try:
+            # ดึงประวัติ *ทั้งหมด* ของคนไข้ (สำหรับใช้ในกราฟ)
             person_history_df = df[df['HN'] == hn].copy()
             if person_history_df.empty:
                 continue
 
-            # ตรรกะการเลือกปี: "ใช้ข้อมูลปีล่าสุดของแต่ละคน"
-            # (ในอนาคตสามารถเพิ่มตรรกะอื่นๆ เช่น เลือกปีที่ต้องการ)
-            if year_logic == "ใช้ข้อมูลปีล่าสุดของแต่ละคน":
-                # เรียงลำดับจากปีมากไปน้อย และเลือกแถวแรก
-                latest_year_series = person_history_df.sort_values(by='Year', ascending=False).iloc[0]
-                person_data = latest_year_series.to_dict()
-            else:
-                # (เผื่อไว้สำหรับตรรกะอื่นๆ เช่น เลือกปีที่ระบุ)
-                # ในตอนนี้จะใช้ปีล่าสุดไปก่อน
-                latest_year_series = person_history_df.sort_values(by='Year', ascending=False).iloc[0]
-                person_data = latest_year_series.to_dict()
+            # --- START: New Year Filtering Logic ---
+            # กรองข้อมูลของคนนี้ เฉพาะปีที่เลือก
+            person_selected_years_df = person_history_df[person_history_df['Year'].isin(selected_years)]
 
-            # สร้างเนื้อหา HTML สำหรับคนไข้คนนี้
-            body = render_body_func(person_data, person_history_df)
-            report_bodies.append(body)
+            if person_selected_years_df.empty:
+                #st.warning(f"ไม่พบข้อมูลสำหรับ HN: {hn} ในปีที่เลือก") # อาจจะแสดงผลเยอะไปถ้าเลือกหลายคน
+                continue
+
+            # วนลูปสร้างรายงานสำหรับ *แต่ละปี* ที่เลือก
+            # (เรียงจากปีมากไปน้อย)
+            for year in sorted(person_selected_years_df['Year'].unique(), reverse=True):
+                
+                person_year_df = person_selected_years_df[person_selected_years_df['Year'] == year]
+                if person_year_df.empty:
+                    continue # ไม่ควรเกิดขึ้น
+
+                # (Logic to merge rows for that year, same as in app.py)
+                merged_series = person_year_df.bfill().ffill().iloc[0]
+                person_data = merged_series.to_dict()
+
+                # สร้างเนื้อหา HTML (person_history_df ถูกส่งไปทั้งหมดเพื่อใช้ทำกราฟย้อนหลัง)
+                body = render_body_func(person_data, person_history_df)
+                report_bodies.append(body)
+            # --- END: New Year Filtering Logic ---
 
         except Exception as e:
             st.error(f"เกิดข้อผิดพลาดในการสร้างรายงานสำหรับ HN: {hn} - {e}")
@@ -108,14 +118,21 @@ def display_batch_print_ui(df):
             key="batch_report_type"
         )
 
-        # 4. เลือกปี (ตอนนี้มีแค่ตัวเลือกเดียว)
-        year_logic = st.selectbox(
-            "3. เลือกปี", 
-            ["ใช้ข้อมูลปีล่าสุดของแต่ละคน"], 
-            key="batch_year_logic",
-            disabled=True,
-            help="ในอนาคตจะสามารถเลือกปีที่ต้องการได้"
+        # --- START: Replaced year_logic with dynamic multiselect ---
+        # 4. เลือกปี
+        all_available_years = sorted(filtered_df['Year'].dropna().unique().astype(int), reverse=True)
+        
+        # Set default to latest year if list is not empty
+        default_year = all_available_years[:1] if all_available_years else []
+        
+        selected_years = st.multiselect(
+            "3. เลือกปี (เลือกได้หลายปี)", 
+            all_available_years, 
+            default=default_year, 
+            key="batch_year_select",
+            format_func=lambda y: f"พ.ศ. {y}"
         )
+        # --- END: Replaced year_logic ---
         
         # 5. เลือกคนไข้
         selected_hns = st.multiselect(
@@ -134,15 +151,21 @@ def display_batch_print_ui(df):
         if st.button("สร้างไฟล์สำหรับพิมพ์", key="batch_submit", use_container_width=True, type="primary"):
             if not selected_hns:
                 st.warning("กรุณาเลือกคนไข้อย่างน้อย 1 คน")
+            # --- START: Add check for selected_years ---
+            elif not selected_years:
+                st.warning("กรุณาเลือกอย่างน้อย 1 ปี")
+            # --- END: Add check for selected_years ---
             else:
-                with st.spinner(f"กำลังสร้างรายงาน {len(selected_hns)} ชุด..."):
-                    html_content = generate_batch_html(df, selected_hns, report_type, year_logic)
+                with st.spinner(f"กำลังสร้างรายงาน {len(selected_hns)} ชุด สำหรับ {len(selected_years)} ปี..."):
+                    # --- START: Pass selected_years to function ---
+                    html_content = generate_batch_html(df, selected_hns, report_type, selected_years)
+                    # --- END: Pass selected_years to function ---
                     
                     if html_content:
                         # เก็บผลลัพธ์ไว้ใน session state เพื่อให้ admin_panel ดึงไปพิมพ์
                         st.session_state.batch_print_html_content = html_content
                         st.session_state.batch_print_trigger = True
-                        st.success(f"สร้างรายงาน {len(selected_hns)} ชุดสำเร็จ! กำลังเตรียมพิมพ์...")
+                        st.success(f"สร้างรายงานสำเร็จ! กำลังเตรียมพิมพ์...")
                         st.rerun() # สั่งให้ UI โหลดใหม่เพื่อเริ่มกระบวนการพิมพ์
                     else:
-                        st.error("ไม่สามารถสร้างไฟล์รายงานได้ (อาจไม่มีข้อมูล)")
+                        st.error("ไม่สามารถสร้างไฟล์รายงานได้ (อาจไม่มีข้อมูลสำหรับ HN และปีที่เลือก)")
