@@ -13,11 +13,9 @@ import json
 # --- Import ฟังก์ชันจากไฟล์อื่นที่จำเป็น ---
 # (จำเป็นต้อง import มาที่นี่ เพราะฟังก์ชันที่ย้ายมาอาจต้องใช้)
 from performance_tests import interpret_audiogram, interpret_lung_capacity, generate_comprehensive_recommendations
-# --- START: Removed circular imports ---
-# from print_report import generate_printable_report # <--- ลบออก
-# from print_performance_report import generate_performance_report_html # <--- ลบออก
-# from visualization import display_visualization_tab # <--- ลบออก
-# --- END: Removed circular imports ---
+from print_report import generate_printable_report
+from print_performance_report import generate_performance_report_html
+from visualization import display_visualization_tab # Import display_visualization_tab มาที่นี่
 
 # --- Helper Functions (ย้ายมาจาก app.py) ---
 def is_empty(val):
@@ -357,82 +355,8 @@ def inject_custom_css():
         }
         
         html, body, [class*="st-"], .st-emotion-cache-10trblm, h1, h2, h3, h4, h5, h6 {
-            font-family: 'Sarabun', Arial, sans-serif !important; /* สำหรับเนื้อหาหลัก */
+            font-family: 'Sarabun', sans-serif !important;
         }
-
-        /* --- START: (*** นี่คือจุดที่แก้ไข ***) --- */
-        /*
-         * (แก้ไขตามคำสั่ง v-new)
-         * 1. ซ่อน text node ที่เสีย (ด้วย font-size: 0)
-         * 2. สร้าง '::before'
-         */
-
-        /* 1. ซ่อน text node และกำหนดขนาด */
-        [data-testid="stExpanderIcon"],
-        [data-testid="stSidebarCollapseButton"]
-        {
-            font-size: 0 !important; /* <-- ซ่อนข้อความที่เสีย */
-            line-height: 0 !important;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            width: 1.5rem;
-            height: 1.5rem;
-        }
-
-        /* 2. สร้าง '::before' บน 'ตัวครอบ' (ปุ่ม) */
-        [data-testid="stExpanderIcon"]::before,
-        [data-testid="stSidebarCollapseButton"]::before
-        {
-            visibility: visible;
-            position: absolute;
-            font-family: 'Sarabun', Arial, sans-serif !important;
-            font-weight: bold;
-            color: currentColor;
-            line-height: 1;
-            font-size: 1.5rem; /* default size */
-        }
-        
-        /* 3. กำหนดสัญลักษณ์สำหรับ Expander (ปุ่มย่อ-ขยาย) */
-        [data-testid="stExpander"][aria-expanded="false"] [data-testid="stExpanderIcon"]::before {
-            content: '+';
-        }
-        [data-testid="stExpander"][aria-expanded="true"] [data-testid="stExpanderIcon"]::before {
-            content: '−'; /* Minus Sign U+2212 */
-        }
-        
-        /* 4. กำหนดสัญลักษณ์สำหรับ Sidebar (ปุ่มพับ) */
-        [data-testid="stSidebar"][aria-expanded="true"] [data-testid="stSidebarCollapseButton"]::before {
-            content: '<';
-            font-size: 2rem;
-            font-weight: 300;
-        }
-        [data-testid="stSidebar"][aria-expanded="false"] [data-testid="stSidebarCollapseButton"]::before {
-            content: '>';
-            font-size: 2rem;
-            font-weight: 300;
-        }
-        
-        /* 5. แก้ไขไอคอนทั่วไป (stIcon) - คงไว้เผื่อไอคอนอื่น */
-        [data-testid="stIcon"] span
-        {
-           font-family: 'Material Icons', Arial, sans-serif !important;
-           font-weight: normal !important;
-           font-style: normal !important;
-           font-size: 24px !important;
-           line-height: 1 !important;
-           letter-spacing: normal !important;
-           text-transform: none !important;
-           display: inline-block !important;
-           white-space: nowrap !important;
-           word-wrap: normal !important;
-           direction: ltr !important;
-           -webkit-font-feature-settings: 'liga' !important;
-           -webkit-font-smoothing: antialiased !important;
-        }
-        /* --- END: (*** นี่คือจุดที่แก้ไข ***) --- */
-        
         .main {
              background-color: var(--background-color);
              color: var(--text-color);
@@ -659,3 +583,168 @@ def display_main_report(person_data, all_person_history_df):
         render_section_header("สรุปและคำแนะนำการปฏิบัติตัว (Summary & Recommendations)")
         recommendations_html = generate_comprehensive_recommendations(person_data)
         st.markdown(f"<div class='recommendation-container'>{recommendations_html}</div>", unsafe_allow_html=True)
+
+
+
+# --- Main Application Logic Wrapper ---
+def main_app(df):
+    """
+    This function contains the main application logic for displaying health reports.
+    It's called after the user has successfully logged in and accepted the PDPA consent.
+    """
+    st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
+
+    inject_custom_css()
+
+    if 'user_hn' not in st.session_state:
+        st.error("เกิดข้อผิดพลาด: ไม่พบข้อมูลผู้ใช้")
+        st.stop()
+
+    user_hn = st.session_state['user_hn']
+    results_df = df[df['HN'] == user_hn].copy()
+    st.session_state['search_result'] = results_df
+
+    def handle_year_change():
+        st.session_state.selected_year = st.session_state.year_select
+        st.session_state.selected_date = None
+        st.session_state.pop("person_row", None)
+        st.session_state.pop("selected_row_found", None)
+
+    if 'selected_year' not in st.session_state: st.session_state.selected_year = None
+    if 'print_trigger' not in st.session_state: st.session_state.print_trigger = False
+    if 'print_performance_trigger' not in st.session_state: st.session_state.print_performance_trigger = False
+
+    with st.sidebar:
+        st.markdown(f"<div class='sidebar-title'>ยินดีต้อนรับ</div><h3>{st.session_state.get('user_name', '')}</h3>", unsafe_allow_html=True)
+        st.markdown(f"**HN:** {st.session_state.get('user_hn', '')}")
+        st.markdown("---")
+        
+        if not results_df.empty:
+            available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
+            if available_years:
+                if st.session_state.selected_year not in available_years:
+                    st.session_state.selected_year = available_years[0]
+                
+                year_idx = available_years.index(st.session_state.selected_year)
+                st.selectbox("เลือกปี พ.ศ. ที่ต้องการดูผลตรวจ", options=available_years, index=year_idx, format_func=lambda y: f"พ.ศ. {y}", key="year_select", on_change=handle_year_change)
+            
+                person_year_df = results_df[results_df["Year"] == st.session_state.selected_year]
+
+                if not person_year_df.empty:
+                    merged_series = person_year_df.bfill().ffill().iloc[0]
+                    st.session_state.person_row = merged_series.to_dict()
+                    st.session_state.selected_row_found = True
+                else:
+                     st.session_state.pop("person_row", None)
+                     st.session_state.pop("selected_row_found", None)
+        
+        st.markdown("---")
+        st.markdown('<div class="sidebar-title" style="font-size: 1.2rem; margin-top: 1rem;">พิมพ์รายงาน</div>', unsafe_allow_html=True)
+        if "person_row" in st.session_state and st.session_state.get("selected_row_found", False):
+            if st.button("พิมพ์รายงานสุขภาพ", use_container_width=True):
+                 st.session_state.print_trigger = True
+            if st.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True):
+                st.session_state.print_performance_trigger = True
+        else:
+            st.button("พิมพ์รายงานสุขภาพ", use_container_width=True, disabled=True)
+            st.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True, disabled=True)
+
+        st.markdown("---")
+        if st.button("ออกจากระบบ (Logout)", use_container_width=True):
+            keys_to_clear = [
+                'authenticated', 'pdpa_accepted', 'user_hn', 'user_name',
+                'search_result', 'selected_year', 'person_row', 
+                'selected_row_found', 'auth_step', 'is_admin'
+            ]
+            for key in keys_to_clear:
+                if key in st.session_state:
+                    del st.session_state[key]
+            st.rerun()
+
+    # --- Main Page Content ---
+    if "person_row" not in st.session_state or not st.session_state.get("selected_row_found", False):
+        st.info("กรุณาเลือกปีที่ต้องการดูผลตรวจจากเมนูด้านข้าง")
+    else:
+        person_data = st.session_state.person_row
+        all_person_history_df = st.session_state.search_result
+        
+        available_reports = OrderedDict()
+        if has_visualization_data(all_person_history_df): available_reports['ภาพรวมสุขภาพ (Graphs)'] = 'visualization_report'
+        if has_basic_health_data(person_data): available_reports['สุขภาพพื้นฐาน'] = 'main_report'
+        if has_vision_data(person_data): available_reports['สมรรถภาพการมองเห็น'] = 'vision_report'
+        if has_hearing_data(person_data): available_reports['สมรรถภาพการได้ยิน'] = 'hearing_report'
+        if has_lung_data(person_data): available_reports['สมรรถภาพปอด'] = 'lung_report'
+        
+        if not available_reports:
+            display_common_header(person_data)
+            st.warning("ไม่พบข้อมูลการตรวจใดๆ สำหรับปีที่เลือก")
+        else:
+            display_common_header(person_data)
+            tabs = st.tabs(list(available_reports.keys()))
+        
+            for i, (tab_title, page_key) in enumerate(available_reports.items()):
+                with tabs[i]:
+                    if page_key == 'visualization_report':
+                        display_visualization_tab(person_data, all_person_history_df)
+                    elif page_key == 'vision_report':
+                        display_performance_report(person_data, 'vision')
+                    elif page_key == 'hearing_report':
+                        display_performance_report(person_data, 'hearing', all_person_history_df=all_person_history_df)
+                    elif page_key == 'lung_report':
+                        display_performance_report(person_data, 'lung')
+                    elif page_key == 'main_report':
+                        display_main_report(person_data, all_person_history_df)
+
+        # --- Print Logic ---
+        if st.session_state.get("print_trigger", False):
+            report_html_data = generate_printable_report(person_data, all_person_history_df)
+            escaped_html = json.dumps(report_html_data)
+            iframe_id = f"print-iframe-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
+            print_component = f"""
+            <iframe id="{iframe_id}" style="display:none;"></iframe>
+            <script>
+                (function() {{ /* Print logic */ }})();
+            </script>
+            """ # Simplified for brevity
+            st.components.v1.html(print_component, height=0, width=0)
+            st.session_state.print_trigger = False
+
+        if st.session_state.get("print_performance_trigger", False):
+            report_html_data = generate_performance_report_html(person_data, all_person_history_df)
+            escaped_html = json.dumps(report_html_data)
+            iframe_id = f"print-perf-iframe-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
+            print_component = f"""
+            <iframe id="{iframe_id}" style="display:none;"></iframe>
+            <script>
+                (function() {{ /* Print performance logic */ }})();
+            </script>
+            """ # Simplified for brevity
+            st.components.v1.html(print_component, height=0, width=0)
+            st.session_state.print_performance_trigger = False
+
+# --- Main Logic to control page flow ---
+if 'authenticated' not in st.session_state:
+    st.session_state['authenticated'] = False
+if 'pdpa_accepted' not in st.session_state:
+    st.session_state['pdpa_accepted'] = False
+
+df = load_sqlite_data()
+if df is None:
+    st.error("ไม่สามารถโหลดฐานข้อมูลได้ กรุณาลองอีกครั้งในภายหลัง")
+    st.stop()
+
+if not st.session_state['authenticated']:
+    authentication_flow(df)
+elif not st.session_state['pdpa_accepted']:
+    if st.session_state.get('is_admin', False):
+        st.session_state['pdpa_accepted'] = True
+        st.rerun()
+    else:
+        pdpa_consent_page()
+else:
+    if st.session_state.get('is_admin', False):
+        display_admin_panel(df)
+    else:
+        main_app(df)
+
+"

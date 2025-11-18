@@ -80,14 +80,6 @@ def render_html_header_and_personal_info(person):
 
     waist_val = person.get("รอบเอว", "-")
     waist_display = f"{waist_val} ซม." if not is_empty(waist_val) else "-"
-    
-    name_raw = person.get('ชื่อ-สกุล', '-')
-    age_raw = person.get('อายุ', '-')
-    sex_raw = person.get('เพศ', '-')
-    hn_raw = person.get('HN', '-')
-    dept_raw = person.get('หน่วยงาน', '-')
-    weight_raw = person.get("น้ำหนัก", "-")
-    height_raw = person.get("ส่วนสูง", "-")
 
     # แก้ไข: จัด Layout ของ Header ใหม่
     header_html = f"""
@@ -100,15 +92,15 @@ def render_html_header_and_personal_info(person):
         <div class="header-right">
             <table class="info-table">
                 <tr>
-                    <td><b>ชื่อ-สกุล:</b> {html.escape(name_raw)}</td>
-                    <td><b>อายุ:</b> {str(int(float(age_raw))) if str(age_raw).replace('.', '', 1).isdigit() else age_raw} ปี</td>
-                    <td><b>เพศ:</b> {html.escape(sex_raw)}</td>
-                    <td><b>HN:</b> {str(int(float(hn_raw))) if str(hn_raw).replace('.', '', 1).isdigit() else hn_raw}</td>
+                    <td><b>ชื่อ-สกุล:</b> {person.get('ชื่อ-สกุล', '-')}</td>
+                    <td><b>อายุ:</b> {str(int(float(person.get('อายุ')))) if str(person.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')} ปี</td>
+                    <td><b>เพศ:</b> {person.get('เพศ', '-')}</td>
+                    <td><b>HN:</b> {str(int(float(person.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person.get('HN', '-')}</td>
                 </tr>
                 <tr>
-                    <td><b>หน่วยงาน:</b> {html.escape(dept_raw)}</td>
-                    <td><b>น้ำหนัก:</b> {weight_raw} กก.</td>
-                    <td><b>ส่วนสูง:</b> {height_raw} ซม.</td>
+                    <td><b>หน่วยงาน:</b> {person.get('หน่วยงาน', '-')}</td>
+                    <td><b>น้ำหนัก:</b> {person.get("น้ำหนัก", "-")} กก.</td>
+                    <td><b>ส่วนสูง:</b> {person.get("ส่วนสูง", "-")} ซม.</td>
                     <td><b>รอบเอว:</b> {waist_display}</td>
                 </tr>
                  <tr>
@@ -381,9 +373,7 @@ def render_print_lung(person_data):
     
     advice_box_html = f"<div class='advice-box'><b>คำแนะนำ:</b> {html.escape(advice)}</div>"
     
-    year_raw = person_data.get("Year")
-    year = int(year_raw) if isinstance(year_raw, (int, float)) or (isinstance(year_raw, str) and year_raw.isdigit()) else None
-    
+    year = person_data.get("Year")
     cxr_result_text = "ไม่มีข้อมูล"
     if year:
         cxr_col = f"CXR{str(year)[-2:]}" if year != (datetime.now().year + 543) else "CXR"
@@ -428,199 +418,157 @@ def render_print_lung(person_data):
     </div>
     """
 
-# --- START: New function to get CSS ---
-def get_performance_report_css():
-    """
-    Returns the CSS string for the performance report.
-    This function is called by batch_print.py
-    """
-    return f"""
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
-        body {{
-            font-family: 'Sarabun', sans-serif !important;
-            /* --- ADJUSTED: font-size and margin --- */
-            font-size: 12px; /* <--- ปรับขนาดตัวอักษรหลักขึ้น */
-            margin: 0.5cm 0.7cm; 
-            /* --- END ADJUSTMENT --- */
-            color: #333;
-            background-color: #fff;
-        }}
-        hr {{ border: 0; border-top: 1px solid #e0e0e0; margin: 0.5rem 0; }}
-        .info-table {{ width: 100%; font-size: 10.5px; text-align: left; border-collapse: collapse; }} /* <--- ปรับขนาด */
-        .info-table td {{ padding: 1px 5px; }}
-        
-        .header-grid {{ display: flex; align-items: flex-end; justify-content: space-between; }}
-        .header-left {{ text-align: left; }}
-        .header-right {{ text-align: right; }}
-
-        /* --- START OF CHANGE: Reduced margin-bottom --- */
-        .report-section {{ margin-bottom: 0.5rem; page-break-inside: avoid; }} 
-        /* --- END OF CHANGE --- */
-        
-        .section-header {{
-            background-color: #00796B; 
-            color: white; text-align: center;
-            padding: 0.4rem; font-weight: bold; border-radius: 8px;
-            margin-bottom: 0.7rem; /* --- CHANGED --- */
-            font-size: 13px; /* <--- ปรับขนาด */
-        }}
-
-        .content-columns {{ display: flex; gap: 15px; align-items: flex-start; }}
-        .main-content {{ flex: 2; min-width: 0; }}
-        .side-content {{ flex: 1; min-width: 0; }}
-        .main-content-full {{ width: 100%; }}
-
-        .data-table {{ width: 100%; font-size: 10.5px; border-collapse: collapse; }} /* <--- ปรับขนาด */
-        .data-table.hearing-table {{ table-layout: fixed; }}
-        .data-table th, .data-table td {{
-            border: 1px solid #e0e0e0; padding: 4px; text-align: center;
-            vertical-align: middle;
-        }}
-        .data-table th {{ background-color: #f5f5f5; font-weight: bold; }}
-        .data-table td:first-child {{ text-align: left; }}
-
-        /* --- START OF CHANGE: CSS for flexbox layout --- */
-        .summary-single-line-box {{
-            display: flex;
-            justify-content: space-between; /* ชิดซ้าย-ขวา */
-            align-items: center;
-            flex-wrap: wrap; /* เผื่อไว้กรณีข้อความยาวมาก */
-            gap: 10px; /* ระยะห่างถ้ามีการ wrap */
-            
-            padding: 8px;
-            border: 1px solid #e0e0e0;
-            background-color: #f9f9f9;
-            border-radius: 6px;
-            margin-bottom: 0.5rem; /* --- CHANGED --- */
-            font-size: 12px; /* <--- ปรับขนาด */
-            font-weight: bold;
-            page-break-inside: avoid; 
-        }}
-        
-        .summary-single-line-box span {{
-            text-align: left; /* จัดข้อความในแต่ละ span ให้ชิดซ้าย */
-        }}
-        /* --- END OF CHANGE --- */
-
-        .summary-container {{ margin-top: 0; }}
-        .summary-container-lung {{ margin-top: 10px; }}
-        .summary-title-lung {{
-            text-align: center;
-            font-weight: bold;
-            font-size: 11px; /* <--- ปรับลดจาก 13px */
-            margin-bottom: 8px; /* <--- ปรับลด margin-bottom */
-            line-height: 1.2; /* <--- เพิ่ม line-height ให้ชิดขึ้น */
-        }}
-        .advice-box {{
-            border-radius: 6px; padding: 8px 12px; font-size: 10.5px; /* <--- ปรับขนาด */
-            line-height: 1.5; border: 1px solid;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            margin-bottom: 5px; 
-            height: 100%;
-            box-sizing: border-box;
-            background-color: #fff8e1; 
-            border-color: #ffecb3;
-        }}
-        .summary-container .advice-box:last-child {{
-            margin-bottom: 0;
-        }}
-        
-        .status-ok-text {{ color: #1b5e20; }}
-        .status-abn-text {{ color: #b71c1c; }}
-        .status-nt-text {{ color: #555; }} /* --- ADDED THIS --- */
-        
-        .signature-section {{
-            margin-top: 2rem;
-            text-align: right;
-            padding-right: 1rem;
-            page-break-inside: avoid;
-        }}
-        .signature-line {{
-            display: inline-block;
-            text-align: center;
-            width: 280px;
-        }}
-        .signature-line .line {{
-            border-bottom: 1px dotted #333;
-            margin-bottom: 0.4rem;
-            width: 100%;
-        }}
-        .signature-line .name, .signature-line .title, .signature-line .license {{
-            white-space: nowrap;
-            font-size: 11px; /* <--- ปรับขนาด */
-        }}
-
-        @media print {{
-            body {{ -webkit-print-color-adjust: exact; margin: 0; }}
-        }}
-    </style>
-    """
-# --- END: New function to get CSS ---
-
-# --- START: New function to generate body content ---
-def render_performance_report_body(person_data, all_person_history_df):
-    """
-    Generates the HTML <body> content for the performance report.
-    This function is called by batch_print.py
-    """
-    
-    header_html = render_html_header_and_personal_info(person_data)
-    vision_html = render_print_vision(person_data)
-    hearing_html = render_print_hearing(person_data, all_person_history_df)
-    lung_html = render_print_lung(person_data)
-    
-    signature_html = f"""
-    <div class="signature-section">
-        <div class="signature-line">
-            <div class="line"></div>
-            <div class="name">นายแพทย์นพรัตน์ รัชฎาพร</div>
-            <div class="title">แพทย์อาชีวเวชศาสตร์</div>
-            <div class="license">ว.26674</div>
-        </div>
-    </div>
-    """
-    
-    # --- START: Return only content, no <body> tag ---
-    return f"""
-    {header_html}
-    {vision_html}
-    {hearing_html}
-    {lung_html}
-    {signature_html}
-    """
-    # --- END: Return only content ---
-# --- END: New function to generate body content ---
-
-
-# --- START: Rewritten function to use the new components ---
 def generate_performance_report_html(person_data, all_person_history_df):
     """
     Checks for available performance tests and generates the combined HTML for the standalone performance report.
-    This is the main function called to create the printable page (for single prints).
+    This is the main function called to create the printable page.
     """
-    
-    css = get_performance_report_css()
-    body_content = render_performance_report_body(person_data, all_person_history_df)
-    title = f"รายงานผลการตรวจสมรรถภาพ - {html.escape(person_data.get('ชื่อ-สกุล', ''))}"
-
     # --- Assemble the final HTML page ---
     final_html = f"""
     <!DOCTYPE html>
     <html lang="th">
     <head>
         <meta charset="UTF-8">
-        <title>{title}</title>
-        {css}
+        <title>รายงานผลการตรวจสมรรถภาพ - {html.escape(person_data.get('ชื่อ-สกุล', ''))}</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
+            body {{
+                font-family: 'Sarabun', sans-serif !important;
+                /* --- ADJUSTED: font-size and margin --- */
+                font-size: 12px; /* <--- ปรับขนาดตัวอักษรหลักขึ้น */
+                margin: 0.5cm 0.7cm; 
+                /* --- END ADJUSTMENT --- */
+                color: #333;
+                background-color: #fff;
+            }}
+            hr {{ border: 0; border-top: 1px solid #e0e0e0; margin: 0.5rem 0; }}
+            .info-table {{ width: 100%; font-size: 10.5px; text-align: left; border-collapse: collapse; }} /* <--- ปรับขนาด */
+            .info-table td {{ padding: 1px 5px; }}
+            
+            .header-grid {{ display: flex; align-items: flex-end; justify-content: space-between; }}
+            .header-left {{ text-align: left; }}
+            .header-right {{ text-align: right; }}
+
+            /* --- START OF CHANGE: Reduced margin-bottom --- */
+            .report-section {{ margin-bottom: 0.5rem; page-break-inside: avoid; }} 
+            /* --- END OF CHANGE --- */
+            
+            .section-header {{
+                background-color: #00796B; 
+                color: white; text-align: center;
+                padding: 0.4rem; font-weight: bold; border-radius: 8px;
+                margin-bottom: 0.7rem; /* --- CHANGED --- */
+                font-size: 13px; /* <--- ปรับขนาด */
+            }}
+
+            .content-columns {{ display: flex; gap: 15px; align-items: flex-start; }}
+            .main-content {{ flex: 2; min-width: 0; }}
+            .side-content {{ flex: 1; min-width: 0; }}
+            .main-content-full {{ width: 100%; }}
+
+            .data-table {{ width: 100%; font-size: 10.5px; border-collapse: collapse; }} /* <--- ปรับขนาด */
+            .data-table.hearing-table {{ table-layout: fixed; }}
+            .data-table th, .data-table td {{
+                border: 1px solid #e0e0e0; padding: 4px; text-align: center;
+                vertical-align: middle;
+            }}
+            .data-table th {{ background-color: #f5f5f5; font-weight: bold; }}
+            .data-table td:first-child {{ text-align: left; }}
+
+            /* --- START OF CHANGE: CSS for flexbox layout --- */
+            .summary-single-line-box {{
+                display: flex;
+                justify-content: space-between; /* ชิดซ้าย-ขวา */
+                align-items: center;
+                flex-wrap: wrap; /* เผื่อไว้กรณีข้อความยาวมาก */
+                gap: 10px; /* ระยะห่างถ้ามีการ wrap */
+                
+                padding: 8px;
+                border: 1px solid #e0e0e0;
+                background-color: #f9f9f9;
+                border-radius: 6px;
+                margin-bottom: 0.5rem; /* --- CHANGED --- */
+                font-size: 12px; /* <--- ปรับขนาด */
+                font-weight: bold;
+                page-break-inside: avoid; 
+            }}
+            
+            .summary-single-line-box span {{
+                text-align: left; /* จัดข้อความในแต่ละ span ให้ชิดซ้าย */
+            }}
+            /* --- END OF CHANGE --- */
+
+            .summary-container {{ margin-top: 0; }}
+            .summary-container-lung {{ margin-top: 10px; }}
+            .summary-title-lung {{
+                text-align: center;
+                font-weight: bold;
+                font-size: 11px; /* <--- ปรับลดจาก 13px */
+                margin-bottom: 8px; /* <--- ปรับลด margin-bottom */
+                line-height: 1.2; /* <--- เพิ่ม line-height ให้ชิดขึ้น */
+            }}
+            .advice-box {{
+                border-radius: 6px; padding: 8px 12px; font-size: 10.5px; /* <--- ปรับขนาด */
+                line-height: 1.5; border: 1px solid;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                margin-bottom: 5px; 
+                height: 100%;
+                box-sizing: border-box;
+                background-color: #fff8e1; 
+                border-color: #ffecb3;
+            }}
+            .summary-container .advice-box:last-child {{
+                margin-bottom: 0;
+            }}
+            
+            .status-ok-text {{ color: #1b5e20; }}
+            .status-abn-text {{ color: #b71c1c; }}
+            .status-nt-text {{ color: #555; }} /* --- ADDED THIS --- */
+            
+            .signature-section {{
+                margin-top: 2rem;
+                text-align: right;
+                padding-right: 1rem;
+                page-break-inside: avoid;
+            }}
+            .signature-line {{
+                display: inline-block;
+                text-align: center;
+                width: 280px;
+            }}
+            .signature-line .line {{
+                border-bottom: 1px dotted #333;
+                margin-bottom: 0.4rem;
+                width: 100%;
+            }}
+            .signature-line .name, .signature-line .title, .signature-line .license {{
+                white-space: nowrap;
+                font-size: 11px; /* <--- ปรับขนาด */
+            }}
+
+            @media print {{
+                body {{ -webkit-print-color-adjust: exact; margin: 0; }}
+            }}
+        </style>
     </head>
     <body>
-        {body_content}
+        {render_html_header_and_personal_info(person_data)}
+        {render_print_vision(person_data)}
+        {render_print_hearing(person_data, all_person_history_df)}
+        {render_print_lung(person_data)}
+        
+        <div class="signature-section">
+            <div class="signature-line">
+                <div class="line"></div>
+                <div class="name">นายแพทย์นพรัตน์ รัชฎาพร</div>
+                <div class="title">แพทย์อาชีวเวชศาสตร์</div>
+                <div class="license">ว.26674</div>
+            </div>
+        </div>
     </body>
     </html>
     """
     return final_html
-# --- END: Rewritten function ---
-
 
 def generate_performance_report_html_for_main_report(person_data, all_person_history_df):
     """
@@ -661,10 +609,4 @@ def generate_performance_report_html_for_main_report(person_data, all_person_his
     if not parts:
         return ""
 
-    # (Note: This function uses render_section_header from print_report.py when called from there)
-    # We create a simple header here as it's self-contained.
-    return f"""
-    <div style='background-color: #f0f2f6; color: #333; text-align: center; padding: 0.2rem 0.4rem; font-weight: bold; border-radius: 6px; margin-top: 0.5rem; margin-bottom: 0.2rem; font-size: 11px; border: 1px solid #ddd;'>
-        ผลการตรวจสมรรถภาพพิเศษ (Performance Tests)
-    </div>
-    """ + "".join(parts)
+    return render_section_header("ผลการตรวจสมรรถภาพพิเศษ (Performance Tests)") + "".join(parts)
