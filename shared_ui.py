@@ -362,28 +362,16 @@ def inject_custom_css():
 
         /* --- START: (*** นี่คือจุดที่แก้ไข ***) --- */
         /*
-         * (แก้ไขครั้งที่ 6 - ใช้วิธีซ่อนทุกอย่าง)
-         * ซ่อนทั้ง text node (ด้วย font-size: 0)
-         * และซ่อน 'span' ลูก (ด้วย display: none)
-         * แล้วค่อยสร้าง ::before
+         * (แก้ไขตามคำสั่ง v-new)
+         * 1. ซ่อน text node ที่เสีย (ด้วย font-size: 0)
+         * 2. สร้าง '::before'
          */
 
-        /* 1. ซ่อน 'span' ที่อยู่ข้างใน (เผื่อมี) */
-        [data-testid="stExpanderIcon"] span,
-        [data-testid="stSidebarCollapseButton"] span
-        {
-            display: none !important; /* ซ่อน span และเนื้อหาข้างใน */
-            visibility: hidden !important;
-            font-size: 0 !important;
-            line-height: 0 !important;
-        }
-
-        /* 2. ซ่อน text node ที่อาจอยู่โดยตรง (ด้วย font-size: 0) */
-        /* และกำหนดขนาดให้ 'ตัวครอบ' ไอคอน (ปุ่ม) */
+        /* 1. ซ่อน text node และกำหนดขนาด */
         [data-testid="stExpanderIcon"],
         [data-testid="stSidebarCollapseButton"]
         {
-            font-size: 0 !important; /* ซ่อน text node ที่อาจหลงเหลือ */
+            font-size: 0 !important; /* <-- ซ่อนข้อความที่เสีย */
             line-height: 0 !important;
             display: inline-flex;
             align-items: center;
@@ -393,11 +381,11 @@ def inject_custom_css():
             height: 1.5rem;
         }
 
-        /* 3. สร้าง '::before' บน 'ตัวครอบ' (ปุ่ม) */
+        /* 2. สร้าง '::before' บน 'ตัวครอบ' (ปุ่ม) */
         [data-testid="stExpanderIcon"]::before,
         [data-testid="stSidebarCollapseButton"]::before
         {
-            visibility: visible; /* ทำให้สัญลักษณ์ใหม่มองเห็น */
+            visibility: visible;
             position: absolute;
             font-family: 'Sarabun', Arial, sans-serif !important;
             font-weight: bold;
@@ -406,7 +394,7 @@ def inject_custom_css():
             font-size: 1.5rem; /* default size */
         }
         
-        /* 4. กำหนดสัญลักษณ์สำหรับ Expander (ปุ่มย่อ-ขยาย) */
+        /* 3. กำหนดสัญลักษณ์สำหรับ Expander (ปุ่มย่อ-ขยาย) */
         [data-testid="stExpander"][aria-expanded="false"] [data-testid="stExpanderIcon"]::before {
             content: '+';
         }
@@ -414,7 +402,7 @@ def inject_custom_css():
             content: '−'; /* Minus Sign U+2212 */
         }
         
-        /* 5. กำหนดสัญลักษณ์สำหรับ Sidebar (ปุ่มพับ) */
+        /* 4. กำหนดสัญลักษณ์สำหรับ Sidebar (ปุ่มพับ) */
         [data-testid="stSidebar"][aria-expanded="true"] [data-testid="stSidebarCollapseButton"]::before {
             content: '<';
             font-size: 2rem;
@@ -426,7 +414,7 @@ def inject_custom_css():
             font-weight: 300;
         }
         
-        /* 6. แก้ไขไอคอนทั่วไป (stIcon) - คงไว้เผื่อไอคอนอื่น */
+        /* 5. แก้ไขไอคอนทั่วไป (stIcon) - คงไว้เผื่อไอคอนอื่น */
         [data-testid="stIcon"] span
         {
            font-family: 'Material Icons', Arial, sans-serif !important;
