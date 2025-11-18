@@ -228,7 +228,8 @@ def display_batch_print_ui(df):
     #     st.session_state.batch_patients = list(options_dict.keys())
 
     # 7. ปุ่มสร้างไฟล์
-    if st.button("สร้างไฟล์สำหรับพิมพ์", key="batch_submit", use_container_width=True, type="primary"):
+    # --- (แก้ไข) ลบ type="primary" ---
+    if st.button("สร้างไฟล์สำหรับพิมพ์", key="batch_submit", use_container_width=True):
         if not selected_hns:
             st.warning("กรุณาเลือกคนไข้อย่างน้อย 1 คน")
         else:
