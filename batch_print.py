@@ -148,16 +148,32 @@ def display_batch_print_ui(df):
         key="batch_report_type"
     )
 
-    # --- (แก้ไข) 3. เลือกปี ---
+    # --- (แก้ไข) 3. เลือกปี (แก้ไข Error TypeError) ---
     all_years_list = sorted(df['Year'].dropna().unique().astype(int), reverse=True)
-    year_options = ["ใช้ข้อมูลปีล่าสุดของแต่ละคน"] + all_years_list
+    # แปลงปีที่เป็น int ให้เป็น string ที่จัดรูปแบบแล้ว (เช่น "พ.ศ. 2568")
+    formatted_year_options = [f"พ.ศ. {y}" for y in all_years_list]
+    # สร้าง list ตัวเลือกสุดท้าย (มีแต่ string)
+    year_options = ["ใช้ข้อมูลปีล่าสุดของแต่ละคน"] + formatted_year_options
     
-    year_logic = st.selectbox(
+    # st.selectbox จะคืนค่า string ที่ผู้ใช้เลือก (เช่น "พ.ศ. 2568")
+    year_selection_formatted = st.selectbox(
         "3. เลือกปี", 
         year_options, 
-        key="batch_year_logic",
-        format_func=lambda x: f"พ.ศ. {x}" if isinstance(x, int) else x
+        key="batch_year_logic"
+        # ไม่ต้องใช้ format_func เพราะเราจัดรูปแบบไว้ล่วงหน้าแล้ว
     )
+    
+    # แปลงค่าที่เลือก (string) กลับไปเป็นค่าที่ตรรกะต้องการ (int หรือ string "ใช้ข้อมูลปีล่าสุด...")
+    year_logic = "" # ค่าที่จะใช้ในตรรกะ
+    if year_selection_formatted == "ใช้ข้อมูลปีล่าสุดของแต่ละคน":
+        year_logic = "ใช้ข้อมูลปีล่าสุดของแต่ละคน"
+    else:
+        try:
+            # แปลง "พ.ศ. 2568" กลับเป็น 2568 (int)
+            year_logic = int(year_selection_formatted.replace("พ.ศ.", "").strip())
+        except ValueError:
+            # กันพลาด ถ้าแปลงไม่ได้ ให้ใช้ค่า default
+            year_logic = "ใช้ข้อมูลปีล่าสุดของแต่ละคน"
     # --- (จบ) 3. เลือกปี ---
 
     # 4. กรองคนไข้ตามหน่วยงานและปี
