@@ -362,25 +362,29 @@ def inject_custom_css():
 
         /* --- START: (*** นี่คือจุดที่แก้ไข ***) --- */
         /*
-         * (แก้ไขครั้งที่ 5 - แก้ปัญหาไอคอนซ้อนกัน)
-         * เราจะซ่อน 'span' ที่อยู่ *ข้างใน* ปุ่ม
-         * และสร้าง '::before' ที่ตัว *ปุ่ม* (parent)
+         * (แก้ไขครั้งที่ 6 - ใช้วิธีซ่อนทุกอย่าง)
+         * ซ่อนทั้ง text node (ด้วย font-size: 0)
+         * และซ่อน 'span' ลูก (ด้วย display: none)
+         * แล้วค่อยสร้าง ::before
          */
 
-        /* 1. ซ่อน 'span' ที่มีข้อความเสีย (keyboard_arrow...) */
+        /* 1. ซ่อน 'span' ที่อยู่ข้างใน (เผื่อมี) */
         [data-testid="stExpanderIcon"] span,
         [data-testid="stSidebarCollapseButton"] span
         {
-            visibility: hidden !important; /* ซ่อน span และเนื้อหาข้างใน */
-            font-size: 0 !important; /* ซ่อนเผื่อไว้ */
+            display: none !important; /* ซ่อน span และเนื้อหาข้างใน */
+            visibility: hidden !important;
+            font-size: 0 !important;
             line-height: 0 !important;
-            display: none !important; /* ซ่อนไปเลย */
         }
 
-        /* 2. กำหนดขนาดให้ 'ตัวครอบ' ไอคอน (ปุ่ม) เพื่อให้ ::before มีที่อยู่ */
+        /* 2. ซ่อน text node ที่อาจอยู่โดยตรง (ด้วย font-size: 0) */
+        /* และกำหนดขนาดให้ 'ตัวครอบ' ไอคอน (ปุ่ม) */
         [data-testid="stExpanderIcon"],
         [data-testid="stSidebarCollapseButton"]
         {
+            font-size: 0 !important; /* ซ่อน text node ที่อาจหลงเหลือ */
+            line-height: 0 !important;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -403,30 +407,22 @@ def inject_custom_css():
         }
         
         /* 4. กำหนดสัญลักษณ์สำหรับ Expander (ปุ่มย่อ-ขยาย) */
-        
-        /* 4.1 สัญลักษณ์เมื่อ Expander 'ปิด' */
         [data-testid="stExpander"][aria-expanded="false"] [data-testid="stExpanderIcon"]::before {
             content: '+';
         }
-        
-        /* 4.2 สัญลักษณ์เมื่อ Expander 'เปิด' */
         [data-testid="stExpander"][aria-expanded="true"] [data-testid="stExpanderIcon"]::before {
             content: '−'; /* Minus Sign U+2212 */
         }
         
         /* 5. กำหนดสัญลักษณ์สำหรับ Sidebar (ปุ่มพับ) */
-        
-        /* 5.1 สัญลักษณ์เมื่อ Sidebar 'เปิด' */
         [data-testid="stSidebar"][aria-expanded="true"] [data-testid="stSidebarCollapseButton"]::before {
             content: '<';
-            font-size: 2rem; /* 32px */
+            font-size: 2rem;
             font-weight: 300;
         }
-        
-        /* 5.2 สัญลักษณ์เมื่อ Sidebar 'ปิด' */
         [data-testid="stSidebar"][aria-expanded="false"] [data-testid="stSidebarCollapseButton"]::before {
             content: '>';
-            font-size: 2rem; /* 32px */
+            font-size: 2rem;
             font-weight: 300;
         }
         
