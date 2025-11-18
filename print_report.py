@@ -86,10 +86,20 @@ def interpret_ekg(val):
     return val
 
 def hepatitis_b_advice(hbsag, hbsab, hbcab):
-# ... (existing code) ...
+    # --- START OF CHANGE: Treat '-' as 'negative' for HBcAb logic ---
     if all(x == "negative" for x in [hbsag_logic, hbsab_logic, hbcab_logic]): return "ไม่มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี ควรปรึกษาแพทย์เพื่อรับวัคซีน", "no_immune"
     return "ไม่สามารถสรุปผลชัดเจน แนะนำให้พบแพทย์เพื่อประเมินซ้ำ", "unclear"
     # --- END OF CHANGE ---
+
+# --- START OF CHANGE: (เพิ่มฟังก์ชันที่ขาดไป) ---
+def render_section_header(title, subtitle=None):
+    full_title = f"{title} <span style='font-weight: normal;'>({subtitle})</span>" if subtitle else title
+    return f"""
+    <div style='background-color: #f0f2f6; color: #333; text-align: center; padding: 0.2rem 0.4rem; font-weight: bold; border-radius: 6px; margin-top: 0.5rem; margin-bottom: 0.2rem; font-size: 11px; border: 1px solid #ddd;'>
+        {full_title}
+    </div>
+    """
+# --- END OF CHANGE ---
 
 # --- START OF CHANGE: Modified function to return a list ---
 def generate_fixed_recommendations(person_data):
