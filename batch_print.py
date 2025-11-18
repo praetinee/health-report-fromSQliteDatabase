@@ -3,25 +3,45 @@ import pandas as pd
 import html
 import json
 from datetime import datetime
+import re # --- (เพิ่ม) Import re สำหรับการแยกส่วน HTML ---
 
-# --- Import ฟังก์ชันที่ถูกแยกส่วนมาจากไฟล์พิมพ์ ---
-from print_report import render_printable_report_body, get_main_report_css
-from print_performance_report import render_performance_report_body, get_performance_report_css
+# --- (แก้ไข) Import ฟังก์ชันที่ถูกต้อง ---
+from print_report import generate_printable_report
+from print_performance_report import generate_performance_report_html
+
+# --- (เพิ่ม) ฟังก์ชันตัวช่วยในการแยกส่วน HTML ---
+def extract_css(html_content):
+    """Extracts content from the first <style> tag."""
+    if not html_content: return ""
+    match = re.search(r'<style.*?>(.*?)</style>', html_content, re.DOTALL | re.IGNORECASE)
+    if match:
+        return match.group(1)
+    return "/* CSS not found */"
+
+def extract_body(html_content):
+    """Extracts content from the <body> tag."""
+    if not html_content: return "<!-- Body content not found -->"
+    match = re.search(r'<body.*?>(.*?)</body>', html_content, re.DOTALL | re.IGNORECASE)
+    if match:
+        return match.group(1)
+    return "<!-- Could not extract body content -->"
+# --- (จบ) ฟังก์ชันตัวช่วย ---
+
 
 def generate_batch_html(df, selected_hns, report_type, year_logic):
     """
-    สร้าง HTML ฉบับยาวสำหรับคนไข้หลายคน
+    สร้าง HTML ฉบับยาวสำหรับคนไข้หลายคน (แก้ไขตรรกะ)
     """
     report_bodies = []
     page_break = "<div style='page-break-after: always;'></div>"
     
-    # เลือกฟังก์ชัน Body และ CSS ที่จะใช้
+    # --- (แก้ไข) เลือกฟังก์ชันที่ถูกต้อง ---
     if report_type == "รายงานสุขภาพ (Main)":
-        render_body_func = render_printable_report_body
-        css_func = get_main_report_css
+        render_full_html_func = generate_printable_report
     else: # "รายงานสมรรถภาพ (Performance)"
-        render_body_func = render_performance_report_body
-        css_func = get_performance_report_css
+        render_full_html_func = generate_performance_report_html
+        
+    css_styles = None # สำหรับเก็บ CSS จากไฟล์แรก
 
     for hn in selected_hns:
         try:
@@ -30,20 +50,25 @@ def generate_batch_html(df, selected_hns, report_type, year_logic):
                 continue
 
             # ตรรกะการเลือกปี: "ใช้ข้อมูลปีล่าสุดของแต่ละคน"
-            # (ในอนาคตสามารถเพิ่มตรรกะอื่นๆ เช่น เลือกปีที่ต้องการ)
             if year_logic == "ใช้ข้อมูลปีล่าสุดของแต่ละคน":
                 # เรียงลำดับจากปีมากไปน้อย และเลือกแถวแรก
                 latest_year_series = person_history_df.sort_values(by='Year', ascending=False).iloc[0]
                 person_data = latest_year_series.to_dict()
             else:
                 # (เผื่อไว้สำหรับตรรกะอื่นๆ เช่น เลือกปีที่ระบุ)
-                # ในตอนนี้จะใช้ปีล่าสุดไปก่อน
                 latest_year_series = person_history_df.sort_values(by='Year', ascending=False).iloc[0]
                 person_data = latest_year_series.to_dict()
 
-            # สร้างเนื้อหา HTML สำหรับคนไข้คนนี้
-            body = render_body_func(person_data, person_history_df)
-            report_bodies.append(body)
+            # --- (แก้ไข) สร้าง HTML ทั้งหน้า แล้วดึงส่วนที่ต้องการ ---
+            full_html = render_full_html_func(person_data, person_history_df)
+            
+            # ดึง CSS จากรีพอร์ตของคนแรกเท่านั้น
+            if css_styles is None:
+                css_styles = extract_css(full_html)
+
+            # ดึงเฉพาะเนื้อหาใน <body>
+            body_content = extract_body(full_html)
+            report_bodies.append(body_content)
 
         except Exception as e:
             st.error(f"เกิดข้อผิดพลาดในการสร้างรายงานสำหรับ HN: {hn} - {e}")
@@ -55,17 +80,20 @@ def generate_batch_html(df, selected_hns, report_type, year_logic):
     # รวม HTML ของทุกคนเข้าด้วยกัน คั่นด้วยตัวแบ่งหน้า
     all_bodies = page_break.join(report_bodies)
     
-    # ดึง CSS
-    css = css_func()
+    # (ป้องกันกรณีไม่พบ CSS)
+    if css_styles is None:
+        css_styles = "body { font-family: sans-serif; }"
 
-    # สร้างหน้า HTML ที่สมบูรณ์
+    # --- (แก้ไข) สร้างหน้า HTML ที่สมบูรณ์โดยใช้ CSS ที่ดึงมา ---
     return f"""
     <!DOCTYPE html>
     <html lang="th">
     <head>
         <meta charset="UTF-8">
         <title>รายงานผลการตรวจสุขภาพ (ชุด)</title>
-        {css}
+        <style>
+        {css_styles}
+        </style>
     </head>
     <body>
         {all_bodies}
