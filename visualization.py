@@ -45,6 +45,18 @@ def apply_medical_layout(fig, title="", x_title="", y_title="", show_legend=True
 
 # --- HELPER FUNCTIONS ---
 
+def clean_html(html_str):
+    """
+    ฟังก์ชันสำหรับลบ Indentation และช่องว่างส่วนเกินออกจาก HTML string
+    เพื่อให้ Streamlit แสดงผลเป็น HTML จริงๆ ไม่ใช่ Code Block
+    """
+    # 1. Dedent เพื่อลบ indentation ร่วมกัน
+    dedented = textwrap.dedent(html_str)
+    # 2. Strip เพื่อลบ newline หน้า/หลัง
+    stripped = dedented.strip()
+    # 3. (Optional) ลบ newline ระหว่าง tag เพื่อให้เป็นบรรทัดเดียว (ช่วยลดปัญหาสุดๆ)
+    return stripped
+
 def get_float(person_data, key):
     val = person_data.get(key, "")
     if pd.isna(val) or str(val).strip().lower() in ["", "-", "none", "nan", "null"]: return None
@@ -136,105 +148,43 @@ def plot_historical_trends(history_df, person_data):
 
 
 # --- SVG ICON GENERATORS ---
-# ฟังก์ชันเหล่านี้จะสร้างโค้ด SVG ที่เปลี่ยนสีได้ตามสถานะสุขภาพ
 
 def get_body_svg(color):
-    """รูปคน (Body Shape)"""
-    return f"""
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="80" height="80" fill="{color}">
-      <path d="M12 2C9.79 2 8 3.79 8 6s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 10c-2.67 0-8 1.34-8 4v2c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-2c0-2.66-5.33-4-8-4z"/>
-    </svg>
-    """
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="80" height="80" fill="{color}"><path d="M12 2C9.79 2 8 3.79 8 6s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 10c-2.67 0-8 1.34-8 4v2c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-2c0-2.66-5.33-4-8-4z"/></svg>"""
 
 def get_blood_drop_svg(color):
-    """รูปหยดเลือด (Blood Drop)"""
-    return f"""
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="80" height="80" fill="{color}">
-      <path d="M12 2c-5.33 4.55-8 8.48-8 11.8 0 4.98 3.8 8.2 8 8.2s8-3.22 8-8.2c0-3.32-2.67-7.25-8-11.8z"/>
-      <path d="M7.8 12c0 .2.03.39.06.58.62-1.74 2.1-3.11 3.93-3.54-.83-.44-1.88.15-2.85 1.03-1.03.94-1.14 1.66-1.14 1.93z" fill="rgba(255,255,255,0.3)"/>
-    </svg>
-    """
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="80" height="80" fill="{color}"><path d="M12 2c-5.33 4.55-8 8.48-8 11.8 0 4.98 3.8 8.2 8 8.2s8-3.22 8-8.2c0-3.32-2.67-7.25-8-11.8z"/><path d="M7.8 12c0 .2.03.39.06.58.62-1.74 2.1-3.11 3.93-3.54-.83-.44-1.88.15-2.85 1.03-1.03.94-1.14 1.66-1.14 1.93z" fill="rgba(255,255,255,0.3)"/></svg>"""
 
 def get_kidney_svg(color):
-    """รูปไต (Kidney)"""
-    # SVG Path ที่วาดเป็นรูปไต (ดัดแปลงจากถั่ว/อวัยวะ)
-    return f"""
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="80" height="80" fill="{color}">
-      <path d="M350.5 120.8c-38.4-29.1-92-31.3-133.6-8.9-40.2-23.2-93.5-21.7-132.9 6.3-54.3 38.6-66.8 116.5-36.3 192.8 29.6 74 98.5 137.6 176.4 159.7 69.4 19.7 143.8-3.1 186.7-59.5 36.1-47.5 44.4-110.5 23.3-167.8-13.8-37.5-44.4-95.1-83.6-122.6zm-23.9 140.4c-12.2 49.6-48.4 85.5-90.4 98.3-41.4 12.6-83.6-4.8-108.8-43.6-24.9-38.3-23.5-88.5 5.9-127.3 28.8-38.1 72.3-54.8 113.7-43.1 40.6 11.5 74.3 51.8 84.7 97.4 1.8 8.1-3.7 16.1-11.8 17.2-8 1.1-15.4-4.7-17.2-12.8-7.8-34.2-33.2-64.4-63.7-73.1-31.1-8.8-63.9 3.8-85.5 32.4-22.1 29.1-23.1 66.8-4.4 95.5 18.9 29.1 50.6 42.2 81.7 32.7 31.5-9.6 58.6-36.5 67.8-73.7 2.2-8.8 11.1-14.2 19.7-11.6 8.6 2.6 13.7 11.8 11.4 20.7z"/>
-    </svg>
-    """
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="80" height="80" fill="{color}"><path d="M350.5 120.8c-38.4-29.1-92-31.3-133.6-8.9-40.2-23.2-93.5-21.7-132.9 6.3-54.3 38.6-66.8 116.5-36.3 192.8 29.6 74 98.5 137.6 176.4 159.7 69.4 19.7 143.8-3.1 186.7-59.5 36.1-47.5 44.4-110.5 23.3-167.8-13.8-37.5-44.4-95.1-83.6-122.6zm-23.9 140.4c-12.2 49.6-48.4 85.5-90.4 98.3-41.4 12.6-83.6-4.8-108.8-43.6-24.9-38.3-23.5-88.5 5.9-127.3 28.8-38.1 72.3-54.8 113.7-43.1 40.6 11.5 74.3 51.8 84.7 97.4 1.8 8.1-3.7 16.1-11.8 17.2-8 1.1-15.4-4.7-17.2-12.8-7.8-34.2-33.2-64.4-63.7-73.1-31.1-8.8-63.9 3.8-85.5 32.4-22.1 29.1-23.1 66.8-4.4 95.5 18.9 29.1 50.6 42.2 81.7 32.7 31.5-9.6 58.6-36.5 67.8-73.7 2.2-8.8 11.1-14.2 19.7-11.6 8.6 2.6 13.7 11.8 11.4 20.7z"/></svg>"""
 
 
 def render_icon_card(title, value_str, unit, desc, color_hex, bg_hex, svg_icon):
     """
-    Render Card UI พร้อม Dynamic SVG Icon
+    Render Card UI พร้อม Dynamic SVG Icon (แบบคลีนๆ)
     """
-    html_content = textwrap.dedent(f"""
-    <div style="
-        background-color: #FFFFFF;
-        border-radius: 16px;
-        padding: 20px;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
-        border: 1px solid rgba(255, 255, 255, 0.5);
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        font-family: 'Sarabun', sans-serif;
-        position: relative;
-        overflow: hidden;
-    ">
-        <!-- Header -->
-        <div style="font-size: 14px; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
-            {title}
-        </div>
-        
-        <!-- Middle Content: Icon & Value -->
+    # สร้าง HTML string แบบบรรทัดเดียว (หรือ strip อย่างดี) เพื่อป้องกัน Markdown Code Block
+    card_html = f"""
+    <div style="background-color: #FFFFFF; border-radius: 16px; padding: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.06); border: 1px solid rgba(0,0,0,0.02); height: 100%; display: flex; flex-direction: column; justify-content: space-between; font-family: 'Sarabun', sans-serif; position: relative; overflow: hidden;">
+        <div style="font-size: 14px; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">{title}</div>
         <div style="display: flex; align-items: center; margin-top: 15px; margin-bottom: 15px;">
-            <div style="flex-shrink: 0; margin-right: 15px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));">
+            <div style="flex-shrink: 0; margin-right: 15px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1)); transform: scale(1.1); transition: transform 0.3s;">
                 {svg_icon}
             </div>
             <div>
-                <div style="font-size: 32px; font-weight: 800; color: #333; line-height: 1;">
-                    {value_str}
-                </div>
-                <div style="font-size: 14px; color: #999; font-weight: 500; margin-top: 2px;">
-                    {unit}
-                </div>
+                <div style="font-size: 32px; font-weight: 800; color: #333; line-height: 1;">{value_str}</div>
+                <div style="font-size: 14px; color: #999; font-weight: 500; margin-top: 2px;">{unit}</div>
             </div>
         </div>
-
-        <!-- Bottom: Status Badge -->
         <div>
-            <span style="
-                background-color: {bg_hex}; 
-                color: {color_hex}; 
-                padding: 6px 14px; 
-                border-radius: 50px; 
-                font-size: 13px; 
-                font-weight: 700;
-                display: inline-block;
-            ">
+            <span style="background-color: {bg_hex}; color: {color_hex}; padding: 6px 14px; border-radius: 50px; font-size: 13px; font-weight: 700; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
                 {desc}
             </span>
         </div>
-        
-        <!-- Decor: Background Circle for depth -->
-        <div style="
-            position: absolute;
-            top: -20px;
-            right: -20px;
-            width: 100px;
-            height: 100px;
-            background-color: {bg_hex};
-            border-radius: 50%;
-            opacity: 0.5;
-            z-index: 0;
-            pointer-events: none;
-        "></div>
+        <div style="position: absolute; top: -30px; right: -30px; width: 120px; height: 120px; background-color: {bg_hex}; border-radius: 50%; opacity: 0.4; z-index: 0; pointer-events: none;"></div>
     </div>
-    """)
-    st.markdown(html_content, unsafe_allow_html=True)
+    """
+    st.markdown(clean_html(card_html), unsafe_allow_html=True)
 
 
 def plot_bmi_gauge(person_data):
