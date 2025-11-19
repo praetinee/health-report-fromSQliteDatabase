@@ -103,8 +103,8 @@ def authentication_flow(df):
 
         /* Style the container for login */
         div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] {
-            background-color: var(--background-color);
-            color: var(--text-color);
+            background-color: var(--background-color); /* Changed from white */
+            color: var(--text-color); /* Added */
             padding: 2rem 2.5rem;
             border-radius: 10px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
@@ -115,34 +115,42 @@ def authentication_flow(df):
             padding-bottom: 1rem;
         }
 
-        /* --- START OF CHANGE: Force Green Button Style --- */
-        /* เจาะจง selector ไปที่ปุ่มใน st.form */
-        section[data-testid="stForm"] button[kind="primary"] {
-            background-color: #00796B !important;
+        /* --- START OF CHANGE: FORCE Green Button Style (Aggressive Override) --- */
+        /* ใช้ button[kind="primary"] เพื่อเล็งเป้าปุ่มสีแดงของระบบโดยตรง */
+        button[kind="primary"] {
+            background-color: #00796B !important; /* สีเขียวหลัก */
             border-color: #00796B !important;
             color: white !important;
-            border-radius: 8px !important;
-            font-weight: 600 !important;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.15) !important;
+            transition: all 0.2s ease-in-out !important;
         }
 
-        section[data-testid="stForm"] button[kind="primary"]:hover {
+        /* ตอนเอาเมาส์ชี้ */
+        button[kind="primary"]:hover {
             background-color: #00695C !important;
             border-color: #00695C !important;
             color: white !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important;
         }
 
-        section[data-testid="stForm"] button[kind="primary"]:active {
+        /* ตอนกด */
+        button[kind="primary"]:active {
             background-color: #004D40 !important;
             border-color: #004D40 !important;
             color: white !important;
+            transform: translateY(0px);
         }
 
-        section[data-testid="stForm"] button[kind="primary"]:focus:not(:active) {
-            background-color: #00796B !important;
+        /* ตอนโฟกัส (เช่นกด Tab มาโดน) */
+        button[kind="primary"]:focus {
+            box-shadow: 0 0 0 0.2rem rgba(0, 121, 107, 0.5) !important;
             border-color: #00796B !important;
             color: white !important;
-            box-shadow: 0 0 0 0.2rem rgba(0, 121, 107, 0.5) !important;
+        }
+        
+        /* ป้องกันกรณีที่มี element ลูก */
+        button[kind="primary"] * {
+            color: white !important;
         }
         /* --- END OF CHANGE --- */
         
@@ -197,18 +205,13 @@ def pdpa_consent_page():
             color: var(--text-color);
         }
         
-        /* Reuse button style for consent page */
-        div.stButton > button {
+        /* Apply same button styles to PDPA page */
+        button[kind="primary"] {
             background-color: #00796B !important;
             border-color: #00796B !important;
             color: white !important;
-            border-radius: 8px;
-            border: none;
-            font-weight: 600;
-            width: 100%;
-            height: 3rem;
         }
-        div.stButton > button:hover {
+        button[kind="primary"]:hover {
             background-color: #00695C !important;
             border-color: #00695C !important;
         }
@@ -234,6 +237,6 @@ def pdpa_consent_page():
             <p>โดยการคลิกปุ่ม <strong>"ยอมรับ"</strong> ด้านล่างนี้ ท่านรับทราบและยินยอมให้โรงพยาบาลเก็บรวบรวม ใช้ และเปิดเผยข้อมูลส่วนบุคคลของท่านตามวัตถุประสงค์ที่ระบุไว้ในคำประกาศนี้</p>
         </div>
         """, unsafe_allow_html=True)
-        if st.button("ยอมรับและดำเนินการต่อ (Accept & Continue)"):
+        if st.button("ยอมรับและดำเนินการต่อ (Accept & Continue)", type="primary"):
             st.session_state['pdpa_accepted'] = True
             st.rerun()
