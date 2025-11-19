@@ -7,30 +7,27 @@ import pandas as pd
 import numpy as np
 
 # --- DESIGN SYSTEM & CONSTANTS ---
-# ใช้ Theme สีที่ดู Modern Medical และเข้าได้กับทั้ง Light/Dark Mode
 THEME = {
     'primary': '#00796B',      # Teal (Medical standard)
     'secondary': '#4DB6AC',    # Lighter Teal
     'accent': '#FF6F00',       # Amber for highlights
-    'text_light': '#37474F',   # Dark Grey for Light Mode
-    'text_dark': '#ECEFF1',    # Light Grey for Dark Mode
-    'grid': 'rgba(128, 128, 128, 0.2)', # Transparent grid lines
+    'text_light': '#37474F',   # Dark Grey
+    'text_dark': '#ECEFF1',    # Light Grey
+    'grid': 'rgba(128, 128, 128, 0.2)', 
     'success': '#66BB6A',      # Soft Green
     'warning': '#FFA726',      # Soft Orange
     'danger': '#EF5350',       # Soft Red
     'info': '#42A5F5',         # Soft Blue
-    'sbp_color': '#E53935',    # Red for SBP (Top)
-    'dbp_color': '#1E88E5',    # Blue for DBP (Bottom)
-    'hct_color': '#AB47BC'     # Purple for Hct
+    'sbp_color': '#E53935',    # Red
+    'dbp_color': '#1E88E5',    # Blue
+    'hct_color': '#AB47BC',    # Purple
+    'track_color': 'rgba(200, 200, 200, 0.2)' # Light grey track for gauges
 }
 
 FONT_FAMILY = "Sarabun, sans-serif"
 
 def apply_medical_layout(fig, title="", x_title="", y_title="", show_legend=True):
-    """
-    ฟังก์ชันช่วยปรับแต่ง Layout ของ Plotly ให้ดูคลีน, ทันสมัย 
-    และโปร่งใสเพื่อให้เข้ากับ Theme ของ Streamlit (Light/Dark) โดยอัตโนมัติ
-    """
+    """ฟังก์ชันช่วยปรับแต่ง Layout ของ Plotly ให้ดูคลีนและทันสมัย"""
     fig.update_layout(
         title=dict(
             text=f"<b>{title}</b>",
@@ -104,9 +101,7 @@ def get_gfr_desc(gfr):
 # --- PLOTTING FUNCTIONS ---
 
 def plot_historical_trends(history_df, person_data):
-    """
-    สร้างกราฟเส้นแสดงแนวโน้มสุขภาพ (Sparkline Style) ที่ยืดหยุ่น
-    """
+    """สร้างกราฟเส้นแสดงแนวโน้มสุขภาพ"""
     st.subheader("📈 แนวโน้มสุขภาพย้อนหลัง (Health Trends)")
     st.caption("ติดตามการเปลี่ยนแปลงสุขภาพของคุณในแต่ละปี (เส้นประคือเกณฑ์มาตรฐาน)")
 
@@ -114,7 +109,6 @@ def plot_historical_trends(history_df, person_data):
         st.info("💡 ต้องการข้อมูลอย่างน้อย 2 ปี เพื่อแสดงกราฟแนวโน้ม")
         return
 
-    # 1. Data Preparation
     history_df = history_df.sort_values(by="Year", ascending=True).copy()
     history_df['Year_str'] = history_df['Year'].astype(str)
     
@@ -124,8 +118,6 @@ def plot_historical_trends(history_df, person_data):
     hb_goal = 12.0 if sex == "หญิง" else 13.0
     hct_goal = 36.0 if sex == "หญิง" else 39.0
     
-    # Config: Key -> (Keys List/String, Unit, Goals List/Float, Colors List/String, Direction Type)
-    # เพิ่ม Direction Type กลับเข้ามาเพื่อสร้างคำอธิบาย
     trend_metrics = {
         'ความดันโลหิต (BP)': (['SBP', 'DBP'], 'mmHg', [130.0, 80.0], [THEME['sbp_color'], THEME['dbp_color']], 'target'),
         'น้ำตาล (FBS)': ('FBS', 'mg/dL', 100.0, THEME['warning'], 'target'),
@@ -136,28 +128,20 @@ def plot_historical_trends(history_df, person_data):
         'ความเข้มข้นเลือด (Hct)': ('HCT', '%', hct_goal, THEME['hct_color'], 'above_threshold')
     }
 
-    # 2. Render Grid (Responsive Columns)
-    cols = st.columns(3) # Grid 3 คอลัมน์
+    cols = st.columns(3)
     
     for i, (title, config) in enumerate(trend_metrics.items()):
         keys, unit, goals, colors, direction_type = config
         
-        # สร้างข้อความกำกับทิศทาง
-        if direction_type == 'range':
-            direction_text = "(ควรอยู่ในเกณฑ์)"
-        elif direction_type == 'higher':
-            direction_text = "(ยิ่งสูงยิ่งดี)"
-        elif direction_type == 'target':
-            direction_text = "(ไม่ควรสูงเกินเกณฑ์)"
-        elif direction_type == 'above_threshold':
-            direction_text = "(ไม่ควรต่ำกว่าเกณฑ์)"
-        else:
-            direction_text = ""
+        if direction_type == 'range': direction_text = "(ควรอยู่ในเกณฑ์)"
+        elif direction_type == 'higher': direction_text = "(ยิ่งสูงยิ่งดี)"
+        elif direction_type == 'target': direction_text = "(ไม่ควรสูงเกินเกณฑ์)"
+        elif direction_type == 'above_threshold': direction_text = "(ไม่ควรต่ำกว่าเกณฑ์)"
+        else: direction_text = ""
 
         with cols[i % 3]:
             fig = go.Figure()
             
-            # กรณีเป็นกราฟคู่ (เช่น BP)
             if isinstance(keys, list):
                 df_plot = history_df[['Year_str'] + keys].dropna(subset=keys, how='all')
                 if df_plot.empty: continue
@@ -166,85 +150,68 @@ def plot_historical_trends(history_df, person_data):
                     goal = goals[j] if isinstance(goals, list) else goals
                     color = colors[j] if isinstance(colors, list) else colors
                     
-                    # Main Line
                     fig.add_trace(go.Scatter(
-                        x=df_plot['Year_str'], 
-                        y=df_plot[key],
-                        mode='lines+markers',
-                        name=key,
+                        x=df_plot['Year_str'], y=df_plot[key],
+                        mode='lines+markers', name=key,
                         line=dict(color=color, width=3, shape='spline'),
                         marker=dict(size=6, color='white', line=dict(width=2, color=color)),
                         hovertemplate=f'<b>{key}: %{{y:.0f}}</b> {unit}<extra></extra>'
                     ))
-                    
-                    # Threshold Line
                     if goal is not None:
                          fig.add_shape(type="line", x0=df_plot['Year_str'].iloc[0], y0=goal, x1=df_plot['Year_str'].iloc[-1], y1=goal,
                             line=dict(color=color, width=1, dash="dot"), opacity=0.6)
 
-            else: # กรณีเป็นกราฟเดี่ยว
+            else:
                 df_plot = history_df[['Year_str', keys]].dropna()
                 if df_plot.empty: continue
                 
                 fig.add_trace(go.Scatter(
-                    x=df_plot['Year_str'], 
-                    y=df_plot[keys],
-                    mode='lines+markers',
-                    name=title,
+                    x=df_plot['Year_str'], y=df_plot[keys],
+                    mode='lines+markers', name=title,
                     line=dict(color=colors, width=3, shape='spline'),
                     marker=dict(size=8, color='white', line=dict(width=2, color=colors)),
                     hovertemplate=f'<b>%{{x}}</b><br>%{{y:.1f}} {unit}<extra></extra>'
                 ))
-                
-                # Threshold Line
                 fig.add_shape(type="line", x0=df_plot['Year_str'].iloc[0], y0=goals, x1=df_plot['Year_str'].iloc[-1], y1=goals,
                     line=dict(color="gray", width=1, dash="dash"), opacity=0.5)
             
-            # Shared Layout Settings
-            # เพิ่ม direction_text เข้าไปใน Title
             full_title = f"{title}<br><span style='font-size:12px; color:gray;'>{direction_text}</span>"
             
             fig.update_layout(
                 title=dict(text=full_title, font=dict(size=14)),
-                height=240, # เพิ่มความสูงเล็กน้อยเผื่อพื้นที่ให้ Subtitle
-                margin=dict(l=10, r=10, t=50, b=30), # ปรับ top margin
+                height=240, margin=dict(l=10, r=10, t=50, b=30),
                 xaxis=dict(showgrid=False, showline=True, linecolor=THEME['grid']),
                 yaxis=dict(showgrid=True, gridcolor=THEME['grid']),
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
                 showlegend=(isinstance(keys, list)), 
                 legend=dict(orientation="h", y=1.15, x=1, xanchor='right', font=dict(size=10)),
                 font=dict(family=FONT_FAMILY)
             )
-            
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 
-def create_modern_gauge(value, title, min_val, max_val, steps, current_color):
-    """สร้าง Gauge Chart แบบ Minimalist ที่พื้นหลังโปร่งใส"""
+def create_progress_ring(value, title, min_val, max_val, current_color):
+    """สร้าง Gauge แบบ Modern Progress Ring (ดูดีกว่า Gauge แบบเข็ม)"""
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
         value=value,
-        number={'suffix': "", 'font': {'size': 40, 'family': FONT_FAMILY, 'color': current_color}},
+        number={'suffix': "", 'font': {'size': 32, 'family': FONT_FAMILY, 'color': current_color}},
         domain={'x': [0, 1], 'y': [0, 1]},
-        title={'text': title, 'font': {'size': 16, 'family': FONT_FAMILY}},
+        title={'text': title, 'font': {'size': 14, 'family': FONT_FAMILY}},
         gauge={
-            'axis': {'range': [min_val, max_val], 'tickwidth': 1, 'tickcolor': "gray", 'tickfont': {'family': FONT_FAMILY}},
-            'bar': {'color': current_color, 'thickness': 0.25},
-            'bgcolor': "rgba(0,0,0,0)", 
+            'axis': {'range': [min_val, max_val], 'tickwidth': 0, 'tickcolor': "rgba(0,0,0,0)", 'showticklabels': False}, # ซ่อนสเกลที่รกตา
+            'bar': {'color': current_color, 'thickness': 0.25}, # แถบสีแสดงค่าจริง
+            'bgcolor': "rgba(0,0,0,0)",
             'borderwidth': 0,
-            'steps': steps,
-            'threshold': {
-                'line': {'color': "red", 'width': 2},
-                'thickness': 0.75,
-                'value': value
-            }
+            'steps': [
+                {'range': [min_val, max_val], 'color': THEME['track_color']} # แถบพื้นหลังสีเทาจางๆ (Track)
+            ],
         }
     ))
     
     fig.update_layout(
-        height=250, 
-        margin=dict(l=20, r=20, t=40, b=20), 
+        height=180, # ขนาดกะทัดรัด
+        margin=dict(l=15, r=15, t=30, b=10),
         font=dict(family=FONT_FAMILY),
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)'
@@ -263,18 +230,11 @@ def plot_bmi_gauge(person_data):
         if bmi < 18.5 or bmi >= 30: color = THEME['danger']
         elif bmi >= 23: color = THEME['warning']
         else: color = THEME['success']
-
-        steps = [
-            {'range': [15, 18.5], 'color': 'rgba(66, 165, 245, 0.2)'},
-            {'range': [18.5, 23], 'color': 'rgba(102, 187, 106, 0.2)'},
-            {'range': [23, 25], 'color': 'rgba(255, 167, 38, 0.2)'},
-            {'range': [25, 30], 'color': 'rgba(255, 112, 67, 0.2)'},
-            {'range': [30, 40], 'color': 'rgba(239, 83, 80, 0.2)'}
-        ]
         
-        fig = create_modern_gauge(bmi, "ดัชนีมวลกาย (BMI)", 15, 40, steps, color)
+        # ใช้ Progress Ring แทน Gauge แบบเดิม
+        fig = create_progress_ring(bmi, "ดัชนีมวลกาย (BMI)", 0, 40, color)
         st.plotly_chart(fig, use_container_width=True)
-        st.markdown(f"<div style='text-align: center; color: {color}; font-weight: bold; font-family: Sarabun;'>{get_bmi_desc(bmi)}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='text-align: center; color: {color}; font-weight: bold; font-family: Sarabun; margin-top: -10px;'>{get_bmi_desc(bmi)}</div>", unsafe_allow_html=True)
     else:
         st.info("ไม่มีข้อมูล BMI")
 
@@ -285,15 +245,9 @@ def plot_fbs_gauge(person_data):
         elif fbs >= 100: color = THEME['warning']
         else: color = THEME['success']
 
-        steps = [
-            {'range': [60, 100], 'color': 'rgba(102, 187, 106, 0.2)'},
-            {'range': [100, 126], 'color': 'rgba(255, 167, 38, 0.2)'},
-            {'range': [126, 200], 'color': 'rgba(239, 83, 80, 0.2)'}
-        ]
-        
-        fig = create_modern_gauge(fbs, "น้ำตาลในเลือด (FBS)", 60, 200, steps, color)
+        fig = create_progress_ring(fbs, "น้ำตาลในเลือด (FBS)", 0, 200, color)
         st.plotly_chart(fig, use_container_width=True)
-        st.markdown(f"<div style='text-align: center; color: {color}; font-weight: bold; font-family: Sarabun;'>{get_fbs_desc(fbs)}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='text-align: center; color: {color}; font-weight: bold; font-family: Sarabun; margin-top: -10px;'>{get_fbs_desc(fbs)}</div>", unsafe_allow_html=True)
     else:
         st.info("ไม่มีข้อมูล FBS")
 
@@ -304,26 +258,15 @@ def plot_gfr_gauge(person_data):
         elif gfr < 90: color = THEME['warning']
         else: color = THEME['success']
         
-        steps = [
-            {'range': [0, 60], 'color': 'rgba(239, 83, 80, 0.2)'},
-            {'range': [60, 90], 'color': 'rgba(255, 167, 38, 0.2)'},
-            {'range': [90, 120], 'color': 'rgba(102, 187, 106, 0.2)'}
-        ]
-        
-        fig = create_modern_gauge(gfr, "การทำงานของไต (GFR)", 0, 120, steps, color)
+        fig = create_progress_ring(gfr, "การทำงานของไต (GFR)", 0, 120, color)
         st.plotly_chart(fig, use_container_width=True)
-        st.markdown(f"<div style='text-align: center; color: {color}; font-weight: bold; font-family: Sarabun;'>{get_gfr_desc(gfr)}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='text-align: center; color: {color}; font-weight: bold; font-family: Sarabun; margin-top: -10px;'>{get_gfr_desc(gfr)}</div>", unsafe_allow_html=True)
     else:
         st.info("ไม่มีข้อมูล GFR")
 
 
 def plot_audiogram(person_data):
-    """สร้างกราฟ Audiogram แบบ Clinical Standard"""
-    freq_cols = {
-        '500': ('R500', 'L500'), '1000': ('R1k', 'L1k'), '2000': ('R2k', 'L2k'),
-        '3000': ('R3k', 'L3k'), '4000': ('R4k', 'L4k'), '6000': ('R6k', 'L6k'),
-        '8000': ('R8k', 'L8k')
-    }
+    freq_cols = {'500': ('R500', 'L500'), '1000': ('R1k', 'L1k'), '2000': ('R2k', 'L2k'), '3000': ('R3k', 'L3k'), '4000': ('R4k', 'L4k'), '6000': ('R6k', 'L6k'), '8000': ('R8k', 'L8k')}
     freqs = list(freq_cols.keys())
     r_vals = [get_float(person_data, freq_cols[f][0]) for f in freqs]
     l_vals = [get_float(person_data, freq_cols[f][1]) for f in freqs]
@@ -333,53 +276,26 @@ def plot_audiogram(person_data):
         return
 
     fig = go.Figure()
-
-    # Background Zones
-    zones = [
-        (0, 25, 'ปกติ (Normal)', 'rgba(102, 187, 106, 0.15)'),
-        (25, 40, 'เล็กน้อย (Mild)', 'rgba(255, 238, 88, 0.15)'),
-        (40, 55, 'ปานกลาง (Moderate)', 'rgba(255, 202, 40, 0.15)'),
-        (55, 70, 'ค่อนข้างรุนแรง (Mod. Severe)', 'rgba(255, 167, 38, 0.15)'),
-        (70, 90, 'รุนแรง (Severe)', 'rgba(255, 112, 67, 0.15)'),
-        (90, 120, 'รุนแรงมาก (Profound)', 'rgba(239, 83, 80, 0.15)')
-    ]
+    zones = [(0, 25, 'ปกติ', 'rgba(102, 187, 106, 0.15)'), (25, 40, 'เล็กน้อย', 'rgba(255, 238, 88, 0.15)'), (40, 55, 'ปานกลาง', 'rgba(255, 202, 40, 0.15)'), (55, 70, 'ค่อนข้างรุนแรง', 'rgba(255, 167, 38, 0.15)'), (70, 90, 'รุนแรง', 'rgba(255, 112, 67, 0.15)'), (90, 120, 'รุนแรงมาก', 'rgba(239, 83, 80, 0.15)')]
     
     for start, end, label, color in zones:
-        fig.add_shape(type="rect", x0=-0.5, x1=len(freqs)-0.5, y0=start, y1=end,
-                      fillcolor=color, opacity=1, layer="below", line_width=0)
-        fig.add_annotation(x=len(freqs)-0.6, y=(start+end)/2, text=label, showarrow=False,
-                           font=dict(size=10, color="gray"))
+        fig.add_shape(type="rect", x0=-0.5, x1=len(freqs)-0.5, y0=start, y1=end, fillcolor=color, opacity=1, layer="below", line_width=0)
+        fig.add_annotation(x=len(freqs)-0.6, y=(start+end)/2, text=label, showarrow=False, font=dict(size=10, color="gray"))
 
-    # Right Ear (Red Circle)
-    fig.add_trace(go.Scatter(
-        x=freqs, y=r_vals, mode='lines+markers', name='หูขวา (Right)',
-        line=dict(color='#D32F2F', width=2), 
-        marker=dict(symbol='circle-open', size=10, line=dict(width=2)),
-        connectgaps=True
-    ))
-
-    # Left Ear (Blue Cross)
-    fig.add_trace(go.Scatter(
-        x=freqs, y=l_vals, mode='lines+markers', name='หูซ้าย (Left)',
-        line=dict(color='#1976D2', width=2, dash='dash'), 
-        marker=dict(symbol='x', size=10, line=dict(width=2)),
-        connectgaps=True
-    ))
+    fig.add_trace(go.Scatter(x=freqs, y=r_vals, mode='lines+markers', name='หูขวา (Right)', line=dict(color='#D32F2F', width=2), marker=dict(symbol='circle-open', size=10, line=dict(width=2)), connectgaps=True))
+    fig.add_trace(go.Scatter(x=freqs, y=l_vals, mode='lines+markers', name='หูซ้าย (Left)', line=dict(color='#1976D2', width=2, dash='dash'), marker=dict(symbol='x', size=10, line=dict(width=2)), connectgaps=True))
 
     fig = apply_medical_layout(fig, "ผลตรวจการได้ยิน (Audiogram)", "ความถี่ (Hz)", "ระดับการได้ยิน (dB HL)")
-    fig.update_layout(
-        yaxis=dict(autorange='reversed', range=[-10, 120], zeroline=False),
-        legend=dict(orientation="h", y=1.1, x=0.5, xanchor='center')
-    )
-    
+    fig.update_layout(yaxis=dict(autorange='reversed', range=[-10, 120], zeroline=False), legend=dict(orientation="h", y=1.1, x=0.5, xanchor='center'))
     st.plotly_chart(fig, use_container_width=True)
 
 
 def plot_risk_radar(person_data):
-    """กราฟ Radar Chart แบบ Modern Filled"""
+    """กราฟ Radar Chart ที่ปรับปรุงให้อ่านง่ายขึ้น"""
     
     def normalize_score(value, thresholds, higher_is_better=False):
-        if value is None: return 0
+        if value is None: return 0 # 0 means no data
+        # Scale 1 (Best) to 5 (Worst)
         score = 1
         if higher_is_better:
             if value < thresholds[0]: score = 5
@@ -395,7 +311,6 @@ def plot_risk_radar(person_data):
             else: score = 1
         return score
 
-    # Data Extraction
     bmi = get_float(person_data, 'BMI') or 0
     sbp = get_float(person_data, 'SBP') or 0
     fbs = get_float(person_data, 'FBS') or 0
@@ -414,13 +329,25 @@ def plot_risk_radar(person_data):
     
     fig = go.Figure()
 
+    # Reference "Normal" Zone (Score 1)
+    fig.add_trace(go.Scatterpolar(
+        r=[1, 1, 1, 1, 1],
+        theta=categories,
+        fill='toself',
+        name='เกณฑ์ปกติ',
+        line=dict(color=THEME['success'], width=1, dash='dash'),
+        fillcolor='rgba(102, 187, 106, 0.1)', # Light Green
+        hoverinfo='skip'
+    ))
+
+    # User Data
     fig.add_trace(go.Scatterpolar(
         r=scores,
         theta=categories,
         fill='toself',
-        name='ระดับความเสี่ยง',
-        line=dict(color=THEME['secondary']),
-        fillcolor='rgba(38, 166, 154, 0.3)'
+        name='ความเสี่ยงของคุณ',
+        line=dict(color=THEME['primary'], width=2),
+        fillcolor='rgba(0, 121, 107, 0.4)', # Transparent Teal
     ))
 
     fig.update_layout(
@@ -429,20 +356,22 @@ def plot_risk_radar(person_data):
                 visible=True,
                 range=[0, 5],
                 tickvals=[1, 2, 3, 4, 5],
-                ticktext=['ปกติ', 'เสี่ยงต่ำ', 'ปานกลาง', 'สูง', 'วิกฤต'],
-                tickfont=dict(size=10, color="gray")
+                ticktext=['ปกติ', 'เสี่ยงต่ำ', 'ปานกลาง', 'สูง', 'วิกฤต'], # เปลี่ยนตัวเลขเป็นคำอธิบาย
+                tickfont=dict(size=10, color="gray"),
+                gridcolor=THEME['grid']
             ),
             bgcolor='rgba(0,0,0,0)'
         ),
-        showlegend=False,
+        showlegend=True,
+        legend=dict(orientation="h", y=-0.1, x=0.5, xanchor='center'), # Legend ด้านล่าง
         title=dict(
             text="<b>ภาพรวมความเสี่ยง (Risk Profile)</b>",
             font=dict(size=16, family=FONT_FAMILY),
             x=0.5
         ),
         font=dict(family=FONT_FAMILY),
-        margin=dict(t=40, b=20, l=40, r=40),
-        height=300,
+        margin=dict(t=50, b=50, l=50, r=50), # เพิ่ม margin ให้อ่านแกนได้
+        height=350,
         paper_bgcolor='rgba(0,0,0,0)'
     )
     
@@ -450,7 +379,6 @@ def plot_risk_radar(person_data):
 
 
 def plot_lung_comparison(person_data):
-    """Bar Chart เปรียบเทียบสมรรถภาพปอด"""
     fvc_actual = get_float(person_data, 'FVC')
     fvc_pred = get_float(person_data, 'FVC predic')
     fev1_actual = get_float(person_data, 'FEV1')
@@ -463,28 +391,11 @@ def plot_lung_comparison(person_data):
     categories = ['FVC (ความจุ)', 'FEV1 (การเป่าออก)']
     
     fig = go.Figure()
-    
-    fig.add_trace(go.Bar(
-        name='ค่าที่วัดได้ (Actual)', 
-        x=categories, 
-        y=[fvc_actual, fev1_actual],
-        marker_color=THEME['primary'],
-        text=[f"{fvc_actual:.2f} L", f"{fev1_actual:.2f} L"],
-        textposition='auto'
-    ))
-    
-    fig.add_trace(go.Bar(
-        name='ค่ามาตรฐาน (Predicted)', 
-        x=categories, 
-        y=[fvc_pred, fev1_pred],
-        marker_color='rgba(158, 158, 158, 0.5)',
-        text=[f"{fvc_pred:.2f} L", f"{fev1_pred:.2f} L"],
-        textposition='auto'
-    ))
+    fig.add_trace(go.Bar(name='ค่าที่วัดได้ (Actual)', x=categories, y=[fvc_actual, fev1_actual], marker_color=THEME['primary'], text=[f"{fvc_actual:.2f} L", f"{fev1_actual:.2f} L"], textposition='auto'))
+    fig.add_trace(go.Bar(name='ค่ามาตรฐาน (Predicted)', x=categories, y=[fvc_pred, fev1_pred], marker_color='rgba(158, 158, 158, 0.5)', text=[f"{fvc_pred:.2f} L", f"{fev1_pred:.2f} L"], textposition='auto'))
 
     fig = apply_medical_layout(fig, "สมรรถภาพปอดเทียบกับมาตรฐาน", "", "ปริมาตร (ลิตร)")
     fig.update_layout(barmode='group')
-    
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -522,7 +433,7 @@ def display_visualization_tab(person_data, history_df):
     """, unsafe_allow_html=True)
 
     # 1. Top Row: Risk Radar & Key Gauges
-    col_radar, col_gauges = st.columns([1, 1.5])
+    col_radar, col_gauges = st.columns([1.2, 1.5]) # ปรับสัดส่วนนิดหน่อยให้ Radar มีที่หายใจ
     
     with col_radar:
         with st.container(border=True):
