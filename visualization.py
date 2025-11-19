@@ -134,93 +134,114 @@ def plot_historical_trends(history_df, person_data):
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 
-def create_shadow_semicircle_gauge(value, max_val, ranges, range_colors):
+def create_linear_range_chart(value, min_val, max_val, ranges, range_colors, marker_color):
     """
-    สร้าง Gauge แบบครึ่งวงกลม (Angular) ที่สะอาดตา
+    สร้างกราฟแท่งแนวนอนแสดงช่วง (Medical Range Bar)
     """
-    steps = []
-    for i in range(len(ranges)-1):
-        steps.append({'range': [ranges[i], ranges[i+1]], 'color': range_colors[i]})
+    fig = go.Figure()
 
-    fig = go.Figure(go.Indicator(
-        mode = "gauge", 
-        value = value,
-        domain = {'x': [0, 1], 'y': [0, 1]},
-        gauge = {
-            'axis': {'range': [0, max_val], 'visible': False}, # ซ่อนแกนให้คลีน
-            'bar': {'color': "rgba(50, 50, 50, 0.8)", 'thickness': 0.15}, # เข็มสีเข้มดูพรีเมียม
-            'bgcolor': "white",
-            'borderwidth': 0,
-            'steps': steps,
-            'threshold': {
-                'line': {'color': "red", 'width': 2},
-                'thickness': 0.75,
-                'value': value
-            },
-            'shape': 'angular'
-        }
+    # 1. Create background ranges (Shapes)
+    # ใช้ add_trace(Bar) แทน shape เพื่อให้ hover ได้และควบคุมง่ายกว่าในบางกรณี
+    # แต่ shape จะนิ่งกว่าสำหรับ background
+    
+    # Draw ranges as filled rectangles
+    for i in range(len(ranges)-1):
+        start, end = ranges[i], ranges[i+1]
+        color = range_colors[i]
+        
+        fig.add_shape(
+            type="rect",
+            x0=start, x1=end, y0=0, y1=1,
+            fillcolor=color, line_width=0,
+            opacity=0.7,
+            layer="below"
+        )
+
+    # 2. Add Marker for current value
+    fig.add_trace(go.Scatter(
+        x=[value], y=[0.5],
+        mode='markers',
+        marker=dict(size=18, color='white', line=dict(width=4, color=marker_color), symbol='circle'),
+        hoverinfo='x',
+        name='ค่าของคุณ'
     ))
 
+    # 3. Setup Axis
     fig.update_layout(
-        height=180,
-        margin=dict(l=20, r=20, t=20, b=0), # ตัด margin ล่างออกเพราะครึ่งวงกลม
+        xaxis=dict(
+            range=[min_val, max_val],
+            showgrid=False,
+            zeroline=False,
+            showline=False,
+            showticklabels=True,
+            tickfont=dict(family=FONT_FAMILY, size=12, color="#888"),
+            # tickvals=ranges # Show ticks at boundaries
+        ),
+        yaxis=dict(
+            showgrid=False,
+            zeroline=False,
+            showline=False,
+            showticklabels=False,
+            range=[0, 1]
+        ),
+        height=80, # ความสูงเฉพาะตัวกราฟ
+        margin=dict(l=10, r=10, t=0, b=20),
+        showlegend=False,
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)'
     )
+    
     return fig
 
-def render_shadow_card(title, value_str, unit, desc, color_hex, bg_hex, chart_fig):
+def render_linear_card(title, value_str, unit, desc, color_hex, bg_hex, chart_fig):
     """
-    Render Card UI แบบมีแสงเงา (Light & Shadow) 
+    Render Card UI for Linear Chart
     """
-    # CSS Card ที่ดูพรีเมียม: สีขาว, เงาฟุ้ง, ขอบมน, มี Hover effect เล็กน้อย
     card_style = f"""
         background-color: #FFFFFF;
         border-radius: 20px;
-        padding: 25px 20px 10px 20px;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.01); /* เงา 2 ชั้นให้ดูลึก */
-        border: 1px solid rgba(255, 255, 255, 0.5);
-        text-align: center;
+        padding: 20px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+        border: 1px solid rgba(0,0,0,0.02);
+        text-align: left;
         font-family: 'Sarabun', sans-serif;
         height: 100%;
-        position: relative;
-        overflow: visible;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        transition: transform 0.2s;
     """
     
-    # HTML สำหรับ Card Content
+    # ส่วนหัว Card (Title + Value + Badge)
     st.markdown(f"""
-    <div style="{card_style}" class="indicator-card">
-        <div style="font-size: 15px; color: #666; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 5px;">{title}</div>
+    <div style="{card_style}">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+            <div>
+                <div style="font-size: 14px; color: #888; font-weight: 500; margin-bottom: 2px;">{title}</div>
+                <div style="font-size: 32px; font-weight: 800; color: #333; line-height: 1.1;">
+                    {value_str} <span style="font-size: 14px; font-weight: 500; color: #999;">{unit}</span>
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <span style="
+                    background-color: {bg_hex}; 
+                    color: {color_hex}; 
+                    padding: 6px 14px; 
+                    border-radius: 8px; 
+                    font-size: 12px; 
+                    font-weight: 700;
+                    display: inline-block;">
+                    {desc}
+                </span>
+            </div>
+        </div>
         
-        <div style="display: flex; align-items: baseline; justify-content: center; gap: 5px;">
-            <span style="font-size: 36px; font-weight: 800; color: #2C3E50; text-shadow: 1px 1px 0px rgba(0,0,0,0.05);">{value_str}</span>
-            <span style="font-size: 16px; font-weight: 500; color: #95A5A6;">{unit}</span>
-        </div>
-
-        <div style="margin-top: 5px; margin-bottom: 0px;">
-            <span style="
-                background-color: {bg_hex}; 
-                color: {color_hex}; 
-                padding: 6px 16px; 
-                border-radius: 50px; 
-                font-size: 13px; 
-                font-weight: 700;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-                display: inline-block;">
-                {desc}
-            </span>
-        </div>
-        
-        <div style="margin-top: -30px; margin-bottom: -20px; z-index: 1; position: relative;">
-            <!-- Chart Placeholder -->
-        </div>
-    </div>
+        <!-- Chart Container -->
+        <div style="margin-top: 5px;">
     """, unsafe_allow_html=True)
     
-    # Render Chart ซ้อนเข้าไป (ใช้ margin-top ติดลบดึงขึ้น)
-    st.markdown('<div style="margin-top: -15px;"></div>', unsafe_allow_html=True)
+    # แทรกกราฟลงไประหว่าง HTML
     st.plotly_chart(chart_fig, use_container_width=True, config={'displayModeBar': False, 'staticPlot': True})
+    
+    # ปิด Div
+    st.markdown("</div></div>", unsafe_allow_html=True)
 
 
 def plot_bmi_gauge(person_data):
@@ -237,12 +258,12 @@ def plot_bmi_gauge(person_data):
         elif "น้อย" in desc: c, bg = THEME['info'], THEME['info_bg']
         else: c, bg = THEME['success'], THEME['success_bg']
         
-        ranges = [0, 18.5, 23, 25, 30, 40]
-        # สีพาสเทลนุ่มๆ ไล่ระดับ
-        colors = ['#BBDEFB', '#C8E6C9', '#FFF9C4', '#FFE0B2', '#FFCDD2']
+        # Linear Ranges
+        ranges = [10, 18.5, 23, 25, 30, 40]
+        colors = ['#E3F2FD', '#E8F5E9', '#FFFDE7', '#FFF3E0', '#FFEBEE']
         
-        fig = create_shadow_semicircle_gauge(bmi, 40, ranges, colors)
-        render_shadow_card("ดัชนีมวลกาย (BMI)", f"{bmi:.1f}", "", desc, c, bg, fig)
+        fig = create_linear_range_chart(bmi, 15, 35, ranges, colors, c)
+        render_linear_card("ดัชนีมวลกาย (BMI)", f"{bmi:.1f}", "", desc, c, bg, fig)
     else:
         st.info("ไม่มีข้อมูล BMI")
 
@@ -253,10 +274,10 @@ def plot_fbs_gauge(person_data):
         c, bg = (THEME['danger'], THEME['danger_bg']) if "เบาหวาน" in desc and "เสี่ยง" not in desc else (THEME['warning'], THEME['warning_bg']) if "เสี่ยง" in desc else (THEME['success'], THEME['success_bg'])
         
         ranges = [0, 70, 100, 126, 300]
-        colors = ['#BBDEFB', '#C8E6C9', '#FFE0B2', '#FFCDD2']
+        colors = ['#E3F2FD', '#E8F5E9', '#FFF3E0', '#FFEBEE'] # ฟ้า(ต่ำ), เขียว(ปกติ), เหลือง(เสี่ยง), แดง(สูง)
         
-        fig = create_shadow_semicircle_gauge(fbs, 200, ranges, colors)
-        render_shadow_card("น้ำตาลในเลือด (FBS)", f"{fbs:.0f}", "mg/dL", desc, c, bg, fig)
+        fig = create_linear_range_chart(fbs, 60, 200, ranges, colors, c)
+        render_linear_card("น้ำตาลในเลือด (FBS)", f"{fbs:.0f}", "mg/dL", desc, c, bg, fig)
     else:
         st.info("ไม่มีข้อมูล FBS")
 
@@ -266,11 +287,12 @@ def plot_gfr_gauge(person_data):
         desc = get_gfr_desc(gfr)
         c, bg = (THEME['success'], THEME['success_bg']) if "ปกติ" in desc else (THEME['warning'], THEME['warning_bg']) if "เล็กน้อย" in desc else (THEME['danger'], THEME['danger_bg'])
         
+        # GFR: ยิ่งมากยิ่งดี (แดง -> เหลือง -> เขียว)
         ranges = [0, 60, 90, 140]
-        colors = ['#FFCDD2', '#FFE0B2', '#C8E6C9']
+        colors = ['#FFEBEE', '#FFF3E0', '#E8F5E9']
         
-        fig = create_shadow_semicircle_gauge(gfr, 140, ranges, colors)
-        render_shadow_card("การทำงานของไต (GFR)", f"{gfr:.0f}", "mL/min", desc, c, bg, fig)
+        fig = create_linear_range_chart(gfr, 20, 120, ranges, colors, c)
+        render_linear_card("การทำงานของไต (GFR)", f"{gfr:.0f}", "mL/min", desc, c, bg, fig)
     else:
         st.info("ไม่มีข้อมูล GFR")
 
