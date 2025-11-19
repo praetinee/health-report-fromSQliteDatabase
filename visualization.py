@@ -16,10 +16,10 @@ THEME = {
     'warning': '#FFA726',      # Orange
     'danger': '#EF5350',       # Red
     'info': '#42A5F5',         # Blue
+    'track': '#F5F5F5',        # Light Grey for ring track
     'sbp_color': '#E53935',    # Red
     'dbp_color': '#1E88E5',    # Blue
     'hct_color': '#AB47BC',    # Purple
-    'bg_gauge': "rgba(230, 230, 230, 0.3)"
 }
 
 FONT_FAMILY = "Sarabun, sans-serif"
@@ -49,10 +49,10 @@ def get_float(person_data, key):
 def get_bmi_desc(bmi):
     if bmi is None: return "ไม่มีข้อมูล"
     if bmi < 18.5: return "น้ำหนักน้อย"
-    if bmi < 23: return "น้ำหนักปกติ"
-    if bmi < 25: return "ท้วม / น้ำหนักเกิน"
-    if bmi < 30: return "อ้วนระยะเริ่มต้น" # ปรับให้ซอฟต์ลง
-    return "อ้วนมาก" # ปรับจาก 'รุนแรง' เป็น 'มาก'
+    if bmi < 23: return "สมส่วน"
+    if bmi < 25: return "น้ำหนักเกิน (ท้วม)"
+    if bmi < 30: return "อ้วนระยะที่ 1" # ปรับคำให้นุ่มนวลขึ้น
+    return "อ้วนระยะที่ 2" # ปรับคำให้เป็นทางการแพทย์
 
 def get_fbs_desc(fbs):
     if fbs is None: return "-"
@@ -130,41 +130,32 @@ def plot_historical_trends(history_df, person_data):
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 
-def create_semicircle_gauge(value, title, min_val, max_val, ranges, range_colors, unit=""):
+def create_ring_chart(value, title, max_val, color, unit=""):
     """
-    สร้าง Gauge แบบครึ่งวงกลม (Speedometer) ที่ดู Clean
+    สร้าง Ring Chart (Donut) ที่ดูทันสมัยสไตล์ Apple Watch
     """
-    # Create steps for the background arc
-    steps = []
-    for i in range(len(ranges)-1):
-        steps.append({'range': [ranges[i], ranges[i+1]], 'color': range_colors[i]})
+    # Ensure value doesn't exceed visually for the ring (but text shows real value)
+    plot_val = min(value, max_val)
+    remaining = max_val - plot_val
+    
+    # Create Donut Chart
+    fig = go.Figure(data=[go.Pie(
+        values=[plot_val, remaining],
+        hole=0.75, # Ring thickness
+        sort=False,
+        direction='clockwise',
+        textinfo='none',
+        hoverinfo='none',
+        marker=dict(colors=[color, THEME['track']])
+    )])
 
-    fig = go.Figure(go.Indicator(
-        mode = "gauge+number",
-        value = value,
-        number = {'suffix': f" {unit}", "font": {"size": 24, "family": FONT_FAMILY, "color": THEME['text_light']}},
-        domain = {'x': [0, 1], 'y': [0, 1]},
-        title = {'text': title, 'font': {'size': 14, 'family': FONT_FAMILY}},
-        gauge = {
-            'axis': {'range': [min_val, max_val], 'tickwidth': 1, 'tickcolor': "gray"},
-            'bar': {'color': "rgba(0,0,0,0.7)", 'thickness': 0.1}, # เข็มสีเข้ม
-            'bgcolor': "white",
-            'borderwidth': 0,
-            'bordercolor': "gray",
-            'steps': steps,
-            'threshold': {
-                'line': {'color': "red", 'width': 4},
-                'thickness': 0.75,
-                'value': value
-            },
-            'shape': 'angular'
-        }
-    ))
-
+    # Add centered text
     fig.update_layout(
-        height=200,
+        title=dict(text=title, x=0.5, y=0.95, font=dict(size=14, family=FONT_FAMILY)),
+        annotations=[dict(text=f"{value:.1f}<br><span style='font-size:14px; color:gray'>{unit}</span>", x=0.5, y=0.5, font_size=28, font_family=FONT_FAMILY, showarrow=False)],
+        showlegend=False,
+        height=180,
         margin=dict(l=20, r=20, t=30, b=20),
-        font=dict(family=FONT_FAMILY),
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)'
     )
@@ -178,48 +169,39 @@ def plot_bmi_gauge(person_data):
          if weight and height: bmi = weight / ((height/100)**2)
 
     if bmi:
-        ranges = [0, 18.5, 23, 25, 30, 40]
-        colors = ['#E3F2FD', '#E8F5E9', '#FFFDE7', '#FFF3E0', '#FFEBEE']
-        
-        fig = create_semicircle_gauge(bmi, "ดัชนีมวลกาย (BMI)", 10, 40, ranges, colors)
-        st.plotly_chart(fig, use_container_width=True)
-        
         desc = get_bmi_desc(bmi)
-        # Color logic for text
-        if "อ้วนมาก" in desc: c = THEME['danger']
-        elif "เริ่ม" in desc or "ท้วม" in desc: c = THEME['warning']
+        # Color logic
+        if "อ้วนระยะที่ 2" in desc: c = THEME['danger']
+        elif "เริ่ม" in desc or "ท้วม" in desc or "อ้วนระยะที่ 1" in desc: c = THEME['warning']
         elif "น้อย" in desc: c = THEME['info']
         else: c = THEME['success']
-        st.markdown(f"<div style='text-align:center; font-weight:bold; color:{c}; margin-top:-40px;'>{desc}</div>", unsafe_allow_html=True)
+        
+        # Max scale for BMI ring usually around 40
+        fig = create_ring_chart(bmi, "ดัชนีมวลกาย (BMI)", 40, c, "")
+        st.plotly_chart(fig, use_container_width=True)
+        st.markdown(f"<div style='text-align:center; font-weight:bold; color:{c}; margin-top:-20px;'>{desc}</div>", unsafe_allow_html=True)
 
 def plot_fbs_gauge(person_data):
     fbs = get_float(person_data, 'FBS')
     if fbs:
-        ranges = [0, 70, 100, 126, 300]
-        colors = ['#E3F2FD', '#E8F5E9', '#FFF3E0', '#FFEBEE']
-        
-        fig = create_semicircle_gauge(fbs, "น้ำตาลในเลือด (FBS)", 50, 200, ranges, colors, "mg/dL")
-        st.plotly_chart(fig, use_container_width=True)
-        
         desc = get_fbs_desc(fbs)
         c = THEME['danger'] if "เบาหวาน" in desc and "เสี่ยง" not in desc else THEME['warning'] if "เสี่ยง" in desc else THEME['success']
-        st.markdown(f"<div style='text-align:center; font-weight:bold; color:{c}; margin-top:-40px;'>{desc}</div>", unsafe_allow_html=True)
+        
+        # Max scale for FBS ring around 200
+        fig = create_ring_chart(fbs, "น้ำตาลในเลือด (FBS)", 200, c, "mg/dL")
+        st.plotly_chart(fig, use_container_width=True)
+        st.markdown(f"<div style='text-align:center; font-weight:bold; color:{c}; margin-top:-20px;'>{desc}</div>", unsafe_allow_html=True)
 
 def plot_gfr_gauge(person_data):
     gfr = get_float(person_data, 'GFR')
     if gfr:
-        # Invert logic for visual: low GFR is red (left), high is green (right)
-        # But gauge ranges must be increasing. 
-        # Let's map: 0-60 (Red), 60-90 (Yellow), 90-140 (Green)
-        ranges = [0, 60, 90, 140]
-        colors = ['#FFEBEE', '#FFF3E0', '#E8F5E9']
-        
-        fig = create_semicircle_gauge(gfr, "การทำงานของไต (GFR)", 0, 120, ranges, colors, "mL/min")
-        st.plotly_chart(fig, use_container_width=True)
-        
         desc = get_gfr_desc(gfr)
         c = THEME['success'] if "ปกติ" in desc else THEME['warning'] if "เล็กน้อย" in desc else THEME['danger']
-        st.markdown(f"<div style='text-align:center; font-weight:bold; color:{c}; margin-top:-40px;'>{desc}</div>", unsafe_allow_html=True)
+        
+        # Max scale for GFR ring around 120
+        fig = create_ring_chart(gfr, "การทำงานของไต (GFR)", 120, c, "mL/min")
+        st.plotly_chart(fig, use_container_width=True)
+        st.markdown(f"<div style='text-align:center; font-weight:bold; color:{c}; margin-top:-20px;'>{desc}</div>", unsafe_allow_html=True)
 
 
 def plot_audiogram(person_data):
