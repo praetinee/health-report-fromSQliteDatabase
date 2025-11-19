@@ -108,7 +108,7 @@ def plot_historical_trends(history_df, person_data):
     สร้างกราฟเส้นแสดงแนวโน้มสุขภาพ (Sparkline Style) ที่ยืดหยุ่น
     """
     st.subheader("📈 แนวโน้มสุขภาพย้อนหลัง (Health Trends)")
-    st.caption("ติดตามการเปลี่ยนแปลงสุขภาพของคุณในแต่ละปี")
+    st.caption("ติดตามการเปลี่ยนแปลงสุขภาพของคุณในแต่ละปี (เส้นประคือเกณฑ์มาตรฐาน)")
 
     if history_df.shape[0] < 2:
         st.info("💡 ต้องการข้อมูลอย่างน้อย 2 ปี เพื่อแสดงกราฟแนวโน้ม")
@@ -125,7 +125,6 @@ def plot_historical_trends(history_df, person_data):
     hct_goal = 36.0 if sex == "หญิง" else 39.0
     
     # Config: Key -> (Keys List/String, Unit, Goals List/Float, Colors List/String)
-    # ปรับปรุงให้รองรับการพลอตกราฟคู่ (เช่น ความดัน)
     trend_metrics = {
         'ความดันโลหิต (BP)': (['SBP', 'DBP'], 'mmHg', [130.0, 80.0], [THEME['sbp_color'], THEME['dbp_color']]),
         'น้ำตาล (FBS)': ('FBS', 'mg/dL', 100.0, THEME['warning']),
@@ -133,7 +132,7 @@ def plot_historical_trends(history_df, person_data):
         'ไต (GFR)': ('GFR', 'mL/min', 90.0, THEME['info']),
         'ดัชนีมวลกาย (BMI)': ('BMI', 'kg/m²', 23.0, '#8D6E63'),
         'ฮีโมโกลบิน (Hb)': ('Hb(%)', 'g/dL', hb_goal, '#EC407A'),
-        'ความเข้มข้นเลือด (Hct)': ('HCT', '%', hct_goal, THEME['hct_color']) # เพิ่ม HCT กลับมา
+        'ความเข้มข้นเลือด (Hct)': ('HCT', '%', hct_goal, THEME['hct_color'])
     }
 
     # 2. Render Grid (Responsive Columns)
@@ -166,10 +165,10 @@ def plot_historical_trends(history_df, person_data):
                         hovertemplate=f'<b>{key}: %{{y:.0f}}</b> {unit}<extra></extra>'
                     ))
                     
-                    # Threshold Line (เฉพาะเส้นแรก หรือ SBP เพื่อไม่ให้รก)
-                    if j == 0:
+                    # Threshold Line (แสดงทุกเส้นที่ตั้งเป้าไว้ เพื่อความชัดเจน)
+                    if goal is not None:
                          fig.add_shape(type="line", x0=df_plot['Year_str'].iloc[0], y0=goal, x1=df_plot['Year_str'].iloc[-1], y1=goal,
-                            line=dict(color=color, width=1, dash="dot"), opacity=0.5)
+                            line=dict(color=color, width=1, dash="dot"), opacity=0.6)
 
             else: # กรณีเป็นกราฟเดี่ยว
                 df_plot = history_df[['Year_str', keys]].dropna()
