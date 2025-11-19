@@ -124,10 +124,11 @@ def authentication_flow(df):
             padding: 10px 12px;
             border: 1px solid #e0e0e0;
             transition: border-color 0.3s;
+            color: #333 !important; /* บังคับสีตัวอักษรให้เป็นสีเข้มตามธีม */
         }
         .stTextInput input:focus {
-            border-color: #00796B;
-            box-shadow: 0 0 0 2px rgba(0, 121, 107, 0.1);
+            border-color: #999;
+            box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
         }
         
         /* ปรับแต่ง Header ส่วน Logo */
@@ -140,45 +141,56 @@ def authentication_flow(df):
             border-radius: 12px;
         }
 
-        /* --- PRETTY OUTLINE BUTTON STYLE (Green Theme) --- */
-        /* เล็งเป้าไปที่ปุ่มใน Form โดยเฉพาะ */
-        [data-testid="stForm"] button {
-            background-color: transparent !important; /* พื้นหลังใส/ขาว */
-            color: #00796B !important; /* ตัวหนังสือเขียว */
-            border: 2px solid #00796B !important; /* ขอบเขียว */
+        /* --- BUTTON STYLE (Clean/White Theme) --- */
+        /* ปรับแก้: กรอบขาว ตัวหนังสือสีเดียวกับ Input (เทาเข้ม/ดำ) */
+        
+        /* เล็งเป้าไปที่ปุ่ม Submit ใน Form */
+        [data-testid="stForm"] [data-testid="baseButton-secondaryFormSubmit"] {
+            background-color: #ffffff !important; /* พื้นหลังขาว */
+            color: #333333 !important; /* ตัวหนังสือสีเดียวกับ Input */
+            border: 1px solid #ffffff !important; /* กรอบสีขาว */
             border-radius: 8px !important;
-            font-weight: 700 !important;
+            font-weight: 600 !important;
             font-size: 16px !important;
             height: 3rem !important;
-            box-shadow: none !important;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05) !important; /* เงาบางๆ ให้ปุ่มลอยขึ้นมานิดหน่อย */
             transition: all 0.2s ease !important;
         }
 
-        /* Hover State: เปลี่ยนเป็นทึบเมื่อชี้ */
-        [data-testid="stForm"] button:hover {
-            background-color: #00796B !important;
-            color: white !important;
-            border-color: #00796B !important;
+        /* Hover State */
+        [data-testid="stForm"] [data-testid="baseButton-secondaryFormSubmit"]:hover {
+            background-color: #f9f9f9 !important;
+            color: #000000 !important;
+            border-color: #f0f0f0 !important;
             transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(0, 121, 107, 0.2) !important;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
         }
 
         /* Active/Click State */
-        [data-testid="stForm"] button:active {
-            background-color: #004D40 !important;
-            border-color: #004D40 !important;
-            color: white !important;
+        [data-testid="stForm"] [data-testid="baseButton-secondaryFormSubmit"]:active {
+            background-color: #e0e0e0 !important;
+            border-color: #e0e0e0 !important;
             transform: translateY(0px);
         }
 
         /* Focus State */
-        [data-testid="stForm"] button:focus {
-            border-color: #00796B !important;
-            color: #00796B !important;
-            background-color: transparent !important;
-            box-shadow: 0 0 0 0.2rem rgba(0, 121, 107, 0.2) !important;
+        [data-testid="stForm"] [data-testid="baseButton-secondaryFormSubmit"]:focus {
+            border-color: #ccc !important;
+            box-shadow: 0 0 0 0.2rem rgba(0, 0, 0, 0.1) !important;
         }
         
+        /* --- Password Visibility Toggle Button Theme --- */
+        /* ปรับปุ่มลูกตา (Show/Hide Password) ให้เป็นธีมเดียวกับ Input */
+        [data-testid="stTextInput"] button {
+            color: #666 !important; /* สีเทากลางๆ (ธีมเดียวกับ Input) */
+            border: none !important;
+            background-color: transparent !important;
+        }
+        [data-testid="stTextInput"] button:hover {
+            color: #333 !important; /* เข้มขึ้นเมื่อ Hover */
+            background-color: transparent !important;
+        }
+
         /* Override text color inside button (just in case) */
         [data-testid="stForm"] button p {
             color: inherit !important;
