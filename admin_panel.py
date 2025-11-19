@@ -126,7 +126,6 @@ def is_urine_abnormal(test_name, value, normal_range):
     return False
 
 def render_urine_section(person_data, sex, year_selected, footer_html=None):
-    """Renders the urinalysis section."""
     urine_data = [("สี (Colour)", person_data.get("Color", "-"), "Yellow, Pale Yellow"), ("น้ำตาล (Sugar)", person_data.get("sugar", "-"), "Negative"), ("โปรตีน (Albumin)", person_data.get("Alb", "-"), "Negative, trace"), ("กรด-ด่าง (pH)", person_data.get("pH", "-"), "5.0 - 8.0"), ("ความถ่วงจำเพาะ (Sp.gr)", person_data.get("Spgr", "-"), "1.003 - 1.030"), ("เม็ดเลือดแดง (RBC)", person_data.get("RBC1", "-"), "0 - 2 cell/HPF"), ("เม็ดเลือดขาว (WBC)", person_data.get("WBC1", "-"), "0 - 5 cell/HPF"), ("เซลล์เยื่อบุผิว (Squam.epit.)", person_data.get("SQ-epi", "-"), "0 - 10 cell/HPF"), ("อื่นๆ", person_data.get("ORTER", "-"), "-")]
     df_urine = pd.DataFrame(urine_data, columns=["การตรวจ", "ผลตรวจ", "ค่าปกติ"])
     html_content = render_lab_table_html("ผลการตรวจปัสสาวะ (Urinalysis)", ["การตรวจ", "ผล", "ค่าปกติ"], [[(row["การตรวจ"], is_urine_abnormal(row["การตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"])), (safe_value(row["ผลตรวจ"]), is_urine_abnormal(row["การตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"])), (row["ค่าปกติ"], is_urine_abnormal(row["การตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"]))] for _, row in df_urine.iterrows()], table_class="lab-table", footer_html=footer_html)
@@ -828,7 +827,7 @@ def display_admin_panel(df):
                         
                         # --- START CHANGE: Move Print Buttons here (inside year selection block) ---
                         # Add spacing
-                        st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+                        st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
                         
                         col_btn_main, col_btn_perf = st.columns(2)
                         with col_btn_main:
@@ -859,7 +858,6 @@ def display_admin_panel(df):
 
         # --- Display Report Content ---
         if st.session_state.admin_person_row:
-            
             # Removed the previous print button block from here
             # st.divider() # Removed standard divider as we added custom hr above
 
