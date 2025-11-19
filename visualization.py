@@ -247,14 +247,12 @@ def plot_health_radar(person_data):
     uric = get_float(person_data, 'Uric Acid')
     
     # Define Data Structure for Iteration
-    # เราใช้ตรรกะ Dynamic: ถ้าค่าไหนไม่มี (None) ให้ตัดแกนนั้นทิ้งไปเลย กราฟจะได้ไม่แหว่งเป็น 0
     metrics_config = [
         {'type': 'BMI', 'val': bmi, 'label': 'รูปร่าง (BMI)', 'fmt': '{:.1f}'},
         {'type': 'BP', 'val': sbp, 'label': 'ความดัน (BP)', 'fmt': '{:.0f}'},
         {'type': 'FBS', 'val': fbs, 'label': 'ระดับน้ำตาล', 'fmt': '{:.0f}'},
         {'type': 'LDL', 'val': ldl, 'label': 'ไขมัน (LDL)', 'fmt': '{:.0f}'},
         {'type': 'GFR', 'val': gfr, 'label': 'ไต (GFR)', 'fmt': '{:.0f}'},
-        # Added configuration
         {'type': 'Liver', 'val': sgpt, 'label': 'ตับ (SGPT)', 'fmt': '{:.0f}'},
         {'type': 'Uric', 'val': uric, 'label': 'กรดยูริก', 'fmt': '{:.1f}'}
     ]
@@ -269,6 +267,13 @@ def plot_health_radar(person_data):
             scores.append(score)
             categories.append(m['label'])
             display_vals.append(m['fmt'].format(m['val']))
+    
+    # --- FIX: Explicitly close the loop to ensure connectivity ---
+    # เมื่อจุดแรกและจุดสุดท้ายต้องเชื่อมกัน Plotly บางครั้งต้องการให้ระบุซ้ำ
+    if scores:
+        scores.append(scores[0])
+        categories.append(categories[0])
+        display_vals.append(display_vals[0])
             
     if len(scores) < 3:
         pass 
@@ -276,8 +281,13 @@ def plot_health_radar(person_data):
     fig = go.Figure()
     
     # Background Ideal Shape (100%)
+    # ต้องปิด Loop ให้ Background ด้วย
+    ideal_r = [100] * (len(categories) - 1)
+    if ideal_r:
+        ideal_r.append(ideal_r[0])
+
     fig.add_trace(go.Scatterpolar(
-        r=[100] * len(categories),
+        r=ideal_r,
         theta=categories,
         fill='toself',
         name='ค่าสมบูรณ์แบบ (Ideal)',
@@ -318,7 +328,7 @@ def plot_health_radar(person_data):
         margin=dict(t=80, b=40, l=60, r=60),
         font=dict(family=FONT_FAMILY),
         paper_bgcolor='rgba(0,0,0,0)',
-        height=500 # เพิ่มความสูงนิดหน่อยเผื่อ label เยอะขึ้น
+        height=500 
     )
     
     st.plotly_chart(fig, use_container_width=True)
