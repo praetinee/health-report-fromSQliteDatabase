@@ -20,7 +20,7 @@ THEME = {
     'danger_bg': '#FFEBEE',    # Light Red BG
     'info': '#42A5F5',         # Blue
     'info_bg': '#E3F2FD',      # Light Blue BG
-    'track': '#F0F2F5',        # Very Light Grey for track
+    'track': '#EEEEEE',        # Light Grey for track
     'sbp_color': '#E53935',    # Red
     'dbp_color': '#1E88E5',    # Blue
     'hct_color': '#AB47BC',    # Purple
@@ -134,44 +134,68 @@ def plot_historical_trends(history_df, person_data):
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 
-def create_premium_ring_chart(value, max_val, color, track_color=THEME['track']):
+def create_shadow_gauge(value, max_val, ranges, range_colors):
     """
-    สร้าง Ring Chart แบบพรีเมียม (Thinner, Cleaner)
+    สร้าง Gauge แบบครึ่งวงกลมที่ดูคลีนและพรีเมียม
     """
-    plot_val = min(value, max_val)
-    remaining = max_val - plot_val
-    
-    fig = go.Figure(data=[go.Pie(
-        values=[plot_val, remaining],
-        hole=0.85, # Ring บางลงเพื่อให้ดูหรูขึ้น
-        sort=False,
-        direction='clockwise',
-        textinfo='none',
-        hoverinfo='none',
-        marker=dict(colors=[color, track_color])
-    )])
+    steps = []
+    for i in range(len(ranges)-1):
+        steps.append({'range': [ranges[i], ranges[i+1]], 'color': range_colors[i]})
+
+    fig = go.Figure(go.Indicator(
+        mode = "gauge", # ไม่โชว์ตัวเลขในกราฟ (จะไปโชว์ใน HTML Card แทนเพื่อความสวยงาม)
+        value = value,
+        domain = {'x': [0, 1], 'y': [0, 1]},
+        gauge = {
+            'axis': {'range': [0, max_val], 'visible': False}, # ซ่อนแกนเลขให้ดูคลีน
+            'bar': {'color': "rgba(0,0,0,0.6)", 'thickness': 0.08}, # เข็มสีเข้มบางๆ
+            'bgcolor': "white",
+            'borderwidth': 0,
+            'steps': steps,
+            'threshold': {
+                'line': {'color': "red", 'width': 2},
+                'thickness': 0.75,
+                'value': value
+            },
+            'shape': 'angular'
+        }
+    ))
 
     fig.update_layout(
-        showlegend=False,
-        height=160, # ปรับความสูงให้พอดีกับ Card
-        margin=dict(l=0, r=0, t=10, b=10), # ลดขอบให้ชิดที่สุด
+        height=160,
+        margin=dict(l=15, r=15, t=10, b=10),
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)'
     )
     return fig
 
-def render_indicator_card(title, value_str, unit, desc, color_hex, bg_hex, chart_fig=None):
+def render_shadow_card(title, value_str, unit, desc, color_hex, bg_hex, chart_fig):
     """
-    Render Card UI แบบ HTML ผสม Plotly (เพื่อให้สวยกว่า Plotly เพียวๆ)
+    Render Card UI แบบมีแสงเงา (Shadow & Depth)
     """
-    # Create the HTML for the textual part (Title, Value, Status Pill)
-    text_html = f"""
-    <div style="text-align: center; font-family: 'Sarabun', sans-serif;">
-        <div style="font-size: 14px; color: gray; margin-bottom: 5px;">{title}</div>
-        <div style="font-size: 32px; font-weight: 700; color: {THEME['text_light']}; line-height: 1;">
-            {value_str} <span style="font-size: 14px; font-weight: 400; color: gray;">{unit}</span>
+    # CSS สำหรับ Card แบบมีเงาและมนสวย
+    card_style = f"""
+        background-color: #FFFFFF;
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08); /* เงาฟุ้งๆ */
+        border: 1px solid rgba(0,0,0,0.02);
+        text-align: center;
+        font-family: 'Sarabun', sans-serif;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        transition: transform 0.2s;
+    """
+    
+    st.markdown(f"""
+    <div style="{card_style}">
+        <div style="font-size: 14px; color: #666; font-weight: 500; margin-bottom: 5px;">{title}</div>
+        <div style="font-size: 28px; font-weight: 700; color: #333; line-height: 1;">
+            {value_str} <span style="font-size: 14px; font-weight: 400; color: #888;">{unit}</span>
         </div>
-        <div style="margin-top: 10px;">
+        <div style="margin: 10px 0;">
             <span style="
                 background-color: {bg_hex}; 
                 color: {color_hex}; 
@@ -183,24 +207,15 @@ def render_indicator_card(title, value_str, unit, desc, color_hex, bg_hex, chart
                 {desc}
             </span>
         </div>
+        <div style="margin-top: -20px;"> 
+            <!-- Placeholder for chart, rendered below via streamlit logic -->
+        </div>
     </div>
-    """
+    """, unsafe_allow_html=True)
     
-    # Display Logic
-    if chart_fig:
-        # ซ้อน Chart กับ Text (Chart เป็น Background Ring)
-        # ใช้ st.columns เพื่อจัดระเบียบ
-        st.plotly_chart(chart_fig, use_container_width=True, config={'displayModeBar': False, 'staticPlot': True})
-        # ดัน Text ขึ้นไปทับ Chart (ทำยากใน Streamlit ปกติ) 
-        # ดังนั้นใช้วิธีวาง Text ไว้ใต้ Chart แต่ใช้ CSS margin-top ติดลบเพื่อดึงขึ้น
-        st.markdown(f"""
-            <div style="margin-top: -120px; position: relative; z-index: 10; pointer-events: none;">
-                {text_html}
-            </div>
-            <div style="margin-bottom: 20px;"></div> 
-        """, unsafe_allow_html=True)
-    else:
-        st.markdown(text_html, unsafe_allow_html=True)
+    # Render Chart (ดันขึ้นไปซ้อนในการ์ดด้วย margin ลบ)
+    st.markdown('<div style="margin-top: -10px;"></div>', unsafe_allow_html=True) 
+    st.plotly_chart(chart_fig, use_container_width=True, config={'displayModeBar': False, 'staticPlot': True})
 
 
 def plot_bmi_gauge(person_data):
@@ -218,8 +233,12 @@ def plot_bmi_gauge(person_data):
         elif "น้อย" in desc: c, bg = THEME['info'], THEME['info_bg']
         else: c, bg = THEME['success'], THEME['success_bg']
         
-        fig = create_premium_ring_chart(bmi, 40, c)
-        render_indicator_card("ดัชนีมวลกาย (BMI)", f"{bmi:.1f}", "", desc, c, bg, fig)
+        ranges = [0, 18.5, 23, 25, 30, 40]
+        # ใช้สีพาสเทลนุ่มๆ สำหรับพื้นหลังเกจ
+        colors = ['#E3F2FD', '#E8F5E9', '#FFFDE7', '#FFF3E0', '#FFEBEE']
+        
+        fig = create_shadow_gauge(bmi, 40, ranges, colors)
+        render_shadow_card("ดัชนีมวลกาย (BMI)", f"{bmi:.1f}", "", desc, c, bg, fig)
     else:
         st.info("ไม่มีข้อมูล BMI")
 
@@ -229,8 +248,11 @@ def plot_fbs_gauge(person_data):
         desc = get_fbs_desc(fbs)
         c, bg = (THEME['danger'], THEME['danger_bg']) if "เบาหวาน" in desc and "เสี่ยง" not in desc else (THEME['warning'], THEME['warning_bg']) if "เสี่ยง" in desc else (THEME['success'], THEME['success_bg'])
         
-        fig = create_premium_ring_chart(fbs, 200, c)
-        render_indicator_card("น้ำตาลในเลือด (FBS)", f"{fbs:.0f}", "mg/dL", desc, c, bg, fig)
+        ranges = [0, 70, 100, 126, 300]
+        colors = ['#E3F2FD', '#E8F5E9', '#FFF3E0', '#FFEBEE']
+        
+        fig = create_shadow_gauge(fbs, 200, ranges, colors)
+        render_shadow_card("น้ำตาลในเลือด (FBS)", f"{fbs:.0f}", "mg/dL", desc, c, bg, fig)
     else:
         st.info("ไม่มีข้อมูล FBS")
 
@@ -240,8 +262,12 @@ def plot_gfr_gauge(person_data):
         desc = get_gfr_desc(gfr)
         c, bg = (THEME['success'], THEME['success_bg']) if "ปกติ" in desc else (THEME['warning'], THEME['warning_bg']) if "เล็กน้อย" in desc else (THEME['danger'], THEME['danger_bg'])
         
-        fig = create_premium_ring_chart(gfr, 120, c)
-        render_indicator_card("การทำงานของไต (GFR)", f"{gfr:.0f}", "mL/min", desc, c, bg, fig)
+        # Reverse ranges logic color manually mapped
+        ranges = [0, 60, 90, 140]
+        colors = ['#FFEBEE', '#FFF3E0', '#E8F5E9']
+        
+        fig = create_shadow_gauge(gfr, 140, ranges, colors)
+        render_shadow_card("การทำงานของไต (GFR)", f"{gfr:.0f}", "mL/min", desc, c, bg, fig)
     else:
         st.info("ไม่มีข้อมูล GFR")
 
@@ -405,13 +431,14 @@ def display_visualization_tab(person_data, history_df):
             st.caption("ℹ️ แถบยาวยิ่งแสดงถึงระดับความเสี่ยงที่สูงขึ้น")
             
     with col_ind:
-        with st.container(border=True):
+        # ใช้ st.container แบบไม่ใส่ border เพราะเรามีการ์ดเงาอยู่ข้างในแล้ว จะได้ไม่ซ้อนกัน
+        with st.container():
             st.markdown("##### 🎯 ตัวชี้วัดสำคัญ (Key Indicators)")
             c1, c2, c3 = st.columns(3)
+            # ใส่ Card ลงใน Column
             with c1: plot_bmi_gauge(person_data)
             with c2: plot_fbs_gauge(person_data)
             with c3: plot_gfr_gauge(person_data)
-            # st.caption("ℹ️ เกจแสดงค่าปัจจุบันเทียบกับช่วงปกติ (สีเขียว)")
 
     # 2. Trends
     with st.container(border=True):
