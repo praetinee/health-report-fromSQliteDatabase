@@ -182,7 +182,8 @@ def plot_audiogram(person_data):
     l_vals = [get_float(person_data, freq_cols[f][1]) for f in freqs]
 
     if all(v is None for v in r_vals) and all(v is None for v in l_vals):
-        st.info("ไม่มีข้อมูล Audiogram")
+        # --- CHANGE: Updated message ---
+        st.info("ไม่มีข้อมูลสมรรถภาพการได้ยิน")
         return
 
     fig = go.Figure()
@@ -206,7 +207,8 @@ def plot_lung_comparison(person_data):
     fev1_p = get_float(person_data, 'FEV1 predic')
 
     if fvc is None:
-        st.info("ไม่มีข้อมูลสมรรถภาพปอด (Spirometry)")
+        # --- CHANGE: Updated message ---
+        st.info("ไม่มีข้อมูลสมรรถภาพปอด")
         return
 
     cats = ['FVC', 'FEV1']
