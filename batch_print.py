@@ -92,63 +92,89 @@ def display_print_center_page(df):
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        # ตัวเลือกวันที่ตรวจ
-        all_dates = sorted(df['วันที่ตรวจ'].unique(), reverse=True)
-        # พยายามเลือกวันนี้เป็นค่าเริ่มต้น ถ้ามี
-        today_str = datetime.now().strftime('%Y-%m-%d') # หรือ format ที่ตรงกับ DB
-        # เนื่องจาก format วันที่ใน DB อาจหลากหลาย ให้ใช้ index 0 ไปก่อน
-        selected_date = st.selectbox("เลือกวันที่ตรวจ", ["(ทั้งหมด)"] + list(all_dates), index=0)
+        # --- CHANGED: ย้ายหน่วยงานมาช่องแรก ---
+        # Prepare department list (Ensure strings and unique for easier searching)
+        all_depts = sorted(df['หน่วยงาน'].dropna().astype(str).unique())
+        # ใช้ st.selectbox ซึ่งรองรับการพิมพ์ค้นหา (Fuzzy search) โดยธรรมชาติ
+        selected_dept = st.selectbox(
+            "1. เลือกหน่วยงาน", 
+            ["(ทั้งหมด)"] + list(all_depts),
+            index=0,
+            key="batch_select_dept"
+        )
 
     with col2:
-        # ตัวเลือกหน่วยงาน
-        all_depts = sorted(df['หน่วยงาน'].dropna().unique())
-        selected_dept = st.selectbox("เลือกหน่วยงาน", ["(ทั้งหมด)"] + list(all_depts))
+        # --- CHANGED: วันที่สัมพันธ์กับหน่วยงาน (Dependent Dropdown) ---
+        if selected_dept != "(ทั้งหมด)":
+            # กรอง df ชั่วคราวเพื่อหาเฉพาะวันที่ ที่หน่วยงานนั้นมาตรวจ
+            dept_filtered_df = df[df['หน่วยงาน'] == selected_dept]
+            available_dates = sorted(dept_filtered_df['วันที่ตรวจ'].dropna().astype(str).unique(), reverse=True)
+        else:
+            # ถ้าไม่เลือกหน่วยงาน ก็โชว์วันที่ทั้งหมดที่มีในระบบ
+            available_dates = sorted(df['วันที่ตรวจ'].dropna().astype(str).unique(), reverse=True)
+            
+        selected_date = st.selectbox(
+            "2. เลือกวันที่ตรวจ", 
+            ["(ทั้งหมด)"] + list(available_dates), 
+            index=0,
+            key="batch_select_date"
+        )
 
     with col3:
         # ตัวเลือกประเภทรายงานที่จะพิมพ์
-        report_type = st.selectbox("เลือกประเภทรายงาน", ["รายงานสุขภาพ (Main)", "รายงานสมรรถภาพ (Performance)"])
+        report_type = st.selectbox(
+            "3. เลือกประเภทรายงาน", 
+            ["รายงานสุขภาพ (Main)", "รายงานสมรรถภาพ (Performance)"],
+            key="batch_select_type"
+        )
 
     # --- 2. แสดงตารางรายชื่อ (Data Selection) ---
     st.subheader("2. เลือกรายชื่อผู้ป่วย")
 
-    # Filter Dataframe
+    # Filter Dataframe for display
     filtered_df = df.copy()
-    if selected_date != "(ทั้งหมด)":
-        filtered_df = filtered_df[filtered_df['วันที่ตรวจ'] == selected_date]
+    
+    # Filter by Dept first
     if selected_dept != "(ทั้งหมด)":
         filtered_df = filtered_df[filtered_df['หน่วยงาน'] == selected_dept]
+        
+    # Filter by Date
+    if selected_date != "(ทั้งหมด)":
+        filtered_df = filtered_df[filtered_df['วันที่ตรวจ'] == selected_date]
 
-    # เอาเฉพาะรายการล่าสุดของแต่ละคน (Unique HN) เพื่อไม่ให้ซ้ำซ้อนใน list
-    # เรียงตามปีล่าสุดก่อน
+    # เอาเฉพาะรายการล่าสุดของแต่ละคน (Unique HN)
     filtered_df = filtered_df.sort_values(by=['Year'], ascending=False)
     unique_patients_df = filtered_df.drop_duplicates(subset=['HN'])
     
     # เตรียมข้อมูลสำหรับ Data Editor
-    # เพิ่มคอลัมน์ 'เลือก' (Select) เป็น True โดย default
     display_df = unique_patients_df[['HN', 'ชื่อ-สกุล', 'หน่วยงาน', 'วันที่ตรวจ']].copy()
     display_df.insert(0, "เลือก", True) 
 
     # แสดง Data Editor
-    edited_df = st.data_editor(
-        display_df,
-        column_config={
-            "เลือก": st.column_config.CheckboxColumn(
-                "เลือกพิมพ์",
-                help="ติ๊กถูกเพื่อเลือกพิมพ์รายงานของคนนี้",
-                default=True,
-            )
-        },
-        disabled=["HN", "ชื่อ-สกุล", "หน่วยงาน", "วันที่ตรวจ"],
-        hide_index=True,
-        use_container_width=True,
-        height=400 
-    )
+    if display_df.empty:
+        st.warning("ไม่พบข้อมูลตามเงื่อนไขที่เลือก")
+        selected_hns = []
+        count_selected = 0
+    else:
+        edited_df = st.data_editor(
+            display_df,
+            column_config={
+                "เลือก": st.column_config.CheckboxColumn(
+                    "เลือกพิมพ์",
+                    help="ติ๊กถูกเพื่อเลือกพิมพ์รายงานของคนนี้",
+                    default=True,
+                )
+            },
+            disabled=["HN", "ชื่อ-สกุล", "หน่วยงาน", "วันที่ตรวจ"],
+            hide_index=True,
+            use_container_width=True,
+            height=400 
+        )
+        # ดึงรายชื่อที่ถูกเลือก
+        selected_hns = edited_df[edited_df['เลือก'] == True]['HN'].tolist()
+        count_selected = len(selected_hns)
 
-    # ดึงรายชื่อที่ถูกเลือก
-    selected_hns = edited_df[edited_df['เลือก'] == True]['HN'].tolist()
-    count_selected = len(selected_hns)
-
-    st.caption(f"จำนวนผู้ป่วยที่เลือก: {count_selected} ท่าน")
+        st.caption(f"จำนวนผู้ป่วยที่เลือก: {count_selected} ท่าน")
 
     # --- 3. ปุ่มดำเนินการ (Action) ---
     st.subheader("3. สั่งพิมพ์")
@@ -163,6 +189,7 @@ def display_print_center_page(df):
                     # เก็บลง Session State
                     st.session_state.batch_print_html = html_content
                     st.session_state.batch_print_ready = True
+                    st.rerun() # Rerun เพื่อให้ส่วนแสดงผลทำงาน
                 else:
                     st.error("ไม่สามารถสร้างรายงานได้ กรุณาลองใหม่")
 
