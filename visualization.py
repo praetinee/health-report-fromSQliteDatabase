@@ -36,24 +36,7 @@ THEME = {
 
 FONT_FAMILY = "Sarabun, sans-serif"
 
-# --- LOTTIE URLS ---
-LOTTIE_ASSETS = {
-    'heart': "https://lottie.host/88910080-8975-4c7b-852c-801180960999/999888777.json", 
-    'weight': "https://lottie.host/5b001638-468e-4782-93f3-952357718117/A0y5z55z5A.json",
-    'kidney': "https://lottie.host/a6d69570-5702-469a-b220-075020290043/p0f1g2h3i4.json",
-    'liver': "https://assets5.lottiefiles.com/packages/lf20_zfszhesy.json", 
-    'general': "https://assets9.lottiefiles.com/packages/lf20_5njp3vgg.json"
-}
-
 # --- HELPER FUNCTIONS ---
-
-def load_lottieurl(url: str):
-    """โหลด Lottie JSON จาก URL อย่างปลอดภัย"""
-    try:
-        r = requests.get(url, timeout=3)
-        if r.status_code != 200: return None
-        return r.json()
-    except: return None
 
 def get_float(person_data, key):
     val = person_data.get(key, "")
@@ -84,6 +67,49 @@ def apply_medical_layout(fig, title="", x_title="", y_title="", show_legend=True
 
     fig.update_layout(**layout_args)
     return fig
+
+# --- SCORING LOGIC (IMPROVED & MEDICALLY GROUNDED) ---
+
+def calculate_metric_score(val, metric_type):
+    """
+    คำนวณคะแนนสุขภาพ (0-100) โดยใช้การประมาณค่าช่วง (Interpolation) 
+    อ้างอิงตามเกณฑ์ทางการแพทย์ (Medical Guidelines)
+    """
+    if val is None: return 0
+    
+    if metric_type == 'BMI':
+        # เกณฑ์คนเอเชีย: ปกติ 18.5 - 22.9 (คะแนนเต็ม)
+        # น้อยกว่า 18.5 (ผอม), มากกว่า 23 (ท้วม), มากกว่า 25 (อ้วน), มากกว่า 30 (อ้วนมาก)
+        x = [15, 18.5, 20.75, 22.9, 23, 25, 30, 35] # ค่าจริง
+        y = [50, 90,   100,   100,  90, 70, 40, 10] # คะแนนที่ได้
+        return np.interp(val, x, y)
+        
+    elif metric_type == 'BP': # SBP (Systolic Blood Pressure)
+        # <120 (Optimal), 120-129 (Elevated), 130-139 (Stage 1), >=140 (Stage 2)
+        x = [90, 115, 120, 129, 130, 139, 140, 160, 180]
+        y = [90, 100, 95,  85,  75,  60,  50,  20,  0]
+        return np.interp(val, x, y)
+        
+    elif metric_type == 'FBS': # Fasting Blood Sugar
+        # 70-99 (Normal), 100-125 (Prediabetes), >=126 (Diabetes)
+        # <70 (Hypoglycemia Risk)
+        x = [50, 70, 99, 100, 125, 126, 200, 300]
+        y = [40, 100, 100, 90, 60,  40,  10,  0]
+        return np.interp(val, x, y)
+        
+    elif metric_type == 'LDL': # LDL Cholesterol
+        # <100 (Optimal), 100-129 (Near Opt), 130-159 (Borderline), 160-189 (High)
+        x = [0,  99,  100, 129, 130, 159, 160, 190]
+        y = [100, 100, 90,  80,  70,  50,  40,  10]
+        return np.interp(val, x, y)
+        
+    elif metric_type == 'GFR': # eGFR (Kidney Function)
+        # >90 (G1), 60-89 (G2), 45-59 (G3a), 30-44 (G3b), 15-29 (G4), <15 (G5)
+        x = [0, 15, 30, 45, 60, 90, 120]
+        y = [0, 10, 30, 50, 70, 100, 100]
+        return np.interp(val, x, y)
+        
+    return 0
 
 # --- ORIGINAL FUNCTIONS (RESTORED) ---
 
@@ -190,58 +216,56 @@ def plot_lung_comparison(person_data):
     fig.update_layout(barmode='group')
     st.plotly_chart(fig, use_container_width=True)
 
-
-# --- NEW FUNCTIONS FOR KEY INDICATORS ---
-
-def calculate_health_score(val, target_min, target_max, reverse=False):
-    if val is None: return 0
-    if not reverse: 
-        if target_max > 1000: # Threshold logic
-            if val >= target_min: return 100
-            return max(0, (val / target_min) * 100)
-        else: # Range logic
-            if target_min <= val <= target_max: return 100
-            dist = min(abs(val - target_min), abs(val - target_max))
-            return max(0, 100 - (dist * 5)) 
-    else: # Lower is better
-        if val <= target_min: return 100
-        if val >= target_max * 1.5: return 0 
-        slope = 100 / ((target_max * 1.5) - target_min)
-        return max(0, 100 - ((val - target_min) * slope))
-
 # --- HEALTH SHIELD (RADAR CHART) ---
 def plot_health_radar(person_data):
+    # Prepare Values
     bmi = get_float(person_data, 'BMI')
     if bmi is None:
         w, h = get_float(person_data, 'น้ำหนัก'), get_float(person_data, 'ส่วนสูง')
         if w and h: bmi = w / ((h/100)**2)
     else:
-        bmi = 0 # Default if calculation fails
+        bmi = None # Reset if calculation fails logic
 
     sbp = get_float(person_data, 'SBP')
     fbs = get_float(person_data, 'FBS')
     ldl = get_float(person_data, 'LDL')
     gfr = get_float(person_data, 'GFR')
     
+    # Calculate Scores using new precise logic
     scores = [
-        calculate_health_score(bmi, 18.5, 23), 
-        calculate_health_score(sbp, 110, 120, reverse=True),
-        calculate_health_score(fbs, 70, 100, reverse=True),
-        calculate_health_score(ldl, 0, 100, reverse=True),
-        calculate_health_score(gfr, 90, 200)
+        calculate_metric_score(bmi, 'BMI'), 
+        calculate_metric_score(sbp, 'BP'),
+        calculate_metric_score(fbs, 'FBS'),
+        calculate_metric_score(ldl, 'LDL'),
+        calculate_metric_score(gfr, 'GFR')
     ]
     
-    categories = ['รูปร่าง (BMI)', 'ความดัน (BP)', 'ระดับน้ำตาล', 'ไขมัน (LDL)', 'ไต (GFR)']
+    # Display Values for Hover (Raw Data)
+    display_vals = [
+        f"{bmi:.1f}" if bmi else "N/A",
+        f"{int(sbp)}" if sbp else "N/A",
+        f"{int(fbs)}" if fbs else "N/A",
+        f"{int(ldl)}" if ldl else "N/A",
+        f"{int(gfr)}" if gfr else "N/A"
+    ]
+
+    categories = [
+        f'รูปร่าง (BMI)', 
+        f'ความดัน (BP)', 
+        f'ระดับน้ำตาล', 
+        f'ไขมัน (LDL)', 
+        f'ไต (GFR)'
+    ]
 
     fig = go.Figure()
     
-    # Background Ideal Shape
+    # Background Ideal Shape (100%)
     fig.add_trace(go.Scatterpolar(
         r=[100]*5,
         theta=categories,
         fill='toself',
-        name='ค่าสมบูรณ์แบบ',
-        line=dict(color='rgba(0, 200, 83, 0.2)', dash='dot'),
+        name='ค่าสมบูรณ์แบบ (Ideal)',
+        line=dict(color='rgba(0, 200, 83, 0.3)', dash='dot', width=1),
         fillcolor='rgba(0, 200, 83, 0.05)',
         hoverinfo='skip'
     ))
@@ -254,20 +278,31 @@ def plot_health_radar(person_data):
         name='สุขภาพของคุณ',
         line=dict(color=THEME['primary'], width=3),
         fillcolor='rgba(0, 121, 107, 0.4)',
-        hovertemplate='%{theta}: <b>%{r:.0f}%</b> คะแนน<extra></extra>'
+        hovertemplate='<b>%{theta}</b><br>ค่าจริง: %{text}<br>คะแนน: %{r:.0f}/100<extra></extra>',
+        text=display_vals 
     ))
 
     fig.update_layout(
         polar=dict(
-            radialaxis=dict(visible=True, range=[0, 100], showticklabels=False),
+            radialaxis=dict(
+                visible=True, 
+                range=[0, 100], 
+                showticklabels=False, # Hide numbers on axis to look cleaner
+                gridcolor=THEME['grid']
+            ),
+            angularaxis=dict(
+                tickfont=dict(size=14, family=FONT_FAMILY, color=THEME['text_dark']),
+                gridcolor=THEME['grid']
+            ),
             bgcolor='rgba(0,0,0,0)'
         ),
         showlegend=True,
-        title=dict(text="<b>🛡️ Health Shield (เกราะป้องกันสุขภาพ)</b>", font=dict(family=FONT_FAMILY, size=18), x=0.1),
-        margin=dict(t=60, b=40, l=40, r=40),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        title=dict(text="<b>🛡️ Health Shield (เกราะป้องกันสุขภาพ)</b>", font=dict(family=FONT_FAMILY, size=20), x=0.1),
+        margin=dict(t=80, b=40, l=60, r=60),
         font=dict(family=FONT_FAMILY),
         paper_bgcolor='rgba(0,0,0,0)',
-        height=400 # ปรับความสูงให้เหมาะสม
+        height=450
     )
     
     st.plotly_chart(fig, use_container_width=True)
@@ -276,7 +311,7 @@ def plot_health_radar(person_data):
 # --- MAIN DISPLAY FUNCTION ---
 
 def display_visualization_tab(person_data, history_df):
-    """Main Tab Display (Updated: Only Health Shield at the top)"""
+    """Main Tab Display"""
     
     st.markdown(f"""
     <style>
@@ -303,9 +338,12 @@ def display_visualization_tab(person_data, history_df):
         with c1:
             st.markdown("### 🛡️ ภาพรวมสุขภาพ (Health Shield)")
             st.markdown("""
-            กราฟนี้แสดงคะแนนสุขภาพใน 5 ด้านหลัก:
-            - **เต็มกราฟ (100%)**: สุขภาพดีเยี่ยม
-            - **กราฟเว้าแหว่ง**: จุดที่ต้องดูแลเป็นพิเศษ
+            กราฟนี้แสดงคะแนนสุขภาพใน 5 ด้านหลัก (เต็ม 100):
+            
+            * **พื้นที่สีเขียวเต็มกราฟ** = สุขภาพดีเยี่ยม
+            * **กราฟเว้าแหว่ง** = จุดเสี่ยงที่ต้องดูแล
+            
+            *เกณฑ์การคำนวณอ้างอิงมาตรฐานทางการแพทย์ (เช่น ADA, NCEP ATP III)*
             """)
         with c2:
             plot_health_radar(person_data)
