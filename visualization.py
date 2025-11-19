@@ -79,34 +79,46 @@ def calculate_metric_score(val, metric_type):
     
     if metric_type == 'BMI':
         # เกณฑ์คนเอเชีย: ปกติ 18.5 - 22.9 (คะแนนเต็ม)
-        # น้อยกว่า 18.5 (ผอม), มากกว่า 23 (ท้วม), มากกว่า 25 (อ้วน), มากกว่า 30 (อ้วนมาก)
-        x = [15, 18.5, 20.75, 22.9, 23, 25, 30, 35] # ค่าจริง
-        y = [50, 90,   100,   100,  90, 70, 40, 10] # คะแนนที่ได้
+        x = [15, 18.5, 20.75, 22.9, 23, 25, 30, 35] 
+        y = [50, 90,   100,   100,  90, 70, 40, 10] 
         return np.interp(val, x, y)
         
-    elif metric_type == 'BP': # SBP (Systolic Blood Pressure)
-        # <120 (Optimal), 120-129 (Elevated), 130-139 (Stage 1), >=140 (Stage 2)
+    elif metric_type == 'BP': # SBP
+        # <120 (Optimal)
         x = [90, 115, 120, 129, 130, 139, 140, 160, 180]
         y = [90, 100, 95,  85,  75,  60,  50,  20,  0]
         return np.interp(val, x, y)
         
-    elif metric_type == 'FBS': # Fasting Blood Sugar
-        # 70-99 (Normal), 100-125 (Prediabetes), >=126 (Diabetes)
-        # <70 (Hypoglycemia Risk)
+    elif metric_type == 'FBS': # Sugar
+        # 70-99 (Normal)
         x = [50, 70, 99, 100, 125, 126, 200, 300]
         y = [40, 100, 100, 90, 60,  40,  10,  0]
         return np.interp(val, x, y)
         
-    elif metric_type == 'LDL': # LDL Cholesterol
-        # <100 (Optimal), 100-129 (Near Opt), 130-159 (Borderline), 160-189 (High)
+    elif metric_type == 'LDL': # Cholesterol
+        # <100 (Optimal)
         x = [0,  99,  100, 129, 130, 159, 160, 190]
         y = [100, 100, 90,  80,  70,  50,  40,  10]
         return np.interp(val, x, y)
         
-    elif metric_type == 'GFR': # eGFR (Kidney Function)
-        # >90 (G1), 60-89 (G2), 45-59 (G3a), 30-44 (G3b), 15-29 (G4), <15 (G5)
+    elif metric_type == 'GFR': # Kidney
+        # >90 (Normal)
         x = [0, 15, 30, 45, 60, 90, 120]
         y = [0, 10, 30, 50, 70, 100, 100]
+        return np.interp(val, x, y)
+        
+    elif metric_type == 'Liver': # SGPT (ALT)
+        # ปกติ < 40 U/L
+        # 40-80 (สูงเล็กน้อย), >80 (สูงปานกลาง)
+        x = [0, 35, 40, 50, 80, 120]
+        y = [100, 100, 90, 70, 40, 0]
+        return np.interp(val, x, y)
+        
+    elif metric_type == 'Uric': # Uric Acid
+        # ปกติ 3.5 - 7.2 mg/dL
+        # > 7.0 เริ่มเสี่ยง
+        x = [0, 6, 7, 8, 9, 10]
+        y = [100, 100, 90, 70, 50, 0]
         return np.interp(val, x, y)
         
     return 0
@@ -182,7 +194,6 @@ def plot_audiogram(person_data):
     l_vals = [get_float(person_data, freq_cols[f][1]) for f in freqs]
 
     if all(v is None for v in r_vals) and all(v is None for v in l_vals):
-        # --- CHANGE: Updated message ---
         st.info("ไม่มีข้อมูลสมรรถภาพการได้ยิน")
         return
 
@@ -207,7 +218,6 @@ def plot_lung_comparison(person_data):
     fev1_p = get_float(person_data, 'FEV1 predic')
 
     if fvc is None:
-        # --- CHANGE: Updated message ---
         st.info("ไม่มีข้อมูลสมรรถภาพปอด")
         return
 
@@ -232,6 +242,9 @@ def plot_health_radar(person_data):
     fbs = get_float(person_data, 'FBS')
     ldl = get_float(person_data, 'LDL')
     gfr = get_float(person_data, 'GFR')
+    # --- ADDED: New Metrics ---
+    sgpt = get_float(person_data, 'SGPT')
+    uric = get_float(person_data, 'Uric Acid')
     
     # Define Data Structure for Iteration
     # เราใช้ตรรกะ Dynamic: ถ้าค่าไหนไม่มี (None) ให้ตัดแกนนั้นทิ้งไปเลย กราฟจะได้ไม่แหว่งเป็น 0
@@ -240,7 +253,10 @@ def plot_health_radar(person_data):
         {'type': 'BP', 'val': sbp, 'label': 'ความดัน (BP)', 'fmt': '{:.0f}'},
         {'type': 'FBS', 'val': fbs, 'label': 'ระดับน้ำตาล', 'fmt': '{:.0f}'},
         {'type': 'LDL', 'val': ldl, 'label': 'ไขมัน (LDL)', 'fmt': '{:.0f}'},
-        {'type': 'GFR', 'val': gfr, 'label': 'ไต (GFR)', 'fmt': '{:.0f}'}
+        {'type': 'GFR', 'val': gfr, 'label': 'ไต (GFR)', 'fmt': '{:.0f}'},
+        # Added configuration
+        {'type': 'Liver', 'val': sgpt, 'label': 'ตับ (SGPT)', 'fmt': '{:.0f}'},
+        {'type': 'Uric', 'val': uric, 'label': 'กรดยูริก', 'fmt': '{:.1f}'}
     ]
     
     scores = []
@@ -255,12 +271,11 @@ def plot_health_radar(person_data):
             display_vals.append(m['fmt'].format(m['val']))
             
     if len(scores) < 3:
-        # กรณีข้อมูลน้อยกว่า 3 จุด กราฟ Radar อาจดูแปลกๆ (เป็นเส้นตรง) แต่ก็ดีกว่าแสดง 0 ครับ
         pass 
 
     fig = go.Figure()
     
-    # Background Ideal Shape (100%) - Must match active categories
+    # Background Ideal Shape (100%)
     fig.add_trace(go.Scatterpolar(
         r=[100] * len(categories),
         theta=categories,
@@ -288,7 +303,7 @@ def plot_health_radar(person_data):
             radialaxis=dict(
                 visible=True, 
                 range=[0, 100], 
-                showticklabels=False, # Hide numbers on axis to look cleaner
+                showticklabels=False, 
                 gridcolor=THEME['grid']
             ),
             angularaxis=dict(
@@ -303,7 +318,7 @@ def plot_health_radar(person_data):
         margin=dict(t=80, b=40, l=60, r=60),
         font=dict(family=FONT_FAMILY),
         paper_bgcolor='rgba(0,0,0,0)',
-        height=450
+        height=500 # เพิ่มความสูงนิดหน่อยเผื่อ label เยอะขึ้น
     )
     
     st.plotly_chart(fig, use_container_width=True)
@@ -339,7 +354,7 @@ def display_visualization_tab(person_data, history_df):
         with c1:
             st.markdown("### 🛡️ ภาพรวมสุขภาพ (Health Shield)")
             st.markdown("""
-            กราฟนี้แสดงคะแนนสุขภาพใน 5 ด้านหลัก (เต็ม 100):
+            กราฟนี้แสดงคะแนนสุขภาพในด้านต่างๆ (เต็ม 100):
             
             * **พื้นที่สีเขียวเต็มกราฟ** = สุขภาพดีเยี่ยม
             * **กราฟเว้าแหว่ง** = จุดเสี่ยงที่ต้องดูแล
