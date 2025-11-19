@@ -205,7 +205,9 @@ def plot_lung_comparison(person_data):
     fev1 = get_float(person_data, 'FEV1')
     fev1_p = get_float(person_data, 'FEV1 predic')
 
-    if fvc is None: return
+    if fvc is None:
+        st.info("ไม่มีข้อมูลสมรรถภาพปอด (Spirometry)")
+        return
 
     cats = ['FVC', 'FEV1']
     fig = go.Figure()
