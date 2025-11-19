@@ -95,7 +95,13 @@ def authentication_flow(df):
         html, body, [class*="st-"], h1, h2, h3, h4, h5, h6, p, label, button, input, div {
             font-family: 'Sarabun', sans-serif !important;
         }
-        .block-container { padding-top: 3rem !important; }
+        
+        /* Center the main block content */
+        .block-container {
+            padding-top: 3rem !important;
+        }
+
+        /* Style the container for login */
         div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] {
             background-color: var(--background-color);
             color: var(--text-color);
@@ -103,7 +109,35 @@ def authentication_flow(df):
             border-radius: 10px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
-        .auth-header { text-align: center; padding-bottom: 1rem; }
+        
+        .auth-header {
+            text-align: center;
+            padding-bottom: 1rem;
+        }
+
+        /* --- START OF CHANGE: Custom Button Styling (Green) --- */
+        .stButton>button {
+            background-color: #00796B; /* สีเขียวหลัก */
+            color: white !important;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            width: 100%;
+            height: 3rem;
+            padding: 0.5rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+            transition: background-color 0.2s, transform 0.2s;
+        }
+        .stButton>button:hover {
+            background-color: #00695C; /* สีเขียวเข้มเมื่อเมาส์ชี้ */
+            color: white !important;
+            transform: translateY(-1px);
+        }
+        .stButton>button:active {
+            background-color: #004D40;
+        }
+        /* --- END OF CHANGE --- */
+        
     </style>
     """, unsafe_allow_html=True)
 
@@ -124,10 +158,16 @@ def pdpa_consent_page():
     st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
+        
         html, body, [class*="st-"], h1, h2, h3, h4, h5, h6, p, label, button, input, div, li, ul {
             font-family: 'Sarabun', sans-serif !important;
         }
-        .block-container { padding-top: 3rem !important; }
+        
+        .block-container {
+            padding-top: 3rem !important;
+        }
+
+        /* Style the container for consent */
         div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] {
              background-color: var(--background-color);
              color: var(--text-color);
@@ -135,6 +175,7 @@ def pdpa_consent_page():
              border-radius: 10px;
              box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
+        
         h2 { text-align: center; color: var(--text-color); }
         .consent-text {
             height: 300px; 
@@ -147,7 +188,19 @@ def pdpa_consent_page():
             text-align: left;
             color: var(--text-color);
         }
-        .stButton>button { width: 100%; height: 3rem; }
+        /* Button style reuse */
+        .stButton>button {
+            background-color: #00796B;
+            color: white !important;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            width: 100%;
+            height: 3rem;
+        }
+        .stButton>button:hover {
+            background-color: #00695C;
+        }
     </style>
     """, unsafe_allow_html=True)
     
