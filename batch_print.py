@@ -7,14 +7,52 @@ from datetime import datetime
 # --- Import ฟังก์ชันที่ถูกแยกส่วนมาจากไฟล์พิมพ์ ---
 from print_report import render_printable_report_body, get_main_report_css
 from print_performance_report import render_performance_report_body, get_performance_report_css
+# นำเข้าฟังก์ชันเช็คข้อมูลจากไฟล์อื่นเพื่อนำมาใช้ตรวจสอบสถานะ
+from print_performance_report import has_vision_data, has_hearing_data, has_lung_data
+
+# --- Helper Functions สำหรับตรวจสอบความพร้อมข้อมูลในไฟล์นี้ ---
+def is_empty(val):
+    return pd.isna(val) or str(val).strip().lower() in ["", "-", "none", "nan", "null"]
+
+def has_basic_health_data(person_data):
+    """ตรวจสอบว่ามีข้อมูลสุขภาพพื้นฐาน (Main Report) หรือไม่"""
+    # เช็คคอลัมน์หลักๆ ของ Lab และ Vitals
+    key_indicators = ['FBS', 'CHOL', 'HCT', 'Cr', 'WBC (cumm)', 'SBP', 'Hb(%)']
+    return any(not is_empty(person_data.get(key)) for key in key_indicators)
+
+def check_data_readiness(person_data, report_type):
+    """
+    ตรวจสอบสถานะความพร้อมของข้อมูลตามประเภทรายงาน
+    Returns: (is_ready: bool, status_text: str)
+    """
+    if report_type == "รายงานสุขภาพ (Main)":
+        if has_basic_health_data(person_data):
+            return True, "✅ พร้อมพิมพ์"
+        else:
+            return False, "⚠️ ไม่มีผลเลือด/ร่างกาย"
+            
+    elif report_type == "รายงานสมรรถภาพ (Performance)":
+        # เช็คว่ามีผลตรวจทางอาชีวเวชศาสตร์อย่างน้อย 1 อย่างหรือไม่
+        has_vis = has_vision_data(person_data)
+        has_hear = has_hearing_data(person_data)
+        has_lung = has_lung_data(person_data)
+        
+        if has_vis or has_hear or has_lung:
+            details = []
+            if has_vis: details.append("ตา")
+            if has_hear: details.append("หู")
+            if has_lung: details.append("ปอด")
+            return True, f"✅ มีผล: {','.join(details)}"
+        else:
+            return False, "⚠️ ไม่มีผลสมรรถภาพ"
+            
+    return False, "❓ ไม่ระบุ"
 
 def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข้อมูลปีล่าสุดของแต่ละคน"):
     """
     สร้าง HTML ฉบับยาวสำหรับคนไข้หลายคน โดยมี Page Break คั่น
     """
     report_bodies = []
-    
-    # CSS สำหรับ Page Break
     page_break_div = "<div style='page-break-after: always;'></div>"
     
     # เลือกฟังก์ชัน Body และ CSS ที่จะใช้
@@ -28,42 +66,44 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
 
     progress_bar = st.progress(0)
     total_patients = len(selected_hns)
+    skipped_count = 0
     
     for i, hn in enumerate(selected_hns):
         try:
-            # อัพเดท Progress
-            progress_bar.progress((i + 1) / total_patients, text=f"กำลังสร้างรายงานคนที่ {i+1}/{total_patients} (HN: {hn})")
+            progress_bar.progress((i + 1) / total_patients, text=f"กำลังตรวจสอบและสร้างรายงานคนที่ {i+1}/{total_patients} (HN: {hn})")
             
             person_history_df = df[df['HN'] == hn].copy()
             if person_history_df.empty:
+                skipped_count += 1
                 continue
 
-            # ตรรกะการเลือกปี (ปัจจุบันใช้ปีล่าสุดเสมอ)
-            if year_logic == "ใช้ข้อมูลปีล่าสุดของแต่ละคน":
-                latest_year_series = person_history_df.sort_values(by='Year', ascending=False).iloc[0]
-                person_data = latest_year_series.to_dict()
-            else:
-                # เผื่อไว้สำหรับ logic อื่น
-                latest_year_series = person_history_df.sort_values(by='Year', ascending=False).iloc[0]
-                person_data = latest_year_series.to_dict()
+            # เลือกข้อมูลปีล่าสุด
+            latest_year_series = person_history_df.sort_values(by='Year', ascending=False).iloc[0]
+            person_data = latest_year_series.to_dict()
 
-            # สร้างเนื้อหา HTML สำหรับคนไข้คนนี้
+            # --- Double Check: ตรวจสอบความพร้อมข้อมูลอีกครั้งก่อนสร้าง ---
+            is_ready, _ = check_data_readiness(person_data, report_type)
+            if not is_ready:
+                # ถ้าข้อมูลไม่พร้อม ข้ามไปเลยเพื่อป้องกันการพิมพ์หน้าว่างเปล่า
+                skipped_count += 1
+                continue
+
+            # สร้างเนื้อหา HTML
             body = render_body_func(person_data, person_history_df)
             report_bodies.append(body)
 
         except Exception as e:
-            st.error(f"เกิดข้อผิดพลาดในการสร้างรายงานสำหรับ HN: {hn} - {e}")
+            st.error(f"เกิดข้อผิดพลาด HN: {hn} - {e}")
             continue 
 
-    progress_bar.empty() # ลบ progress bar เมื่อเสร็จ
+    progress_bar.empty()
 
     if not report_bodies:
-        return None
+        return None, skipped_count
 
-    # รวม HTML ของทุกคนเข้าด้วยกัน คั่นด้วยตัวแบ่งหน้า
+    # รวม HTML
     all_bodies = page_break_div.join(report_bodies)
     
-    # สร้างหน้า HTML ที่สมบูรณ์ (CSS + All Bodies)
     full_html = f"""
     <!DOCTYPE html>
     <html lang="th">
@@ -77,7 +117,7 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
     </body>
     </html>
     """
-    return full_html
+    return full_html, skipped_count
 
 def display_print_center_page(df):
     """
@@ -92,10 +132,7 @@ def display_print_center_page(df):
     col1, col2, col3 = st.columns([1.5, 1.5, 1])
     
     with col1:
-        # --- CHANGED: ใช้ Multiselect แทน Selectbox ---
-        # ทำให้เหมือนช่อง Search Box พิมพ์แล้วขึ้นเลย และเลือกได้หลายแผนกด้วย
         all_depts = sorted(df['หน่วยงาน'].dropna().astype(str).str.strip().unique())
-        
         selected_depts = st.multiselect(
             "1. ค้นหาหน่วยงาน (พิมพ์ชื่อได้เลย)", 
             options=all_depts,
@@ -104,13 +141,10 @@ def display_print_center_page(df):
         )
 
     with col2:
-        # --- CHANGED: วันที่สัมพันธ์กับ "หลาย" หน่วยงาน ---
         if selected_depts:
-            # ถ้ามีการเลือกหน่วยงาน (1 หรือหลายอัน) -> กรองเอาเฉพาะวันที่ของหน่วยงานเหล่านั้น
             dept_filtered_df = df[df['หน่วยงาน'].astype(str).str.strip().isin(selected_depts)]
             available_dates = sorted(dept_filtered_df['วันที่ตรวจ'].dropna().astype(str).unique(), reverse=True)
         else:
-            # ถ้าไม่เลือก (คือเอาทั้งหมด) -> โชว์วันที่ทั้งหมดที่มีในระบบ
             available_dates = sorted(df['วันที่ตรวจ'].dropna().astype(str).unique(), reverse=True)
             
         selected_date = st.selectbox(
@@ -127,31 +161,43 @@ def display_print_center_page(df):
             key="batch_select_type"
         )
 
-    # --- 2. แสดงตารางรายชื่อ (Data Selection) ---
+    # --- 2. แสดงตารางรายชื่อ (Data Selection with Smart Status) ---
     st.subheader("2. เลือกรายชื่อผู้ป่วย")
 
-    # Filter Dataframe for display
+    # Filter Dataframe
     filtered_df = df.copy()
-    
-    # Filter by Depts (รองรับหลายหน่วยงาน)
     if selected_depts:
         filtered_df = filtered_df[filtered_df['หน่วยงาน'].astype(str).str.strip().isin(selected_depts)]
-        
-    # Filter by Date
     if selected_date != "(ทั้งหมด)":
         filtered_df = filtered_df[filtered_df['วันที่ตรวจ'].astype(str) == selected_date]
 
-    # เอาเฉพาะรายการล่าสุดของแต่ละคน (Unique HN)
+    # เอาเฉพาะรายการล่าสุดของแต่ละคน
     filtered_df = filtered_df.sort_values(by=['Year'], ascending=False)
     unique_patients_df = filtered_df.drop_duplicates(subset=['HN'])
     
-    # เตรียมข้อมูลสำหรับ Data Editor
+    # เตรียมข้อมูลสำหรับแสดงผล
     display_df = unique_patients_df[['HN', 'ชื่อ-สกุล', 'หน่วยงาน', 'วันที่ตรวจ']].copy()
     
-    # เรียงลำดับตามชื่อเพื่อให้อ่านง่าย
-    display_df = display_df.sort_values(by='ชื่อ-สกุล')
+    # --- SMART LOGIC: ตรวจสอบสถานะข้อมูลแต่ละคน ---
+    status_list = []
+    ready_list = []
     
-    display_df.insert(0, "เลือก", True) 
+    for _, row in display_df.iterrows():
+        # ต้องดึง row เต็มๆ จาก df เดิมมาเช็ค เพราะ display_df ตัดคอลัมน์ออกไปแล้ว
+        full_data_row = unique_patients_df.loc[unique_patients_df['HN'] == row['HN']].iloc[0].to_dict()
+        is_ready, status_text = check_data_readiness(full_data_row, report_type)
+        status_list.append(status_text)
+        ready_list.append(is_ready)
+    
+    display_df['สถานะ'] = status_list
+    display_df['เลือก'] = ready_list # Default เลือกเฉพาะคนที่พร้อม (True)
+
+    # เรียงลำดับ: เอาคนที่พร้อม (True) ขึ้นก่อน, แล้วเรียงตามชื่อ
+    display_df = display_df.sort_values(by=['เลือก', 'ชื่อ-สกุล'], ascending=[False, True])
+    
+    # ย้ายคอลัมน์ 'เลือก' และ 'สถานะ' มาไว้หน้าสุด
+    cols = ['เลือก', 'สถานะ', 'HN', 'ชื่อ-สกุล', 'หน่วยงาน', 'วันที่ตรวจ']
+    display_df = display_df[cols]
 
     # แสดง Data Editor
     if display_df.empty:
@@ -162,22 +208,25 @@ def display_print_center_page(df):
         edited_df = st.data_editor(
             display_df,
             column_config={
-                "เลือก": st.column_config.CheckboxColumn(
-                    "เลือกพิมพ์",
-                    help="ติ๊กถูกเพื่อเลือกพิมพ์รายงานของคนนี้",
-                    default=True,
-                )
+                "เลือก": st.column_config.CheckboxColumn("เลือกพิมพ์", default=False),
+                "สถานะ": st.column_config.TextColumn("สถานะข้อมูล", help="✅=พร้อมพิมพ์, ⚠️=ไม่มีข้อมูล", disabled=True),
+                "HN": st.column_config.TextColumn("HN", disabled=True),
+                "ชื่อ-สกุล": st.column_config.TextColumn("ชื่อ-สกุล", disabled=True),
+                "หน่วยงาน": st.column_config.TextColumn("หน่วยงาน", disabled=True),
+                "วันที่ตรวจ": st.column_config.TextColumn("วันที่ตรวจ", disabled=True),
             },
-            disabled=["HN", "ชื่อ-สกุล", "หน่วยงาน", "วันที่ตรวจ"],
             hide_index=True,
             use_container_width=True,
             height=400 
         )
+        
         # ดึงรายชื่อที่ถูกเลือก
         selected_hns = edited_df[edited_df['เลือก'] == True]['HN'].tolist()
         count_selected = len(selected_hns)
 
-        st.caption(f"จำนวนผู้ป่วยที่เลือก: {count_selected} ท่าน")
+        # สรุปยอด
+        count_ready = sum(ready_list)
+        st.caption(f"พบผู้ป่วยทั้งหมด {len(display_df)} คน | ข้อมูลพร้อมพิมพ์ ✅ {count_ready} คน | เลือกพิมพ์ {count_selected} คน")
 
     # --- 3. ปุ่มดำเนินการ (Action) ---
     st.subheader("3. สั่งพิมพ์")
@@ -187,19 +236,21 @@ def display_print_center_page(df):
     with col_btn_1:
         if st.button(f"🖨️ สร้างรายงาน ({count_selected} ท่าน)", type="primary", use_container_width=True, disabled=(count_selected == 0)):
             if count_selected > 0:
-                html_content = generate_batch_html(df, selected_hns, report_type)
+                html_content, skipped = generate_batch_html(df, selected_hns, report_type)
+                
                 if html_content:
-                    # เก็บลง Session State
                     st.session_state.batch_print_html = html_content
                     st.session_state.batch_print_ready = True
-                    st.rerun() # Rerun เพื่อให้ส่วนแสดงผลทำงาน
+                    if skipped > 0:
+                        st.warning(f"สร้างรายงานสำเร็จ! (แต่ข้ามไป {skipped} คน เนื่องจากไม่มีข้อมูลผลตรวจ)")
+                    else:
+                        st.success("สร้างรายงานสำเร็จครบถ้วน!")
+                    st.rerun()
                 else:
-                    st.error("ไม่สามารถสร้างรายงานได้ กรุณาลองใหม่")
+                    st.error("ไม่สามารถสร้างรายงานได้ (อาจไม่มีข้อมูลผลตรวจในรายชื่อที่เลือกเลย)")
 
     # --- 4. ส่วนแสดงผลการพิมพ์ (Hidden Print Trigger) ---
     if st.session_state.get("batch_print_ready", False):
-        st.success("✅ สร้างรายงานเสร็จสิ้น! กำลังเปิดหน้าต่างพิมพ์...")
-        
         # JavaScript เพื่อสั่งพิมพ์ทันที
         html_content = st.session_state.batch_print_html
         escaped_html = json.dumps(html_content)
@@ -229,6 +280,4 @@ def display_print_center_page(df):
         </script>
         """
         st.components.v1.html(print_script, height=0, width=0)
-        
-        # Reset state เพื่อไม่ให้พิมพ์ซ้ำถ้าแค่ refresh หน้า
         st.session_state.batch_print_ready = False
