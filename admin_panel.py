@@ -22,7 +22,7 @@ from print_report import (
     generate_doctor_opinion
 )
 
-# --- Helper Functions ---
+# --- Helper Functions (รวมไว้ในนี้เพื่อให้ทำงานได้สมบูรณ์และ app.py เรียกใช้ได้) ---
 
 def is_empty(val):
     """Check if a value is empty, null, or whitespace."""
@@ -126,6 +126,7 @@ def is_urine_abnormal(test_name, value, normal_range):
     return False
 
 def render_urine_section(person_data, sex, year_selected, footer_html=None):
+    """Renders the urinalysis section."""
     urine_data = [("สี (Colour)", person_data.get("Color", "-"), "Yellow, Pale Yellow"), ("น้ำตาล (Sugar)", person_data.get("sugar", "-"), "Negative"), ("โปรตีน (Albumin)", person_data.get("Alb", "-"), "Negative, trace"), ("กรด-ด่าง (pH)", person_data.get("pH", "-"), "5.0 - 8.0"), ("ความถ่วงจำเพาะ (Sp.gr)", person_data.get("Spgr", "-"), "1.003 - 1.030"), ("เม็ดเลือดแดง (RBC)", person_data.get("RBC1", "-"), "0 - 2 cell/HPF"), ("เม็ดเลือดขาว (WBC)", person_data.get("WBC1", "-"), "0 - 5 cell/HPF"), ("เซลล์เยื่อบุผิว (Squam.epit.)", person_data.get("SQ-epi", "-"), "0 - 10 cell/HPF"), ("อื่นๆ", person_data.get("ORTER", "-"), "-")]
     df_urine = pd.DataFrame(urine_data, columns=["การตรวจ", "ผลตรวจ", "ค่าปกติ"])
     html_content = render_lab_table_html("ผลการตรวจปัสสาวะ (Urinalysis)", ["การตรวจ", "ผล", "ค่าปกติ"], [[(row["การตรวจ"], is_urine_abnormal(row["การตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"])), (safe_value(row["ผลตรวจ"]), is_urine_abnormal(row["การตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"])), (row["ค่าปกติ"], is_urine_abnormal(row["การตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"]))] for _, row in df_urine.iterrows()], table_class="lab-table", footer_html=footer_html)
@@ -825,10 +826,10 @@ def display_admin_panel(df):
                         with col_sel_year:
                             selected_year = st.selectbox("เลือกปี พ.ศ.", options=available_years, index=year_idx, format_func=lambda y: f"พ.ศ. {y}", key="admin_year_select")
                         
-                        # --- START CHANGE: Move Print Buttons here (inside year selection block) ---
-                        # Add spacing
-                        st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
-                        
+                        # --- START CHANGE: Move Print Buttons directly under Year Select, remove container ---
+                        # Add some margin top to separate from dropdown
+                        st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
+
                         col_btn_main, col_btn_perf = st.columns(2)
                         with col_btn_main:
                              if st.button("พิมพ์รายงานสุขภาพ (Main)", use_container_width=True, key="admin_print_main", type="primary"):
@@ -837,8 +838,8 @@ def display_admin_panel(df):
                              if st.button("พิมพ์รายงานสมรรถภาพ (Perf)", use_container_width=True, key="admin_print_perf", type="primary"):
                                  st.session_state.admin_print_performance_trigger = True
                         
-                        # Add divider closer to buttons
-                        st.markdown("<hr style='margin-top: 5px; margin-bottom: 15px; border-top: 1px solid #ddd;'>", unsafe_allow_html=True)
+                        # Add divider right after buttons
+                        st.markdown("<hr style='margin-top: 0px; margin-bottom: 15px; border-top: 1px solid #ddd;'>", unsafe_allow_html=True)
                         # --- END CHANGE ---
 
                         if selected_year != st.session_state.admin_selected_year:
@@ -858,8 +859,8 @@ def display_admin_panel(df):
 
         # --- Display Report Content ---
         if st.session_state.admin_person_row:
-            # Removed the previous print button block from here
-            # st.divider() # Removed standard divider as we added custom hr above
+            
+            # Removed previous print block
 
             person_data = st.session_state.admin_person_row
             all_person_history_df_admin = df[df['HN'] == st.session_state.admin_selected_hn].copy()
