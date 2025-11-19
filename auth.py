@@ -10,32 +10,39 @@ def is_empty(val):
     return pd.isna(val) or str(val).strip().lower() in ["", "-", "none", "nan", "null"]
 
 def normalize_name(name):
-    """จัดการการเว้นวรรคในชื่อ-นามสกุลที่ไม่สม่ำเสมอ"""
+    """
+    จัดการการเว้นวรรคในชื่อ-นามสกุลที่ไม่สม่ำเสมอ
+    โดยการตัดช่องว่างทั้งหมดออก เพื่อให้การค้นหาแม่นยำที่สุด
+    เช่น "สมชาย  ใจดี" -> "สมชายใจดี"
+    """
     if is_empty(name):
         return ""
+    # ลบทุกช่องว่าง (Whitespace) ออกจาก string
     return re.sub(r'\s+', '', str(name).strip())
-
-# --- START OF CHANGE: 'generate_questions' function removed ---
-# --- END OF CHANGE ---
-
 
 def display_primary_login(df):
     """แสดงหน้าจอเข้าสู่ระบบหลัก (ชื่อ-สกุล + เลขบัตรประชาชน หรือ HN)"""
-    st.markdown("<h4>เข้าสู่ระบบ</h4>", unsafe_allow_html=True)
-    name_input = st.text_input("ชื่อ-นามสกุล", key="login_name", label_visibility="collapsed", placeholder="ชื่อ-นามสกุล")
     
-    id_input = st.text_input(
-        "รหัสผ่าน (เลขบัตรประชาชน 13 หลัก หรือ HN)", 
-        key="login_id", 
-        help="กรอกเลขบัตรประชาชน 13 หลัก หรือ หมายเลข HN ของท่าน", 
-        label_visibility="collapsed", 
-        placeholder="รหัสผ่าน (เลขบัตรประชาชน 13 หลัก หรือ HN)", 
-        type="password"
-    )
-
-    # --- START OF CHANGE: Removed columns and "Forgot Password" button ---
-    if st.button("ลงชื่อเข้าใช้", use_container_width=True, type="primary"):
+    # --- ใช้ Form เพื่อให้รองรับการกด Enter และ Tab ---
+    with st.form(key='login_form'):
+        st.markdown("<h4>เข้าสู่ระบบ</h4>", unsafe_allow_html=True)
         
+        # input fields
+        name_input = st.text_input("ชื่อ-นามสกุล", key="login_name", label_visibility="collapsed", placeholder="ชื่อ-นามสกุล")
+        
+        id_input = st.text_input(
+            "รหัสผ่าน (เลขบัตรประชาชน 13 หลัก หรือ HN)", 
+            key="login_id", 
+            help="กรอกเลขบัตรประชาชน 13 หลัก หรือ หมายเลข HN ของท่าน", 
+            label_visibility="collapsed", 
+            placeholder="รหัสผ่าน (เลขบัตรประชาชน 13 หลัก หรือ HN)", 
+            type="password"
+        )
+
+        # ปุ่ม Submit ของ Form
+        submit_button = st.form_submit_button("ลงชื่อเข้าใช้", use_container_width=True, type="primary")
+
+    if submit_button:
         # --- START OF CHANGE: Add Admin login check ---
         if name_input == "admin" and id_input == "admin":
             st.session_state['authenticated'] = True
@@ -46,18 +53,19 @@ def display_primary_login(df):
         # --- END OF CHANGE ---
 
         elif name_input and id_input: # Keep existing user logic in elif
+            # Normalize ชื่อที่กรอกมา (ตัดเว้นวรรคทิ้งหมด)
             normalized_input_name = normalize_name(name_input)
             input_password = str(id_input).strip()
             
             # --- START OF MODIFICATION ---
             # 1. ค้นหาผู้ใช้ด้วยชื่อก่อน (Find user by name first)
+            # โดยเทียบกับชื่อใน DB ที่ถูก Normalize แล้วเช่นกัน
             name_records = df[df['ชื่อ-สกุล'].apply(normalize_name) == normalized_input_name]
             
             if not name_records.empty:
                 # 2. ถ้าเจอชื่อ, รวบรวม HN และ เลขบัตรประชาชน ทั้งหมดที่เชื่อมโยงกับชื่อนี้
-                # (Get all HNs and National IDs associated with this name from all years)
                 
-                # รวบรวม HN ทั้งหมด (ควรจะเป็นค่าเดียวกัน)
+                # รวบรวม HN ทั้งหมด
                 all_hns_for_name = name_records['HN'].astype(str).str.strip().unique()
                 
                 # รวบรวมเลขบัตรประชาชนทั้งหมด, กรองค่าว่าง/nan ออกก่อน
@@ -86,10 +94,6 @@ def display_primary_login(df):
             # --- END OF MODIFICATION ---
         else:
             st.warning("กรุณากรอกข้อมูลให้ครบถ้วน")
-    # --- END OF CHANGE ---
-
-# --- START OF CHANGE: 'display_question_verification' function removed ---
-# --- END OF CHANGE ---
 
 
 def authentication_flow(df):
@@ -134,10 +138,7 @@ def authentication_flow(df):
         </div>
         """, unsafe_allow_html=True)
 
-        # --- START OF CHANGE: Removed auth_step logic ---
-        # No more 'auth_step' needed, just show the primary login
         display_primary_login(df)
-        # --- END OF CHANGE ---
 
 def pdpa_consent_page():
     """แสดงหน้าสำหรับให้ความยินยอม PDPA"""
