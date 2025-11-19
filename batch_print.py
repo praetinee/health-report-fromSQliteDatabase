@@ -89,35 +89,37 @@ def display_print_center_page(df):
     # --- 1. ส่วนคัดกรองข้อมูล (Filter Section) ---
     st.subheader("1. คัดกรองผู้ป่วยที่ต้องการพิมพ์")
     
-    col1, col2, col3 = st.columns(3)
+    # ปรับ Layout: หน่วยงาน (สำคัญสุด) -> วันที่ (รองลงมา) -> ประเภทรายงาน
+    col1, col2, col3 = st.columns([1.5, 1.5, 1])
     
     with col1:
-        # --- CHANGED: ย้ายหน่วยงานมาช่องแรก ---
-        # Prepare department list (Ensure strings and unique for easier searching)
-        all_depts = sorted(df['หน่วยงาน'].dropna().astype(str).unique())
-        # ใช้ st.selectbox ซึ่งรองรับการพิมพ์ค้นหา (Fuzzy search) โดยธรรมชาติ
+        # --- ปรับปรุง: หน่วยงานอยู่ช่องแรก ---
+        # เตรียมรายการหน่วยงาน: แปลงเป็น String, ตัดช่องว่าง, เรียงลำดับ เพื่อให้พิมพ์ค้นหาง่าย
+        all_depts = sorted(df['หน่วยงาน'].dropna().astype(str).str.strip().unique())
+        
         selected_dept = st.selectbox(
-            "1. เลือกหน่วยงาน", 
+            "1. เลือกหน่วยงาน (พิมพ์ค้นหาได้)", 
             ["(ทั้งหมด)"] + list(all_depts),
             index=0,
             key="batch_select_dept"
         )
 
     with col2:
-        # --- CHANGED: วันที่สัมพันธ์กับหน่วยงาน (Dependent Dropdown) ---
+        # --- ปรับปรุง: วันที่สัมพันธ์กับหน่วยงาน (Dependent Dropdown) ---
         if selected_dept != "(ทั้งหมด)":
-            # กรอง df ชั่วคราวเพื่อหาเฉพาะวันที่ ที่หน่วยงานนั้นมาตรวจ
-            dept_filtered_df = df[df['หน่วยงาน'] == selected_dept]
+            # ถ้าเลือกหน่วยงาน -> กรองเอาเฉพาะวันที่ที่หน่วยงานนั้นมาตรวจ
+            dept_filtered_df = df[df['หน่วยงาน'].astype(str).str.strip() == selected_dept]
             available_dates = sorted(dept_filtered_df['วันที่ตรวจ'].dropna().astype(str).unique(), reverse=True)
         else:
-            # ถ้าไม่เลือกหน่วยงาน ก็โชว์วันที่ทั้งหมดที่มีในระบบ
+            # ถ้าไม่เลือกหน่วยงาน -> โชว์วันที่ทั้งหมดที่มีในระบบ
             available_dates = sorted(df['วันที่ตรวจ'].dropna().astype(str).unique(), reverse=True)
             
         selected_date = st.selectbox(
             "2. เลือกวันที่ตรวจ", 
             ["(ทั้งหมด)"] + list(available_dates), 
             index=0,
-            key="batch_select_date"
+            key="batch_select_date",
+            help="รายการวันที่ตรวจจะเปลี่ยนไปตามหน่วยงานที่เลือก"
         )
 
     with col3:
@@ -136,23 +138,29 @@ def display_print_center_page(df):
     
     # Filter by Dept first
     if selected_dept != "(ทั้งหมด)":
-        filtered_df = filtered_df[filtered_df['หน่วยงาน'] == selected_dept]
+        # ใช้ str.strip() เพื่อความแม่นยำในการกรอง
+        filtered_df = filtered_df[filtered_df['หน่วยงาน'].astype(str).str.strip() == selected_dept]
         
     # Filter by Date
     if selected_date != "(ทั้งหมด)":
-        filtered_df = filtered_df[filtered_df['วันที่ตรวจ'] == selected_date]
+        filtered_df = filtered_df[filtered_df['วันที่ตรวจ'].astype(str) == selected_date]
 
     # เอาเฉพาะรายการล่าสุดของแต่ละคน (Unique HN)
+    # เรียงลำดับตามปีล่าสุดก่อน
     filtered_df = filtered_df.sort_values(by=['Year'], ascending=False)
     unique_patients_df = filtered_df.drop_duplicates(subset=['HN'])
     
     # เตรียมข้อมูลสำหรับ Data Editor
     display_df = unique_patients_df[['HN', 'ชื่อ-สกุล', 'หน่วยงาน', 'วันที่ตรวจ']].copy()
+    
+    # เรียงลำดับตามชื่อเพื่อให้อ่านง่าย
+    display_df = display_df.sort_values(by='ชื่อ-สกุล')
+    
     display_df.insert(0, "เลือก", True) 
 
     # แสดง Data Editor
     if display_df.empty:
-        st.warning("ไม่พบข้อมูลตามเงื่อนไขที่เลือก")
+        st.info("ไม่พบข้อมูลตามเงื่อนไขที่เลือก")
         selected_hns = []
         count_selected = 0
     else:
