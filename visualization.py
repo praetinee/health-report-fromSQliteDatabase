@@ -8,75 +8,47 @@ import numpy as np
 import textwrap
 import requests
 from streamlit_lottie import st_lottie
+from datetime import datetime
 
 # --- DESIGN SYSTEM & CONSTANTS ---
 THEME = {
     'primary': '#00796B',      # Teal
     'secondary': '#80CBC4',    # Soft Teal
-    'text_light': '#37474F',   # Dark Grey
+    'accent': '#009688',       # Bright Teal
+    'text_dark': '#37474F',    # Dark Grey
+    'text_light': '#90A4AE',   # Light Grey
     'grid': 'rgba(128, 128, 128, 0.1)', 
-    'success': '#66BB6A',      # Green
-    'success_bg': '#E8F5E9',   # Light Green BG
-    'warning': '#FFA726',      # Orange
-    'warning_bg': '#FFF3E0',   # Light Orange BG
-    'danger': '#EF5350',       # Red
-    'danger_bg': '#FFEBEE',    # Light Red BG
-    'info': '#42A5F5',         # Blue
-    'info_bg': '#E3F2FD',      # Light Blue BG
-    'track': '#EEEEEE',        # Light Grey for track
-    'sbp_color': '#E53935',    # Red
-    'dbp_color': '#1E88E5',    # Blue
-    'hct_color': '#AB47BC',    # Purple
+    'success': '#00C853',      # Bright Green
+    'success_bg': '#E8F5E9',   
+    'warning': '#FFAB00',      # Amber
+    'warning_bg': '#FFF8E1',   
+    'danger': '#D50000',       # Red
+    'danger_bg': '#FFEBEE',    
+    'info': '#2962FF',         # Blue
+    'info_bg': '#E3F2FD',      
+    'bg_card': '#FFFFFF',
 }
 
 FONT_FAMILY = "Sarabun, sans-serif"
 
-# --- LOTTIE URLS ---
-# คุณสามารถเปลี่ยน URL เป็นไฟล์ที่คุณชอบจาก lottiefiles.com ได้เลย
-LOTTIE_BMI_URL = "https://lottie.host/5b001638-468e-4782-93f3-952357718117/A0y5z55z5A.json" # Example: Person/Health
-LOTTIE_BLOOD_URL = "https://lottie.host/88910080-8975-4c7b-852c-801180960999/999888777.json" # Example: Blood Drop (Placeholder URL)
-# เนื่องจาก URL บางอันอาจจะหมดอายุหรือไม่มีจริง ผมจะใช้ฟังก์ชัน load_lottieurl ที่จัดการ error ได้
-# และใช้ SVG เป็น Fallback ถ้าโหลดไม่ได้
-
-# ใช้ URL กลางๆ ที่มักจะ work (เป็นตัวอย่าง)
-# BMI: Person Yoga/Active
-LOTTIE_BMI_URL = "https://assets9.lottiefiles.com/packages/lf20_zfszhesy.json" 
-# Blood: Blood Drop
-LOTTIE_BLOOD_URL = "https://assets2.lottiefiles.com/packages/lf20_t97bckwz.json"
-# Kidney: Anatomy/Organ (หายากหน่อย อาจใช้ Heart แทนในตัวอย่าง หรือ Generic Organ)
-LOTTIE_KIDNEY_URL = "https://assets3.lottiefiles.com/packages/lf20_9wimz7j7.json" # Example Medical Scan
-
-
-def load_lottieurl(url: str):
-    """โหลด Lottie JSON จาก URL"""
-    try:
-        r = requests.get(url)
-        if r.status_code != 200:
-            return None
-        return r.json()
-    except:
-        return None
-
-def apply_medical_layout(fig, title="", x_title="", y_title="", show_legend=True):
-    """Standard Layout for consistency"""
-    fig.update_layout(
-        title=dict(text=f"<b>{title}</b>", font=dict(family=FONT_FAMILY, size=18), x=0),
-        xaxis=dict(title=x_title, showgrid=True, gridcolor=THEME['grid']),
-        yaxis=dict(title=y_title, showgrid=True, gridcolor=THEME['grid']),
-        legend=dict(orientation="h", y=1.1),
-        plot_bgcolor='rgba(0,0,0,0)',
-        paper_bgcolor='rgba(0,0,0,0)',
-        font=dict(family=FONT_FAMILY),
-        margin=dict(l=10, r=10, t=50, b=20)
-    )
-    return fig
+# --- LOTTIE URLS (Stable URLs) ---
+LOTTIE_ASSETS = {
+    'heart': "https://lottie.host/88910080-8975-4c7b-852c-801180960999/999888777.json", # Blood/Heart
+    'weight': "https://lottie.host/5b001638-468e-4782-93f3-952357718117/A0y5z55z5A.json", # Body/Scale
+    'kidney': "https://lottie.host/a6d69570-5702-469a-b220-075020290043/p0f1g2h3i4.json", # Scanner/Organ
+    'liver': "https://assets5.lottiefiles.com/packages/lf20_zfszhesy.json", # Generic Health
+    'general': "https://assets9.lottiefiles.com/packages/lf20_5njp3vgg.json" # Doctor/Checkup
+}
 
 # --- HELPER FUNCTIONS ---
 
-def clean_html(html_str):
-    dedented = textwrap.dedent(html_str)
-    stripped = dedented.strip()
-    return stripped
+def load_lottieurl(url: str):
+    """โหลด Lottie JSON จาก URL อย่างปลอดภัย"""
+    try:
+        r = requests.get(url, timeout=3)
+        if r.status_code != 200: return None
+        return r.json()
+    except: return None
 
 def get_float(person_data, key):
     val = person_data.get(key, "")
@@ -84,386 +56,467 @@ def get_float(person_data, key):
     try: return float(str(val).replace(",", "").strip())
     except: return None
 
-def get_bmi_desc(bmi):
-    if bmi is None: return "ไม่มีข้อมูล"
-    if bmi < 18.5: return "น้ำหนักน้อย"
-    if bmi < 23: return "สมส่วน"
-    if bmi < 25: return "น้ำหนักเกิน"
-    if bmi < 30: return "ภาวะอ้วนระยะที่ 1"
-    return "ภาวะอ้วนระยะที่ 2"
-
-def get_fbs_desc(fbs):
-    if fbs is None: return "-"
-    if fbs < 100: return "ปกติ"
-    if fbs < 126: return "เสี่ยงเบาหวาน"
-    return "เบาหวาน"
-
-def get_gfr_desc(gfr):
-    if gfr is None: return "-"
-    if gfr >= 90: return "ไตปกติ"
-    if gfr >= 60: return "ไตเสื่อมเล็กน้อย"
-    return "ไตเสื่อม"
-
-# --- PLOTTING FUNCTIONS ---
-
-def plot_historical_trends(history_df, person_data):
-    st.subheader("📈 แนวโน้มสุขภาพย้อนหลัง")
-    
-    if history_df.shape[0] < 2:
-        st.info("💡 ต้องการข้อมูลอย่างน้อย 2 ปี เพื่อแสดงกราฟแนวโน้ม")
-        return
-
-    history_df = history_df.sort_values(by="Year", ascending=True).copy()
-    history_df['Year_str'] = history_df['Year'].astype(str)
-    history_df['BMI'] = history_df.apply(lambda row: (get_float(row, 'น้ำหนัก') / ((get_float(row, 'ส่วนสูง') / 100) ** 2)) if get_float(row, 'น้ำหนัก') and get_float(row, 'ส่วนสูง') else np.nan, axis=1)
-
-    sex = person_data.get("เพศ", "ชาย")
-    hb_goal = 12.0 if sex == "หญิง" else 13.0
-    
-    trend_metrics = {
-        'ความดันโลหิต (BP)': (['SBP', 'DBP'], 'mmHg', [130.0, 80.0], [THEME['sbp_color'], THEME['dbp_color']], 'target'),
-        'น้ำตาล (FBS)': ('FBS', 'mg/dL', 100.0, THEME['warning'], 'target'),
-        'ไขมัน (Cholesterol)': ('CHOL', 'mg/dL', 200.0, THEME['danger'], 'target'),
-        'ไต (GFR)': ('GFR', 'mL/min', 90.0, THEME['info'], 'higher'),
-        'ดัชนีมวลกาย (BMI)': ('BMI', 'kg/m²', 23.0, '#8D6E63', 'range'),
-        'ฮีโมโกลบิน (Hb)': ('Hb(%)', 'g/dL', hb_goal, '#EC407A', 'above_threshold')
-    }
-
-    cols = st.columns(3)
-    for i, (title, config) in enumerate(trend_metrics.items()):
-        keys, unit, goals, colors, direction_type = config
-        
-        if direction_type == 'range': d_text = "(ควรอยู่ในเกณฑ์)"
-        elif direction_type == 'higher': d_text = "(ยิ่งสูงยิ่งดี)"
-        elif direction_type == 'target': d_text = "(ไม่ควรเกินเกณฑ์)"
-        elif direction_type == 'above_threshold': d_text = "(ไม่ควรต่ำกว่าเกณฑ์)"
-        else: d_text = ""
-
-        with cols[i % 3]:
-            fig = go.Figure()
-            if isinstance(keys, list):
-                df_plot = history_df[['Year_str'] + keys].dropna(subset=keys, how='all')
-                if df_plot.empty: continue
-                for j, key in enumerate(keys):
-                    goal = goals[j]
-                    color = colors[j]
-                    fig.add_trace(go.Scatter(x=df_plot['Year_str'], y=df_plot[key], mode='lines+markers', name=key, line=dict(color=color, width=3, shape='spline'), marker=dict(size=6, color='white', line=dict(width=2, color=color)), hovertemplate=f'<b>{key}: %{{y:.0f}}</b> {unit}<extra></extra>'))
-                    if goal: fig.add_shape(type="line", x0=df_plot['Year_str'].iloc[0], y0=goal, x1=df_plot['Year_str'].iloc[-1], y1=goal, line=dict(color=color, width=1, dash="dot"), opacity=0.6)
-            else:
-                df_plot = history_df[['Year_str', keys]].dropna()
-                if df_plot.empty: continue
-                fig.add_trace(go.Scatter(x=df_plot['Year_str'], y=df_plot[keys], mode='lines+markers', name=title, line=dict(color=colors, width=3, shape='spline'), marker=dict(size=8, color='white', line=dict(width=2, color=colors)), hovertemplate=f'<b>%{{x}}</b><br>%{{y:.1f}} {unit}<extra></extra>'))
-                fig.add_shape(type="line", x0=df_plot['Year_str'].iloc[0], y0=goals, x1=df_plot['Year_str'].iloc[-1], y1=goals, line=dict(color="gray", width=1, dash="dash"), opacity=0.5)
-            
-            fig.update_layout(
-                title=dict(text=f"{title}<br><span style='font-size:12px; color:gray;'>{d_text}</span>", font=dict(size=14)),
-                height=220, margin=dict(l=10, r=10, t=50, b=30),
-                xaxis=dict(showgrid=False, showline=True, linecolor=THEME['grid']),
-                yaxis=dict(showgrid=True, gridcolor=THEME['grid']),
-                plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-                showlegend=(isinstance(keys, list)), legend=dict(orientation="h", y=1.15, x=1, xanchor='right'),
-                font=dict(family=FONT_FAMILY)
-            )
-            st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-
-
-# --- LOTTIE RENDERER ---
-
-def render_lottie_card(title, value_str, unit, desc, color_hex, bg_hex, lottie_url):
-    """
-    Render Card UI พร้อม Lottie Animation (หรือ Fallback)
-    """
-    # Card HTML Container (ส่วนหัวและส่วนท้าย)
-    # เราจะแบ่งเป็น 3 ส่วน: Header, Lottie Area (ใช้ st_lottie), Footer
-    
-    # 1. Opening Div & Header
-    st.markdown(clean_html(f"""
-    <div style="
-        background-color: #FFFFFF;
-        border-radius: 16px;
-        padding: 20px 20px 10px 20px;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.06);
-        border: 1px solid rgba(0,0,0,0.02);
-        height: 100%;
-        font-family: 'Sarabun', sans-serif;
-        position: relative;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-    ">
-        <div style="font-size: 14px; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;">
-            {title}
-        </div>
-    """), unsafe_allow_html=True)
-
-    # 2. Middle: Lottie Animation & Value (ใช้ st.columns ภายใน container นี้ไม่ได้ง่ายๆ 
-    # เราจึงต้องปิด div ก่อน แล้วใช้ st.columns แล้วค่อยเปิด div ใหม่ หรือใช้ Layout ซ้อน)
-    
-    # วิธีที่เนียนที่สุดคือใช้ st.columns เพื่อแบ่งซ้ายขวา: ซ้าย=Lottie, ขวา=Text
-    # แต่ต้องระวังเรื่องความสูง Lottie
-    
-    c1, c2 = st.columns([1, 1.5])
-    with c1:
-        lottie_json = load_lottieurl(lottie_url)
-        if lottie_json:
-            st_lottie(lottie_json, speed=1, height=80, key=f"lottie_{title}_{value_str}")
-        else:
-            # Fallback Text Icon if Lottie fails
-            st.markdown(f"<div style='font-size:40px; text-align:center;'>❤️</div>", unsafe_allow_html=True)
-
-    with c2:
-        st.markdown(clean_html(f"""
-        <div style="margin-top: 10px;">
-            <div style="font-size: 28px; font-weight: 800; color: #333; line-height: 1;">{value_str}</div>
-            <div style="font-size: 14px; color: #999; font-weight: 500; margin-top: 2px;">{unit}</div>
-        </div>
-        """), unsafe_allow_html=True)
-        
-    # 3. Footer: Status Badge & Close Div
-    st.markdown(clean_html(f"""
-        <div style="margin-top: 15px; margin-bottom: 10px;">
-            <span style="
-                background-color: {bg_hex}; 
-                color: {color_hex}; 
-                padding: 6px 14px; 
-                border-radius: 50px; 
-                font-size: 13px; 
-                font-weight: 700; 
-                display: inline-block; 
-                box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                {desc}
-            </span>
-        </div>
-        <!-- Decor Circle -->
-        <div style="position: absolute; top: -30px; right: -30px; width: 100px; height: 100px; background-color: {bg_hex}; border-radius: 50%; opacity: 0.4; z-index: 0; pointer-events: none;"></div>
-    </div>
-    """), unsafe_allow_html=True)
-
-
-def plot_bmi_gauge(person_data):
-    bmi = get_float(person_data, 'BMI')
-    if bmi is None:
-         weight = get_float(person_data, 'น้ำหนัก')
-         height = get_float(person_data, 'ส่วนสูง')
-         if weight and height: bmi = weight / ((height/100)**2)
-
-    if bmi:
-        desc = get_bmi_desc(bmi)
-        if "อ้วนระยะที่ 2" in desc: c, bg = THEME['danger'], THEME['danger_bg']
-        elif "เริ่ม" in desc or "ท้วม" in desc or "ระยะที่ 1" in desc: c, bg = THEME['warning'], THEME['warning_bg']
-        elif "น้อย" in desc: c, bg = THEME['info'], THEME['info_bg']
-        else: c, bg = THEME['success'], THEME['success_bg']
-        
-        # Lottie: Person Exercising / Body Scan
-        # URL ตัวอย่าง: หุ่นคน/ออกกำลังกาย
-        url = "https://lottie.host/5b001638-468e-4782-93f3-952357718117/A0y5z55z5A.json" 
-        render_lottie_card("ดัชนีมวลกาย (BMI)", f"{bmi:.1f}", "kg/m²", desc, c, bg, url)
-    else:
-        st.info("ไม่มีข้อมูล BMI")
-
-def plot_fbs_gauge(person_data):
-    fbs = get_float(person_data, 'FBS')
-    if fbs:
-        desc = get_fbs_desc(fbs)
-        c, bg = (THEME['danger'], THEME['danger_bg']) if "เบาหวาน" in desc and "เสี่ยง" not in desc else (THEME['warning'], THEME['warning_bg']) if "เสี่ยง" in desc else (THEME['success'], THEME['success_bg'])
-        
-        # Lottie: Blood Drop / Lab Test
-        url = "https://lottie.host/88910080-8975-4c7b-852c-801180960999/999888777.json" 
-        render_lottie_card("น้ำตาลในเลือด (FBS)", f"{fbs:.0f}", "mg/dL", desc, c, bg, url)
-    else:
-        st.info("ไม่มีข้อมูล FBS")
-
-def plot_gfr_gauge(person_data):
-    gfr = get_float(person_data, 'GFR')
-    if gfr:
-        desc = get_gfr_desc(gfr)
-        c, bg = (THEME['success'], THEME['success_bg']) if "ปกติ" in desc else (THEME['warning'], THEME['warning_bg']) if "เล็กน้อย" in desc else (THEME['danger'], THEME['danger_bg'])
-        
-        # Lottie: Medical Scanner / Organ
-        url = "https://lottie.host/a6d69570-5702-469a-b220-075020290043/p0f1g2h3i4.json"
-        render_lottie_card("การทำงานของไต (GFR)", f"{gfr:.0f}", "mL/min", desc, c, bg, url)
-    else:
-        st.info("ไม่มีข้อมูล GFR")
-
-
-def plot_audiogram(person_data):
-    freq_cols = {'500': ('R500', 'L500'), '1000': ('R1k', 'L1k'), '2000': ('R2k', 'L2k'), '3000': ('R3k', 'L3k'), '4000': ('R4k', 'L4k'), '6000': ('R6k', 'L6k'), '8000': ('R8k', 'L8k')}
-    freqs = list(freq_cols.keys())
-    r_vals = [get_float(person_data, freq_cols[f][0]) for f in freqs]
-    l_vals = [get_float(person_data, freq_cols[f][1]) for f in freqs]
-
-    if all(v is None for v in r_vals) and all(v is None for v in l_vals):
-        st.info("ไม่มีข้อมูล Audiogram")
-        return
-
-    fig = go.Figure()
-    zones = [(0, 25, 'ปกติ', '#E8F5E9'), (25, 40, 'เล็กน้อย', '#FFFDE7'), (40, 55, 'ปานกลาง', '#FFF9C4'), (55, 70, 'ค่อนข้างรุนแรง', '#FFE0B2'), (70, 90, 'รุนแรง', '#FFCCBC'), (90, 120, 'รุนแรงมาก', '#FFAB91')]
-    for s, e, l, c in zones:
-        fig.add_shape(type="rect", x0=-0.5, x1=len(freqs)-0.5, y0=s, y1=e, fillcolor=c, opacity=0.5, layer="below", line_width=0)
-        fig.add_annotation(x=len(freqs)-0.6, y=(s+e)/2, text=l, showarrow=False, font=dict(size=10, color="gray"))
-
-    fig.add_trace(go.Scatter(x=freqs, y=r_vals, mode='lines+markers', name='หูขวา', line=dict(color='#D32F2F', width=2), marker=dict(symbol='circle-open')))
-    fig.add_trace(go.Scatter(x=freqs, y=l_vals, mode='lines+markers', name='หูซ้าย', line=dict(color='#1976D2', width=2, dash='dash'), marker=dict(symbol='x')))
-
-    fig = apply_medical_layout(fig, "ผลตรวจการได้ยิน (Audiogram)", "ความถี่ (Hz)", "dB HL")
-    fig.update_layout(yaxis=dict(autorange='reversed', range=[-10, 120], zeroline=False))
-    st.plotly_chart(fig, use_container_width=True)
-
-
-def plot_risk_bar_chart(person_data):
-    """
-    เปลี่ยนจาก Radar Chart เป็น Bar Chart แนวนอน เพื่อให้อ่านง่ายขึ้น
-    """
-    def get_score(val, thresholds, high_bad=True):
-        if val is None: return 0
-        if high_bad:
-            if val < thresholds[0]: return 1 # ปกติ
-            if val < thresholds[1]: return 2 # เริ่มเสี่ยง
-            if val < thresholds[2]: return 3 # เสี่ยงปานกลาง
-            if val < thresholds[3]: return 4 # เสี่ยงสูง
-            return 5 # วิกฤต
-        else: # low is bad (e.g., GFR)
-            if val > thresholds[3]: return 1
-            if val > thresholds[2]: return 2
-            if val > thresholds[1]: return 3
-            if val > thresholds[0]: return 4
-            return 5
-
-    bmi = get_float(person_data, 'BMI')
-    sbp = get_float(person_data, 'SBP')
-    fbs = get_float(person_data, 'FBS')
-    chol = get_float(person_data, 'CHOL')
-    gfr = get_float(person_data, 'GFR')
-
-    scores = [
-        get_score(bmi, [23, 25, 30, 35]),
-        get_score(sbp, [120, 130, 140, 160]),
-        get_score(fbs, [100, 126, 150, 200]),
-        get_score(chol, [200, 240, 260, 300]),
-        get_score(gfr, [90, 60, 30, 15], high_bad=False)
-    ]
-    
-    categories = ['BMI (น้ำหนัก)', 'ความดันโลหิต', 'น้ำตาลในเลือด', 'ไขมัน', 'การทำงานไต']
-    
-    # Map scores to colors and text
-    risk_colors = []
-    risk_texts = []
-    for s in scores:
-        if s <= 1: 
-            risk_colors.append(THEME['success'])
-            risk_texts.append("ปกติ")
-        elif s == 2:
-            risk_colors.append(THEME['info'])
-            risk_texts.append("เริ่มเสี่ยง")
-        elif s == 3:
-            risk_colors.append(THEME['warning'])
-            risk_texts.append("ปานกลาง")
-        elif s == 4:
-            risk_colors.append(THEME['danger'])
-            risk_texts.append("สูง")
-        else: # 5
-            risk_colors.append('#C62828') # Dark Red
-            risk_texts.append("วิกฤต")
-            
-    fig = go.Figure()
-    
-    fig.add_trace(go.Bar(
-        y=categories,
-        x=scores,
-        orientation='h',
-        marker=dict(color=risk_colors),
-        text=risk_texts,
-        textposition='auto',
-        textfont=dict(family=FONT_FAMILY, color='white')
-    ))
-    
+def apply_medical_layout(fig, title="", height=None, show_legend=True):
+    """Standard Layout for Modern Medical Charts"""
     fig.update_layout(
-        title=dict(text="<b>ระดับความเสี่ยงสุขภาพ (Risk Level)</b>", font=dict(size=16, family=FONT_FAMILY)),
-        xaxis=dict(
-            range=[0, 5.5], 
-            tickvals=[1, 2, 3, 4, 5],
-            ticktext=['ปกติ', 'เริ่ม', 'กลาง', 'สูง', 'วิกฤต'],
-            gridcolor=THEME['grid']
-        ),
-        yaxis=dict(title=""),
+        title=dict(text=f"<b>{title}</b>", font=dict(family=FONT_FAMILY, size=16, color=THEME['text_dark']), x=0),
+        font=dict(family=FONT_FAMILY, color=THEME['text_dark']),
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
+        margin=dict(l=20, r=20, t=40, b=20),
+        height=height,
+        showlegend=show_legend,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+    )
+    return fig
+
+def calculate_health_score(val, target_min, target_max, reverse=False):
+    """
+    Normalize health values to 0-100 score for Radar Chart.
+    reverse=True means lower is better (e.g. Cholesterol).
+    """
+    if val is None: return 0
+    
+    # Simple linear mapping logic
+    # 100 = Perfect (Mean of target)
+    # 0 = Critical
+    
+    ideal = (target_min + target_max) / 2
+    
+    if not reverse: # Higher is generally better (e.g. GFR, HDL) or Range based
+        # For simplicity in this visualization, we treat range bound metrics by distance from ideal
+        # If metric is strictly higher is better (GFR):
+        if target_max > 1000: # Like infinity
+            if val >= target_min: return 100
+            return max(0, (val / target_min) * 100)
+        else: # Range (e.g. BMI 18.5-23)
+            if target_min <= val <= target_max: return 100
+            dist = min(abs(val - target_min), abs(val - target_max))
+            return max(0, 100 - (dist * 5)) # Deduct score based on distance
+            
+    else: # Lower is better (e.g. LDL, BP, Sugar)
+        if val <= target_min: return 100
+        if val >= target_max * 1.5: return 0 # Critical cap
+        # Map range target_min...target_max*1.5 to 100...0
+        slope = 100 / ((target_max * 1.5) - target_min)
+        return max(0, 100 - ((val - target_min) * slope))
+
+# --- 1. VISUALIZATION: HEALTH SHIELD (RADAR CHART) ---
+
+def plot_health_radar(person_data):
+    # Prepare Data
+    bmi = get_float(person_data, 'BMI')
+    if bmi is None:
+        w, h = get_float(person_data, 'น้ำหนัก'), get_float(person_data, 'ส่วนสูง')
+        if w and h: bmi = w / ((h/100)**2)
+    
+    sbp = get_float(person_data, 'SBP')
+    fbs = get_float(person_data, 'FBS')
+    ldl = get_float(person_data, 'LDL')
+    gfr = get_float(person_data, 'GFR')
+    alt = get_float(person_data, 'SGPT') # Liver
+
+    # Scoring (Approximation for Visualization)
+    scores = [
+        calculate_health_score(bmi, 18.5, 23), # BMI Range
+        calculate_health_score(sbp, 110, 120, reverse=True), # BP (Lower better)
+        calculate_health_score(fbs, 70, 100, reverse=True), # Sugar (Lower better)
+        calculate_health_score(ldl, 0, 100, reverse=True), # LDL (Lower better)
+        calculate_health_score(gfr, 90, 200), # Kidney (Higher better)
+        calculate_health_score(alt, 0, 40, reverse=True) # Liver (Lower better)
+    ]
+    
+    categories = ['รูปร่าง (BMI)', 'ความดัน (BP)', 'ระดับน้ำตาล', 'ไขมัน (LDL)', 'ไต (GFR)', 'ตับ (SGPT)']
+    
+    fig = go.Figure()
+
+    # Background Ideal Shape
+    fig.add_trace(go.Scatterpolar(
+        r=[100]*6,
+        theta=categories,
+        fill='toself',
+        name='ค่าสมบูรณ์แบบ',
+        line=dict(color='rgba(0, 200, 83, 0.2)', dash='dot'),
+        fillcolor='rgba(0, 200, 83, 0.05)',
+        hoverinfo='skip'
+    ))
+
+    # Actual Data
+    fig.add_trace(go.Scatterpolar(
+        r=scores,
+        theta=categories,
+        fill='toself',
+        name='สุขภาพของคุณ',
+        line=dict(color=THEME['primary'], width=3),
+        fillcolor='rgba(0, 121, 107, 0.4)',
+        hovertemplate='%{theta}: <b>%{r:.0f}%</b> คะแนน<extra></extra>'
+    ))
+
+    fig.update_layout(
+        polar=dict(
+            radialaxis=dict(visible=True, range=[0, 100], showticklabels=False),
+            bgcolor='rgba(0,0,0,0)'
+        ),
+        showlegend=True,
+        title=dict(text="<b>🛡️ Health Shield (เกราะป้องกันสุขภาพ)</b>", font=dict(family=FONT_FAMILY, size=18), x=0.1),
+        margin=dict(t=60, b=40, l=40, r=40),
         font=dict(family=FONT_FAMILY),
-        margin=dict(l=10, r=10, t=40, b=20),
-        height=300
+        paper_bgcolor='rgba(0,0,0,0)'
     )
     
     st.plotly_chart(fig, use_container_width=True)
 
+# --- 2. VISUALIZATION: SMART KPI CARDS 2.0 ---
 
-def plot_lung_comparison(person_data):
-    fvc = get_float(person_data, 'FVC')
-    fvc_p = get_float(person_data, 'FVC predic')
-    fev1 = get_float(person_data, 'FEV1')
-    fev1_p = get_float(person_data, 'FEV1 predic')
+def get_trend_indicator(current, previous, reverse=False):
+    """
+    Return HTML string for trend arrow.
+    reverse=True means 'Increase' is Bad (e.g. BP, Weight).
+    """
+    if current is None or previous is None: return ""
+    diff = current - previous
+    percent = (diff / previous * 100) if previous != 0 else 0
+    
+    if abs(percent) < 1: return "<span style='color:gray; font-size:12px;'>➖ คงที่</span>"
+    
+    is_good = (diff < 0) if reverse else (diff > 0)
+    color = THEME['success'] if is_good else THEME['danger']
+    arrow = "▼" if diff < 0 else "▲"
+    
+    return f"<span style='color:{color}; font-weight:bold; font-size:13px;'>{arrow} {abs(diff):.1f} ({abs(percent):.1f}%)</span>"
 
-    if fvc is None: return
+def render_smart_card(title, value, unit, status, trend_html, lottie_url, color_code):
+    """Render Modern Card with Lottie + Trend"""
+    # Custom CSS for Card
+    card_style = f"""
+        background: linear-gradient(145deg, #ffffff, #f0f2f5);
+        border-radius: 20px;
+        padding: 20px;
+        box-shadow: 5px 5px 15px #d1d9e6, -5px -5px 15px #ffffff;
+        border-left: 5px solid {color_code};
+        position: relative;
+        overflow: hidden;
+        min-height: 180px;
+    """
+    
+    c1, c2 = st.columns([1.2, 2])
+    
+    with st.container():
+        st.markdown(f"""<div style="{card_style}">
+            <div style="position:absolute; top:15px; right:15px; font-size:12px; color:#888; font-weight:600; letter-spacing:1px;">{title}</div>
+        """, unsafe_allow_html=True)
+        
+        col_lottie, col_info = st.columns([1, 2])
+        with col_lottie:
+            if lottie_url:
+                lottie_json = load_lottieurl(lottie_url)
+                if lottie_json:
+                    st_lottie(lottie_json, height=70, key=f"card_{title}")
+                else:
+                    st.markdown("❤️", unsafe_allow_html=True)
+            else:
+                 st.markdown("📊", unsafe_allow_html=True)
 
-    cats = ['FVC', 'FEV1']
+        with col_info:
+            st.markdown(f"""
+                <div style="margin-top:10px;">
+                    <div style="font-size:28px; font-weight:800; color:#333; line-height:1;">{value}</div>
+                    <div style="font-size:14px; color:#666;">{unit}</div>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown(f"""
+            <div style="margin-top:15px; padding-top:10px; border-top:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+                <span style="background-color:{color_code}20; color:{color_code}; padding:4px 10px; border-radius:15px; font-size:12px; font-weight:bold;">{status}</span>
+                {trend_html}
+            </div>
+            </div>
+        """, unsafe_allow_html=True)
+
+def display_smart_cards(person_data, history_df):
+    # Get previous year data if available
+    prev_data = {}
+    if history_df is not None and len(history_df) >= 2:
+        sorted_df = history_df.sort_values('Year', ascending=False)
+        # Check if the first row is current year (which it should be), then take the second row
+        if len(sorted_df) > 1:
+             # Check if current display year matches the top of history, if so take 2nd. 
+             # If we are viewing an old year, we can't easily get 'previous' without more logic.
+             # For simplicity, assume we compare to the immediately preceding record in time.
+             current_year = person_data.get('Year')
+             # Find row with year < current_year
+             past_rows = sorted_df[sorted_df['Year'] < current_year]
+             if not past_rows.empty:
+                 prev_row = past_rows.iloc[0]
+                 prev_data = prev_row.to_dict()
+
+    # 1. BMI Card
+    bmi = get_float(person_data, 'BMI')
+    if bmi is None:
+        w, h = get_float(person_data, 'น้ำหนัก'), get_float(person_data, 'ส่วนสูง')
+        if w and h: bmi = w / ((h/100)**2)
+    
+    bmi_prev = get_float(prev_data, 'BMI') if prev_data else None
+    if bmi_prev is None and prev_data:
+         w, h = get_float(prev_data, 'น้ำหนัก'), get_float(prev_data, 'ส่วนสูง')
+         if w and h: bmi_prev = w / ((h/100)**2)
+
+    bmi_status = "ปกติ" if bmi and 18.5 <= bmi < 23 else "เสี่ยง/ผิดปกติ"
+    bmi_color = THEME['success'] if bmi_status == "ปกติ" else THEME['warning']
+    
+    # 2. FBS Card
+    fbs = get_float(person_data, 'FBS')
+    fbs_prev = get_float(prev_data, 'FBS')
+    fbs_status = "ปกติ" if fbs and fbs < 100 else "สูง"
+    fbs_color = THEME['success'] if fbs_status == "ปกติ" else THEME['danger']
+
+    # 3. BP Card (SBP)
+    sbp = get_float(person_data, 'SBP')
+    sbp_prev = get_float(prev_data, 'SBP')
+    sbp_status = "ปกติ" if sbp and sbp < 130 else "สูง"
+    sbp_color = THEME['success'] if sbp_status == "ปกติ" else THEME['danger']
+
+    # 4. Kidney (GFR)
+    gfr = get_float(person_data, 'GFR')
+    gfr_prev = get_float(prev_data, 'GFR')
+    gfr_status = "ดี" if gfr and gfr > 90 else ("เสื่อมเล็กน้อย" if gfr and gfr > 60 else "เสื่อม")
+    gfr_color = THEME['success'] if gfr and gfr > 60 else THEME['danger']
+
+    # Render Columns
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        render_smart_card("ดัชนีมวลกาย (BMI)", f"{bmi:.1f}" if bmi else "-", "kg/m²", bmi_status, get_trend_indicator(bmi, bmi_prev, True), LOTTIE_ASSETS['weight'], bmi_color)
+    with c2:
+        render_smart_card("น้ำตาล (FBS)", f"{int(fbs)}" if fbs else "-", "mg/dL", fbs_status, get_trend_indicator(fbs, fbs_prev, True), LOTTIE_ASSETS['heart'], fbs_color)
+    with c3:
+        render_smart_card("ความดัน (SBP)", f"{int(sbp)}" if sbp else "-", "mmHg", sbp_status, get_trend_indicator(sbp, sbp_prev, True), None, sbp_color) # No dedicated Lottie for BP, use None
+    with c4:
+        render_smart_card("ไต (GFR)", f"{int(gfr)}" if gfr else "-", "mL/min", gfr_status, get_trend_indicator(gfr, gfr_prev, False), LOTTIE_ASSETS['kidney'], gfr_color)
+
+# --- 3. VISUALIZATION: BULLET GRAPHS (LINEAR GAUGES) ---
+
+def plot_bullet_charts(person_data):
+    
+    def create_bullet(title, val, unit, ranges, target_val, reverse=False):
+        # ranges: [min_bad, limit_good, max_scale]
+        # reverse: True if Lower is Better
+        
+        fig = go.Figure(go.Indicator(
+            mode = "number+gauge+delta",
+            value = val if val else 0,
+            delta = {'reference': target_val, 'increasing': {'color': THEME['danger'] if reverse else THEME['success']}, 'decreasing': {'color': THEME['success'] if reverse else THEME['danger']}},
+            domain = {'x': [0.1, 1], 'y': [0, 1]},
+            title = {'text': f"<b>{title}</b><br><span style='font-size:0.8em;color:gray'>{unit}</span>", 'font':{'size':14}},
+            gauge = {
+                'shape': "bullet",
+                'axis': {'range': [ranges[0], ranges[-1]]},
+                'threshold': {
+                    'line': {'color': "black", 'width': 2},
+                    'thickness': 0.75,
+                    'value': target_val
+                },
+                'steps': [
+                    {'range': [ranges[0], ranges[1]], 'color': THEME['success_bg'] if not reverse else THEME['success_bg']}, # Zone 1
+                    {'range': [ranges[1], ranges[2]], 'color': THEME['warning_bg']}, # Zone 2
+                    {'range': [ranges[2], ranges[3]], 'color': THEME['danger_bg']} if len(ranges)>3 else None # Zone 3
+                ],
+                'bar': {'color': THEME['primary']}
+            }
+        ))
+        fig.update_layout(height=120, margin=dict(l=20, r=20, t=10, b=10))
+        return fig
+
+    # BP
+    sbp = get_float(person_data, 'SBP')
+    if sbp:
+        st.plotly_chart(create_bullet("ความดันโลหิต (SBP)", sbp, "mmHg", [90, 120, 140, 180], 120, reverse=True), use_container_width=True)
+    
+    # LDL
+    ldl = get_float(person_data, 'LDL')
+    if ldl:
+        st.plotly_chart(create_bullet("ไขมันเลว (LDL)", ldl, "mg/dL", [0, 100, 130, 190], 100, reverse=True), use_container_width=True)
+
+    # GFR
+    gfr = get_float(person_data, 'GFR')
+    if gfr:
+        st.plotly_chart(create_bullet("การทำงานของไต (GFR)", gfr, "mL/min", [0, 60, 90, 120], 90, reverse=False), use_container_width=True)
+
+# --- 4. VISUALIZATION: DIGITAL TWIN / BODY MAP ---
+
+def plot_digital_twin(person_data):
+    """
+    Create an abstract Body Map using Plotly Shapes.
+    Colors organs based on status.
+    """
+    
+    # 1. Define Body Shapes (Stick Figure / Abstract Block)
+    shapes = []
+    
+    # Head
+    shapes.append(dict(type="circle", xref="x", yref="y", x0=-1, y0=8, x1=1, y1=10, line_color="#333", fillcolor="#eee"))
+    # Body
+    shapes.append(dict(type="rect", xref="x", yref="y", x0=-1.5, y0=4, x1=1.5, y1=8, line_color="#333", fillcolor="#fafafa"))
+    # Legs
+    shapes.append(dict(type="rect", xref="x", yref="y", x0=-1.2, y0=0, x1=-0.2, y1=4, line_color="#333", fillcolor="#eee"))
+    shapes.append(dict(type="rect", xref="x", yref="y", x0=0.2, y0=0, x1=1.2, y1=4, line_color="#333", fillcolor="#eee"))
+    
+    # 2. Define Organs (Status Points)
+    
+    # Logic for status colors
+    def get_color(val, bad_thresh, mid_thresh, reverse=False):
+        if val is None: return "gray"
+        # Reverse: High is Bad (BP, Sugar)
+        if reverse:
+            if val >= bad_thresh: return THEME['danger']
+            if val >= mid_thresh: return THEME['warning']
+            return THEME['success']
+        else: # Normal: Low is Bad (GFR)
+            if val <= bad_thresh: return THEME['danger']
+            if val <= mid_thresh: return THEME['warning']
+            return THEME['success']
+
+    # Brain (BP)
+    sbp = get_float(person_data, 'SBP')
+    c_brain = get_color(sbp, 140, 130, reverse=True)
+    
+    # Lungs (CXR) - Text based
+    cxr = str(person_data.get('CXR', '')).lower()
+    c_lungs = THEME['danger'] if 'abnormal' in cxr or 'infiltrate' in cxr else THEME['success']
+    
+    # Heart (Lipids/LDL)
+    ldl = get_float(person_data, 'LDL')
+    c_heart = get_color(ldl, 160, 130, reverse=True)
+    
+    # Liver (SGPT)
+    sgpt = get_float(person_data, 'SGPT')
+    c_liver = get_color(sgpt, 40, 30, reverse=True) # Strict threshold
+    
+    # Kidneys (GFR) - x position offset
+    gfr = get_float(person_data, 'GFR')
+    c_kidney = get_color(gfr, 60, 90, reverse=False)
+    
+    # Stomach/Waist (BMI)
+    bmi = get_float(person_data, 'BMI')
+    if bmi is None: 
+        w, h = get_float(person_data, 'น้ำหนัก'), get_float(person_data, 'ส่วนสูง')
+        if w and h: bmi = w / ((h/100)**2)
+    c_body = get_color(bmi, 30, 25, reverse=True)
+
+    # Plot Points
+    organs = [
+        {'x': 0, 'y': 9, 'label': 'สมอง/ความดัน', 'color': c_brain, 'val': f"{sbp} mmHg"},
+        {'x': 0, 'y': 7, 'label': 'ปอด (CXR)', 'color': c_lungs, 'val': cxr if cxr else "-"},
+        {'x': 0.5, 'y': 6.5, 'label': 'หัวใจ (LDL)', 'color': c_heart, 'val': f"{ldl} mg/dL"},
+        {'x': -0.5, 'y': 5.5, 'label': 'ตับ (SGPT)', 'color': c_liver, 'val': f"{sgpt} U/L"},
+        {'x': 0.5, 'y': 5.0, 'label': 'ไต (GFR)', 'color': c_kidney, 'val': f"{gfr}"},
+        {'x': 0, 'y': 4.5, 'label': 'รูปร่าง (BMI)', 'color': c_body, 'val': f"{bmi:.1f}" if bmi else "-"},
+    ]
+    
     fig = go.Figure()
-    fig.add_trace(go.Bar(name='ค่าจริง (Actual)', x=cats, y=[fvc, fev1], marker_color=THEME['primary'], text=[f"{fvc}L", f"{fev1}L"], textposition='auto'))
-    fig.add_trace(go.Bar(name='ค่ามาตรฐาน (Pred)', x=cats, y=[fvc_p, fev1_p], marker_color='rgba(158,158,158,0.5)', text=[f"{fvc_p}L", f"{fev1_p}L"], textposition='auto'))
-
-    fig = apply_medical_layout(fig, "สมรรถภาพปอด (Spirometry)", "", "Liters")
-    fig.update_layout(barmode='group')
+    
+    # Draw Points
+    fig.add_trace(go.Scatter(
+        x=[o['x'] for o in organs],
+        y=[o['y'] for o in organs],
+        mode='markers+text',
+        marker=dict(size=25, color=[o['color'] for o in organs], line=dict(width=2, color='white')),
+        text=[o['label'] for o in organs],
+        textposition="middle right",
+        hovertext=[f"{o['label']}: {o['val']}" for o in organs],
+        hoverinfo="text"
+    ))
+    
+    # Add Shapes
+    fig.update_layout(shapes=shapes)
+    
+    fig.update_layout(
+        xaxis=dict(range=[-3, 3], showgrid=False, zeroline=False, visible=False),
+        yaxis=dict(range=[-1, 11], showgrid=False, zeroline=False, visible=False),
+        width=400, height=500,
+        margin=dict(l=0, r=0, t=0, b=0),
+        plot_bgcolor='rgba(0,0,0,0)',
+        title=dict(text="<b>🧍 Digital Twin (จำลองสุขภาพ)</b>", x=0.5, y=0.95, font=dict(family=FONT_FAMILY, size=16))
+    )
+    
     st.plotly_chart(fig, use_container_width=True)
 
+# --- MAIN APP LAYOUT ---
+
+def plot_historical_trends(history_df):
+    # Re-using existing logic but improved styling
+    if history_df is None or len(history_df) < 2:
+        st.info("ต้องการข้อมูลอย่างน้อย 2 ปี เพื่อแสดงกราฟแนวโน้ม")
+        return
+        
+    history_df = history_df.sort_values('Year')
+    history_df['Year_Str'] = history_df['Year'].astype(str)
+    
+    metrics = [
+        {'key': 'FBS', 'name': 'น้ำตาล (FBS)', 'color': THEME['warning']},
+        {'key': 'SBP', 'name': 'ความดัน (SBP)', 'color': THEME['danger']},
+        {'key': 'LDL', 'name': 'ไขมัน (LDL)', 'color': THEME['info']},
+        {'key': 'GFR', 'name': 'ไต (GFR)', 'color': THEME['success']}
+    ]
+    
+    fig = go.Figure()
+    for m in metrics:
+        if m['key'] in history_df.columns:
+            df_clean = history_df.dropna(subset=[m['key']])
+            if not df_clean.empty:
+                # Clean data to float
+                df_clean[m['key']] = df_clean[m['key']].astype(str).str.replace(',', '').astype(float)
+                fig.add_trace(go.Scatter(
+                    x=df_clean['Year_Str'], y=df_clean[m['key']],
+                    mode='lines+markers',
+                    name=m['name'],
+                    line=dict(color=m['color'], width=3),
+                    marker=dict(size=8)
+                ))
+    
+    apply_medical_layout(fig, "แนวโน้มสุขภาพย้อนหลัง (Historical Trends)", height=350)
+    st.plotly_chart(fig, use_container_width=True)
 
 def display_visualization_tab(person_data, history_df):
-    """Main Tab Display"""
+    """Main function to render the revamped Visualization Tab"""
     
+    # Header
     st.markdown(f"""
-    <style>
-        .viz-header-card {{
-            background-color: var(--secondary-background-color);
-            padding: 20px;
-            border-radius: 12px;
-            border-left: 5px solid {THEME['primary']};
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }}
-        .viz-header-title {{ margin:0; color:var(--text-color); font-family:'Sarabun'; font-size:1.5rem; font-weight:600; }}
-        .viz-header-subtitle {{ margin:5px 0 0 0; color:var(--text-color); opacity:0.8; font-family:'Sarabun'; }}
-    </style>
-    <div class="viz-header-card">
-        <h3 class="viz-header-title">📊 แดชบอร์ดสุขภาพอัจฉริยะ</h3>
-        <p class="viz-header-subtitle">วิเคราะห์แนวโน้มและความเสี่ยงสุขภาพ: <b>{person_data.get('ชื่อ-สกุล', '')}</b></p>
+    <div style="background-color:{THEME['success_bg']}; padding:15px; border-radius:10px; border-left:5px solid {THEME['success']}; margin-bottom:20px;">
+        <h3 style="margin:0; color:{THEME['text_dark']}; font-family:{FONT_FAMILY};">🏥 Smart Health Dashboard</h3>
+        <p style="margin:0; color:{THEME['text_dark']}; opacity:0.7;">วิเคราะห์สุขภาพของคุณ: {person_data.get('ชื่อ-สกุล', '-')}</p>
     </div>
     """, unsafe_allow_html=True)
-
-    # 1. Top: Risk Bar Chart & Indicators
-    col_risk, col_ind = st.columns([1.5, 2]) # ปรับสัดส่วน
     
-    with col_risk:
-        with st.container(border=True):
-            plot_risk_bar_chart(person_data)
-            st.caption("ℹ️ แถบยาวยิ่งแสดงถึงระดับความเสี่ยงที่สูงขึ้น")
-            
-    with col_ind:
-        # ใช้ st.container แบบไม่ใส่ border เพราะเรามีการ์ดเงาอยู่ข้างในแล้ว จะได้ไม่ซ้อนกัน
-        with st.container():
-            st.markdown("##### 🎯 ตัวชี้วัดสำคัญ (Key Indicators)")
-            c1, c2, c3 = st.columns(3)
-            # ใส่ Card ลงใน Column (ใช้ Lottie)
-            with c1: plot_bmi_gauge(person_data)
-            with c2: plot_fbs_gauge(person_data)
-            with c3: plot_gfr_gauge(person_data)
-
-    # 2. Trends
-    with st.container(border=True):
-        plot_historical_trends(history_df, person_data)
-
-    # 3. Specific Tests
+    # 1. Smart Cards Row (Concept 2)
+    st.markdown("#### 1. ภาพรวมดัชนีชี้วัด (Smart KPIs)")
+    display_smart_cards(person_data, history_df)
+    
     st.markdown("---")
-    st.subheader("🔬 ผลตรวจสมรรถภาพเฉพาะทาง")
     
-    c_audio, c_lung = st.columns(2)
-    with c_audio:
-        with st.container(border=True): plot_audiogram(person_data)
-    with c_lung:
-        with st.container(border=True): plot_lung_comparison(person_data)
+    # 2. Health Shield & Digital Twin (Concept 1 & 4)
+    c1, c2 = st.columns([1.5, 1])
+    
+    with c1:
+        # Health Shield
+        st.markdown("#### 2. เกราะป้องกันสุขภาพ (Health Shield)")
+        st.caption("กราฟนี้แสดงความสมบูรณ์ของร่างกายในแต่ละด้าน (เต็ม 100% คือดีเยี่ยม)")
+        plot_health_radar(person_data)
+        
+    with c2:
+        # Digital Twin
+        st.markdown("#### 3. ร่างกายจำลอง (Digital Twin)")
+        st.caption("จุดสีแสดงสถานะอวัยวะ: 🟢ปกติ 🟡เสี่ยง 🔴อันตราย")
+        plot_digital_twin(person_data)
+
+    st.markdown("---")
+
+    # 3. Bullet Graphs (Concept 3) - Target vs Actual
+    st.markdown("#### 4. ระยะห่างจากเป้าหมาย (Targets)")
+    st.caption("เส้นขีดสีดำคือเป้าหมาย (Target) ที่ควรทำให้ได้")
+    c_b1, c_b2 = st.columns(2)
+    with c_b1:
+        plot_bullet_charts(person_data)
+    with c_b2:
+        # Historical Trends
+        st.markdown("##### 📈 แนวโน้มย้อนหลัง")
+        plot_historical_trends(history_df)
