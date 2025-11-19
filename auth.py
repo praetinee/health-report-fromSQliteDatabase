@@ -116,8 +116,10 @@ def authentication_flow(df):
         }
 
         /* --- START OF CHANGE: Custom Button Styling (Green) --- */
-        .stButton>button {
-            background-color: #00796B; /* สีเขียวหลัก */
+        /* ใช้ !important เพื่อบังคับสีทับ Theme หลักของ Streamlit */
+        div.stButton > button {
+            background-color: #00796B !important; /* สีเขียวหลัก */
+            border-color: #00796B !important;
             color: white !important;
             border-radius: 8px;
             border: none;
@@ -125,16 +127,24 @@ def authentication_flow(df):
             width: 100%;
             height: 3rem;
             padding: 0.5rem;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15) !important;
             transition: background-color 0.2s, transform 0.2s;
         }
-        .stButton>button:hover {
-            background-color: #00695C; /* สีเขียวเข้มเมื่อเมาส์ชี้ */
+        div.stButton > button:hover {
+            background-color: #00695C !important; /* สีเขียวเข้มเมื่อเมาส์ชี้ */
+            border-color: #00695C !important;
             color: white !important;
             transform: translateY(-1px);
         }
-        .stButton>button:active {
-            background-color: #004D40;
+        div.stButton > button:active {
+            background-color: #004D40 !important;
+            border-color: #004D40 !important;
+            color: white !important;
+        }
+        div.stButton > button:focus:not(:active) {
+            background-color: #00796B !important;
+            border-color: #00796B !important;
+            color: white !important;
         }
         /* --- END OF CHANGE --- */
         
@@ -189,8 +199,9 @@ def pdpa_consent_page():
             color: var(--text-color);
         }
         /* Button style reuse */
-        .stButton>button {
-            background-color: #00796B;
+        div.stButton > button {
+            background-color: #00796B !important;
+            border-color: #00796B !important;
             color: white !important;
             border-radius: 8px;
             border: none;
@@ -198,8 +209,9 @@ def pdpa_consent_page():
             width: 100%;
             height: 3rem;
         }
-        .stButton>button:hover {
-            background-color: #00695C;
+        div.stButton > button:hover {
+            background-color: #00695C !important;
+            border-color: #00695C !important;
         }
     </style>
     """, unsafe_allow_html=True)
