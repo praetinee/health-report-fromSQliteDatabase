@@ -22,7 +22,7 @@ from print_report import (
     generate_doctor_opinion
 )
 
-# --- Helper Functions (รวมไว้ในนี้เพื่อให้ทำงานได้สมบูรณ์และ app.py เรียกใช้ได้) ---
+# --- Helper Functions ---
 
 def is_empty(val):
     """Check if a value is empty, null, or whitespace."""
@@ -848,14 +848,20 @@ def display_admin_panel(df):
             person_data = st.session_state.admin_person_row
             all_person_history_df_admin = df[df['HN'] == st.session_state.admin_selected_hn].copy()
 
-            # Print Buttons
-            col_p1, col_p2 = st.columns(2)
-            with col_p1:
-                if st.button("🖨️ พิมพ์รายงานสุขภาพ (Main)", use_container_width=True, key="admin_print_main"):
-                    st.session_state.admin_print_trigger = True
-            with col_p2:
-                if st.button("🖨️ พิมพ์รายงานสมรรถภาพ (Perf)", use_container_width=True, key="admin_print_perf"):
-                    st.session_state.admin_print_performance_trigger = True
+            # --- START CHANGE: Print Section Styling ---
+            # สร้าง Container สีเขียวอ่อนๆ หรือกรอบเพื่อให้เห็นชัดเจน
+            with st.container(border=True):
+                st.markdown("<h4 style='text-align: center; color: #00695C; margin-bottom: 15px;'>🖨️ ส่วนสั่งพิมพ์รายงาน (Print Actions)</h4>", unsafe_allow_html=True)
+                
+                col_p1, col_p2 = st.columns(2)
+                with col_p1:
+                    # ใช้ type="primary" เพื่อให้ปุ่มดูเด่นขึ้น (สีจะตาม CSS .stButton>button ที่เรากำหนดไว้)
+                    if st.button("พิมพ์รายงานสุขภาพ (Main)", use_container_width=True, key="admin_print_main", type="primary"):
+                        st.session_state.admin_print_trigger = True
+                with col_p2:
+                    if st.button("พิมพ์รายงานสมรรถภาพ (Perf)", use_container_width=True, key="admin_print_perf", type="primary"):
+                        st.session_state.admin_print_performance_trigger = True
+            # --- END CHANGE ---
 
             available_reports = OrderedDict()
             if has_visualization_data(all_person_history_df_admin): available_reports['ภาพรวมสุขภาพ (Graphs)'] = 'visualization_report'
