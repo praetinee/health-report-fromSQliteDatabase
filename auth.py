@@ -115,36 +115,34 @@ def authentication_flow(df):
             padding-bottom: 1rem;
         }
 
-        /* --- START OF CHANGE: Custom Button Styling (Green) --- */
-        /* ใช้ !important เพื่อบังคับสีทับ Theme หลักของ Streamlit */
-        div.stButton > button {
-            background-color: #00796B !important; /* สีเขียวหลัก */
+        /* --- START OF CHANGE: Force Green Button Style --- */
+        /* เจาะจง selector ไปที่ปุ่มใน st.form */
+        section[data-testid="stForm"] button[kind="primary"] {
+            background-color: #00796B !important;
             border-color: #00796B !important;
             color: white !important;
-            border-radius: 8px;
-            border: none;
-            font-weight: 600;
-            width: 100%;
-            height: 3rem;
-            padding: 0.5rem;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
             box-shadow: 0 2px 5px rgba(0,0,0,0.15) !important;
-            transition: background-color 0.2s, transform 0.2s;
         }
-        div.stButton > button:hover {
-            background-color: #00695C !important; /* สีเขียวเข้มเมื่อเมาส์ชี้ */
+
+        section[data-testid="stForm"] button[kind="primary"]:hover {
+            background-color: #00695C !important;
             border-color: #00695C !important;
             color: white !important;
-            transform: translateY(-1px);
         }
-        div.stButton > button:active {
+
+        section[data-testid="stForm"] button[kind="primary"]:active {
             background-color: #004D40 !important;
             border-color: #004D40 !important;
             color: white !important;
         }
-        div.stButton > button:focus:not(:active) {
+
+        section[data-testid="stForm"] button[kind="primary"]:focus:not(:active) {
             background-color: #00796B !important;
             border-color: #00796B !important;
             color: white !important;
+            box-shadow: 0 0 0 0.2rem rgba(0, 121, 107, 0.5) !important;
         }
         /* --- END OF CHANGE --- */
         
@@ -198,7 +196,8 @@ def pdpa_consent_page():
             text-align: left;
             color: var(--text-color);
         }
-        /* Button style reuse */
+        
+        /* Reuse button style for consent page */
         div.stButton > button {
             background-color: #00796B !important;
             border-color: #00796B !important;
