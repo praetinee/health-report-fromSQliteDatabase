@@ -228,44 +228,41 @@ def plot_health_radar(person_data):
         w, h = get_float(person_data, 'น้ำหนัก'), get_float(person_data, 'ส่วนสูง')
         if w and h: bmi = w / ((h/100)**2)
     
-    # Removed the faulty else block that reset bmi to None
-
     sbp = get_float(person_data, 'SBP')
     fbs = get_float(person_data, 'FBS')
     ldl = get_float(person_data, 'LDL')
     gfr = get_float(person_data, 'GFR')
     
-    # Calculate Scores using new precise logic
-    scores = [
-        calculate_metric_score(bmi, 'BMI'), 
-        calculate_metric_score(sbp, 'BP'),
-        calculate_metric_score(fbs, 'FBS'),
-        calculate_metric_score(ldl, 'LDL'),
-        calculate_metric_score(gfr, 'GFR')
+    # Define Data Structure for Iteration
+    # เราใช้ตรรกะ Dynamic: ถ้าค่าไหนไม่มี (None) ให้ตัดแกนนั้นทิ้งไปเลย กราฟจะได้ไม่แหว่งเป็น 0
+    metrics_config = [
+        {'type': 'BMI', 'val': bmi, 'label': 'รูปร่าง (BMI)', 'fmt': '{:.1f}'},
+        {'type': 'BP', 'val': sbp, 'label': 'ความดัน (BP)', 'fmt': '{:.0f}'},
+        {'type': 'FBS', 'val': fbs, 'label': 'ระดับน้ำตาล', 'fmt': '{:.0f}'},
+        {'type': 'LDL', 'val': ldl, 'label': 'ไขมัน (LDL)', 'fmt': '{:.0f}'},
+        {'type': 'GFR', 'val': gfr, 'label': 'ไต (GFR)', 'fmt': '{:.0f}'}
     ]
     
-    # Display Values for Hover (Raw Data)
-    display_vals = [
-        f"{bmi:.1f}" if bmi else "N/A",
-        f"{int(sbp)}" if sbp else "N/A",
-        f"{int(fbs)}" if fbs else "N/A",
-        f"{int(ldl)}" if ldl else "N/A",
-        f"{int(gfr)}" if gfr else "N/A"
-    ]
-
-    categories = [
-        f'รูปร่าง (BMI)', 
-        f'ความดัน (BP)', 
-        f'ระดับน้ำตาล', 
-        f'ไขมัน (LDL)', 
-        f'ไต (GFR)'
-    ]
+    scores = []
+    categories = []
+    display_vals = []
+    
+    for m in metrics_config:
+        if m['val'] is not None:
+            score = calculate_metric_score(m['val'], m['type'])
+            scores.append(score)
+            categories.append(m['label'])
+            display_vals.append(m['fmt'].format(m['val']))
+            
+    if len(scores) < 3:
+        # กรณีข้อมูลน้อยกว่า 3 จุด กราฟ Radar อาจดูแปลกๆ (เป็นเส้นตรง) แต่ก็ดีกว่าแสดง 0 ครับ
+        pass 
 
     fig = go.Figure()
     
-    # Background Ideal Shape (100%)
+    # Background Ideal Shape (100%) - Must match active categories
     fig.add_trace(go.Scatterpolar(
-        r=[100]*5,
+        r=[100] * len(categories),
         theta=categories,
         fill='toself',
         name='ค่าสมบูรณ์แบบ (Ideal)',
