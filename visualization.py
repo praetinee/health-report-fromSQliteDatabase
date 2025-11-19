@@ -6,13 +6,15 @@ import plotly.express as px
 import pandas as pd
 import numpy as np
 import textwrap
+import requests
+from streamlit_lottie import st_lottie
 
 # --- DESIGN SYSTEM & CONSTANTS ---
 THEME = {
     'primary': '#00796B',      # Teal
     'secondary': '#80CBC4',    # Soft Teal
     'text_light': '#37474F',   # Dark Grey
-    'grid': 'rgba(128, 128, 128, 0.1)',
+    'grid': 'rgba(128, 128, 128, 0.1)', 
     'success': '#66BB6A',      # Green
     'success_bg': '#E8F5E9',   # Light Green BG
     'warning': '#FFA726',      # Orange
@@ -28,6 +30,32 @@ THEME = {
 }
 
 FONT_FAMILY = "Sarabun, sans-serif"
+
+# --- LOTTIE URLS ---
+# คุณสามารถเปลี่ยน URL เป็นไฟล์ที่คุณชอบจาก lottiefiles.com ได้เลย
+LOTTIE_BMI_URL = "https://lottie.host/5b001638-468e-4782-93f3-952357718117/A0y5z55z5A.json" # Example: Person/Health
+LOTTIE_BLOOD_URL = "https://lottie.host/88910080-8975-4c7b-852c-801180960999/999888777.json" # Example: Blood Drop (Placeholder URL)
+# เนื่องจาก URL บางอันอาจจะหมดอายุหรือไม่มีจริง ผมจะใช้ฟังก์ชัน load_lottieurl ที่จัดการ error ได้
+# และใช้ SVG เป็น Fallback ถ้าโหลดไม่ได้
+
+# ใช้ URL กลางๆ ที่มักจะ work (เป็นตัวอย่าง)
+# BMI: Person Yoga/Active
+LOTTIE_BMI_URL = "https://assets9.lottiefiles.com/packages/lf20_zfszhesy.json" 
+# Blood: Blood Drop
+LOTTIE_BLOOD_URL = "https://assets2.lottiefiles.com/packages/lf20_t97bckwz.json"
+# Kidney: Anatomy/Organ (หายากหน่อย อาจใช้ Heart แทนในตัวอย่าง หรือ Generic Organ)
+LOTTIE_KIDNEY_URL = "https://assets3.lottiefiles.com/packages/lf20_9wimz7j7.json" # Example Medical Scan
+
+
+def load_lottieurl(url: str):
+    """โหลด Lottie JSON จาก URL"""
+    try:
+        r = requests.get(url)
+        if r.status_code != 200:
+            return None
+        return r.json()
+    except:
+        return None
 
 def apply_medical_layout(fig, title="", x_title="", y_title="", show_legend=True):
     """Standard Layout for consistency"""
@@ -46,15 +74,8 @@ def apply_medical_layout(fig, title="", x_title="", y_title="", show_legend=True
 # --- HELPER FUNCTIONS ---
 
 def clean_html(html_str):
-    """
-    ฟังก์ชันสำหรับลบ Indentation และช่องว่างส่วนเกินออกจาก HTML string
-    เพื่อให้ Streamlit แสดงผลเป็น HTML จริงๆ ไม่ใช่ Code Block
-    """
-    # 1. Dedent เพื่อลบ indentation ร่วมกัน
     dedented = textwrap.dedent(html_str)
-    # 2. Strip เพื่อลบ newline หน้า/หลัง
     stripped = dedented.strip()
-    # 3. (Optional) ลบ newline ระหว่าง tag เพื่อให้เป็นบรรทัดเดียว (ช่วยลดปัญหาสุดๆ)
     return stripped
 
 def get_float(person_data, key):
@@ -86,9 +107,8 @@ def get_gfr_desc(gfr):
 # --- PLOTTING FUNCTIONS ---
 
 def plot_historical_trends(history_df, person_data):
-    """Sparkline Trend Charts"""
     st.subheader("📈 แนวโน้มสุขภาพย้อนหลัง")
-
+    
     if history_df.shape[0] < 2:
         st.info("💡 ต้องการข้อมูลอย่างน้อย 2 ปี เพื่อแสดงกราฟแนวโน้ม")
         return
@@ -99,7 +119,7 @@ def plot_historical_trends(history_df, person_data):
 
     sex = person_data.get("เพศ", "ชาย")
     hb_goal = 12.0 if sex == "หญิง" else 13.0
-
+    
     trend_metrics = {
         'ความดันโลหิต (BP)': (['SBP', 'DBP'], 'mmHg', [130.0, 80.0], [THEME['sbp_color'], THEME['dbp_color']], 'target'),
         'น้ำตาล (FBS)': ('FBS', 'mg/dL', 100.0, THEME['warning'], 'target'),
@@ -112,7 +132,7 @@ def plot_historical_trends(history_df, person_data):
     cols = st.columns(3)
     for i, (title, config) in enumerate(trend_metrics.items()):
         keys, unit, goals, colors, direction_type = config
-
+        
         if direction_type == 'range': d_text = "(ควรอยู่ในเกณฑ์)"
         elif direction_type == 'higher': d_text = "(ยิ่งสูงยิ่งดี)"
         elif direction_type == 'target': d_text = "(ไม่ควรเกินเกณฑ์)"
@@ -134,7 +154,7 @@ def plot_historical_trends(history_df, person_data):
                 if df_plot.empty: continue
                 fig.add_trace(go.Scatter(x=df_plot['Year_str'], y=df_plot[keys], mode='lines+markers', name=title, line=dict(color=colors, width=3, shape='spline'), marker=dict(size=8, color='white', line=dict(width=2, color=colors)), hovertemplate=f'<b>%{{x}}</b><br>%{{y:.1f}} {unit}<extra></extra>'))
                 fig.add_shape(type="line", x0=df_plot['Year_str'].iloc[0], y0=goals, x1=df_plot['Year_str'].iloc[-1], y1=goals, line=dict(color="gray", width=1, dash="dash"), opacity=0.5)
-
+            
             fig.update_layout(
                 title=dict(text=f"{title}<br><span style='font-size:12px; color:gray;'>{d_text}</span>", font=dict(size=14)),
                 height=220, margin=dict(l=10, r=10, t=50, b=30),
@@ -147,44 +167,77 @@ def plot_historical_trends(history_df, person_data):
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 
-# --- SVG ICON GENERATORS ---
+# --- LOTTIE RENDERER ---
 
-def get_body_svg(color):
-    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="80" height="80" fill="{color}"><path d="M12 2C9.79 2 8 3.79 8 6s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 10c-2.67 0-8 1.34-8 4v2c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-2c0-2.66-5.33-4-8-4z"/></svg>"""
-
-def get_blood_drop_svg(color):
-    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="80" height="80" fill="{color}"><path d="M12 2c-5.33 4.55-8 8.48-8 11.8 0 4.98 3.8 8.2 8 8.2s8-3.22 8-8.2c0-3.32-2.67-7.25-8-11.8z"/><path d="M7.8 12c0 .2.03.39.06.58.62-1.74 2.1-3.11 3.93-3.54-.83-.44-1.88.15-2.85 1.03-1.03.94-1.14 1.66-1.14 1.93z" fill="rgba(255,255,255,0.3)"/></svg>"""
-
-def get_kidney_svg(color):
-    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="80" height="80" fill="{color}"><path d="M350.5 120.8c-38.4-29.1-92-31.3-133.6-8.9-40.2-23.2-93.5-21.7-132.9 6.3-54.3 38.6-66.8 116.5-36.3 192.8 29.6 74 98.5 137.6 176.4 159.7 69.4 19.7 143.8-3.1 186.7-59.5 36.1-47.5 44.4-110.5 23.3-167.8-13.8-37.5-44.4-95.1-83.6-122.6zm-23.9 140.4c-12.2 49.6-48.4 85.5-90.4 98.3-41.4 12.6-83.6-4.8-108.8-43.6-24.9-38.3-23.5-88.5 5.9-127.3 28.8-38.1 72.3-54.8 113.7-43.1 40.6 11.5 74.3 51.8 84.7 97.4 1.8 8.1-3.7 16.1-11.8 17.2-8 1.1-15.4-4.7-17.2-12.8-7.8-34.2-33.2-64.4-63.7-73.1-31.1-8.8-63.9 3.8-85.5 32.4-22.1 29.1-23.1 66.8-4.4 95.5 18.9 29.1 50.6 42.2 81.7 32.7 31.5-9.6 58.6-36.5 67.8-73.7 2.2-8.8 11.1-14.2 19.7-11.6 8.6 2.6 13.7 11.8 11.4 20.7z"/></svg>"""
-
-
-def render_icon_card(title, value_str, unit, desc, color_hex, bg_hex, svg_icon):
+def render_lottie_card(title, value_str, unit, desc, color_hex, bg_hex, lottie_url):
     """
-    Render Card UI พร้อม Dynamic SVG Icon (แบบคลีนๆ)
+    Render Card UI พร้อม Lottie Animation (หรือ Fallback)
     """
-    # สร้าง HTML string แบบบรรทัดเดียว (หรือ strip อย่างดี) เพื่อป้องกัน Markdown Code Block
-    card_html = f"""
-    <div style="background-color: #FFFFFF; border-radius: 16px; padding: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.06); border: 1px solid rgba(0,0,0,0.02); height: 100%; display: flex; flex-direction: column; justify-content: space-between; font-family: 'Sarabun', sans-serif; position: relative; overflow: hidden;">
-        <div style="font-size: 14px; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">{title}</div>
-        <div style="display: flex; align-items: center; margin-top: 15px; margin-bottom: 15px;">
-            <div style="flex-shrink: 0; margin-right: 15px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1)); transform: scale(1.1); transition: transform 0.3s;">
-                {svg_icon}
-            </div>
-            <div>
-                <div style="font-size: 32px; font-weight: 800; color: #333; line-height: 1;">{value_str}</div>
-                <div style="font-size: 14px; color: #999; font-weight: 500; margin-top: 2px;">{unit}</div>
-            </div>
+    # Card HTML Container (ส่วนหัวและส่วนท้าย)
+    # เราจะแบ่งเป็น 3 ส่วน: Header, Lottie Area (ใช้ st_lottie), Footer
+    
+    # 1. Opening Div & Header
+    st.markdown(clean_html(f"""
+    <div style="
+        background-color: #FFFFFF;
+        border-radius: 16px;
+        padding: 20px 20px 10px 20px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+        border: 1px solid rgba(0,0,0,0.02);
+        height: 100%;
+        font-family: 'Sarabun', sans-serif;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    ">
+        <div style="font-size: 14px; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;">
+            {title}
         </div>
-        <div>
-            <span style="background-color: {bg_hex}; color: {color_hex}; padding: 6px 14px; border-radius: 50px; font-size: 13px; font-weight: 700; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+    """), unsafe_allow_html=True)
+
+    # 2. Middle: Lottie Animation & Value (ใช้ st.columns ภายใน container นี้ไม่ได้ง่ายๆ 
+    # เราจึงต้องปิด div ก่อน แล้วใช้ st.columns แล้วค่อยเปิด div ใหม่ หรือใช้ Layout ซ้อน)
+    
+    # วิธีที่เนียนที่สุดคือใช้ st.columns เพื่อแบ่งซ้ายขวา: ซ้าย=Lottie, ขวา=Text
+    # แต่ต้องระวังเรื่องความสูง Lottie
+    
+    c1, c2 = st.columns([1, 1.5])
+    with c1:
+        lottie_json = load_lottieurl(lottie_url)
+        if lottie_json:
+            st_lottie(lottie_json, speed=1, height=80, key=f"lottie_{title}_{value_str}")
+        else:
+            # Fallback Text Icon if Lottie fails
+            st.markdown(f"<div style='font-size:40px; text-align:center;'>❤️</div>", unsafe_allow_html=True)
+
+    with c2:
+        st.markdown(clean_html(f"""
+        <div style="margin-top: 10px;">
+            <div style="font-size: 28px; font-weight: 800; color: #333; line-height: 1;">{value_str}</div>
+            <div style="font-size: 14px; color: #999; font-weight: 500; margin-top: 2px;">{unit}</div>
+        </div>
+        """), unsafe_allow_html=True)
+        
+    # 3. Footer: Status Badge & Close Div
+    st.markdown(clean_html(f"""
+        <div style="margin-top: 15px; margin-bottom: 10px;">
+            <span style="
+                background-color: {bg_hex}; 
+                color: {color_hex}; 
+                padding: 6px 14px; 
+                border-radius: 50px; 
+                font-size: 13px; 
+                font-weight: 700; 
+                display: inline-block; 
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
                 {desc}
             </span>
         </div>
-        <div style="position: absolute; top: -30px; right: -30px; width: 120px; height: 120px; background-color: {bg_hex}; border-radius: 50%; opacity: 0.4; z-index: 0; pointer-events: none;"></div>
+        <!-- Decor Circle -->
+        <div style="position: absolute; top: -30px; right: -30px; width: 100px; height: 100px; background-color: {bg_hex}; border-radius: 50%; opacity: 0.4; z-index: 0; pointer-events: none;"></div>
     </div>
-    """
-    st.markdown(clean_html(card_html), unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
 
 def plot_bmi_gauge(person_data):
@@ -200,9 +253,11 @@ def plot_bmi_gauge(person_data):
         elif "เริ่ม" in desc or "ท้วม" in desc or "ระยะที่ 1" in desc: c, bg = THEME['warning'], THEME['warning_bg']
         elif "น้อย" in desc: c, bg = THEME['info'], THEME['info_bg']
         else: c, bg = THEME['success'], THEME['success_bg']
-
-        icon_svg = get_body_svg(c)
-        render_icon_card("ดัชนีมวลกาย (BMI)", f"{bmi:.1f}", "kg/m²", desc, c, bg, icon_svg)
+        
+        # Lottie: Person Exercising / Body Scan
+        # URL ตัวอย่าง: หุ่นคน/ออกกำลังกาย
+        url = "https://lottie.host/5b001638-468e-4782-93f3-952357718117/A0y5z55z5A.json" 
+        render_lottie_card("ดัชนีมวลกาย (BMI)", f"{bmi:.1f}", "kg/m²", desc, c, bg, url)
     else:
         st.info("ไม่มีข้อมูล BMI")
 
@@ -211,9 +266,10 @@ def plot_fbs_gauge(person_data):
     if fbs:
         desc = get_fbs_desc(fbs)
         c, bg = (THEME['danger'], THEME['danger_bg']) if "เบาหวาน" in desc and "เสี่ยง" not in desc else (THEME['warning'], THEME['warning_bg']) if "เสี่ยง" in desc else (THEME['success'], THEME['success_bg'])
-
-        icon_svg = get_blood_drop_svg(c)
-        render_icon_card("น้ำตาลในเลือด (FBS)", f"{fbs:.0f}", "mg/dL", desc, c, bg, icon_svg)
+        
+        # Lottie: Blood Drop / Lab Test
+        url = "https://lottie.host/88910080-8975-4c7b-852c-801180960999/999888777.json" 
+        render_lottie_card("น้ำตาลในเลือด (FBS)", f"{fbs:.0f}", "mg/dL", desc, c, bg, url)
     else:
         st.info("ไม่มีข้อมูล FBS")
 
@@ -222,9 +278,10 @@ def plot_gfr_gauge(person_data):
     if gfr:
         desc = get_gfr_desc(gfr)
         c, bg = (THEME['success'], THEME['success_bg']) if "ปกติ" in desc else (THEME['warning'], THEME['warning_bg']) if "เล็กน้อย" in desc else (THEME['danger'], THEME['danger_bg'])
-
-        icon_svg = get_kidney_svg(c)
-        render_icon_card("การทำงานของไต (GFR)", f"{gfr:.0f}", "mL/min", desc, c, bg, icon_svg)
+        
+        # Lottie: Medical Scanner / Organ
+        url = "https://lottie.host/a6d69570-5702-469a-b220-075020290043/p0f1g2h3i4.json"
+        render_lottie_card("การทำงานของไต (GFR)", f"{gfr:.0f}", "mL/min", desc, c, bg, url)
     else:
         st.info("ไม่มีข้อมูล GFR")
 
@@ -285,14 +342,14 @@ def plot_risk_bar_chart(person_data):
         get_score(chol, [200, 240, 260, 300]),
         get_score(gfr, [90, 60, 30, 15], high_bad=False)
     ]
-
+    
     categories = ['BMI (น้ำหนัก)', 'ความดันโลหิต', 'น้ำตาลในเลือด', 'ไขมัน', 'การทำงานไต']
-
+    
     # Map scores to colors and text
     risk_colors = []
     risk_texts = []
     for s in scores:
-        if s <= 1:
+        if s <= 1: 
             risk_colors.append(THEME['success'])
             risk_texts.append("ปกติ")
         elif s == 2:
@@ -307,9 +364,9 @@ def plot_risk_bar_chart(person_data):
         else: # 5
             risk_colors.append('#C62828') # Dark Red
             risk_texts.append("วิกฤต")
-
+            
     fig = go.Figure()
-
+    
     fig.add_trace(go.Bar(
         y=categories,
         x=scores,
@@ -319,11 +376,11 @@ def plot_risk_bar_chart(person_data):
         textposition='auto',
         textfont=dict(family=FONT_FAMILY, color='white')
     ))
-
+    
     fig.update_layout(
         title=dict(text="<b>ระดับความเสี่ยงสุขภาพ (Risk Level)</b>", font=dict(size=16, family=FONT_FAMILY)),
         xaxis=dict(
-            range=[0, 5.5],
+            range=[0, 5.5], 
             tickvals=[1, 2, 3, 4, 5],
             ticktext=['ปกติ', 'เริ่ม', 'กลาง', 'สูง', 'วิกฤต'],
             gridcolor=THEME['grid']
@@ -335,7 +392,7 @@ def plot_risk_bar_chart(person_data):
         margin=dict(l=10, r=10, t=40, b=20),
         height=300
     )
-
+    
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -359,7 +416,7 @@ def plot_lung_comparison(person_data):
 
 def display_visualization_tab(person_data, history_df):
     """Main Tab Display"""
-
+    
     st.markdown(f"""
     <style>
         .viz-header-card {{
@@ -381,18 +438,18 @@ def display_visualization_tab(person_data, history_df):
 
     # 1. Top: Risk Bar Chart & Indicators
     col_risk, col_ind = st.columns([1.5, 2]) # ปรับสัดส่วน
-
+    
     with col_risk:
         with st.container(border=True):
             plot_risk_bar_chart(person_data)
             st.caption("ℹ️ แถบยาวยิ่งแสดงถึงระดับความเสี่ยงที่สูงขึ้น")
-
+            
     with col_ind:
         # ใช้ st.container แบบไม่ใส่ border เพราะเรามีการ์ดเงาอยู่ข้างในแล้ว จะได้ไม่ซ้อนกัน
         with st.container():
             st.markdown("##### 🎯 ตัวชี้วัดสำคัญ (Key Indicators)")
             c1, c2, c3 = st.columns(3)
-            # ใส่ Card ลงใน Column
+            # ใส่ Card ลงใน Column (ใช้ Lottie)
             with c1: plot_bmi_gauge(person_data)
             with c2: plot_fbs_gauge(person_data)
             with c3: plot_gfr_gauge(person_data)
@@ -404,7 +461,7 @@ def display_visualization_tab(person_data, history_df):
     # 3. Specific Tests
     st.markdown("---")
     st.subheader("🔬 ผลตรวจสมรรถภาพเฉพาะทาง")
-
+    
     c_audio, c_lung = st.columns(2)
     with c_audio:
         with st.container(border=True): plot_audiogram(person_data)
