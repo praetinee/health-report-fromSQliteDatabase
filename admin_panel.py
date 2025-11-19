@@ -22,19 +22,16 @@ from print_report import (
     generate_doctor_opinion
 )
 
-# --- Helper Functions (รวมไว้ในนี้เพื่อให้ทำงานได้สมบูรณ์และ app.py เรียกใช้ได้) ---
+# --- Helper Functions ---
 
 def is_empty(val):
-    """Check if a value is empty, null, or whitespace."""
     return pd.isna(val) or str(val).strip().lower() in ["", "-", "none", "nan", "null"]
 
 def normalize_name(name):
-    """จัดการการเว้นวรรคในชื่อ-นามสกุลที่ไม่สม่ำเสมอ"""
     if is_empty(name): return ""
     return re.sub(r'\s+', '', str(name).strip())
 
 def get_float(col, person_data):
-    """Safely gets a float value from person_data dictionary."""
     try:
         val = person_data.get(col, "")
         if is_empty(val): return None
@@ -42,7 +39,6 @@ def get_float(col, person_data):
     except: return None
 
 def flag(val, low=None, high=None, higher_is_better=False):
-    """Formats a lab value and flags it if it's abnormal."""
     try:
         val_float = float(str(val).replace(",", "").strip()) 
     except: return "-", False
@@ -56,11 +52,9 @@ def flag(val, low=None, high=None, higher_is_better=False):
     return formatted_val, is_abnormal
 
 def render_section_header(title):
-    """Renders a new, modern section header."""
     st.markdown(f"<h4>{title}</h4>", unsafe_allow_html=True)
 
 def render_lab_table_html(title, headers, rows, table_class="lab-table", footer_html=None):
-    """Generates HTML for a lab result table with a new header style and optional footer."""
     header_html = f"<h5 class='section-subtitle'>{title}</h5>"
     html_content = f"{header_html}<div class='table-container'><table class='{table_class}'><colgroup><col style='width:40%;'><col style='width:20%;'><col style='width:40%;'></colgroup><thead><tr>"
     for i, h in enumerate(headers):
@@ -126,7 +120,6 @@ def is_urine_abnormal(test_name, value, normal_range):
     return False
 
 def render_urine_section(person_data, sex, year_selected, footer_html=None):
-    """Renders the urinalysis section."""
     urine_data = [("สี (Colour)", person_data.get("Color", "-"), "Yellow, Pale Yellow"), ("น้ำตาล (Sugar)", person_data.get("sugar", "-"), "Negative"), ("โปรตีน (Albumin)", person_data.get("Alb", "-"), "Negative, trace"), ("กรด-ด่าง (pH)", person_data.get("pH", "-"), "5.0 - 8.0"), ("ความถ่วงจำเพาะ (Sp.gr)", person_data.get("Spgr", "-"), "1.003 - 1.030"), ("เม็ดเลือดแดง (RBC)", person_data.get("RBC1", "-"), "0 - 2 cell/HPF"), ("เม็ดเลือดขาว (WBC)", person_data.get("WBC1", "-"), "0 - 5 cell/HPF"), ("เซลล์เยื่อบุผิว (Squam.epit.)", person_data.get("SQ-epi", "-"), "0 - 10 cell/HPF"), ("อื่นๆ", person_data.get("ORTER", "-"), "-")]
     df_urine = pd.DataFrame(urine_data, columns=["การตรวจ", "ผลตรวจ", "ค่าปกติ"])
     html_content = render_lab_table_html("ผลการตรวจปัสสาวะ (Urinalysis)", ["การตรวจ", "ผล", "ค่าปกติ"], [[(row["การตรวจ"], is_urine_abnormal(row["การตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"])), (safe_value(row["ผลตรวจ"]), is_urine_abnormal(row["การตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"])), (row["ค่าปกติ"], is_urine_abnormal(row["การตรวจ"], row["ผลตรวจ"], row["ค่าปกติ"]))] for _, row in df_urine.iterrows()], table_class="lab-table", footer_html=footer_html)
@@ -139,7 +132,6 @@ def interpret_stool_exam(val):
     if val_lower == "normal": return "ไม่พบเม็ดเลือดขาวในอุจจาระ ถือว่าปกติ"
     if "wbc" in val_lower or "เม็ดเลือดขาว" in val_lower: return "พบเม็ดเลือดขาวในอุจจาระ นัดตรวจซ้ำ"
     return val
-
 def interpret_stool_cs(value):
     if is_empty(value): return "ไม่ได้เข้ารับการตรวจ"
     val_strip = str(value).strip()
@@ -844,24 +836,23 @@ def display_admin_panel(df):
 
         # --- Display Report Content ---
         if st.session_state.admin_person_row:
+            
+            # --- START CHANGE: Move Print Buttons under Year Select, remove container/header ---
+            col_p1, col_p2 = st.columns(2)
+            with col_p1:
+                # ปุ่มพิมพ์ Main
+                if st.button("🖨️ พิมพ์รายงานสุขภาพ (Main)", use_container_width=True, key="admin_print_main", type="primary"):
+                    st.session_state.admin_print_trigger = True
+            with col_p2:
+                # ปุ่มพิมพ์ Performance
+                if st.button("🖨️ พิมพ์รายงานสมรรถภาพ (Perf)", use_container_width=True, key="admin_print_perf", type="primary"):
+                    st.session_state.admin_print_performance_trigger = True
+            # --- END CHANGE ---
+
             st.divider()
+
             person_data = st.session_state.admin_person_row
             all_person_history_df_admin = df[df['HN'] == st.session_state.admin_selected_hn].copy()
-
-            # --- START CHANGE: Print Section Styling ---
-            # สร้าง Container สีเขียวอ่อนๆ หรือกรอบเพื่อให้เห็นชัดเจน
-            with st.container(border=True):
-                st.markdown("<h4 style='text-align: center; color: #00695C; margin-bottom: 15px;'>🖨️ ส่วนสั่งพิมพ์รายงาน (Print Actions)</h4>", unsafe_allow_html=True)
-                
-                col_p1, col_p2 = st.columns(2)
-                with col_p1:
-                    # ใช้ type="primary" เพื่อให้ปุ่มดูเด่นขึ้น (สีจะตาม CSS .stButton>button ที่เรากำหนดไว้)
-                    if st.button("พิมพ์รายงานสุขภาพ (Main)", use_container_width=True, key="admin_print_main", type="primary"):
-                        st.session_state.admin_print_trigger = True
-                with col_p2:
-                    if st.button("พิมพ์รายงานสมรรถภาพ (Perf)", use_container_width=True, key="admin_print_perf", type="primary"):
-                        st.session_state.admin_print_performance_trigger = True
-            # --- END CHANGE ---
 
             available_reports = OrderedDict()
             if has_visualization_data(all_person_history_df_admin): available_reports['ภาพรวมสุขภาพ (Graphs)'] = 'visualization_report'
