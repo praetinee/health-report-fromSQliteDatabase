@@ -211,11 +211,11 @@ def authentication_flow(df):
 
         display_primary_login(df)
         
-        # Footer แบบกลางๆ
+        # Footer Updated Text
         st.markdown("""
         <div style='text-align: center; margin-top: 4rem; color: #bbb; font-size: 0.7rem; letter-spacing: 0.5px; line-height: 1.6;'>
             © 2025 Health Data Reporting System. All rights reserved.<br>
-            <span style='color: #999;'>System Developed for Occupational Health Dept.</span>
+            <span style='color: #999;'>Realized by P.P. for Occupational Health Dept.</span>
         </div>
         """, unsafe_allow_html=True)
 
