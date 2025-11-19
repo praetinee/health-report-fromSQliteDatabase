@@ -307,7 +307,7 @@ def plot_risk_bar_chart(person_data):
         y=categories,
         x=scores,
         orientation='h',
-        marker=dict(color=risk_colors, startPosition=0),
+        marker=dict(color=risk_colors),
         text=risk_texts,
         textposition='auto',
         textfont=dict(family=FONT_FAMILY, color='white')
