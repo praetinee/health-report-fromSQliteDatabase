@@ -223,8 +223,8 @@ def plot_health_radar(person_data):
     if bmi is None:
         w, h = get_float(person_data, 'น้ำหนัก'), get_float(person_data, 'ส่วนสูง')
         if w and h: bmi = w / ((h/100)**2)
-    else:
-        bmi = None # Reset if calculation fails logic
+    
+    # Removed the faulty else block that reset bmi to None
 
     sbp = get_float(person_data, 'SBP')
     fbs = get_float(person_data, 'FBS')
