@@ -124,29 +124,41 @@ def plot_historical_trends(history_df, person_data):
     hb_goal = 12.0 if sex == "หญิง" else 13.0
     hct_goal = 36.0 if sex == "หญิง" else 39.0
     
-    # Config: Key -> (Keys List/String, Unit, Goals List/Float, Colors List/String)
+    # Config: Key -> (Keys List/String, Unit, Goals List/Float, Colors List/String, Direction Type)
+    # เพิ่ม Direction Type กลับเข้ามาเพื่อสร้างคำอธิบาย
     trend_metrics = {
-        'ความดันโลหิต (BP)': (['SBP', 'DBP'], 'mmHg', [130.0, 80.0], [THEME['sbp_color'], THEME['dbp_color']]),
-        'น้ำตาล (FBS)': ('FBS', 'mg/dL', 100.0, THEME['warning']),
-        'ไขมัน (Cholesterol)': ('CHOL', 'mg/dL', 200.0, THEME['danger']),
-        'ไต (GFR)': ('GFR', 'mL/min', 90.0, THEME['info']),
-        'ดัชนีมวลกาย (BMI)': ('BMI', 'kg/m²', 23.0, '#8D6E63'),
-        'ฮีโมโกลบิน (Hb)': ('Hb(%)', 'g/dL', hb_goal, '#EC407A'),
-        'ความเข้มข้นเลือด (Hct)': ('HCT', '%', hct_goal, THEME['hct_color'])
+        'ความดันโลหิต (BP)': (['SBP', 'DBP'], 'mmHg', [130.0, 80.0], [THEME['sbp_color'], THEME['dbp_color']], 'target'),
+        'น้ำตาล (FBS)': ('FBS', 'mg/dL', 100.0, THEME['warning'], 'target'),
+        'ไขมัน (Cholesterol)': ('CHOL', 'mg/dL', 200.0, THEME['danger'], 'target'),
+        'ไต (GFR)': ('GFR', 'mL/min', 90.0, THEME['info'], 'higher'),
+        'ดัชนีมวลกาย (BMI)': ('BMI', 'kg/m²', 23.0, '#8D6E63', 'range'),
+        'ฮีโมโกลบิน (Hb)': ('Hb(%)', 'g/dL', hb_goal, '#EC407A', 'above_threshold'),
+        'ความเข้มข้นเลือด (Hct)': ('HCT', '%', hct_goal, THEME['hct_color'], 'above_threshold')
     }
 
     # 2. Render Grid (Responsive Columns)
     cols = st.columns(3) # Grid 3 คอลัมน์
     
     for i, (title, config) in enumerate(trend_metrics.items()):
-        keys, unit, goals, colors = config
+        keys, unit, goals, colors, direction_type = config
         
+        # สร้างข้อความกำกับทิศทาง
+        if direction_type == 'range':
+            direction_text = "(ควรอยู่ในเกณฑ์)"
+        elif direction_type == 'higher':
+            direction_text = "(ยิ่งสูงยิ่งดี)"
+        elif direction_type == 'target':
+            direction_text = "(ไม่ควรสูงเกินเกณฑ์)"
+        elif direction_type == 'above_threshold':
+            direction_text = "(ไม่ควรต่ำกว่าเกณฑ์)"
+        else:
+            direction_text = ""
+
         with cols[i % 3]:
             fig = go.Figure()
             
             # กรณีเป็นกราฟคู่ (เช่น BP)
             if isinstance(keys, list):
-                # หาข้อมูลที่มีอย่างน้อย 1 ค่าในคอลัมน์ที่ระบุ
                 df_plot = history_df[['Year_str'] + keys].dropna(subset=keys, how='all')
                 if df_plot.empty: continue
 
@@ -165,7 +177,7 @@ def plot_historical_trends(history_df, person_data):
                         hovertemplate=f'<b>{key}: %{{y:.0f}}</b> {unit}<extra></extra>'
                     ))
                     
-                    # Threshold Line (แสดงทุกเส้นที่ตั้งเป้าไว้ เพื่อความชัดเจน)
+                    # Threshold Line
                     if goal is not None:
                          fig.add_shape(type="line", x0=df_plot['Year_str'].iloc[0], y0=goal, x1=df_plot['Year_str'].iloc[-1], y1=goal,
                             line=dict(color=color, width=1, dash="dot"), opacity=0.6)
@@ -189,16 +201,19 @@ def plot_historical_trends(history_df, person_data):
                     line=dict(color="gray", width=1, dash="dash"), opacity=0.5)
             
             # Shared Layout Settings
+            # เพิ่ม direction_text เข้าไปใน Title
+            full_title = f"{title}<br><span style='font-size:12px; color:gray;'>{direction_text}</span>"
+            
             fig.update_layout(
-                title=dict(text=f"{title}", font=dict(size=14)),
-                height=220,
-                margin=dict(l=10, r=10, t=40, b=30),
+                title=dict(text=full_title, font=dict(size=14)),
+                height=240, # เพิ่มความสูงเล็กน้อยเผื่อพื้นที่ให้ Subtitle
+                margin=dict(l=10, r=10, t=50, b=30), # ปรับ top margin
                 xaxis=dict(showgrid=False, showline=True, linecolor=THEME['grid']),
                 yaxis=dict(showgrid=True, gridcolor=THEME['grid']),
                 plot_bgcolor='rgba(0,0,0,0)',
                 paper_bgcolor='rgba(0,0,0,0)',
-                showlegend=(isinstance(keys, list)), # Show legend only for multi-line charts
-                legend=dict(orientation="h", y=1.1, x=1, xanchor='right', font=dict(size=10)),
+                showlegend=(isinstance(keys, list)), 
+                legend=dict(orientation="h", y=1.15, x=1, xanchor='right', font=dict(size=10)),
                 font=dict(family=FONT_FAMILY)
             )
             
