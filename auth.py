@@ -94,7 +94,7 @@ def display_primary_login(df):
 
 def authentication_flow(df):
     """จัดการ Flow การเข้าสู่ระบบทั้งหมด"""
-    st.set_page_config(page_title="ลงชื่อเข้าใช้ | รพ.สันทราย", layout="centered", page_icon="🏥")
+    st.set_page_config(page_title="ลงชื่อเข้าใช้ | ระบบรายงานผลสุขภาพ", layout="centered", page_icon="🏥")
     
     st.markdown("""
     <style>
@@ -143,40 +143,49 @@ def authentication_flow(df):
             /* box-shadow: 0 4px 12px rgba(0,0,0,0.1); Optional: ถ้าอยากให้โลโก้มีเงา */
         }
 
-        /* --- SMART BUTTON STYLE (Green Theme) --- */
-        /* ใช้ button[kind="primary"] เพื่อเล็งเป้าปุ่มสีแดงของระบบโดยตรง */
-        button[kind="primary"] {
-            background: linear-gradient(180deg, #00796B 0%, #00695C 100%) !important; /* ไล่สีเล็กน้อยให้ดูมีมิติ */
-            border: none !important;
+        /* --- SMART FIX: Custom Green Button Style --- */
+        /* เล็งเป้าไปที่ปุ่มใน Form โดยเฉพาะ (ซึ่งเราถอด type=primary ออกแล้ว) */
+        [data-testid="stForm"] button {
+            background-color: #00796B !important; /* เขียวที่เราต้องการ */
             color: white !important;
-            border-radius: 10px !important;
+            border: 1px solid #00796B !important;
+            border-radius: 8px !important;
             font-weight: 600 !important;
             font-size: 16px !important;
-            height: 3.2rem !important;
-            letter-spacing: 0.5px;
-            box-shadow: 0 4px 6px rgba(0, 121, 107, 0.2) !important;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            height: 3rem !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+            transition: all 0.2s ease !important;
         }
 
-        /* ตอนเอาเมาส์ชี้ */
-        button[kind="primary"]:hover {
-            background: linear-gradient(180deg, #00897B 0%, #00796B 100%) !important;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0, 121, 107, 0.3) !important;
+        /* Hover State */
+        [data-testid="stForm"] button:hover {
+            background-color: #00695C !important;
+            border-color: #00695C !important;
+            color: white !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
         }
 
-        /* ตอนกด */
-        button[kind="primary"]:active {
-            background: #004D40 !important;
-            transform: translateY(1px);
-            box-shadow: 0 2px 4px rgba(0, 121, 107, 0.2) !important;
+        /* Active/Click State */
+        [data-testid="stForm"] button:active {
+            background-color: #004D40 !important;
+            border-color: #004D40 !important;
+            color: white !important;
+            transform: translateY(0px);
+        }
+
+        /* Focus State */
+        [data-testid="stForm"] button:focus {
+            border-color: #004D40 !important;
+            color: white !important;
+            box-shadow: 0 0 0 0.2rem rgba(0, 121, 107, 0.25) !important;
         }
         
-        /* ข้อความในปุ่ม */
-        button[kind="primary"] p {
-            font-size: 16px !important;
-            font-weight: 600 !important;
+        /* Override text color inside button (just in case) */
+        [data-testid="stForm"] button p {
+            color: white !important;
         }
+        /* --- END OF FIX --- */
         
     </style>
     """, unsafe_allow_html=True)
@@ -186,17 +195,17 @@ def authentication_flow(df):
         <div class="auth-header">
           <img src="https://i.postimg.cc/tJd4DZSY/image.png" alt="Logo" width="300" style="max-width: 100%; height: auto;">
           <h2 style='text-align: center; margin-top: 0px; margin-bottom: 5px; font-weight: 700; color: var(--text-color); letter-spacing: -0.5px;'>ระบบรายงานผลตรวจสุขภาพ</h2>
-          <p style='text-align: center; color: #666; margin-top: 0px; margin-bottom: 20px; font-weight: 400;'>กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย</p>
+          <p style='text-align: center; color: #666; margin-top: 0px; margin-bottom: 20px; font-weight: 400;'>กลุ่มงานอาชีวเวชกรรม</p>
         </div>
         """, unsafe_allow_html=True)
 
         display_primary_login(df)
         
-        # Footer เล็กๆ ด้านล่าง
+        # Footer เล็กๆ ด้านล่าง - ปรับให้เป็นกลางและดูเป็นมืออาชีพ
         st.markdown("""
-        <div style='text-align: center; margin-top: 3rem; color: #999; font-size: 0.8rem;'>
-            © 2025 Sansai Hospital. All rights reserved.<br>
-            Secure Health Data Reporting System
+        <div style='text-align: center; margin-top: 3rem; color: #bbb; font-size: 0.75rem; line-height: 1.4;'>
+            © 2025 Health Data Reporting System Designed & Developed by P.P.. All rights reserved.<br>
+            <span style='color: #999;'>System Developed for Occupational Health Dept.</span>
         </div>
         """, unsafe_allow_html=True)
 
@@ -212,72 +221,49 @@ def pdpa_consent_page():
         }
         
         .block-container {
-            padding-top: 4rem !important;
-            max_width: 700px;
+            padding-top: 3rem !important;
         }
 
         /* Style the container for consent */
         div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] {
-             background-color: var(--secondary-background-color);
+             background-color: var(--background-color);
              color: var(--text-color);
-             padding: 2.5rem; 
-             border-radius: 16px;
-             box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-             border: 1px solid rgba(0,0,0,0.05);
+             padding: 2rem 3rem; 
+             border-radius: 10px;
+             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         
-        h2 { 
-            text-align: center; 
-            color: var(--text-color); 
-            font-weight: 700; 
-            margin-bottom: 1.5rem;
-        }
-        
+        h2 { text-align: center; color: var(--text-color); }
         .consent-text {
-            height: 400px; 
-            overflow-y: auto; 
-            border: 1px solid #e0e0e0;
-            padding: 1.5rem; 
-            border-radius: 8px; 
-            background-color: var(--background-color);
-            margin-bottom: 2rem; 
+            height: 300px; 
+            overflow-y: scroll; 
+            border: 1px solid var(--border-color);
+            padding: 1rem; 
+            border-radius: 5px; 
+            background-color: var(--secondary-background-color);
+            margin-bottom: 1.5rem; 
             text-align: left;
             color: var(--text-color);
-            line-height: 1.6;
         }
         
-        /* Scrollbar Styling */
-        .consent-text::-webkit-scrollbar {
-            width: 8px;
-        }
-        .consent-text::-webkit-scrollbar-track {
-            background: #f1f1f1; 
-            border-radius: 4px;
-        }
-        .consent-text::-webkit-scrollbar-thumb {
-            background: #ccc; 
-            border-radius: 4px;
-        }
-        .consent-text::-webkit-scrollbar-thumb:hover {
-            background: #bbb; 
-        }
-        
-        /* Reuse button style */
-        div.stButton > button[kind="primary"] {
-            background: linear-gradient(180deg, #00796B 0%, #00695C 100%) !important;
-            border: none !important;
+        /* Reuse button style for consent page */
+        div.stButton > button {
+            background-color: #00796B !important;
             color: white !important;
-            border-radius: 10px !important;
+            border: 1px solid #00796B !important;
+            border-radius: 8px !important;
             font-weight: 600 !important;
             width: 100%;
-            height: 3.5rem !important;
-            box-shadow: 0 4px 6px rgba(0, 121, 107, 0.2) !important;
-            transition: all 0.3s ease !important;
+            height: 3rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15) !important;
         }
-        div.stButton > button[kind="primary"]:hover {
-            background: linear-gradient(180deg, #00897B 0%, #00796B 100%) !important;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0, 121, 107, 0.3) !important;
+        div.stButton > button:hover {
+            background-color: #00695C !important;
+            border-color: #00695C !important;
+            transform: translateY(-1px);
+        }
+        div.stButton > button:active {
+            background-color: #004D40 !important;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -286,31 +272,23 @@ def pdpa_consent_page():
         st.markdown("<h2>ข้อตกลงและเงื่อนไขการใช้งาน (PDPA Consent)</h2>", unsafe_allow_html=True)
         st.markdown("""
         <div class="consent-text">
-            <h4 style="margin-top:0;">คำประกาศเกี่ยวกับความเป็นส่วนตัว (Privacy Notice)</h4>
-            <p><strong>โรงพยาบาลสันทราย</strong> ให้ความสำคัญกับการคุ้มครองข้อมูลส่วนบุคคลของท่าน เพื่อให้ท่านมั่นใจได้ว่าข้อมูลส่วนบุคคลของท่านที่เราได้รับจะถูกนำไปใช้ตรงตามความต้องการของท่านและถูกต้องตามกฎหมายคุ้มครองข้อมูลส่วนบุคคล</p>
-            
-            <p><strong>1. วัตถุประสงค์ในการเก็บรวบรวม ใช้ หรือเปิดเผยข้อมูลส่วนบุคคล</strong></p>
+            <h4>คำประกาศเกี่ยวกับความเป็นส่วนตัว (Privacy Notice)</h4>
+            <p><strong>ระบบรายงานผลตรวจสุขภาพ</strong> ให้ความสำคัญกับการคุ้มครองข้อมูลส่วนบุคคลของท่าน เพื่อให้ท่านมั่นใจได้ว่าข้อมูลส่วนบุคคลของท่านที่เราได้รับจะถูกนำไปใช้ตรงตามความต้องการของท่านและถูกต้องตามกฎหมายคุ้มครองข้อมูลส่วนบุคคล</p>
+            <p><strong>วัตถุประสงค์ในการเก็บรวบรวม ใช้ หรือเปิดเผยข้อมูลส่วนบุคคล</strong></p>
             <ul>
                 <li>เพื่อใช้ในการระบุและยืนยันตัวตนของท่านก่อนเข้าใช้งานระบบรายงานผลตรวจสุขภาพ</li>
-                <li>เพื่อแสดงผลการตรวจสุขภาพและข้อมูลที่เกี่ยวข้องซึ่งเป็นข้อมูลส่วนบุคคลที่มีความอ่อนไหว (Sensitive Data)</li>
-                <li>เพื่อการวิเคราะห์ข้อมูลในภาพรวมสำหรับการพัฒนาคุณภาพบริการของโรงพยาบาล (โดยไม่ระบุตัวตน)</li>
+                <li>เพื่อแสดงผลการตรวจสุขภาพและข้อมูลที่เกี่ยวข้องซึ่งเป็นข้อมูลส่วนบุคคลที่มีความอ่อนไหว</li>
+                <li>เพื่อการวิเคราะห์ข้อมูลในภาพรวมสำหรับการพัฒนาคุณภาพบริการ (โดยไม่ระบุตัวตน)</li>
             </ul>
-            
-            <p><strong>2. การรักษาความปลอดภัยของข้อมูล</strong></p>
-            <p>โรงพยาบาลมีมาตรการรักษาความปลอดภัยของข้อมูลส่วนบุคคลของท่านอย่างเข้มงวด ตามมาตรฐานสากล เพื่อป้องกันการเข้าถึง การใช้ หรือการเปิดเผยข้อมูลโดยไม่ได้รับอนุญาต</p>
-            
-            <p><strong>3. การเปิดเผยข้อมูลส่วนบุคคล</strong></p>
-            <p>โรงพยาบาลจะไม่เปิดเผยข้อมูลส่วนบุคคลของท่านแก่บุคคลภายนอก เว้นแต่จะได้รับความยินยอมจากท่าน หรือเป็นไปตามที่กฎหมายกำหนด</p>
-            
-            <p><strong>4. สิทธิ์ของเจ้าของข้อมูล</strong></p>
-            <p>ท่านมีสิทธิ์ในการเข้าถึง ขอรับสำเนา ขอแก้ไข หรือขอระงับการใช้ข้อมูลส่วนบุคคลของท่านตามที่กฎหมายกำหนด</p>
-            
-            <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid #eee;">
-            <p style="font-weight: 600;">การยอมรับข้อตกลง</p>
-            <p>โดยการคลิกปุ่ม <strong>"ยอมรับและดำเนินการต่อ"</strong> ด้านล่างนี้ ท่านรับทราบและยินยอมให้โรงพยาบาลเก็บรวบรวม ใช้ และเปิดเผยข้อมูลส่วนบุคคลของท่านตามวัตถุประสงค์ที่ระบุไว้ในคำประกาศนี้</p>
+            <p><strong>การรักษาความปลอดภัยของข้อมูล</strong></p>
+            <p>ระบบมีมาตรการรักษาความปลอดภัยของข้อมูลส่วนบุคคลของท่านอย่างเข้มงวด เพื่อป้องกันการเข้าถึง การใช้ หรือการเปิดเผยข้อมูลโดยไม่ได้รับอนุญาต</p>
+            <p><strong>การเปิดเผยข้อมูลส่วนบุคคล</strong></p>
+            <p>ระบบจะไม่เปิดเผยข้อมูลส่วนบุคคลของท่านแก่บุคคลภายนอก เว้นแต่จะได้รับความยินยอมจากท่าน หรือเป็นไปตามที่กฎหมายกำหนด</p>
+            <p>โดยการคลิกปุ่ม <strong>"ยอมรับ"</strong> ด้านล่างนี้ ท่านรับทราบและยินยอมให้ระบบเก็บรวบรวม ใช้ และเปิดเผยข้อมูลส่วนบุคคลของท่านตามวัตถุประสงค์ที่ระบุไว้ในคำประกาศนี้</p>
         </div>
         """, unsafe_allow_html=True)
         
-        if st.button("ยอมรับและดำเนินการต่อ (Accept & Continue)", type="primary"):
+        # ใช้ปุ่มธรรมดา (ไม่ใช้ type=primary) แล้ว CSS จะจัดการให้เป็นสีเขียว
+        if st.button("ยอมรับและดำเนินการต่อ (Accept & Continue)"):
             st.session_state['pdpa_accepted'] = True
             st.rerun()
