@@ -126,6 +126,12 @@ def display_print_center_page(df):
     st.title("🖨️ ศูนย์จัดการพิมพ์รายงาน (Print Center)")
     st.markdown("---")
 
+    # --- State Management (Persistence) ---
+    # กำหนดค่าเริ่มต้นถ้ายังไม่มีใน session state เพื่อให้เวลากลับมาหน้านี้ค่าไม่หาย
+    if 'bp_dept_filter' not in st.session_state: st.session_state.bp_dept_filter = []
+    if 'bp_date_filter' not in st.session_state: st.session_state.bp_date_filter = "(ทั้งหมด)"
+    if 'bp_report_type' not in st.session_state: st.session_state.bp_report_type = "รายงานสุขภาพ (Main)"
+
     # --- 1. ส่วนคัดกรองข้อมูล (Filter Section) ---
     st.subheader("1. คัดกรองผู้ป่วยที่ต้องการพิมพ์")
     
@@ -133,32 +139,46 @@ def display_print_center_page(df):
     
     with col1:
         all_depts = sorted(df['หน่วยงาน'].dropna().astype(str).str.strip().unique())
+        # ใช้ key เพื่อผูกกับ session_state โดยตรง -> ค่าจะคงอยู่แม้เปลี่ยน Tab
         selected_depts = st.multiselect(
             "1. ค้นหาหน่วยงาน (พิมพ์ชื่อได้เลย)", 
             options=all_depts,
             placeholder="เลือกหรือพิมพ์ชื่อหน่วยงาน...",
-            key="batch_select_depts"
+            key="bp_dept_filter"
         )
 
     with col2:
+        # Logic Dependent Dropdown
         if selected_depts:
             dept_filtered_df = df[df['หน่วยงาน'].astype(str).str.strip().isin(selected_depts)]
             available_dates = sorted(dept_filtered_df['วันที่ตรวจ'].dropna().astype(str).unique(), reverse=True)
         else:
             available_dates = sorted(df['วันที่ตรวจ'].dropna().astype(str).unique(), reverse=True)
-            
+        
+        # ตรวจสอบว่าค่าเดิมที่เคยเลือก ยังอยู่ใน list ใหม่หรือไม่ ถ้าไม่ ให้ reset
+        date_options = ["(ทั้งหมด)"] + list(available_dates)
+        index_to_select = 0
+        if st.session_state.bp_date_filter in date_options:
+            index_to_select = date_options.index(st.session_state.bp_date_filter)
+
         selected_date = st.selectbox(
             "2. เลือกวันที่ตรวจ", 
-            ["(ทั้งหมด)"] + list(available_dates), 
-            index=0,
-            key="batch_select_date"
+            options=date_options,
+            index=index_to_select,
+            key="bp_date_filter"
         )
 
     with col3:
+        report_type_options = ["รายงานสุขภาพ (Main)", "รายงานสมรรถภาพ (Performance)"]
+        type_index = 0
+        if st.session_state.bp_report_type in report_type_options:
+            type_index = report_type_options.index(st.session_state.bp_report_type)
+            
         report_type = st.selectbox(
             "3. เลือกประเภทรายงาน", 
-            ["รายงานสุขภาพ (Main)", "รายงานสมรรถภาพ (Performance)"],
-            key="batch_select_type"
+            options=report_type_options,
+            index=type_index,
+            key="bp_report_type"
         )
 
     # --- 2. แสดงตารางรายชื่อ (Data Selection with Smart Status) ---
@@ -182,8 +202,8 @@ def display_print_center_page(df):
     status_list = []
     ready_list = []
     
+    # ใช้ report_type ที่เลือกปัจจุบันในการเช็ค
     for _, row in display_df.iterrows():
-        # ต้องดึง row เต็มๆ จาก df เดิมมาเช็ค เพราะ display_df ตัดคอลัมน์ออกไปแล้ว
         full_data_row = unique_patients_df.loc[unique_patients_df['HN'] == row['HN']].iloc[0].to_dict()
         is_ready, status_text = check_data_readiness(full_data_row, report_type)
         status_list.append(status_text)
