@@ -175,7 +175,8 @@ def plot_historical_trends(history_df, person_data):
                 name=title,
                 line=dict(color=color, width=3, shape='spline'), # Spline for smooth look
                 marker=dict(size=8, color='white', line=dict(width=2, color=color)),
-                hovertemplate=f'<b>%{x}</b><br>%{y:.1f} {unit}<extra></extra>'
+                # แก้ไขบรรทัดนี้: ใส่ {{ }} สำหรับตัวแปร Plotly และ { } สำหรับตัวแปร Python
+                hovertemplate=f'<b>%{{x}}</b><br>%{{y:.1f}} {unit}<extra></extra>'
             ))
             
             # Add Threshold Line (Dashed)
