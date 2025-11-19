@@ -9,14 +9,18 @@ import numpy as np
 # --- DESIGN SYSTEM & CONSTANTS ---
 THEME = {
     'primary': '#00796B',      # Teal
-    'secondary': '#4DB6AC',    # Light Teal
+    'secondary': '#80CBC4',    # Soft Teal
     'text_light': '#37474F',   # Dark Grey
-    'grid': 'rgba(128, 128, 128, 0.2)', 
+    'grid': 'rgba(128, 128, 128, 0.1)', 
     'success': '#66BB6A',      # Green
+    'success_bg': '#E8F5E9',   # Light Green BG
     'warning': '#FFA726',      # Orange
+    'warning_bg': '#FFF3E0',   # Light Orange BG
     'danger': '#EF5350',       # Red
+    'danger_bg': '#FFEBEE',    # Light Red BG
     'info': '#42A5F5',         # Blue
-    'track': '#F5F5F5',        # Light Grey for ring track
+    'info_bg': '#E3F2FD',      # Light Blue BG
+    'track': '#F0F2F5',        # Very Light Grey for track
     'sbp_color': '#E53935',    # Red
     'dbp_color': '#1E88E5',    # Blue
     'hct_color': '#AB47BC',    # Purple
@@ -51,8 +55,8 @@ def get_bmi_desc(bmi):
     if bmi < 18.5: return "น้ำหนักน้อย"
     if bmi < 23: return "สมส่วน"
     if bmi < 25: return "น้ำหนักเกิน (ท้วม)"
-    if bmi < 30: return "อ้วนระยะที่ 1" # ปรับคำให้นุ่มนวลขึ้น
-    return "อ้วนระยะที่ 2" # ปรับคำให้เป็นทางการแพทย์
+    if bmi < 30: return "อ้วนระยะที่ 1"
+    return "อ้วนระยะที่ 2"
 
 def get_fbs_desc(fbs):
     if fbs is None: return "-"
@@ -130,36 +134,74 @@ def plot_historical_trends(history_df, person_data):
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 
-def create_ring_chart(value, title, max_val, color, unit=""):
+def create_premium_ring_chart(value, max_val, color, track_color=THEME['track']):
     """
-    สร้าง Ring Chart (Donut) ที่ดูทันสมัยสไตล์ Apple Watch
+    สร้าง Ring Chart แบบพรีเมียม (Thinner, Cleaner)
     """
-    # Ensure value doesn't exceed visually for the ring (but text shows real value)
     plot_val = min(value, max_val)
     remaining = max_val - plot_val
     
-    # Create Donut Chart
     fig = go.Figure(data=[go.Pie(
         values=[plot_val, remaining],
-        hole=0.75, # Ring thickness
+        hole=0.85, # Ring บางลงเพื่อให้ดูหรูขึ้น
         sort=False,
         direction='clockwise',
         textinfo='none',
         hoverinfo='none',
-        marker=dict(colors=[color, THEME['track']])
+        marker=dict(colors=[color, track_color])
     )])
 
-    # Add centered text
     fig.update_layout(
-        title=dict(text=title, x=0.5, y=0.95, font=dict(size=14, family=FONT_FAMILY)),
-        annotations=[dict(text=f"{value:.1f}<br><span style='font-size:14px; color:gray'>{unit}</span>", x=0.5, y=0.5, font_size=28, font_family=FONT_FAMILY, showarrow=False)],
         showlegend=False,
-        height=180,
-        margin=dict(l=20, r=20, t=30, b=20),
+        height=160, # ปรับความสูงให้พอดีกับ Card
+        margin=dict(l=0, r=0, t=10, b=10), # ลดขอบให้ชิดที่สุด
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)'
     )
     return fig
+
+def render_indicator_card(title, value_str, unit, desc, color_hex, bg_hex, chart_fig=None):
+    """
+    Render Card UI แบบ HTML ผสม Plotly (เพื่อให้สวยกว่า Plotly เพียวๆ)
+    """
+    # Create the HTML for the textual part (Title, Value, Status Pill)
+    text_html = f"""
+    <div style="text-align: center; font-family: 'Sarabun', sans-serif;">
+        <div style="font-size: 14px; color: gray; margin-bottom: 5px;">{title}</div>
+        <div style="font-size: 32px; font-weight: 700; color: {THEME['text_light']}; line-height: 1;">
+            {value_str} <span style="font-size: 14px; font-weight: 400; color: gray;">{unit}</span>
+        </div>
+        <div style="margin-top: 10px;">
+            <span style="
+                background-color: {bg_hex}; 
+                color: {color_hex}; 
+                padding: 4px 12px; 
+                border-radius: 20px; 
+                font-size: 12px; 
+                font-weight: 600;
+                display: inline-block;">
+                {desc}
+            </span>
+        </div>
+    </div>
+    """
+    
+    # Display Logic
+    if chart_fig:
+        # ซ้อน Chart กับ Text (Chart เป็น Background Ring)
+        # ใช้ st.columns เพื่อจัดระเบียบ
+        st.plotly_chart(chart_fig, use_container_width=True, config={'displayModeBar': False, 'staticPlot': True})
+        # ดัน Text ขึ้นไปทับ Chart (ทำยากใน Streamlit ปกติ) 
+        # ดังนั้นใช้วิธีวาง Text ไว้ใต้ Chart แต่ใช้ CSS margin-top ติดลบเพื่อดึงขึ้น
+        st.markdown(f"""
+            <div style="margin-top: -120px; position: relative; z-index: 10; pointer-events: none;">
+                {text_html}
+            </div>
+            <div style="margin-bottom: 20px;"></div> 
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown(text_html, unsafe_allow_html=True)
+
 
 def plot_bmi_gauge(person_data):
     bmi = get_float(person_data, 'BMI')
@@ -170,38 +212,38 @@ def plot_bmi_gauge(person_data):
 
     if bmi:
         desc = get_bmi_desc(bmi)
-        # Color logic
-        if "อ้วนระยะที่ 2" in desc: c = THEME['danger']
-        elif "เริ่ม" in desc or "ท้วม" in desc or "อ้วนระยะที่ 1" in desc: c = THEME['warning']
-        elif "น้อย" in desc: c = THEME['info']
-        else: c = THEME['success']
+        # Color selection
+        if "อ้วนระยะที่ 2" in desc: c, bg = THEME['danger'], THEME['danger_bg']
+        elif "เริ่ม" in desc or "ท้วม" in desc or "อ้วนระยะที่ 1" in desc: c, bg = THEME['warning'], THEME['warning_bg']
+        elif "น้อย" in desc: c, bg = THEME['info'], THEME['info_bg']
+        else: c, bg = THEME['success'], THEME['success_bg']
         
-        # Max scale for BMI ring usually around 40
-        fig = create_ring_chart(bmi, "ดัชนีมวลกาย (BMI)", 40, c, "")
-        st.plotly_chart(fig, use_container_width=True)
-        st.markdown(f"<div style='text-align:center; font-weight:bold; color:{c}; margin-top:-20px;'>{desc}</div>", unsafe_allow_html=True)
+        fig = create_premium_ring_chart(bmi, 40, c)
+        render_indicator_card("ดัชนีมวลกาย (BMI)", f"{bmi:.1f}", "", desc, c, bg, fig)
+    else:
+        st.info("ไม่มีข้อมูล BMI")
 
 def plot_fbs_gauge(person_data):
     fbs = get_float(person_data, 'FBS')
     if fbs:
         desc = get_fbs_desc(fbs)
-        c = THEME['danger'] if "เบาหวาน" in desc and "เสี่ยง" not in desc else THEME['warning'] if "เสี่ยง" in desc else THEME['success']
+        c, bg = (THEME['danger'], THEME['danger_bg']) if "เบาหวาน" in desc and "เสี่ยง" not in desc else (THEME['warning'], THEME['warning_bg']) if "เสี่ยง" in desc else (THEME['success'], THEME['success_bg'])
         
-        # Max scale for FBS ring around 200
-        fig = create_ring_chart(fbs, "น้ำตาลในเลือด (FBS)", 200, c, "mg/dL")
-        st.plotly_chart(fig, use_container_width=True)
-        st.markdown(f"<div style='text-align:center; font-weight:bold; color:{c}; margin-top:-20px;'>{desc}</div>", unsafe_allow_html=True)
+        fig = create_premium_ring_chart(fbs, 200, c)
+        render_indicator_card("น้ำตาลในเลือด (FBS)", f"{fbs:.0f}", "mg/dL", desc, c, bg, fig)
+    else:
+        st.info("ไม่มีข้อมูล FBS")
 
 def plot_gfr_gauge(person_data):
     gfr = get_float(person_data, 'GFR')
     if gfr:
         desc = get_gfr_desc(gfr)
-        c = THEME['success'] if "ปกติ" in desc else THEME['warning'] if "เล็กน้อย" in desc else THEME['danger']
+        c, bg = (THEME['success'], THEME['success_bg']) if "ปกติ" in desc else (THEME['warning'], THEME['warning_bg']) if "เล็กน้อย" in desc else (THEME['danger'], THEME['danger_bg'])
         
-        # Max scale for GFR ring around 120
-        fig = create_ring_chart(gfr, "การทำงานของไต (GFR)", 120, c, "mL/min")
-        st.plotly_chart(fig, use_container_width=True)
-        st.markdown(f"<div style='text-align:center; font-weight:bold; color:{c}; margin-top:-20px;'>{desc}</div>", unsafe_allow_html=True)
+        fig = create_premium_ring_chart(gfr, 120, c)
+        render_indicator_card("การทำงานของไต (GFR)", f"{gfr:.0f}", "mL/min", desc, c, bg, fig)
+    else:
+        st.info("ไม่มีข้อมูล GFR")
 
 
 def plot_audiogram(person_data):
