@@ -22,7 +22,7 @@ from print_report import (
     generate_doctor_opinion
 )
 
-# --- Helper Functions ---
+# --- Helper Functions (รวมไว้ในนี้เพื่อให้ทำงานได้สมบูรณ์และ app.py เรียกใช้ได้) ---
 
 def is_empty(val):
     """Check if a value is empty, null, or whitespace."""
