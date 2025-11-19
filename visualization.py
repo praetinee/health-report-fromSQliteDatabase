@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
 import numpy as np
-import textwrap # ใช้สำหรับจัดการ string ให้ไม่มีปัญหา indentation
+import textwrap
 
 # --- DESIGN SYSTEM & CONSTANTS ---
 THEME = {
@@ -135,107 +135,106 @@ def plot_historical_trends(history_df, person_data):
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 
-def create_semicircle_gauge_chart(value, max_val, ranges, range_colors):
-    """
-    สร้าง Gauge แบบครึ่งวงกลม (Angular)
-    """
-    steps = []
-    for i in range(len(ranges)-1):
-        steps.append({'range': [ranges[i], ranges[i+1]], 'color': range_colors[i]})
+# --- SVG ICON GENERATORS ---
+# ฟังก์ชันเหล่านี้จะสร้างโค้ด SVG ที่เปลี่ยนสีได้ตามสถานะสุขภาพ
 
-    fig = go.Figure(go.Indicator(
-        mode = "gauge", 
-        value = value,
-        domain = {'x': [0, 1], 'y': [0, 1]},
-        gauge = {
-            'axis': {'range': [0, max_val], 'visible': False}, 
-            'bar': {'color': "rgba(50, 50, 50, 0.7)", 'thickness': 0.12}, # เข็มสีเทาเข้ม
-            'bgcolor': "white",
-            'borderwidth': 0,
-            'steps': steps,
-            'threshold': {
-                'line': {'color': "red", 'width': 2},
-                'thickness': 0.75,
-                'value': value
-            },
-            'shape': 'angular'
-        }
-    ))
-
-    fig.update_layout(
-        height=120, # ความสูงพอดีๆ
-        margin=dict(l=20, r=20, t=0, b=0), # ตัดขอบบนล่างออก เพื่อให้ชิด Text ด้านบน
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)'
-    )
-    return fig
-
-def render_seamless_card(title, value_str, unit, desc, color_hex, bg_hex, chart_fig):
+def get_body_svg(color):
+    """รูปคน (Body Shape)"""
+    return f"""
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="80" height="80" fill="{color}">
+      <path d="M12 2C9.79 2 8 3.79 8 6s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 10c-2.67 0-8 1.34-8 4v2c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-2c0-2.66-5.33-4-8-4z"/>
+    </svg>
     """
-    Render Card UI ที่ผสาน HTML และ Chart เข้าด้วยกันอย่างเนียนตา
+
+def get_blood_drop_svg(color):
+    """รูปหยดเลือด (Blood Drop)"""
+    return f"""
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="80" height="80" fill="{color}">
+      <path d="M12 2c-5.33 4.55-8 8.48-8 11.8 0 4.98 3.8 8.2 8 8.2s8-3.22 8-8.2c0-3.32-2.67-7.25-8-11.8z"/>
+      <path d="M7.8 12c0 .2.03.39.06.58.62-1.74 2.1-3.11 3.93-3.54-.83-.44-1.88.15-2.85 1.03-1.03.94-1.14 1.66-1.14 1.93z" fill="rgba(255,255,255,0.3)"/>
+    </svg>
     """
-    # 1. ส่วนหัว Card (HTML)
-    # ใช้ textwrap.dedent เพื่อป้องกันปัญหา indentation ที่ทำให้เกิดบั๊กแสดงโค้ด
+
+def get_kidney_svg(color):
+    """รูปไต (Kidney)"""
+    # SVG Path ที่วาดเป็นรูปไต (ดัดแปลงจากถั่ว/อวัยวะ)
+    return f"""
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="80" height="80" fill="{color}">
+      <path d="M350.5 120.8c-38.4-29.1-92-31.3-133.6-8.9-40.2-23.2-93.5-21.7-132.9 6.3-54.3 38.6-66.8 116.5-36.3 192.8 29.6 74 98.5 137.6 176.4 159.7 69.4 19.7 143.8-3.1 186.7-59.5 36.1-47.5 44.4-110.5 23.3-167.8-13.8-37.5-44.4-95.1-83.6-122.6zm-23.9 140.4c-12.2 49.6-48.4 85.5-90.4 98.3-41.4 12.6-83.6-4.8-108.8-43.6-24.9-38.3-23.5-88.5 5.9-127.3 28.8-38.1 72.3-54.8 113.7-43.1 40.6 11.5 74.3 51.8 84.7 97.4 1.8 8.1-3.7 16.1-11.8 17.2-8 1.1-15.4-4.7-17.2-12.8-7.8-34.2-33.2-64.4-63.7-73.1-31.1-8.8-63.9 3.8-85.5 32.4-22.1 29.1-23.1 66.8-4.4 95.5 18.9 29.1 50.6 42.2 81.7 32.7 31.5-9.6 58.6-36.5 67.8-73.7 2.2-8.8 11.1-14.2 19.7-11.6 8.6 2.6 13.7 11.8 11.4 20.7z"/>
+    </svg>
+    """
+
+
+def render_icon_card(title, value_str, unit, desc, color_hex, bg_hex, svg_icon):
+    """
+    Render Card UI พร้อม Dynamic SVG Icon
+    """
     html_content = textwrap.dedent(f"""
     <div style="
         background-color: #FFFFFF;
         border-radius: 16px;
-        padding: 20px 20px 5px 20px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-        border: 1px solid rgba(0,0,0,0.05);
-        font-family: 'Sarabun', sans-serif;
-        margin-bottom: 10px;
+        padding: 20px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+        border: 1px solid rgba(255, 255, 255, 0.5);
         height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        font-family: 'Sarabun', sans-serif;
+        position: relative;
+        overflow: hidden;
     ">
-        <div style="display: flex; justify-content: space-between; align-items: start;">
+        <!-- Header -->
+        <div style="font-size: 14px; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+            {title}
+        </div>
+        
+        <!-- Middle Content: Icon & Value -->
+        <div style="display: flex; align-items: center; margin-top: 15px; margin-bottom: 15px;">
+            <div style="flex-shrink: 0; margin-right: 15px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));">
+                {svg_icon}
+            </div>
             <div>
-                <div style="font-size: 14px; color: #888; margin-bottom: 2px;">{title}</div>
-                <div style="font-size: 36px; font-weight: 700; color: #333; line-height: 1;">
-                    {value_str} <span style="font-size: 16px; font-weight: 500; color: #999;">{unit}</span>
+                <div style="font-size: 32px; font-weight: 800; color: #333; line-height: 1;">
+                    {value_str}
+                </div>
+                <div style="font-size: 14px; color: #999; font-weight: 500; margin-top: 2px;">
+                    {unit}
                 </div>
             </div>
-            <div>
-                <span style="
-                    background-color: {bg_hex}; 
-                    color: {color_hex}; 
-                    padding: 6px 12px; 
-                    border-radius: 8px; 
-                    font-size: 12px; 
-                    font-weight: 700;
-                    white-space: nowrap;
-                ">
-                    {desc}
-                </span>
-            </div>
         </div>
+
+        <!-- Bottom: Status Badge -->
+        <div>
+            <span style="
+                background-color: {bg_hex}; 
+                color: {color_hex}; 
+                padding: 6px 14px; 
+                border-radius: 50px; 
+                font-size: 13px; 
+                font-weight: 700;
+                display: inline-block;
+            ">
+                {desc}
+            </span>
+        </div>
+        
+        <!-- Decor: Background Circle for depth -->
+        <div style="
+            position: absolute;
+            top: -20px;
+            right: -20px;
+            width: 100px;
+            height: 100px;
+            background-color: {bg_hex};
+            border-radius: 50%;
+            opacity: 0.5;
+            z-index: 0;
+            pointer-events: none;
+        "></div>
     </div>
     """)
-    
     st.markdown(html_content, unsafe_allow_html=True)
-    
-    # 2. ส่วนกราฟ (Plotly)
-    # ดันกราฟขึ้นไปซ้อนกับ Card ด้านบนด้วย margin ติดลบ
-    # ใส่พื้นหลังสีขาวให้กราฟ เพื่อให้กลืนไปกับ Card
-    chart_fig.update_layout(
-        paper_bgcolor='rgba(255,255,255,0)', # พื้นหลังใส (เพราะซ้อนอยู่บน div ขาวไม่ได้จริงๆ ใน streamlit ต้องแยกกัน)
-        # Trick: เราไม่สามารถซ้อน div กับ chart ได้สมบูรณ์แบบใน streamlit
-        # ดังนั้นเราจะใช้ "Visual Trick" คือทำให้ div ด้านบนดูเหมือนเปิดท้าย
-        # และ chart ด้านล่างดูเหมือนต่อกัน
-    )
-    
-    # ปรับ CSS เพื่อดึงกราฟขึ้นไปชิดกับ div ด้านบน
-    st.markdown("""
-        <style>
-        div[data-testid="stVerticalBlock"] > div > div[data-testid="stBlock"] {
-            gap: 0rem; /* ลดช่องว่างระหว่าง element */
-        }
-        </style>
-        <div style="margin-top: -20px; margin-bottom: 20px; background-color: #FFFFFF; border-radius: 0 0 16px 16px; box-shadow: 0 10px 15px -5px rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.05); border-top: none; padding-bottom: 10px;">
-    """, unsafe_allow_html=True)
-    
-    st.plotly_chart(chart_fig, use_container_width=True, config={'displayModeBar': False, 'staticPlot': True})
-    
-    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def plot_bmi_gauge(person_data):
@@ -247,17 +246,13 @@ def plot_bmi_gauge(person_data):
 
     if bmi:
         desc = get_bmi_desc(bmi)
-        # Color selection
-        if "ระยะที่ 2" in desc: c, bg = THEME['danger'], THEME['danger_bg']
-        elif "เริ่ม" in desc or "เกิน" in desc or "ระยะที่ 1" in desc: c, bg = THEME['warning'], THEME['warning_bg']
+        if "อ้วนระยะที่ 2" in desc: c, bg = THEME['danger'], THEME['danger_bg']
+        elif "เริ่ม" in desc or "ท้วม" in desc or "ระยะที่ 1" in desc: c, bg = THEME['warning'], THEME['warning_bg']
         elif "น้อย" in desc: c, bg = THEME['info'], THEME['info_bg']
         else: c, bg = THEME['success'], THEME['success_bg']
         
-        ranges = [0, 18.5, 23, 25, 30, 40]
-        colors = ['#E3F2FD', '#E8F5E9', '#FFFDE7', '#FFF3E0', '#FFEBEE']
-        
-        fig = create_semicircle_gauge_chart(bmi, 40, ranges, colors)
-        render_seamless_card("ดัชนีมวลกาย (BMI)", f"{bmi:.1f}", "", desc, c, bg, fig)
+        icon_svg = get_body_svg(c)
+        render_icon_card("ดัชนีมวลกาย (BMI)", f"{bmi:.1f}", "kg/m²", desc, c, bg, icon_svg)
     else:
         st.info("ไม่มีข้อมูล BMI")
 
@@ -267,11 +262,8 @@ def plot_fbs_gauge(person_data):
         desc = get_fbs_desc(fbs)
         c, bg = (THEME['danger'], THEME['danger_bg']) if "เบาหวาน" in desc and "เสี่ยง" not in desc else (THEME['warning'], THEME['warning_bg']) if "เสี่ยง" in desc else (THEME['success'], THEME['success_bg'])
         
-        ranges = [0, 70, 100, 126, 300]
-        colors = ['#E3F2FD', '#E8F5E9', '#FFF3E0', '#FFEBEE']
-        
-        fig = create_semicircle_gauge_chart(fbs, 200, ranges, colors)
-        render_seamless_card("น้ำตาลในเลือด (FBS)", f"{fbs:.0f}", "mg/dL", desc, c, bg, fig)
+        icon_svg = get_blood_drop_svg(c)
+        render_icon_card("น้ำตาลในเลือด (FBS)", f"{fbs:.0f}", "mg/dL", desc, c, bg, icon_svg)
     else:
         st.info("ไม่มีข้อมูล FBS")
 
@@ -281,11 +273,8 @@ def plot_gfr_gauge(person_data):
         desc = get_gfr_desc(gfr)
         c, bg = (THEME['success'], THEME['success_bg']) if "ปกติ" in desc else (THEME['warning'], THEME['warning_bg']) if "เล็กน้อย" in desc else (THEME['danger'], THEME['danger_bg'])
         
-        ranges = [0, 60, 90, 140]
-        colors = ['#FFEBEE', '#FFF3E0', '#E8F5E9']
-        
-        fig = create_semicircle_gauge_chart(gfr, 140, ranges, colors)
-        render_seamless_card("การทำงานของไต (GFR)", f"{gfr:.0f}", "mL/min", desc, c, bg, fig)
+        icon_svg = get_kidney_svg(c)
+        render_icon_card("การทำงานของไต (GFR)", f"{gfr:.0f}", "mL/min", desc, c, bg, icon_svg)
     else:
         st.info("ไม่มีข้อมูล GFR")
 
