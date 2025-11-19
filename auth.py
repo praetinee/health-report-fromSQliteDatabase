@@ -25,11 +25,11 @@ def display_primary_login(df):
     
     # --- ใช้ Form เพื่อให้รองรับการกด Enter และ Tab ---
     with st.form(key='login_form'):
-        # ใช้ HTML เพื่อจัดแต่งหัวข้อใน Form ให้ดูดีขึ้น
+        # ใช้ HTML เพื่อจัดแต่งหัวข้อใน Form ให้ดูดีขึ้น (รองรับ Dark Mode)
         st.markdown("""
             <div style='text-align: left; margin-bottom: 20px;'>
                 <h3 style='margin: 0; color: var(--text-color); font-weight: 600;'>เข้าสู่ระบบ</h3>
-                <p style='margin: 0; font-size: 0.9rem; color: gray;'>กรุณากรอกข้อมูลเพื่อยืนยันตัวตน</p>
+                <p style='margin: 0; font-size: 0.9rem; opacity: 0.8;'>กรุณากรอกข้อมูลเพื่อยืนยันตัวตน</p>
             </div>
         """, unsafe_allow_html=True)
         
@@ -46,7 +46,7 @@ def display_primary_login(df):
 
         st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
-        # ใช้ปุ่มธรรมดา (Secondary) แล้วแต่ง CSS ให้เป็นแบบ Outline
+        # ปุ่ม Submit (Style จะถูกจัดการด้วย CSS ด้านล่าง)
         submit_button = st.form_submit_button("ลงชื่อเข้าใช้งาน", use_container_width=True)
 
     if submit_button:
@@ -95,43 +95,67 @@ def authentication_flow(df):
     """จัดการ Flow การเข้าสู่ระบบทั้งหมด"""
     st.set_page_config(page_title="ลงชื่อเข้าใช้ | ระบบรายงานผลสุขภาพ", layout="centered", page_icon="🏥")
     
+    # --- CSS Injection for Responsive & Themed Design ---
     st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
         
+        /* Global Font Settings */
         html, body, [class*="st-"], h1, h2, h3, h4, h5, h6, p, label, button, input, div {
             font-family: 'Sarabun', sans-serif !important;
         }
         
-        /* จัดระยะห่างด้านบนใหม่ ให้ดูโปร่งขึ้น */
+        /* --- Responsive Container Layout --- */
         .block-container {
             padding-top: 4rem !important;
-            max_width: 550px; /* จำกัดความกว้างให้พอดีสายตา */
+            max-width: 550px; /* Desktop width constraint */
+            margin: 0 auto;
         }
 
-        /* --- CARD DESIGN FOR LOGIN FORM --- */
+        /* Mobile Adjustments */
+        @media (max-width: 576px) {
+            .block-container {
+                padding-top: 2rem !important;
+                padding-left: 1rem !important;
+                padding-right: 1rem !important;
+                max-width: 100% !important;
+            }
+            [data-testid="stForm"] {
+                padding: 1.5rem !important; /* Reduce padding inside card on mobile */
+            }
+            .auth-header img {
+                max-width: 80% !important; /* Slightly smaller logo on mobile */
+            }
+        }
+
+        /* --- Adaptive Card Design (Theme Aware) --- */
         [data-testid="stForm"] {
             background-color: var(--secondary-background-color);
             padding: 2.5rem;
             border-radius: 16px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.08); 
-            border: 1px solid rgba(0,0,0,0.05);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08); 
+            border: 1px solid rgba(128, 128, 128, 0.1); /* Subtle border for definition */
         }
 
-        /* ปรับแต่ง Input Fields */
+        /* --- Input Fields Styling --- */
         .stTextInput input {
             border-radius: 8px;
             padding: 10px 12px;
-            border: 1px solid #e0e0e0;
-            transition: border-color 0.3s;
-            color: #333 !important; /* บังคับสีตัวอักษรให้เป็นสีเข้มตามธีม */
+            border: 1px solid var(--secondary-background-color); /* Matches background initially */
+            background-color: var(--background-color); /* Input bg matches main bg */
+            color: var(--text-color) !important;
+            transition: all 0.3s;
+        }
+        /* Add a subtle border when input is not focused to distinguish it */
+        .stTextInput input {
+            border: 1px solid rgba(128, 128, 128, 0.2);
         }
         .stTextInput input:focus {
-            border-color: #999;
-            box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(0, 121, 107, 0.1);
         }
         
-        /* ปรับแต่ง Header ส่วน Logo */
+        /* --- Header & Logo --- */
         .auth-header {
             text-align: center;
             padding-bottom: 2rem;
@@ -139,63 +163,63 @@ def authentication_flow(df):
         .auth-header img {
             margin-bottom: 1.5rem;
             border-radius: 12px;
+            height: auto;
         }
 
-        /* --- BUTTON STYLE (Clean/White Theme) --- */
-        /* ปรับแก้: กรอบขาว ตัวหนังสือสีเดียวกับ Input (เทาเข้ม/ดำ) */
-        
-        /* เล็งเป้าไปที่ปุ่ม Submit ใน Form */
+        /* --- BUTTON STYLE (Clean/White Theme - Adaptive) --- */
+        /* Uses var(--background-color) to ensure it looks 'Clean' (matching page bg) 
+           in both Light and Dark modes.
+           Text color uses var(--text-color) to automatically switch between Black/White.
+        */
         [data-testid="stForm"] [data-testid="baseButton-secondaryFormSubmit"] {
-            background-color: #ffffff !important; /* พื้นหลังขาว */
-            color: #333333 !important; /* ตัวหนังสือสีเดียวกับ Input */
-            border: 1px solid #ffffff !important; /* กรอบสีขาว */
+            background-color: var(--background-color) !important; 
+            color: var(--text-color) !important;
+            border: 1px solid rgba(128, 128, 128, 0.3) !important; /* Subtle border */
             border-radius: 8px !important;
             font-weight: 600 !important;
             font-size: 16px !important;
             height: 3rem !important;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05) !important; /* เงาบางๆ ให้ปุ่มลอยขึ้นมานิดหน่อย */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05) !important;
             transition: all 0.2s ease !important;
         }
 
         /* Hover State */
         [data-testid="stForm"] [data-testid="baseButton-secondaryFormSubmit"]:hover {
-            background-color: #f9f9f9 !important;
-            color: #000000 !important;
-            border-color: #f0f0f0 !important;
+            background-color: var(--secondary-background-color) !important;
+            border-color: var(--primary-color) !important; /* Highlight border color on hover */
+            color: var(--primary-color) !important; /* Highlight text on hover */
             transform: translateY(-1px);
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
         }
 
         /* Active/Click State */
         [data-testid="stForm"] [data-testid="baseButton-secondaryFormSubmit"]:active {
-            background-color: #e0e0e0 !important;
-            border-color: #e0e0e0 !important;
             transform: translateY(0px);
+            opacity: 0.8;
         }
 
         /* Focus State */
         [data-testid="stForm"] [data-testid="baseButton-secondaryFormSubmit"]:focus {
-            border-color: #ccc !important;
-            box-shadow: 0 0 0 0.2rem rgba(0, 0, 0, 0.1) !important;
+            border-color: var(--primary-color) !important;
+            box-shadow: 0 0 0 0.2rem rgba(0, 121, 107, 0.2) !important;
         }
         
-        /* --- Password Visibility Toggle Button Theme --- */
-        /* ปรับปุ่มลูกตา (Show/Hide Password) ให้เป็นธีมเดียวกับ Input */
+        /* --- Password Toggle Button (Adaptive) --- */
         [data-testid="stTextInput"] button {
-            color: #666 !important; /* สีเทากลางๆ (ธีมเดียวกับ Input) */
+            color: var(--text-color) !important;
+            opacity: 0.6;
             border: none !important;
             background-color: transparent !important;
         }
         [data-testid="stTextInput"] button:hover {
-            color: #333 !important; /* เข้มขึ้นเมื่อ Hover */
-            background-color: transparent !important;
+            opacity: 1;
+            color: var(--primary-color) !important;
         }
 
-        /* Override text color inside button (just in case) */
+        /* Override generic button text color if needed */
         [data-testid="stForm"] button p {
             color: inherit !important;
         }
-        /* --- END OF FIX --- */
         
     </style>
     """, unsafe_allow_html=True)
@@ -205,23 +229,25 @@ def authentication_flow(df):
         <div class="auth-header">
           <img src="https://i.postimg.cc/tJd4DZSY/image.png" alt="Logo" width="300" style="max-width: 100%; height: auto;">
           <h2 style='text-align: center; margin-top: 0px; margin-bottom: 5px; font-weight: 700; color: var(--text-color); letter-spacing: -0.5px;'>ระบบรายงานผลตรวจสุขภาพ</h2>
-          <p style='text-align: center; color: #666; margin-top: 0px; margin-bottom: 20px; font-weight: 400;'>กลุ่มงานอาชีวเวชกรรม</p>
+          <p style='text-align: center; opacity: 0.7; margin-top: 0px; margin-bottom: 20px; font-weight: 400;'>กลุ่มงานอาชีวเวชกรรม</p>
         </div>
         """, unsafe_allow_html=True)
 
         display_primary_login(df)
         
-        # Footer Updated Text
+        # Footer Updated with requested text
         st.markdown("""
-        <div style='text-align: center; margin-top: 4rem; color: #bbb; font-size: 0.7rem; letter-spacing: 0.5px; line-height: 1.6;'>
+        <div style='text-align: center; margin-top: 4rem; opacity: 0.6; font-size: 0.75rem; letter-spacing: 0.5px; line-height: 1.6;'>
             © 2025 Health Data Reporting System. All rights reserved.<br>
-            <span style='color: #999;'>Realized by P.P. for Occupational Health Dept.</span>
+            <span style='opacity: 0.8; font-weight: 500;'>Realized by P.P. for Occupational Health Dept.</span>
         </div>
         """, unsafe_allow_html=True)
 
 def pdpa_consent_page():
     """แสดงหน้าสำหรับให้ความยินยอม PDPA"""
     st.set_page_config(page_title="PDPA Consent", layout="centered")
+    
+    # --- Responsive PDPA CSS ---
     st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap');
@@ -232,6 +258,13 @@ def pdpa_consent_page():
         
         .block-container {
             padding-top: 3rem !important;
+        }
+
+        @media (max-width: 576px) {
+             div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] {
+                padding: 1.5rem 1.5rem !important;
+             }
+             h2 { font-size: 1.5rem !important; }
         }
 
         /* Style the container for consent */
@@ -256,7 +289,7 @@ def pdpa_consent_page():
             color: var(--text-color);
         }
         
-        /* Reuse button style for consent page - Keep this one FILLED GREEN for emphasis */
+        /* Button style for consent */
         .stButton > button {
             background-color: #00796B !important;
             color: white !important;
