@@ -46,8 +46,7 @@ def display_primary_login(df):
 
         st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
-        # --- TRICK: ใช้ type="secondary" (ค่า default) เพื่อหลีกเลี่ยงสีแดงของ Theme ---
-        # แล้วเราจะใช้ CSS บังคับสีเขียวใส่ปุ่มนี้แทน
+        # ใช้ปุ่มธรรมดา (Secondary) แล้วแต่ง CSS ให้เป็นแบบ Outline
         submit_button = st.form_submit_button("ลงชื่อเข้าใช้งาน", use_container_width=True)
 
     if submit_button:
@@ -111,12 +110,11 @@ def authentication_flow(df):
         }
 
         /* --- CARD DESIGN FOR LOGIN FORM --- */
-        /* ตกแต่งตัว Form หลักให้เหมือน Card */
         [data-testid="stForm"] {
             background-color: var(--secondary-background-color);
             padding: 2.5rem;
-            border-radius: 16px; /* มุมโค้งมน */
-            box-shadow: 0 10px 30px rgba(0,0,0,0.08); /* เงานุ่มนวล */
+            border-radius: 16px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08); 
             border: 1px solid rgba(0,0,0,0.05);
         }
 
@@ -139,31 +137,30 @@ def authentication_flow(df):
         }
         .auth-header img {
             margin-bottom: 1.5rem;
-            border-radius: 12px; /* ถ้ามีมุมภาพ */
-            /* box-shadow: 0 4px 12px rgba(0,0,0,0.1); Optional: ถ้าอยากให้โลโก้มีเงา */
+            border-radius: 12px;
         }
 
-        /* --- SMART FIX: Custom Green Button Style --- */
-        /* เล็งเป้าไปที่ปุ่มใน Form โดยเฉพาะ (ซึ่งเราถอด type=primary ออกแล้ว) */
+        /* --- PRETTY OUTLINE BUTTON STYLE (Green Theme) --- */
+        /* เล็งเป้าไปที่ปุ่มใน Form โดยเฉพาะ */
         [data-testid="stForm"] button {
-            background-color: #00796B !important; /* เขียวที่เราต้องการ */
-            color: white !important;
-            border: 1px solid #00796B !important;
+            background-color: transparent !important; /* พื้นหลังใส/ขาว */
+            color: #00796B !important; /* ตัวหนังสือเขียว */
+            border: 2px solid #00796B !important; /* ขอบเขียว */
             border-radius: 8px !important;
-            font-weight: 600 !important;
+            font-weight: 700 !important;
             font-size: 16px !important;
             height: 3rem !important;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+            box-shadow: none !important;
             transition: all 0.2s ease !important;
         }
 
-        /* Hover State */
+        /* Hover State: เปลี่ยนเป็นทึบเมื่อชี้ */
         [data-testid="stForm"] button:hover {
-            background-color: #00695C !important;
-            border-color: #00695C !important;
+            background-color: #00796B !important;
             color: white !important;
+            border-color: #00796B !important;
             transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+            box-shadow: 0 4px 8px rgba(0, 121, 107, 0.2) !important;
         }
 
         /* Active/Click State */
@@ -176,14 +173,15 @@ def authentication_flow(df):
 
         /* Focus State */
         [data-testid="stForm"] button:focus {
-            border-color: #004D40 !important;
-            color: white !important;
-            box-shadow: 0 0 0 0.2rem rgba(0, 121, 107, 0.25) !important;
+            border-color: #00796B !important;
+            color: #00796B !important;
+            background-color: transparent !important;
+            box-shadow: 0 0 0 0.2rem rgba(0, 121, 107, 0.2) !important;
         }
         
         /* Override text color inside button (just in case) */
         [data-testid="stForm"] button p {
-            color: white !important;
+            color: inherit !important;
         }
         /* --- END OF FIX --- */
         
@@ -201,11 +199,11 @@ def authentication_flow(df):
 
         display_primary_login(df)
         
-        # Footer เล็กๆ ด้านล่าง - ปรับให้เป็นกลาง ดูเท่ และเป็นมืออาชีพ (Clean & Minimal)
+        # Footer แบบกลางๆ
         st.markdown("""
         <div style='text-align: center; margin-top: 4rem; color: #bbb; font-size: 0.7rem; letter-spacing: 0.5px; line-height: 1.6;'>
             © 2025 Health Data Reporting System. All rights reserved.<br>
-            <span style='color: #999;'>Designed & Developed by <b>P.P.</b> • For Occupational Health Dept.</span>
+            <span style='color: #999;'>System Developed for Occupational Health Dept.</span>
         </div>
         """, unsafe_allow_html=True)
 
@@ -246,8 +244,8 @@ def pdpa_consent_page():
             color: var(--text-color);
         }
         
-        /* Reuse button style for consent page */
-        div.stButton > button {
+        /* Reuse button style for consent page - Keep this one FILLED GREEN for emphasis */
+        .stButton > button {
             background-color: #00796B !important;
             color: white !important;
             border: 1px solid #00796B !important;
@@ -257,12 +255,12 @@ def pdpa_consent_page():
             height: 3rem;
             box-shadow: 0 2px 5px rgba(0,0,0,0.15) !important;
         }
-        div.stButton > button:hover {
+        .stButton > button:hover {
             background-color: #00695C !important;
             border-color: #00695C !important;
             transform: translateY(-1px);
         }
-        div.stButton > button:active {
+        .stButton > button:active {
             background-color: #004D40 !important;
         }
     </style>
@@ -288,7 +286,6 @@ def pdpa_consent_page():
         </div>
         """, unsafe_allow_html=True)
         
-        # ใช้ปุ่มธรรมดา (ไม่ใช้ type=primary) แล้ว CSS จะจัดการให้เป็นสีเขียว
         if st.button("ยอมรับและดำเนินการต่อ (Accept & Continue)"):
             st.session_state['pdpa_accepted'] = True
             st.rerun()
