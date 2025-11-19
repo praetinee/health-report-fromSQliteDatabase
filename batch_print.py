@@ -125,6 +125,43 @@ def display_print_center_page(df):
     """
     st.title("🖨️ ศูนย์จัดการพิมพ์รายงาน (Print Center)")
     st.markdown("---")
+    
+    # --- Custom CSS for Print Button ---
+    st.markdown("""
+    <style>
+        /* Action Button Styling */
+        div[data-testid="stButton"] > button[kind="primary"] {
+            background: linear-gradient(135deg, #00796B 0%, #004D40 100%) !important;
+            color: white !important;
+            border: none !important;
+            padding: 0.8rem 2rem !important;
+            font-size: 1.2rem !important;
+            font-weight: 600 !important;
+            border-radius: 50px !important; /* Pill shape */
+            box-shadow: 0 4px 15px rgba(0, 121, 107, 0.3) !important;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+            letter-spacing: 0.5px !important;
+        }
+        
+        div[data-testid="stButton"] > button[kind="primary"]:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 8px 20px rgba(0, 121, 107, 0.4) !important;
+            filter: brightness(1.1) !important;
+        }
+        
+        div[data-testid="stButton"] > button[kind="primary"]:active {
+            transform: translateY(1px) !important;
+            box-shadow: 0 2px 5px rgba(0, 121, 107, 0.4) !important;
+        }
+
+        div[data-testid="stButton"] > button[kind="primary"]:disabled {
+            background: #e0e0e0 !important;
+            color: #9e9e9e !important;
+            box-shadow: none !important;
+            cursor: not-allowed !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
 
     # --- Fix Issue 2: State Management (Persistence) ---
     # ตรวจสอบและกำหนดค่าเริ่มต้นใน session_state ถ้ายังไม่มี
@@ -251,12 +288,14 @@ def display_print_center_page(df):
         st.caption(f"พบผู้ป่วยทั้งหมด {len(display_df)} คน | ข้อมูลพร้อมพิมพ์ ✅ {count_ready} คน | เลือกพิมพ์ {count_selected} คน")
 
     # --- 3. ปุ่มดำเนินการ (Action) ---
-    st.subheader("3. สั่งพิมพ์")
+    st.markdown("---")
+    st.subheader("3. ดำเนินการสั่งพิมพ์")
     
-    col_btn_1, col_btn_2 = st.columns([1, 2])
+    # จัดปุ่มให้อยู่ตรงกลางและดูเด่น
+    col_l, col_c, col_r = st.columns([1, 2, 1])
     
-    with col_btn_1:
-        if st.button(f"🖨️ สร้างรายงาน ({count_selected} ท่าน)", type="primary", use_container_width=True, disabled=(count_selected == 0)):
+    with col_c:
+        if st.button(f"🖨️ สั่งพิมพ์รายงาน ({count_selected} ท่าน)", type="primary", use_container_width=True, disabled=(count_selected == 0)):
             if count_selected > 0:
                 html_content, skipped = generate_batch_html(df, selected_hns, report_type)
                 
