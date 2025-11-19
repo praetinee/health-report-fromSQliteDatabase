@@ -201,11 +201,11 @@ def authentication_flow(df):
 
         display_primary_login(df)
         
-        # Footer เล็กๆ ด้านล่าง - ปรับให้เป็นกลางและดูเป็นมืออาชีพ
+        # Footer เล็กๆ ด้านล่าง - ปรับให้เป็นกลาง ดูเท่ และเป็นมืออาชีพ (Clean & Minimal)
         st.markdown("""
-        <div style='text-align: center; margin-top: 3rem; color: #bbb; font-size: 0.75rem; line-height: 1.4;'>
-            © 2025 Health Data Reporting System Designed & Developed by P.P.. All rights reserved.<br>
-            <span style='color: #999;'>System Developed for Occupational Health Dept.</span>
+        <div style='text-align: center; margin-top: 4rem; color: #bbb; font-size: 0.7rem; letter-spacing: 0.5px; line-height: 1.6;'>
+            © 2025 Health Data Reporting System. All rights reserved.<br>
+            <span style='color: #999;'>Designed & Developed by <b>P.P.</b> • For Occupational Health Dept.</span>
         </div>
         """, unsafe_allow_html=True)
 
