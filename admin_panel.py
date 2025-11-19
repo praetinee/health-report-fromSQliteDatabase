@@ -139,6 +139,7 @@ def interpret_stool_exam(val):
     if val_lower == "normal": return "ไม่พบเม็ดเลือดขาวในอุจจาระ ถือว่าปกติ"
     if "wbc" in val_lower or "เม็ดเลือดขาว" in val_lower: return "พบเม็ดเลือดขาวในอุจจาระ นัดตรวจซ้ำ"
     return val
+
 def interpret_stool_cs(value):
     if is_empty(value): return "ไม่ได้เข้ารับการตรวจ"
     val_strip = str(value).strip()
@@ -826,16 +827,16 @@ def display_admin_panel(df):
                         with col_sel_year:
                             selected_year = st.selectbox("เลือกปี พ.ศ.", options=available_years, index=year_idx, format_func=lambda y: f"พ.ศ. {y}", key="admin_year_select")
                         
-                        # --- START CHANGE: Move Print Buttons directly under Year Select, remove container ---
-                        # Add some margin top to separate from dropdown
+                        # --- START CHANGE: Move Print Buttons here (inside year selection block) ---
+                        # Add spacing
                         st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
-
+                        
                         col_btn_main, col_btn_perf = st.columns(2)
                         with col_btn_main:
-                             if st.button("พิมพ์รายงานสุขภาพ (Main)", use_container_width=True, key="admin_print_main", type="primary"):
+                             if st.button("พิมพ์รายงานสุขภาพ", use_container_width=True, key="admin_print_main", type="primary"):
                                  st.session_state.admin_print_trigger = True
                         with col_btn_perf:
-                             if st.button("พิมพ์รายงานสมรรถภาพ (Perf)", use_container_width=True, key="admin_print_perf", type="primary"):
+                             if st.button("พิมพ์รายงานสมรรถภาพ", use_container_width=True, key="admin_print_perf", type="primary"):
                                  st.session_state.admin_print_performance_trigger = True
                         
                         # Add divider right after buttons
