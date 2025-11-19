@@ -39,8 +39,9 @@ def display_primary_login(df):
             type="password"
         )
 
-        # ปุ่ม Submit ของ Form
-        submit_button = st.form_submit_button("ลงชื่อเข้าใช้", use_container_width=True, type="primary")
+        # --- TRICK: ใช้ type="secondary" (ค่า default) เพื่อหลีกเลี่ยงสีแดงของ Theme ---
+        # แล้วเราจะใช้ CSS บังคับสีเขียวใส่ปุ่มนี้แทน
+        submit_button = st.form_submit_button("ลงชื่อเข้าใช้", use_container_width=True)
 
     if submit_button:
         if name_input == "admin" and id_input == "admin":
@@ -115,44 +116,49 @@ def authentication_flow(df):
             padding-bottom: 1rem;
         }
 
-        /* --- START OF CHANGE: FORCE Green Button Style (Aggressive Override) --- */
-        /* ใช้ button[kind="primary"] เพื่อเล็งเป้าปุ่มสีแดงของระบบโดยตรง */
-        button[kind="primary"] {
-            background-color: #00796B !important; /* สีเขียวหลัก */
-            border-color: #00796B !important;
+        /* --- SMART FIX: Custom Green Button Style --- */
+        /* เล็งเป้าไปที่ปุ่มใน Form โดยเฉพาะ (ซึ่งเราถอด type=primary ออกแล้ว) */
+        [data-testid="stForm"] button {
+            background-color: #00796B !important; /* เขียวที่เราต้องการ */
             color: white !important;
-            transition: all 0.2s ease-in-out !important;
+            border: 1px solid #00796B !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+            font-size: 16px !important;
+            height: 3rem !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+            transition: all 0.2s ease !important;
         }
 
-        /* ตอนเอาเมาส์ชี้ */
-        button[kind="primary"]:hover {
+        /* Hover State */
+        [data-testid="stForm"] button:hover {
             background-color: #00695C !important;
             border-color: #00695C !important;
             color: white !important;
             transform: translateY(-1px);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
         }
 
-        /* ตอนกด */
-        button[kind="primary"]:active {
+        /* Active/Click State */
+        [data-testid="stForm"] button:active {
             background-color: #004D40 !important;
             border-color: #004D40 !important;
             color: white !important;
             transform: translateY(0px);
         }
 
-        /* ตอนโฟกัส (เช่นกด Tab มาโดน) */
-        button[kind="primary"]:focus {
-            box-shadow: 0 0 0 0.2rem rgba(0, 121, 107, 0.5) !important;
-            border-color: #00796B !important;
+        /* Focus State */
+        [data-testid="stForm"] button:focus {
+            border-color: #004D40 !important;
             color: white !important;
+            box-shadow: 0 0 0 0.2rem rgba(0, 121, 107, 0.25) !important;
         }
         
-        /* ป้องกันกรณีที่มี element ลูก */
-        button[kind="primary"] * {
+        /* Override text color inside button (just in case) */
+        [data-testid="stForm"] button p {
             color: white !important;
         }
-        /* --- END OF CHANGE --- */
+        /* --- END OF FIX --- */
         
     </style>
     """, unsafe_allow_html=True)
@@ -205,15 +211,24 @@ def pdpa_consent_page():
             color: var(--text-color);
         }
         
-        /* Apply same button styles to PDPA page */
-        button[kind="primary"] {
+        /* Reuse the same green style for the PDPA button */
+        .stButton > button {
             background-color: #00796B !important;
-            border-color: #00796B !important;
             color: white !important;
+            border: 1px solid #00796B !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+            width: 100%;
+            height: 3rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15) !important;
         }
-        button[kind="primary"]:hover {
+        .stButton > button:hover {
             background-color: #00695C !important;
             border-color: #00695C !important;
+            transform: translateY(-1px);
+        }
+        .stButton > button:active {
+            background-color: #004D40 !important;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -237,6 +252,8 @@ def pdpa_consent_page():
             <p>โดยการคลิกปุ่ม <strong>"ยอมรับ"</strong> ด้านล่างนี้ ท่านรับทราบและยินยอมให้โรงพยาบาลเก็บรวบรวม ใช้ และเปิดเผยข้อมูลส่วนบุคคลของท่านตามวัตถุประสงค์ที่ระบุไว้ในคำประกาศนี้</p>
         </div>
         """, unsafe_allow_html=True)
-        if st.button("ยอมรับและดำเนินการต่อ (Accept & Continue)", type="primary"):
+        
+        # ใช้ปุ่มธรรมดา (ไม่ใช้ type=primary) แล้ว CSS จะจัดการให้เป็นสีเขียว
+        if st.button("ยอมรับและดำเนินการต่อ (Accept & Continue)"):
             st.session_state['pdpa_accepted'] = True
             st.rerun()
