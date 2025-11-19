@@ -269,7 +269,6 @@ def plot_health_radar(person_data):
             display_vals.append(m['fmt'].format(m['val']))
     
     # --- FIX: Explicitly close the loop to ensure connectivity ---
-    # เมื่อจุดแรกและจุดสุดท้ายต้องเชื่อมกัน Plotly บางครั้งต้องการให้ระบุซ้ำ
     if scores:
         scores.append(scores[0])
         categories.append(categories[0])
@@ -281,7 +280,6 @@ def plot_health_radar(person_data):
     fig = go.Figure()
     
     # Background Ideal Shape (100%)
-    # ต้องปิด Loop ให้ Background ด้วย
     ideal_r = [100] * (len(categories) - 1)
     if ideal_r:
         ideal_r.append(ideal_r[0])
@@ -369,7 +367,7 @@ def display_visualization_tab(person_data, history_df):
             * **พื้นที่สีเขียวเต็มกราฟ** = สุขภาพดีเยี่ยม
             * **กราฟเว้าแหว่ง** = จุดเสี่ยงที่ต้องดูแล
             
-            *เกณฑ์การคำนวณอ้างอิงมาตรฐานทางการแพทย์ (เช่น ADA, NCEP ATP III)*
+            *เกณฑ์การคำนวณอ้างอิงมาตรฐานทางการแพทย์ (เช่น ADA, NCEP ATP III, KDIGO, ACR)*
             """)
         with c2:
             plot_health_radar(person_data)
