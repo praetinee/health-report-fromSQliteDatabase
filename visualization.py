@@ -134,21 +134,21 @@ def plot_historical_trends(history_df, person_data):
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 
-def create_shadow_gauge(value, max_val, ranges, range_colors):
+def create_shadow_semicircle_gauge(value, max_val, ranges, range_colors):
     """
-    สร้าง Gauge แบบครึ่งวงกลมที่ดูคลีนและพรีเมียม
+    สร้าง Gauge แบบครึ่งวงกลม (Angular) ที่สะอาดตา
     """
     steps = []
     for i in range(len(ranges)-1):
         steps.append({'range': [ranges[i], ranges[i+1]], 'color': range_colors[i]})
 
     fig = go.Figure(go.Indicator(
-        mode = "gauge", # ไม่โชว์ตัวเลขในกราฟ (จะไปโชว์ใน HTML Card แทนเพื่อความสวยงาม)
+        mode = "gauge", 
         value = value,
         domain = {'x': [0, 1], 'y': [0, 1]},
         gauge = {
-            'axis': {'range': [0, max_val], 'visible': False}, # ซ่อนแกนเลขให้ดูคลีน
-            'bar': {'color': "rgba(0,0,0,0.6)", 'thickness': 0.08}, # เข็มสีเข้มบางๆ
+            'axis': {'range': [0, max_val], 'visible': False}, # ซ่อนแกนให้คลีน
+            'bar': {'color': "rgba(50, 50, 50, 0.8)", 'thickness': 0.15}, # เข็มสีเข้มดูพรีเมียม
             'bgcolor': "white",
             'borderwidth': 0,
             'steps': steps,
@@ -162,8 +162,8 @@ def create_shadow_gauge(value, max_val, ranges, range_colors):
     ))
 
     fig.update_layout(
-        height=160,
-        margin=dict(l=15, r=15, t=10, b=10),
+        height=180,
+        margin=dict(l=20, r=20, t=20, b=0), # ตัด margin ล่างออกเพราะครึ่งวงกลม
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)'
     )
@@ -171,50 +171,55 @@ def create_shadow_gauge(value, max_val, ranges, range_colors):
 
 def render_shadow_card(title, value_str, unit, desc, color_hex, bg_hex, chart_fig):
     """
-    Render Card UI แบบมีแสงเงา (Shadow & Depth)
+    Render Card UI แบบมีแสงเงา (Light & Shadow) 
     """
-    # CSS สำหรับ Card แบบมีเงาและมนสวย
+    # CSS Card ที่ดูพรีเมียม: สีขาว, เงาฟุ้ง, ขอบมน, มี Hover effect เล็กน้อย
     card_style = f"""
         background-color: #FFFFFF;
-        border-radius: 16px;
-        padding: 20px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08); /* เงาฟุ้งๆ */
-        border: 1px solid rgba(0,0,0,0.02);
+        border-radius: 20px;
+        padding: 25px 20px 10px 20px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.01); /* เงา 2 ชั้นให้ดูลึก */
+        border: 1px solid rgba(255, 255, 255, 0.5);
         text-align: center;
         font-family: 'Sarabun', sans-serif;
         height: 100%;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        transition: transform 0.2s;
+        position: relative;
+        overflow: visible;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
     """
     
+    # HTML สำหรับ Card Content
     st.markdown(f"""
-    <div style="{card_style}">
-        <div style="font-size: 14px; color: #666; font-weight: 500; margin-bottom: 5px;">{title}</div>
-        <div style="font-size: 28px; font-weight: 700; color: #333; line-height: 1;">
-            {value_str} <span style="font-size: 14px; font-weight: 400; color: #888;">{unit}</span>
+    <div style="{card_style}" class="indicator-card">
+        <div style="font-size: 15px; color: #666; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 5px;">{title}</div>
+        
+        <div style="display: flex; align-items: baseline; justify-content: center; gap: 5px;">
+            <span style="font-size: 36px; font-weight: 800; color: #2C3E50; text-shadow: 1px 1px 0px rgba(0,0,0,0.05);">{value_str}</span>
+            <span style="font-size: 16px; font-weight: 500; color: #95A5A6;">{unit}</span>
         </div>
-        <div style="margin: 10px 0;">
+
+        <div style="margin-top: 5px; margin-bottom: 0px;">
             <span style="
                 background-color: {bg_hex}; 
                 color: {color_hex}; 
-                padding: 4px 12px; 
-                border-radius: 20px; 
-                font-size: 12px; 
-                font-weight: 600;
+                padding: 6px 16px; 
+                border-radius: 50px; 
+                font-size: 13px; 
+                font-weight: 700;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
                 display: inline-block;">
                 {desc}
             </span>
         </div>
-        <div style="margin-top: -20px;"> 
-            <!-- Placeholder for chart, rendered below via streamlit logic -->
+        
+        <div style="margin-top: -30px; margin-bottom: -20px; z-index: 1; position: relative;">
+            <!-- Chart Placeholder -->
         </div>
     </div>
     """, unsafe_allow_html=True)
     
-    # Render Chart (ดันขึ้นไปซ้อนในการ์ดด้วย margin ลบ)
-    st.markdown('<div style="margin-top: -10px;"></div>', unsafe_allow_html=True) 
+    # Render Chart ซ้อนเข้าไป (ใช้ margin-top ติดลบดึงขึ้น)
+    st.markdown('<div style="margin-top: -15px;"></div>', unsafe_allow_html=True)
     st.plotly_chart(chart_fig, use_container_width=True, config={'displayModeBar': False, 'staticPlot': True})
 
 
@@ -227,17 +232,16 @@ def plot_bmi_gauge(person_data):
 
     if bmi:
         desc = get_bmi_desc(bmi)
-        # Color selection
         if "อ้วนระยะที่ 2" in desc: c, bg = THEME['danger'], THEME['danger_bg']
         elif "เริ่ม" in desc or "ท้วม" in desc or "อ้วนระยะที่ 1" in desc: c, bg = THEME['warning'], THEME['warning_bg']
         elif "น้อย" in desc: c, bg = THEME['info'], THEME['info_bg']
         else: c, bg = THEME['success'], THEME['success_bg']
         
         ranges = [0, 18.5, 23, 25, 30, 40]
-        # ใช้สีพาสเทลนุ่มๆ สำหรับพื้นหลังเกจ
-        colors = ['#E3F2FD', '#E8F5E9', '#FFFDE7', '#FFF3E0', '#FFEBEE']
+        # สีพาสเทลนุ่มๆ ไล่ระดับ
+        colors = ['#BBDEFB', '#C8E6C9', '#FFF9C4', '#FFE0B2', '#FFCDD2']
         
-        fig = create_shadow_gauge(bmi, 40, ranges, colors)
+        fig = create_shadow_semicircle_gauge(bmi, 40, ranges, colors)
         render_shadow_card("ดัชนีมวลกาย (BMI)", f"{bmi:.1f}", "", desc, c, bg, fig)
     else:
         st.info("ไม่มีข้อมูล BMI")
@@ -249,9 +253,9 @@ def plot_fbs_gauge(person_data):
         c, bg = (THEME['danger'], THEME['danger_bg']) if "เบาหวาน" in desc and "เสี่ยง" not in desc else (THEME['warning'], THEME['warning_bg']) if "เสี่ยง" in desc else (THEME['success'], THEME['success_bg'])
         
         ranges = [0, 70, 100, 126, 300]
-        colors = ['#E3F2FD', '#E8F5E9', '#FFF3E0', '#FFEBEE']
+        colors = ['#BBDEFB', '#C8E6C9', '#FFE0B2', '#FFCDD2']
         
-        fig = create_shadow_gauge(fbs, 200, ranges, colors)
+        fig = create_shadow_semicircle_gauge(fbs, 200, ranges, colors)
         render_shadow_card("น้ำตาลในเลือด (FBS)", f"{fbs:.0f}", "mg/dL", desc, c, bg, fig)
     else:
         st.info("ไม่มีข้อมูล FBS")
@@ -262,11 +266,10 @@ def plot_gfr_gauge(person_data):
         desc = get_gfr_desc(gfr)
         c, bg = (THEME['success'], THEME['success_bg']) if "ปกติ" in desc else (THEME['warning'], THEME['warning_bg']) if "เล็กน้อย" in desc else (THEME['danger'], THEME['danger_bg'])
         
-        # Reverse ranges logic color manually mapped
         ranges = [0, 60, 90, 140]
-        colors = ['#FFEBEE', '#FFF3E0', '#E8F5E9']
+        colors = ['#FFCDD2', '#FFE0B2', '#C8E6C9']
         
-        fig = create_shadow_gauge(gfr, 140, ranges, colors)
+        fig = create_shadow_semicircle_gauge(gfr, 140, ranges, colors)
         render_shadow_card("การทำงานของไต (GFR)", f"{gfr:.0f}", "mL/min", desc, c, bg, fig)
     else:
         st.info("ไม่มีข้อมูล GFR")
