@@ -6,3 +6,4 @@ streamlit_js_eval
 google-generativeai
 openai
 plotly
+streamlit-lottie
