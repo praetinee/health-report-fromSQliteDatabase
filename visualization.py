@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
 import numpy as np
+import textwrap # ใช้สำหรับจัดการ string ให้ไม่มีปัญหา indentation
 
 # --- DESIGN SYSTEM & CONSTANTS ---
 THEME = {
@@ -54,9 +55,9 @@ def get_bmi_desc(bmi):
     if bmi is None: return "ไม่มีข้อมูล"
     if bmi < 18.5: return "น้ำหนักน้อย"
     if bmi < 23: return "สมส่วน"
-    if bmi < 25: return "น้ำหนักเกิน (ท้วม)"
-    if bmi < 30: return "อ้วนระยะที่ 1"
-    return "อ้วนระยะที่ 2"
+    if bmi < 25: return "น้ำหนักเกิน"
+    if bmi < 30: return "ภาวะอ้วนระยะที่ 1"
+    return "ภาวะอ้วนระยะที่ 2"
 
 def get_fbs_desc(fbs):
     if fbs is None: return "-"
@@ -134,114 +135,107 @@ def plot_historical_trends(history_df, person_data):
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 
-def create_linear_range_chart(value, min_val, max_val, ranges, range_colors, marker_color):
+def create_semicircle_gauge_chart(value, max_val, ranges, range_colors):
     """
-    สร้างกราฟแท่งแนวนอนแสดงช่วง (Medical Range Bar)
+    สร้าง Gauge แบบครึ่งวงกลม (Angular)
     """
-    fig = go.Figure()
-
-    # 1. Create background ranges (Shapes)
-    # ใช้ add_trace(Bar) แทน shape เพื่อให้ hover ได้และควบคุมง่ายกว่าในบางกรณี
-    # แต่ shape จะนิ่งกว่าสำหรับ background
-    
-    # Draw ranges as filled rectangles
+    steps = []
     for i in range(len(ranges)-1):
-        start, end = ranges[i], ranges[i+1]
-        color = range_colors[i]
-        
-        fig.add_shape(
-            type="rect",
-            x0=start, x1=end, y0=0, y1=1,
-            fillcolor=color, line_width=0,
-            opacity=0.7,
-            layer="below"
-        )
+        steps.append({'range': [ranges[i], ranges[i+1]], 'color': range_colors[i]})
 
-    # 2. Add Marker for current value
-    fig.add_trace(go.Scatter(
-        x=[value], y=[0.5],
-        mode='markers',
-        marker=dict(size=18, color='white', line=dict(width=4, color=marker_color), symbol='circle'),
-        hoverinfo='x',
-        name='ค่าของคุณ'
+    fig = go.Figure(go.Indicator(
+        mode = "gauge", 
+        value = value,
+        domain = {'x': [0, 1], 'y': [0, 1]},
+        gauge = {
+            'axis': {'range': [0, max_val], 'visible': False}, 
+            'bar': {'color': "rgba(50, 50, 50, 0.7)", 'thickness': 0.12}, # เข็มสีเทาเข้ม
+            'bgcolor': "white",
+            'borderwidth': 0,
+            'steps': steps,
+            'threshold': {
+                'line': {'color': "red", 'width': 2},
+                'thickness': 0.75,
+                'value': value
+            },
+            'shape': 'angular'
+        }
     ))
 
-    # 3. Setup Axis
     fig.update_layout(
-        xaxis=dict(
-            range=[min_val, max_val],
-            showgrid=False,
-            zeroline=False,
-            showline=False,
-            showticklabels=True,
-            tickfont=dict(family=FONT_FAMILY, size=12, color="#888"),
-            # tickvals=ranges # Show ticks at boundaries
-        ),
-        yaxis=dict(
-            showgrid=False,
-            zeroline=False,
-            showline=False,
-            showticklabels=False,
-            range=[0, 1]
-        ),
-        height=80, # ความสูงเฉพาะตัวกราฟ
-        margin=dict(l=10, r=10, t=0, b=20),
-        showlegend=False,
+        height=120, # ความสูงพอดีๆ
+        margin=dict(l=20, r=20, t=0, b=0), # ตัดขอบบนล่างออก เพื่อให้ชิด Text ด้านบน
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)'
     )
-    
     return fig
 
-def render_linear_card(title, value_str, unit, desc, color_hex, bg_hex, chart_fig):
+def render_seamless_card(title, value_str, unit, desc, color_hex, bg_hex, chart_fig):
     """
-    Render Card UI for Linear Chart
+    Render Card UI ที่ผสาน HTML และ Chart เข้าด้วยกันอย่างเนียนตา
     """
-    card_style = f"""
+    # 1. ส่วนหัว Card (HTML)
+    # ใช้ textwrap.dedent เพื่อป้องกันปัญหา indentation ที่ทำให้เกิดบั๊กแสดงโค้ด
+    html_content = textwrap.dedent(f"""
+    <div style="
         background-color: #FFFFFF;
-        border-radius: 20px;
-        padding: 20px;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.06);
-        border: 1px solid rgba(0,0,0,0.02);
-        text-align: left;
+        border-radius: 16px;
+        padding: 20px 20px 5px 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        border: 1px solid rgba(0,0,0,0.05);
         font-family: 'Sarabun', sans-serif;
+        margin-bottom: 10px;
         height: 100%;
-        transition: transform 0.2s;
-    """
-    
-    # ส่วนหัว Card (Title + Value + Badge)
-    st.markdown(f"""
-    <div style="{card_style}">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+    ">
+        <div style="display: flex; justify-content: space-between; align-items: start;">
             <div>
-                <div style="font-size: 14px; color: #888; font-weight: 500; margin-bottom: 2px;">{title}</div>
-                <div style="font-size: 32px; font-weight: 800; color: #333; line-height: 1.1;">
-                    {value_str} <span style="font-size: 14px; font-weight: 500; color: #999;">{unit}</span>
+                <div style="font-size: 14px; color: #888; margin-bottom: 2px;">{title}</div>
+                <div style="font-size: 36px; font-weight: 700; color: #333; line-height: 1;">
+                    {value_str} <span style="font-size: 16px; font-weight: 500; color: #999;">{unit}</span>
                 </div>
             </div>
-            <div style="text-align: right;">
+            <div>
                 <span style="
                     background-color: {bg_hex}; 
                     color: {color_hex}; 
-                    padding: 6px 14px; 
+                    padding: 6px 12px; 
                     border-radius: 8px; 
                     font-size: 12px; 
                     font-weight: 700;
-                    display: inline-block;">
+                    white-space: nowrap;
+                ">
                     {desc}
                 </span>
             </div>
         </div>
-        
-        <!-- Chart Container -->
-        <div style="margin-top: 5px;">
+    </div>
+    """)
+    
+    st.markdown(html_content, unsafe_allow_html=True)
+    
+    # 2. ส่วนกราฟ (Plotly)
+    # ดันกราฟขึ้นไปซ้อนกับ Card ด้านบนด้วย margin ติดลบ
+    # ใส่พื้นหลังสีขาวให้กราฟ เพื่อให้กลืนไปกับ Card
+    chart_fig.update_layout(
+        paper_bgcolor='rgba(255,255,255,0)', # พื้นหลังใส (เพราะซ้อนอยู่บน div ขาวไม่ได้จริงๆ ใน streamlit ต้องแยกกัน)
+        # Trick: เราไม่สามารถซ้อน div กับ chart ได้สมบูรณ์แบบใน streamlit
+        # ดังนั้นเราจะใช้ "Visual Trick" คือทำให้ div ด้านบนดูเหมือนเปิดท้าย
+        # และ chart ด้านล่างดูเหมือนต่อกัน
+    )
+    
+    # ปรับ CSS เพื่อดึงกราฟขึ้นไปชิดกับ div ด้านบน
+    st.markdown("""
+        <style>
+        div[data-testid="stVerticalBlock"] > div > div[data-testid="stBlock"] {
+            gap: 0rem; /* ลดช่องว่างระหว่าง element */
+        }
+        </style>
+        <div style="margin-top: -20px; margin-bottom: 20px; background-color: #FFFFFF; border-radius: 0 0 16px 16px; box-shadow: 0 10px 15px -5px rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.05); border-top: none; padding-bottom: 10px;">
     """, unsafe_allow_html=True)
     
-    # แทรกกราฟลงไประหว่าง HTML
     st.plotly_chart(chart_fig, use_container_width=True, config={'displayModeBar': False, 'staticPlot': True})
     
-    # ปิด Div
-    st.markdown("</div></div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def plot_bmi_gauge(person_data):
@@ -253,17 +247,17 @@ def plot_bmi_gauge(person_data):
 
     if bmi:
         desc = get_bmi_desc(bmi)
-        if "อ้วนระยะที่ 2" in desc: c, bg = THEME['danger'], THEME['danger_bg']
-        elif "เริ่ม" in desc or "ท้วม" in desc or "อ้วนระยะที่ 1" in desc: c, bg = THEME['warning'], THEME['warning_bg']
+        # Color selection
+        if "ระยะที่ 2" in desc: c, bg = THEME['danger'], THEME['danger_bg']
+        elif "เริ่ม" in desc or "เกิน" in desc or "ระยะที่ 1" in desc: c, bg = THEME['warning'], THEME['warning_bg']
         elif "น้อย" in desc: c, bg = THEME['info'], THEME['info_bg']
         else: c, bg = THEME['success'], THEME['success_bg']
         
-        # Linear Ranges
-        ranges = [10, 18.5, 23, 25, 30, 40]
+        ranges = [0, 18.5, 23, 25, 30, 40]
         colors = ['#E3F2FD', '#E8F5E9', '#FFFDE7', '#FFF3E0', '#FFEBEE']
         
-        fig = create_linear_range_chart(bmi, 15, 35, ranges, colors, c)
-        render_linear_card("ดัชนีมวลกาย (BMI)", f"{bmi:.1f}", "", desc, c, bg, fig)
+        fig = create_semicircle_gauge_chart(bmi, 40, ranges, colors)
+        render_seamless_card("ดัชนีมวลกาย (BMI)", f"{bmi:.1f}", "", desc, c, bg, fig)
     else:
         st.info("ไม่มีข้อมูล BMI")
 
@@ -274,10 +268,10 @@ def plot_fbs_gauge(person_data):
         c, bg = (THEME['danger'], THEME['danger_bg']) if "เบาหวาน" in desc and "เสี่ยง" not in desc else (THEME['warning'], THEME['warning_bg']) if "เสี่ยง" in desc else (THEME['success'], THEME['success_bg'])
         
         ranges = [0, 70, 100, 126, 300]
-        colors = ['#E3F2FD', '#E8F5E9', '#FFF3E0', '#FFEBEE'] # ฟ้า(ต่ำ), เขียว(ปกติ), เหลือง(เสี่ยง), แดง(สูง)
+        colors = ['#E3F2FD', '#E8F5E9', '#FFF3E0', '#FFEBEE']
         
-        fig = create_linear_range_chart(fbs, 60, 200, ranges, colors, c)
-        render_linear_card("น้ำตาลในเลือด (FBS)", f"{fbs:.0f}", "mg/dL", desc, c, bg, fig)
+        fig = create_semicircle_gauge_chart(fbs, 200, ranges, colors)
+        render_seamless_card("น้ำตาลในเลือด (FBS)", f"{fbs:.0f}", "mg/dL", desc, c, bg, fig)
     else:
         st.info("ไม่มีข้อมูล FBS")
 
@@ -287,12 +281,11 @@ def plot_gfr_gauge(person_data):
         desc = get_gfr_desc(gfr)
         c, bg = (THEME['success'], THEME['success_bg']) if "ปกติ" in desc else (THEME['warning'], THEME['warning_bg']) if "เล็กน้อย" in desc else (THEME['danger'], THEME['danger_bg'])
         
-        # GFR: ยิ่งมากยิ่งดี (แดง -> เหลือง -> เขียว)
         ranges = [0, 60, 90, 140]
         colors = ['#FFEBEE', '#FFF3E0', '#E8F5E9']
         
-        fig = create_linear_range_chart(gfr, 20, 120, ranges, colors, c)
-        render_linear_card("การทำงานของไต (GFR)", f"{gfr:.0f}", "mL/min", desc, c, bg, fig)
+        fig = create_semicircle_gauge_chart(gfr, 140, ranges, colors)
+        render_seamless_card("การทำงานของไต (GFR)", f"{gfr:.0f}", "mL/min", desc, c, bg, fig)
     else:
         st.info("ไม่มีข้อมูล GFR")
 
