@@ -12,7 +12,7 @@ THEME = {
     'primary': '#00796B',      # Teal
     'secondary': '#80CBC4',    # Soft Teal
     'text_light': '#37474F',   # Dark Grey
-    'grid': 'rgba(128, 128, 128, 0.1)', 
+    'grid': 'rgba(128, 128, 128, 0.1)',
     'success': '#66BB6A',      # Green
     'success_bg': '#E8F5E9',   # Light Green BG
     'warning': '#FFA726',      # Orange
@@ -88,7 +88,7 @@ def get_gfr_desc(gfr):
 def plot_historical_trends(history_df, person_data):
     """Sparkline Trend Charts"""
     st.subheader("📈 แนวโน้มสุขภาพย้อนหลัง")
-    
+
     if history_df.shape[0] < 2:
         st.info("💡 ต้องการข้อมูลอย่างน้อย 2 ปี เพื่อแสดงกราฟแนวโน้ม")
         return
@@ -99,7 +99,7 @@ def plot_historical_trends(history_df, person_data):
 
     sex = person_data.get("เพศ", "ชาย")
     hb_goal = 12.0 if sex == "หญิง" else 13.0
-    
+
     trend_metrics = {
         'ความดันโลหิต (BP)': (['SBP', 'DBP'], 'mmHg', [130.0, 80.0], [THEME['sbp_color'], THEME['dbp_color']], 'target'),
         'น้ำตาล (FBS)': ('FBS', 'mg/dL', 100.0, THEME['warning'], 'target'),
@@ -112,7 +112,7 @@ def plot_historical_trends(history_df, person_data):
     cols = st.columns(3)
     for i, (title, config) in enumerate(trend_metrics.items()):
         keys, unit, goals, colors, direction_type = config
-        
+
         if direction_type == 'range': d_text = "(ควรอยู่ในเกณฑ์)"
         elif direction_type == 'higher': d_text = "(ยิ่งสูงยิ่งดี)"
         elif direction_type == 'target': d_text = "(ไม่ควรเกินเกณฑ์)"
@@ -134,7 +134,7 @@ def plot_historical_trends(history_df, person_data):
                 if df_plot.empty: continue
                 fig.add_trace(go.Scatter(x=df_plot['Year_str'], y=df_plot[keys], mode='lines+markers', name=title, line=dict(color=colors, width=3, shape='spline'), marker=dict(size=8, color='white', line=dict(width=2, color=colors)), hovertemplate=f'<b>%{{x}}</b><br>%{{y:.1f}} {unit}<extra></extra>'))
                 fig.add_shape(type="line", x0=df_plot['Year_str'].iloc[0], y0=goals, x1=df_plot['Year_str'].iloc[-1], y1=goals, line=dict(color="gray", width=1, dash="dash"), opacity=0.5)
-            
+
             fig.update_layout(
                 title=dict(text=f"{title}<br><span style='font-size:12px; color:gray;'>{d_text}</span>", font=dict(size=14)),
                 height=220, margin=dict(l=10, r=10, t=50, b=30),
@@ -200,7 +200,7 @@ def plot_bmi_gauge(person_data):
         elif "เริ่ม" in desc or "ท้วม" in desc or "ระยะที่ 1" in desc: c, bg = THEME['warning'], THEME['warning_bg']
         elif "น้อย" in desc: c, bg = THEME['info'], THEME['info_bg']
         else: c, bg = THEME['success'], THEME['success_bg']
-        
+
         icon_svg = get_body_svg(c)
         render_icon_card("ดัชนีมวลกาย (BMI)", f"{bmi:.1f}", "kg/m²", desc, c, bg, icon_svg)
     else:
@@ -211,7 +211,7 @@ def plot_fbs_gauge(person_data):
     if fbs:
         desc = get_fbs_desc(fbs)
         c, bg = (THEME['danger'], THEME['danger_bg']) if "เบาหวาน" in desc and "เสี่ยง" not in desc else (THEME['warning'], THEME['warning_bg']) if "เสี่ยง" in desc else (THEME['success'], THEME['success_bg'])
-        
+
         icon_svg = get_blood_drop_svg(c)
         render_icon_card("น้ำตาลในเลือด (FBS)", f"{fbs:.0f}", "mg/dL", desc, c, bg, icon_svg)
     else:
@@ -222,7 +222,7 @@ def plot_gfr_gauge(person_data):
     if gfr:
         desc = get_gfr_desc(gfr)
         c, bg = (THEME['success'], THEME['success_bg']) if "ปกติ" in desc else (THEME['warning'], THEME['warning_bg']) if "เล็กน้อย" in desc else (THEME['danger'], THEME['danger_bg'])
-        
+
         icon_svg = get_kidney_svg(c)
         render_icon_card("การทำงานของไต (GFR)", f"{gfr:.0f}", "mL/min", desc, c, bg, icon_svg)
     else:
@@ -285,14 +285,14 @@ def plot_risk_bar_chart(person_data):
         get_score(chol, [200, 240, 260, 300]),
         get_score(gfr, [90, 60, 30, 15], high_bad=False)
     ]
-    
+
     categories = ['BMI (น้ำหนัก)', 'ความดันโลหิต', 'น้ำตาลในเลือด', 'ไขมัน', 'การทำงานไต']
-    
+
     # Map scores to colors and text
     risk_colors = []
     risk_texts = []
     for s in scores:
-        if s <= 1: 
+        if s <= 1:
             risk_colors.append(THEME['success'])
             risk_texts.append("ปกติ")
         elif s == 2:
@@ -307,9 +307,9 @@ def plot_risk_bar_chart(person_data):
         else: # 5
             risk_colors.append('#C62828') # Dark Red
             risk_texts.append("วิกฤต")
-            
+
     fig = go.Figure()
-    
+
     fig.add_trace(go.Bar(
         y=categories,
         x=scores,
@@ -319,11 +319,11 @@ def plot_risk_bar_chart(person_data):
         textposition='auto',
         textfont=dict(family=FONT_FAMILY, color='white')
     ))
-    
+
     fig.update_layout(
         title=dict(text="<b>ระดับความเสี่ยงสุขภาพ (Risk Level)</b>", font=dict(size=16, family=FONT_FAMILY)),
         xaxis=dict(
-            range=[0, 5.5], 
+            range=[0, 5.5],
             tickvals=[1, 2, 3, 4, 5],
             ticktext=['ปกติ', 'เริ่ม', 'กลาง', 'สูง', 'วิกฤต'],
             gridcolor=THEME['grid']
@@ -335,7 +335,7 @@ def plot_risk_bar_chart(person_data):
         margin=dict(l=10, r=10, t=40, b=20),
         height=300
     )
-    
+
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -359,7 +359,7 @@ def plot_lung_comparison(person_data):
 
 def display_visualization_tab(person_data, history_df):
     """Main Tab Display"""
-    
+
     st.markdown(f"""
     <style>
         .viz-header-card {{
@@ -381,12 +381,12 @@ def display_visualization_tab(person_data, history_df):
 
     # 1. Top: Risk Bar Chart & Indicators
     col_risk, col_ind = st.columns([1.5, 2]) # ปรับสัดส่วน
-    
+
     with col_risk:
         with st.container(border=True):
             plot_risk_bar_chart(person_data)
             st.caption("ℹ️ แถบยาวยิ่งแสดงถึงระดับความเสี่ยงที่สูงขึ้น")
-            
+
     with col_ind:
         # ใช้ st.container แบบไม่ใส่ border เพราะเรามีการ์ดเงาอยู่ข้างในแล้ว จะได้ไม่ซ้อนกัน
         with st.container():
@@ -404,7 +404,7 @@ def display_visualization_tab(person_data, history_df):
     # 3. Specific Tests
     st.markdown("---")
     st.subheader("🔬 ผลตรวจสมรรถภาพเฉพาะทาง")
-    
+
     c_audio, c_lung = st.columns(2)
     with c_audio:
         with st.container(border=True): plot_audiogram(person_data)
