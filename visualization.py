@@ -52,13 +52,20 @@ def clean_html(html_str):
 def apply_medical_layout(fig, title="", x_title="", y_title="", show_legend=True, height=None):
     """Standard Layout (Compatible with both Old and New charts)"""
     layout_args = dict(
-        title=dict(text=f"<b>{title}</b>", font=dict(family=FONT_FAMILY, size=16, color=THEME['text_dark']), x=0),
+        title=dict(
+            text=f"<b>{title}</b>", 
+            font=dict(family=FONT_FAMILY, size=16, color=THEME['text_dark']), 
+            x=0,
+            y=0.95 # Fix title position
+        ),
         font=dict(family=FONT_FAMILY, color=THEME['text_dark']),
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
-        margin=dict(l=10, r=10, t=50, b=20),
+        # --- FIX: Increased top margin from 50 to 80 to prevent crowding ---
+        margin=dict(l=10, r=10, t=80, b=20),
         showlegend=show_legend,
-        legend=dict(orientation="h", y=1.1)
+        # --- FIX: Adjusted legend position to sit nicely in the new gap ---
+        legend=dict(orientation="h", y=1.15, x=1, xanchor='right')
     )
     
     if x_title: layout_args['xaxis'] = dict(title=x_title, showgrid=True, gridcolor=THEME['grid'])
@@ -79,30 +86,32 @@ def calculate_metric_score(val, metric_type):
     
     if metric_type == 'BMI':
         # เกณฑ์คนเอเชีย: ปกติ 18.5 - 22.9 (คะแนนเต็ม)
-        x = [15, 18.5, 20.75, 22.9, 23, 25, 30, 35] 
-        y = [50, 90,   100,   100,  90, 70, 40, 10] 
+        # น้อยกว่า 18.5 (ผอม), มากกว่า 23 (ท้วม), มากกว่า 25 (อ้วน), มากกว่า 30 (อ้วนมาก)
+        x = [15, 18.5, 20.75, 22.9, 23, 25, 30, 35] # ค่าจริง
+        y = [50, 90,   100,   100,  90, 70, 40, 10] # คะแนนที่ได้
         return np.interp(val, x, y)
         
-    elif metric_type == 'BP': # SBP
-        # <120 (Optimal)
+    elif metric_type == 'BP': # SBP (Systolic Blood Pressure)
+        # <120 (Optimal), 120-129 (Elevated), 130-139 (Stage 1), >=140 (Stage 2)
         x = [90, 115, 120, 129, 130, 139, 140, 160, 180]
         y = [90, 100, 95,  85,  75,  60,  50,  20,  0]
         return np.interp(val, x, y)
         
-    elif metric_type == 'FBS': # Sugar
-        # 70-99 (Normal)
+    elif metric_type == 'FBS': # Fasting Blood Sugar
+        # 70-99 (Normal), 100-125 (Prediabetes), >=126 (Diabetes)
+        # <70 (Hypoglycemia Risk)
         x = [50, 70, 99, 100, 125, 126, 200, 300]
         y = [40, 100, 100, 90, 60,  40,  10,  0]
         return np.interp(val, x, y)
         
-    elif metric_type == 'LDL': # Cholesterol
-        # <100 (Optimal)
+    elif metric_type == 'LDL': # LDL Cholesterol
+        # <100 (Optimal), 100-129 (Near Opt), 130-159 (Borderline), 160-189 (High)
         x = [0,  99,  100, 129, 130, 159, 160, 190]
         y = [100, 100, 90,  80,  70,  50,  40,  10]
         return np.interp(val, x, y)
         
-    elif metric_type == 'GFR': # Kidney
-        # >90 (Normal)
+    elif metric_type == 'GFR': # eGFR (Kidney Function)
+        # >90 (G1), 60-89 (G2), 45-59 (G3a), 30-44 (G3b), 15-29 (G4), <15 (G5)
         x = [0, 15, 30, 45, 60, 90, 120]
         y = [0, 10, 30, 50, 70, 100, 100]
         return np.interp(val, x, y)
@@ -146,6 +155,8 @@ def plot_historical_trends(history_df, person_data):
         'ไขมัน (Cholesterol)': ('CHOL', 'mg/dL', 200.0, THEME['danger'], 'target'),
         'ไต (GFR)': ('GFR', 'mL/min', 90.0, THEME['info'], 'higher'),
         'ดัชนีมวลกาย (BMI)': ('BMI', 'kg/m²', 23.0, '#8D6E63', 'range'),
+        # --- ADDED: HCT back to trend metrics ---
+        'ความเข้มข้นเลือด (HCT)': ('HCT', '%', 35.0, THEME['hct_color'], 'above_threshold'),
         'ฮีโมโกลบิน (Hb)': ('Hb(%)', 'g/dL', hb_goal, '#EC407A', 'above_threshold')
     }
 
