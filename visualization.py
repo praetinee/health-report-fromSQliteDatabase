@@ -259,10 +259,10 @@ def plot_health_radar(person_data):
     
     # Define Data Structure for Iteration
     metrics_config = [
-        {'type': 'BMI', 'val': bmi, 'label': 'รูปร่าง (BMI)', 'fmt': '{:.1f}'},
-        {'type': 'BP', 'val': sbp, 'label': 'ความดัน (BP)', 'fmt': '{:.0f}'},
+        {'type': 'BMI', 'val': bmi, 'label': 'ดัชนีมวลกาย (BMI)', 'fmt': '{:.1f}'},
+        {'type': 'BP', 'val': sbp, 'label': 'ความดันโลหิต (BP)', 'fmt': '{:.0f}'},
         {'type': 'FBS', 'val': fbs, 'label': 'ระดับน้ำตาล', 'fmt': '{:.0f}'},
-        {'type': 'LDL', 'val': ldl, 'label': 'ไขมัน (LDL)', 'fmt': '{:.0f}'},
+        {'type': 'LDL', 'val': ldl, 'label': 'ไขมันเลว (LDL)', 'fmt': '{:.0f}'},
         {'type': 'GFR', 'val': gfr, 'label': 'ไต (GFR)', 'fmt': '{:.0f}'},
         {'type': 'Liver', 'val': sgpt, 'label': 'ตับ (SGPT)', 'fmt': '{:.0f}'},
         {'type': 'Uric', 'val': uric, 'label': 'กรดยูริก', 'fmt': '{:.1f}'}
