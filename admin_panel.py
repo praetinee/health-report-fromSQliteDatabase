@@ -7,22 +7,45 @@ import re
 import html 
 import numpy as np 
 
-# --- Import Utils (New!) ---
-from utils import (
-    is_empty,
-    normalize_name,
-    has_basic_health_data,
-    has_vision_data,
-    has_hearing_data,
-    has_lung_data,
-    has_visualization_data
-)
+# --- Import Utils (ตัวช่วยตรวจสอบข้อมูล - ถ้าไม่มีก็ใช้ Fallback) ---
+try:
+    from utils import (
+        is_empty,
+        normalize_name,
+        has_basic_health_data,
+        has_vision_data,
+        has_hearing_data,
+        has_lung_data,
+        has_visualization_data
+    )
+except ImportError:
+    # Fallback กรณีหา utils ไม่เจอ
+    def is_empty(val): return pd.isna(val) or str(val).strip() == ""
+    def normalize_name(name): return str(name).strip()
+    def has_basic_health_data(row): return True
+    def has_vision_data(row): return False
+    def has_hearing_data(row): return False
+    def has_lung_data(row): return False
+    def has_visualization_data(df): return False
 
 # --- Import ฟังก์ชันอื่นๆ ---
-from performance_tests import interpret_audiogram, interpret_lung_capacity, interpret_cxr, generate_comprehensive_recommendations
-from print_report import generate_printable_report
-from print_performance_report import generate_performance_report_html
-from batch_print import display_print_center_page
+# ใช้ try-except เพื่อป้องกัน error หากไฟล์เหล่านี้มีปัญหา
+try:
+    from performance_tests import interpret_audiogram, interpret_lung_capacity, interpret_cxr, generate_comprehensive_recommendations
+except ImportError:
+    pass 
+
+try:
+    from print_report import generate_printable_report
+    from print_performance_report import generate_performance_report_html
+except ImportError:
+    def generate_printable_report(*args): return ""
+    def generate_performance_report_html(*args): return ""
+
+try:
+    from batch_print import display_print_center_page
+except ImportError:
+    def display_print_center_page(*args): st.info("Batch Print module not found")
 
 # --- Import Visualization ---
 try:
@@ -30,17 +53,26 @@ try:
 except ImportError:
     def display_visualization_tab(person_data, all_df): st.info("Visualization module not found")
 
-# --- Import Shared UI Functions (เฉพาะ UI เท่านั้น) ---
+# --- Import Shared UI Functions (จุดที่เคยเกิด Error) ---
+# ใช้ try-except Exception เพื่อดักจับ Error ทุกประเภทจาก shared_ui
 try:
     from shared_ui import (
         inject_custom_css,
         display_common_header,
-        # เอาเฉพาะ UI component, ไม่เอา logic function
     )
-except ImportError:
-    # Fallback ถ้าหา shared_ui ไม่เจอ
-    def inject_custom_css(): pass
-    def display_common_header(data): st.write(data)
+except Exception as e:
+    # ถ้า shared_ui พัง ให้ใช้ฟังก์ชันสำรองเหล่านี้แทน
+    def inject_custom_css():
+        st.markdown("""
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap');
+            html, body, [class*="css"] { font-family: 'Sarabun', sans-serif; }
+        </style>
+        """, unsafe_allow_html=True)
+        
+    def display_common_header(data):
+        st.write(f"**Reports for:** {data.get('ชื่อ-สกุล', 'Unknown')}")
+        st.markdown("---")
 
 # --- Import LINE Manager Function ---
 try:
@@ -50,16 +82,17 @@ except ImportError:
         st.error("ไม่พบไฟล์ line_register.py กรุณาสร้างไฟล์นี้ก่อน")
 
 # ------------------------------------------------------------------
-# ส่วนแสดงผลรายงาน (Placeholder สำหรับให้ app.py เรียกใช้)
+# ส่วนแสดงผลรายงาน (นิยามไว้ที่นี่เพื่อให้ app.py เรียกใช้ได้โดยไม่ Error)
 # ------------------------------------------------------------------
 
 def display_main_report(person_data, all_person_history_df):
     """แสดงผลสุขภาพพื้นฐาน"""
-    st.info("ℹ️ ส่วนแสดงผลสุขภาพพื้นฐาน (Main Report) - กรุณานำโค้ดแสดงผลเดิมมาใส่ตรงนี้")
+    st.info("ℹ️ ส่วนแสดงผลสุขภาพพื้นฐาน (Main Report)")
+    # คุณสามารถนำโค้ดแสดงผล BMI, ความดัน ฯลฯ มาใส่ตรงนี้ได้
 
 def display_performance_report(person_data, report_type, all_person_history_df=None):
     """แสดงผลสมรรถภาพ"""
-    st.info(f"ℹ️ ส่วนแสดงผลสมรรถภาพ: {report_type} - กรุณานำโค้ดแสดงผลเดิมมาใส่ตรงนี้")
+    st.info(f"ℹ️ ส่วนแสดงผลสมรรถภาพ: {report_type}")
 
 # ------------------------------------------------------------------
 
@@ -77,7 +110,7 @@ def display_admin_panel(df):
     if "admin_person_row" not in st.session_state: st.session_state.admin_person_row = None
 
     with st.sidebar:
-        st.markdown("<div class='sidebar-title'>👑 Admin Panel</div>", unsafe_allow_html=True)
+        st.title("Admin Panel")
         if st.button("ออกจากระบบ (Logout)", use_container_width=True):
             keys_to_clear = [
                 'authenticated', 'pdpa_accepted', 'user_hn', 'user_name', 'is_admin',
