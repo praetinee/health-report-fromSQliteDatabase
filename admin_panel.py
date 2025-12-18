@@ -3,6 +3,28 @@ import pandas as pd
 import sqlite3
 from datetime import datetime
 
+# --- Import Module อื่นๆ ที่จำเป็นสำหรับการแสดงผล ---
+# เราต้อง Import ฟังก์ชันแสดงผลจากไฟล์อื่นๆ ของคุณเพื่อให้ admin_panel เรียกใช้ได้
+try:
+    from shared_ui import (
+        display_common_header,
+        display_main_report,
+        display_performance_report,
+        has_visualization_data,
+        has_basic_health_data,
+        has_vision_data,
+        has_hearing_data,
+        has_lung_data
+    )
+    from visualization import display_visualization_tab
+except ImportError:
+    # Fallback ถ้าหาไฟล์ไม่เจอ (เพื่อป้องกัน Error ตอนรันครั้งแรก)
+    def display_common_header(person_data): st.warning("ไม่พบ module shared_ui")
+    def display_main_report(person_data, all_df): st.warning("ไม่พบ module shared_ui")
+    def display_performance_report(person_data, r_type, all_df=None): st.warning("ไม่พบ module shared_ui")
+    def display_visualization_tab(person_data, all_df): st.warning("ไม่พบ module visualization")
+    def has_visualization_data(df): return False
+
 # --- Import LINE Manager Function ---
 # (สำคัญ: ต้องมีไฟล์ line_register.py อยู่ในโฟลเดอร์เดียวกัน)
 try:
@@ -11,17 +33,7 @@ except ImportError:
     def render_admin_line_manager():
         st.error("ไม่พบไฟล์ line_register.py กรุณาสร้างไฟล์นี้ก่อน")
 
-# --- Helper Functions (Shared Logic) ---
-def is_empty(val):
-    if val is None: return True
-    if isinstance(val, str) and val.strip() == "": return True
-    if isinstance(val, (int, float)) and pd.isna(val): return True
-    return False
-
-def normalize_name(name):
-    if not isinstance(name, str): return str(name)
-    return " ".join(name.split())
-
+# --- Helper Functions (Shared Logic within Admin) ---
 def inject_custom_css():
     st.markdown("""
     <style>
@@ -38,57 +50,6 @@ def inject_custom_css():
         @media print { .no-print, .stSidebar, header, footer { display: none !important; } .card { box-shadow: none; border: 1px solid #ddd; } }
     </style>
     """, unsafe_allow_html=True)
-
-# --- Data Checking Helper Functions ---
-def has_basic_health_data(row):
-    columns = ['Weight', 'Height', 'BMI', 'Waist', 'SBP', 'DBP', 'Pulse']
-    return any(not is_empty(row.get(col)) for col in columns)
-
-def has_vision_data(row):
-    columns = ['V_R_Far', 'V_L_Far', 'V_R_Near', 'V_L_Near', 'Color_Blind']
-    return any(not is_empty(row.get(col)) for col in columns)
-
-def has_hearing_data(row):
-    freqs = [250, 500, 1000, 2000, 3000, 4000, 6000, 8000]
-    columns = [f'R_{f}' for f in freqs] + [f'L_{f}' for f in freqs]
-    return any(not is_empty(row.get(col)) for col in columns)
-
-def has_lung_data(row):
-    columns = ['FVC_Predicted', 'FVC_Actual', 'FVC_Percent', 'FEV1_Predicted', 'FEV1_Actual', 'FEV1_Percent', 'FEV1_FVC_Ratio']
-    return any(not is_empty(row.get(col)) for col in columns)
-
-def has_visualization_data(df):
-    return not df.empty and len(df) > 1
-
-# --- Display Functions ---
-def display_common_header(person_data):
-    st.markdown(f"<div class='main-header'><h1>รายงานผลการตรวจสุขภาพประจำปี {person_data.get('Year', '')}</h1></div>", unsafe_allow_html=True)
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown(f"**ชื่อ-นามสกุล:** {person_data.get('ชื่อ-สกุล', '-')}")
-        st.markdown(f"**อายุ:** {person_data.get('Age', '-')} ปี")
-        st.markdown(f"**หน่วยงาน:** {person_data.get('Department', '-')}")
-    with col2:
-        st.markdown(f"**วันที่ตรวจ:** {person_data.get('วันที่ตรวจ', '-')}")
-        st.markdown(f"**HN:** {person_data.get('HN', '-')}")
-        st.markdown(f"**เพศ:** {person_data.get('Gender', '-')}")
-    st.markdown("---")
-
-# ------------------------------------------------------------------------------------
-# ⚠️ สำคัญ: หากคุณมี Logic การแสดงผล (Display Logic) ของเดิมอยู่ ให้ใช้ของเดิมตรงส่วนนี้
-# ------------------------------------------------------------------------------------
-
-def display_main_report(person_data, all_person_history_df):
-    st.info("แสดงผลสุขภาพพื้นฐาน (Main Report) - กรุณาใส่ Code การแสดงผลเดิมของคุณที่นี่")
-
-def display_performance_report(person_data, report_type, all_person_history_df=None):
-    st.info(f"แสดงผลสมรรถภาพ: {report_type} - กรุณาใส่ Code การแสดงผลเดิมของคุณที่นี่")
-
-def display_visualization_tab(person_data, all_person_history_df):
-    st.info("แสดงกราฟแนวโน้มสุขภาพ - กรุณาใส่ Code การแสดงผลเดิมของคุณที่นี่")
-
-# ------------------------------------------------------------------------------------
 
 # --- Main Admin Panel Function ---
 def display_admin_panel(df):
@@ -108,6 +69,9 @@ def display_admin_panel(df):
             st.rerun()
 
     # --- ส่วนที่เพิ่ม: TABS สำหรับ Admin ---
+    # แยกเป็น 2 Tabs:
+    # 1. ค้นหาและดูผลตรวจ (ระบบเดิม)
+    # 2. จัดการ LINE Users (ระบบใหม่ที่เพิ่งทำ)
     tab1, tab2 = st.tabs(["🔍 ค้นหาและดูผลตรวจ", "📱 จัดการ LINE Users"])
 
     # TAB 1: ระบบเดิม (ค้นหาคนไข้)
@@ -125,6 +89,7 @@ def display_admin_panel(df):
         if search_btn or search_query:
             st.session_state.admin_search_term = search_query
             if search_query.strip():
+                # Logic การค้นหา
                 mask = df['ชื่อ-สกุล'].str.contains(search_query, na=False) | df['HN'].astype(str).str.contains(search_query, na=False)
                 results = df[mask].copy()
                 st.session_state.admin_search_results = results
@@ -138,6 +103,7 @@ def display_admin_panel(df):
             else:
                 st.success(f"พบข้อมูล {len(results)} รายการ")
                 
+                # Dropdown เลือกคนไข้
                 person_options = results[['HN', 'ชื่อ-สกุล']].drop_duplicates()
                 selection_list = person_options.apply(lambda x: f"{x['ชื่อ-สกุล']} (HN: {x['HN']})", axis=1).tolist()
                 
@@ -148,23 +114,47 @@ def display_admin_panel(df):
                     st.session_state.admin_selected_hn = selected_hn
                     
                     st.markdown("---")
+                    
+                    # ดึงข้อมูลประวัติทั้งหมดของคนนี้
                     person_history = df[df['HN'] == selected_hn].copy()
                     
+                    # เลือกปีงบประมาณ
                     years = sorted(person_history['Year'].unique().tolist(), reverse=True)
                     selected_year_admin = st.selectbox("เลือกปีงบประมาณ:", years)
                     
+                    # ดึงข้อมูลของปีที่เลือก
                     person_row_admin = person_history[person_history['Year'] == selected_year_admin].iloc[0].to_dict()
                     
+                    # --- ส่วนแสดงผลรายงาน (เรียกใช้ฟังก์ชันจริงจาก shared_ui.py และ visualization.py) ---
                     display_common_header(person_row_admin)
                     
-                    report_tabs = st.tabs(["สุขภาพพื้นฐาน", "กราฟแนวโน้ม"])
-                    with report_tabs[0]:
-                        display_main_report(person_row_admin, person_history)
-                    with report_tabs[1]:
-                        if has_visualization_data(person_history):
-                            display_visualization_tab(person_row_admin, person_history)
-                        else:
-                            st.info("ไม่มีข้อมูลเพียงพอสำหรับสร้างกราฟ")
+                    # ตรวจสอบว่ามีข้อมูลอะไรบ้างเพื่อสร้าง Tabs ย่อย
+                    report_tabs_labels = []
+                    
+                    if has_basic_health_data(person_row_admin): report_tabs_labels.append("สุขภาพพื้นฐาน")
+                    if has_visualization_data(person_history): report_tabs_labels.append("กราฟแนวโน้ม")
+                    if has_vision_data(person_row_admin): report_tabs_labels.append("สมรรถภาพการมองเห็น")
+                    if has_hearing_data(person_row_admin): report_tabs_labels.append("สมรรถภาพการได้ยิน")
+                    if has_lung_data(person_row_admin): report_tabs_labels.append("สมรรถภาพปอด")
+
+                    if report_tabs_labels:
+                        sub_tabs = st.tabs(report_tabs_labels)
+                        
+                        # วนลูปแสดงผลตาม Tab ที่มี
+                        for i, label in enumerate(report_tabs_labels):
+                            with sub_tabs[i]:
+                                if label == "สุขภาพพื้นฐาน":
+                                    display_main_report(person_row_admin, person_history)
+                                elif label == "กราฟแนวโน้ม":
+                                    display_visualization_tab(person_row_admin, person_history)
+                                elif label == "สมรรถภาพการมองเห็น":
+                                    display_performance_report(person_row_admin, 'vision')
+                                elif label == "สมรรถภาพการได้ยิน":
+                                    display_performance_report(person_row_admin, 'hearing', all_person_history_df=person_history)
+                                elif label == "สมรรถภาพปอด":
+                                    display_performance_report(person_row_admin, 'lung')
+                    else:
+                        st.warning("ไม่มีข้อมูลการตรวจสำหรับปีที่เลือก")
 
     # TAB 2: หน้าจัดการ LINE Users (Google Sheets)
     with tab2:
