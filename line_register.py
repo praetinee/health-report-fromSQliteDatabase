@@ -9,21 +9,27 @@ SHEET_ID = "1tJ1UK4SusWNpfD-bARfCUm_zc7jlo4xvrrWDW9DoFIU"
 WORKSHEET_NAME = "UserID"
 
 # ---------------------------------------------------------------------
-# จุดที่คุณต้องแก้ไขคือตรงนี้ครับ! 👇
+# จุดที่คุณต้องแก้ไขคือตรงนี้ครับ! 👇 (บรรทัดที่ 15)
 # เอาเลข LIFF ID ที่ได้จากเว็บ LINE Developers มาใส่แทนคำว่า YOUR_LIFF_ID_HERE
 # ---------------------------------------------------------------------
-LIFF_ID = "2008725340-YHOiWxtj" 
+LIFF_ID = "YOUR_LIFF_ID_HERE" 
 
 
 # --- Google Sheets Connection ---
 def get_gsheet_client():
+    # ตรวจสอบ Secrets
     if "gcp_service_account" not in st.secrets:
         st.error("⚠️ ไม่พบตั้งค่า gcp_service_account ใน Secrets")
         return None
+    
     scopes = ["https://www.googleapis.com/auth/spreadsheets"]
-    creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
-    client = gspread.authorize(creds)
-    return client
+    try:
+        creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
+        client = gspread.authorize(creds)
+        return client
+    except Exception as e:
+        st.error(f"Error connecting to GSheets: {e}")
+        return None
 
 def get_user_worksheet():
     client = get_gsheet_client()
@@ -33,6 +39,7 @@ def get_user_worksheet():
         try:
             worksheet = sheet.worksheet(WORKSHEET_NAME)
         except gspread.WorksheetNotFound:
+            # ถ้าไม่มี Sheet ให้สร้างใหม่
             worksheet = sheet.add_worksheet(title=WORKSHEET_NAME, rows=1000, cols=3)
             worksheet.append_row(["ชื่อ", "นามสกุล", "LINE User ID"])
         return worksheet
@@ -45,11 +52,15 @@ def check_if_user_registered(line_user_id):
     ws = get_user_worksheet()
     if not ws: return False, None
     try:
+        # ดึงข้อมูล Column C (LINE User ID)
         line_ids = ws.col_values(3)
         if line_user_id in line_ids:
             row_idx = line_ids.index(line_user_id) + 1
             row_data = ws.row_values(row_idx)
-            user_info = {"first_name": row_data[0], "last_name": row_data[1], "line_id": line_user_id}
+            # กันเหนียวเผื่อข้อมูลไม่ครบ
+            fname = row_data[0] if len(row_data) > 0 else ""
+            lname = row_data[1] if len(row_data) > 1 else ""
+            user_info = {"first_name": fname, "last_name": lname, "line_id": line_user_id}
             return True, user_info
         return False, None
     except: return False, None
@@ -58,6 +69,7 @@ def save_new_user_to_sheet(fname, lname, line_user_id):
     ws = get_user_worksheet()
     if not ws: return False, "Connect Error"
     try:
+        # เช็คซ้ำอีกรอบ
         if line_user_id in ws.col_values(3): return True, "Duplicate"
         ws.append_row([fname, lname, line_user_id])
         return True, "Saved"
@@ -74,30 +86,43 @@ def check_registration_logic(df, input_fname, input_lname, input_id):
     i_fname = clean_string(input_fname)
     i_lname = clean_string(input_lname)
     i_id = clean_string(input_id)
-    if not i_fname or not i_lname or not i_id: return False, "กรอกไม่ครบ", None
-    if len(i_id) != 13: return False, "เลขบัตรต้อง 13 หลัก", None
+    if not i_fname or not i_lname or not i_id: return False, "กรอกข้อมูลไม่ครบ", None
+    if len(i_id) != 13: return False, "เลขบัตรต้องมี 13 หลัก", None
+    
+    # เทียบเลขบัตร
     user_match = df[df['เลขบัตรประชาชน'].astype(str).str.strip() == i_id]
-    if user_match.empty: return False, "ไม่พบเลขบัตร", None
+    if user_match.empty: return False, "ไม่พบเลขบัตรประชาชนนี้ในระบบ", None
+    
+    # เทียบชื่อ
     for _, row in user_match.iterrows():
         db_f, db_l = normalize_db_name_field(row['ชื่อ-สกุล'])
+        # เทียบแบบตัดช่องว่าง
         if db_f == i_fname and db_l.replace(" ", "") == i_lname.replace(" ", ""):
             return True, "สำเร็จ", row.to_dict()
-    return False, "ชื่อนามสกุลไม่ตรง", None
+            
+    return False, "ชื่อ-นามสกุล ไม่ตรงกับฐานข้อมูล", None
 
-# --- LIFF Script ---
+# --- LIFF Script (สำหรับดึง UserID) ---
 def liff_initializer_component():
+    """ฝัง JavaScript เพื่อดึง UserID"""
+    # ถ้ามี ID แล้ว ไม่ต้องรันซ้ำ
     if "line_user_id" in st.session_state or st.query_params.get("userid"):
         return
 
+    # HTML/JS Code
     js_code = f"""
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script>
         async function main() {{
             try {{
+                // Init LIFF
                 await liff.init({{ liffId: "{LIFF_ID}" }});
+                
                 if (liff.isLoggedIn()) {{
                     const profile = await liff.getProfile();
                     const userId = profile.userId;
+                    
+                    // Reload page พร้อมส่ง userid กลับมา
                     const currentUrl = new URL(window.location.href);
                     if (!currentUrl.searchParams.has("userid")) {{
                         currentUrl.searchParams.set("userid", userId);
@@ -112,13 +137,13 @@ def liff_initializer_component():
         }}
         main();
     </script>
-    <div style="text-align:center; padding:20px;">
-        <p>กำลังเชื่อมต่อกับ LINE... กรุณารอสักครู่</p>
+    <div style="text-align:center; padding:20px; color: #666;">
+        <p>กำลังเชื่อมต่อกับ LINE... <br>กรุณารอสักครู่...</p>
     </div>
     """
     components.html(js_code, height=100)
 
-# --- Admin Manager ---
+# --- Admin Manager (สำหรับดูข้อมูลในเว็บ) ---
 def render_admin_line_manager():
     st.subheader("📱 จัดการผู้ใช้งาน LINE (Google Sheets)")
     ws = get_user_worksheet()
@@ -133,31 +158,48 @@ def render_admin_line_manager():
         else:
             st.dataframe(df, use_container_width=True)
             st.markdown(f"[เปิดดูไฟล์ Google Sheets]({ 'https://docs.google.com/spreadsheets/d/' + SHEET_ID })")
-            st.info("💡 หากต้องการแก้ไขหรือลบข้อมูล กรุณาทำใน Google Sheets โดยตรง ข้อมูลจะอัปเดตมาที่นี่เมื่อรีเฟรช")
+            st.info("💡 หากต้องการแก้ไขหรือลบข้อมูล กรุณาทำใน Google Sheets โดยตรง")
             if st.button("รีเฟรชข้อมูล"): st.rerun()
     except Exception as e:
-        st.error(f"เกิดข้อผิดพลาดในการดึงข้อมูล: {e}")
+        st.error(f"เกิดข้อผิดพลาด: {e}")
 
-# --- Main Render Function ---
+# --- Main Render Function (หน้าจอหลัก) ---
 def render_registration_page(df):
-    st.markdown("""<style>.reg-container{padding:2rem;border-radius:15px;box-shadow:0 4px 15px rgba(0,0,0,0.1);max-width:500px;margin:auto;}.reg-header{color:#00B900;text-align:center;font-weight:bold;margin-bottom:1.5rem;}.stButton>button{background-color:#00B900!important;color:white!important;border-radius:50px;height:50px;font-size:18px;}</style>""", unsafe_allow_html=True)
+    # CSS ตกแต่ง
+    st.markdown("""
+    <style>
+        .reg-header {color:#00B900;text-align:center;font-weight:bold;margin-bottom:1.5rem;}
+        .stButton>button {background-color:#00B900!important;color:white!important;border-radius:50px;height:50px;font-size:18px;}
+    </style>
+    """, unsafe_allow_html=True)
     
+    # 1. พยายามรับ UserID จาก URL (ที่ส่งมาจาก LIFF)
     qp_userid = st.query_params.get("userid", None)
     if qp_userid: st.session_state["line_user_id"] = qp_userid
     
+    # 2. ถ้ายังไม่มี UserID -> รัน LIFF Script
     if "line_user_id" not in st.session_state:
-        if st.checkbox("Dev Mode: Mock UserID"):
+        # ปุ่ม Test สำหรับ Dev Mode (ในเครื่อง)
+        if st.checkbox("Dev Mode: Mock UserID (กดเพื่อทดสอบในคอม)"):
             st.session_state["line_user_id"] = "U_MOCK_TEST_12345"
             st.rerun()
+        
+        # รัน LIFF ของจริง
         liff_initializer_component()
-        return
+        return # หยุดการทำงานชั่วคราว รอ Reload
 
+    # --- ได้ UserID มาแล้ว ---
     line_user_id = st.session_state["line_user_id"]
+    
+    # 3. เช็คว่าเคยลงทะเบียนหรือยัง?
     is_registered, user_info = check_if_user_registered(line_user_id)
     
     if is_registered:
+        # ถ้าเคยแล้ว -> หาข้อมูลใน DB แล้ว Login เลย
         found_rows = df[df['ชื่อ-สกุล'].str.contains(user_info['first_name'], na=False)]
         matched_user = None
+        
+        # กรองให้ชัวร์
         for _, row in found_rows.iterrows():
             db_f, db_l = normalize_db_name_field(row['ชื่อ-สกุล'])
             if db_f == user_info['first_name'] and db_l == user_info['last_name']:
@@ -165,6 +207,7 @@ def render_registration_page(df):
                 break
         
         if matched_user is not None:
+             # Login Success!
              if not st.session_state.get('authenticated'):
                 st.session_state.update({
                     'authenticated': True,
@@ -176,9 +219,10 @@ def render_registration_page(df):
                 st.rerun()
              return
         else:
-             st.error("พบการลงทะเบียน แต่ไม่พบข้อมูลสุขภาพในระบบ")
+             st.error("พบการลงทะเบียน แต่ไม่พบข้อมูลสุขภาพในระบบ (กรุณาติดต่อเจ้าหน้าที่)")
              return
 
+    # 4. ถ้ายังไม่เคย -> แสดงฟอร์มลงทะเบียน
     if st.session_state.get('line_register_success', False):
         st.success("✅ ลงทะเบียนเรียบร้อยแล้ว!")
         if st.button("เข้าดูผลตรวจสุขภาพ", type="primary", use_container_width=True): st.rerun()
@@ -187,9 +231,11 @@ def render_registration_page(df):
     with st.container():
         st.markdown("<h2 class='reg-header'>ลงทะเบียนเชื่อมต่อบัญชี</h2>", unsafe_allow_html=True)
         with st.expander("📄 ข้อตกลงและเงื่อนไข (PDPA)", expanded=False):
-            st.markdown("1. ยินยอมให้เก็บข้อมูลชื่อ-นามสกุล/เลขบัตร\n2. แสดงผลเฉพาะเจ้าของข้อมูล")
+            st.markdown("1. ยินยอมให้เก็บข้อมูลชื่อ-นามสกุล/เลขบัตรเพื่อยืนยันตัวตน\n2. แสดงผลเฉพาะเจ้าของข้อมูล")
+        
         pdpa_check = st.checkbox("ข้าพเจ้ายอมรับข้อตกลงและเงื่อนไข (PDPA)")
         st.markdown("---")
+        
         with st.form("line_reg_form"):
             c1, c2 = st.columns(2)
             with c1: f = st.text_input("ชื่อ")
