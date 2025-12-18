@@ -18,13 +18,12 @@ from line_register import render_registration_page
 from print_report import generate_printable_report
 from print_performance_report import generate_performance_report_html
 
-# --- Import Helper Functions from Shared UI ---
+# --- Import Utils (New!) ---
+# ดึงฟังก์ชันตรวจสอบข้อมูลจากไฟล์กลาง utils.py
 try:
-    from shared_ui import (
+    from utils import (
         is_empty,
         normalize_name,
-        inject_custom_css,
-        display_common_header,
         has_basic_health_data,
         has_vision_data,
         has_hearing_data,
@@ -32,17 +31,26 @@ try:
         has_visualization_data
     )
 except ImportError:
-    st.error("Critical Error: shared_ui module not found.")
+    st.error("Critical Error: utils module not found. Please create utils.py.")
     st.stop()
 
+# --- Import Helper Functions from Shared UI (Only UI) ---
+try:
+    from shared_ui import (
+        inject_custom_css,
+        display_common_header
+    )
+except ImportError:
+    # ถ้าหา shared_ui ไม่เจอ (เช่นยังไม่ได้สร้าง) ให้ใช้ Default
+    def inject_custom_css(): pass
+    def display_common_header(data): st.write(data)
+
 # --- Import Display Functions ---
-# 1. จาก visualization.py โดยตรง
 try:
     from visualization import display_visualization_tab
 except ImportError:
     def display_visualization_tab(d, all_df): st.info("No visualization module")
 
-# 2. จาก admin_panel.py (เพราะเราย้ายกลับไปนิยามไว้ที่นั่นแล้ว)
 try:
     from admin_panel import display_admin_panel, display_main_report, display_performance_report
 except ImportError:
