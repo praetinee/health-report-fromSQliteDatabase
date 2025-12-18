@@ -7,3 +7,5 @@ google-generativeai
 openai
 plotly
 streamlit-lottie
+gspread
+google-auth
