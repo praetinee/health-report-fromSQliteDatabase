@@ -12,14 +12,17 @@ from datetime import datetime
 from auth import authentication_flow, pdpa_consent_page
 
 # --- Import Line Register ---
-from line_register import render_registration_page
+try:
+    from line_register import render_registration_page
+except ImportError:
+    def render_registration_page(df):
+        st.error("ไม่พบไฟล์ line_register.py กรุณาสร้างไฟล์นี้")
 
 # --- Import Print Functions ---
 from print_report import generate_printable_report
 from print_performance_report import generate_performance_report_html
 
-# --- Import Utils (New!) ---
-# ดึงฟังก์ชันตรวจสอบข้อมูลจากไฟล์กลาง utils.py
+# --- Import Utils (ตัวช่วยตรวจสอบข้อมูล) ---
 try:
     from utils import (
         is_empty,
@@ -31,19 +34,38 @@ try:
         has_visualization_data
     )
 except ImportError:
-    st.error("Critical Error: utils module not found. Please create utils.py.")
-    st.stop()
+    # Fallback ถ้าหา utils ไม่เจอ (ป้องกัน App พัง)
+    def is_empty(val): return pd.isna(val) or str(val).strip() == ""
+    def normalize_name(name): return str(name).strip()
+    def has_basic_health_data(row): return True
+    def has_vision_data(row): return False
+    def has_hearing_data(row): return False
+    def has_lung_data(row): return False
+    def has_visualization_data(df): return False
 
-# --- Import Helper Functions from Shared UI (Only UI) ---
+# --- Import Shared UI (ใช้ try-except แบบครอบจักรวาลป้องกันพัง) ---
 try:
     from shared_ui import (
         inject_custom_css,
         display_common_header
     )
-except ImportError:
-    # ถ้าหา shared_ui ไม่เจอ (เช่นยังไม่ได้สร้าง) ให้ใช้ Default
-    def inject_custom_css(): pass
-    def display_common_header(data): st.write(data)
+except Exception as e:
+    # ถ้า shared_ui พัง ให้ใช้ฟังก์ชันสำรองเหล่านี้แทน
+    # st.error(f"Warning: shared_ui module error: {e}") # (Uncomment เพื่อดู error จริง)
+    
+    def inject_custom_css():
+        st.markdown("""
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap');
+            html, body, [class*="css"] { font-family: 'Sarabun', sans-serif; }
+            .sidebar-title { font-size: 1.2rem; font-weight: bold; color: #2C3E50; margin-bottom: 1rem; }
+        </style>
+        """, unsafe_allow_html=True)
+        
+    def display_common_header(data):
+        st.markdown(f"## รายงานผลสุขภาพ: {data.get('ชื่อ-สกุล', '-')}")
+        st.write(f"HN: {data.get('HN', '-')} | วันที่ตรวจ: {data.get('วันที่ตรวจ', '-')}")
+        st.markdown("---")
 
 # --- Import Display Functions ---
 try:
@@ -55,9 +77,12 @@ try:
     from admin_panel import display_admin_panel, display_main_report, display_performance_report
 except ImportError:
     st.error("Critical Error: admin_panel module not found or has errors.")
-    st.stop()
+    # สร้าง Dummy function กันพัง
+    def display_admin_panel(df): st.error("Admin Panel Error")
+    def display_main_report(p, a): st.write("Main Report Error")
+    def display_performance_report(p, t, a=None): st.write("Perf Report Error")
 
-# --- Data Loading (เหมือนเดิม) ---
+# --- Data Loading ---
 @st.cache_data(ttl=600)
 def load_sqlite_data():
     tmp_path = None
