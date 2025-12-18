@@ -23,22 +23,28 @@ from line_register import render_registration_page
 from print_report import generate_printable_report
 from print_performance_report import generate_performance_report_html
 
-# --- Import Admin Panel and SHARED UI functions FROM admin_panel ---
-from admin_panel import (
-    display_admin_panel,
-    is_empty,
-    normalize_name,
-    inject_custom_css,
-    display_common_header,
-    has_basic_health_data,
-    has_vision_data,
-    has_hearing_data,
-    has_lung_data,
-    has_visualization_data,
-    display_main_report,
-    display_performance_report,
-    display_visualization_tab
-)
+# --- Import Shared UI Functions (Directly from shared_ui.py) ---
+try:
+    from shared_ui import (
+        is_empty,
+        normalize_name,
+        inject_custom_css,
+        display_common_header,
+        has_basic_health_data,
+        has_vision_data,
+        has_hearing_data,
+        has_lung_data,
+        has_visualization_data,
+        display_main_report,
+        display_performance_report,
+        display_visualization_tab
+    )
+except ImportError as e:
+    st.error(f"Critical Error: Cannot import shared_ui. {e}")
+    st.stop()
+
+# --- Import Admin Panel (Only the main function) ---
+from admin_panel import display_admin_panel
 
 # --- ค่าคงที่ (Constants) ---
 THAI_MONTHS_GLOBAL = {1: "มกราคม", 2: "กุมภาพันธ์", 3: "มีนาคม", 4: "เมษายน", 5: "พฤษภาคม", 6: "มิถุนายน", 7: "กรกฎาคม", 8: "สิงหาคม", 9: "กันยายน", 10: "ตุลาคม", 11: "พฤศจิกายน", 12: "ธันวาคม"}
@@ -93,7 +99,7 @@ def main_app(df):
     """
     st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
 
-    inject_custom_css() # Use inject_custom_css from admin_panel (where it's now defined)
+    inject_custom_css() # Use inject_custom_css from shared_ui
 
     # --- Logic to handle data for the logged-in user ---
     if 'user_hn' not in st.session_state:
@@ -182,7 +188,6 @@ def main_app(df):
 
         # --- Determine available report tabs ---
         available_reports = OrderedDict()
-        # Use functions imported from admin_panel (where they are now defined)
         if has_visualization_data(all_person_history_df): available_reports['ภาพรวมสุขภาพ (Graphs)'] = 'visualization_report'
         if has_basic_health_data(person_data): available_reports['สุขภาพพื้นฐาน'] = 'main_report'
         if has_vision_data(person_data): available_reports['สมรรถภาพการมองเห็น'] = 'vision_report'
