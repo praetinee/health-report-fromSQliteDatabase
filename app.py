@@ -16,6 +16,9 @@ from streamlit_js_eval import streamlit_js_eval
 # --- Import Authentication ---
 from auth import authentication_flow, pdpa_consent_page
 
+# --- Import New Line Register Module ---
+from line_register import render_registration_page
+
 # --- Import Print Functions ---
 from print_report import generate_printable_report
 from print_performance_report import generate_performance_report_html
@@ -23,7 +26,6 @@ from print_performance_report import generate_performance_report_html
 # --- Import Admin Panel and SHARED UI functions FROM admin_panel ---
 from admin_panel import (
     display_admin_panel,
-    # List all the shared functions that were previously in shared_ui.py
     is_empty,
     normalize_name,
     inject_custom_css,
@@ -68,8 +70,9 @@ def load_sqlite_data():
             return s_val
 
         df_loaded['HN'] = df_loaded['HN'].apply(clean_hn)
-
+        # Clean Data เบื้องต้น
         df_loaded['ชื่อ-สกุล'] = df_loaded['ชื่อ-สกุล'].astype(str).str.strip().str.replace(r'\s+', ' ', regex=True)
+        # สำคัญ: บังคับให้เลขบัตรประชาชนเป็น String และ Trim space
         df_loaded['เลขบัตรประชาชน'] = df_loaded['เลขบัตรประชาชน'].astype(str).str.strip()
         df_loaded['Year'] = df_loaded['Year'].astype(int)
         df_loaded['วันที่ตรวจ'] = df_loaded['วันที่ตรวจ'].astype(str).str.strip().replace('nan', '')
@@ -163,7 +166,7 @@ def main_app(df):
                 'authenticated', 'pdpa_accepted', 'user_hn', 'user_name', 'is_admin',
                 'search_result', 'selected_year', 'person_row', 'selected_row_found',
                 'admin_search_term', 'admin_search_results', 'admin_selected_hn',
-                'admin_selected_year', 'admin_person_row'
+                'admin_selected_year', 'admin_person_row', 'line_register_success', 'line_registered_user'
             ]
             for key in keys_to_clear:
                 if key in st.session_state:
@@ -265,19 +268,38 @@ if df is None:
     st.error("ไม่สามารถโหลดฐานข้อมูลได้ กรุณาลองอีกครั้งในภายหลัง")
     st.stop()
 
+# --- เช็ค Query Parameter ว่าจะเข้าหน้าลงทะเบียน (LINE Register) หรือไม่ ---
+# ใน LINE Rich Menu ให้ใส่ Link เป็น: https://your-app-url.streamlit.app/?page=register
+try:
+    query_params = st.query_params 
+    page_param = query_params.get("page", "")
+except:
+    page_param = ""
+
 # --- Routing Logic ---
-if not st.session_state['authenticated']:
-    authentication_flow(df)
+if page_param == "register":
+    # 1. เข้าสู่โหมดลงทะเบียน LINE (แยกโมดูลตามที่ขอ)
+    render_registration_page(df)
+
+elif not st.session_state['authenticated']:
+    # 2. เข้าสู่โหมด Login ปกติ (Desktop/Web)
+    
+    # เพิ่มตัวเลือกเล็กๆ ด้านบนเผื่อกด Test ใน Dev Mode
+    if st.checkbox("ทดสอบโหมดลงทะเบียน LINE OA (Dev Only)", value=False):
+        render_registration_page(df)
+    else:
+        authentication_flow(df)
+
 elif not st.session_state['pdpa_accepted']:
+    # 3. ผ่าน Login แล้วแต่ยังไม่ยอมรับ PDPA (กรณี Web Login)
     if st.session_state.get('is_admin', False):
         st.session_state['pdpa_accepted'] = True
         st.rerun()
     else:
         pdpa_consent_page()
 else:
-    # Route to Admin or User App
+    # 4. เข้าสู่ระบบสำเร็จ (แสดง Admin หรือ User Report)
     if st.session_state.get('is_admin', False):
-        display_admin_panel(df) # Call admin panel function (now defined in admin_panel.py)
+        display_admin_panel(df) 
     else:
-        main_app(df) # Call main app function for regular users
-
+        main_app(df)
