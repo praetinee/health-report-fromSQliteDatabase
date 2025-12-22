@@ -11,7 +11,7 @@ from datetime import datetime
 # --- Import Authentication & Consent ---
 from auth import authentication_flow, pdpa_consent_page
 
-# --- Import CSV Saving Function (จาก line_register) ---
+# --- Import CSV Saving Function ---
 try:
     from line_register import save_new_user_to_csv, liff_initializer_component, check_if_user_registered, normalize_db_name_field
 except ImportError:
@@ -98,7 +98,7 @@ def load_sqlite_data():
     finally:
         if tmp_path and os.path.exists(tmp_path): os.remove(tmp_path)
 
-# --- Main App Logic (สำหรับ User ที่ล็อกอินแล้ว) ---
+# --- Main App Logic (แก้ใหม่ให้โหลดข้อมูลชัวร์ๆ) ---
 def main_app(df):
     st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
     inject_custom_css()
@@ -109,45 +109,39 @@ def main_app(df):
         
     user_hn = st.session_state['user_hn']
     
-    # 1. Filter Data for User
+    # 1. กรองข้อมูลของ User คนนี้ออกมา
     results_df = df[df['HN'] == user_hn].copy()
     st.session_state['search_result'] = results_df
 
     if results_df.empty:
-        st.error(f"ไม่พบข้อมูลผลตรวจสำหรับ HN: {user_hn} (อาจเกิดจากข้อมูลใน Database ไม่ตรงกัน)")
-        # ปุ่ม Logout กรณีข้อมูลผิดพลาด
+        st.error(f"ไม่พบข้อมูลผลตรวจสำหรับ HN: {user_hn}")
         if st.button("กลับหน้าหลัก"):
             st.session_state.clear()
             st.rerun()
         return
 
-    # 2. Auto-Select Latest Year (แก้ปัญหาหน้าขาว)
+    # 2. หาปีที่มีข้อมูลทั้งหมด
     available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
     
     if not available_years:
         st.warning("ไม่พบประวัติการตรวจสุขภาพรายปี")
         return
 
-    # ถ้ายังไม่มีปีที่เลือก หรือปีที่เลือกไม่อยู่ในรายการ ให้เลือกปีล่าสุดเสมอ
+    # 3. เลือกปีล่าสุดอัตโนมัติ (ถ้ายังไม่ได้เลือก)
     if 'selected_year' not in st.session_state or st.session_state.selected_year not in available_years:
         st.session_state.selected_year = available_years[0]
-        # รีเซ็ต person_row เพื่อให้โหลดใหม่
+
+    # 4. ดึงข้อมูลของปีที่เลือกมาเตรียมไว้ (Important!)
+    # ไม่ใช้ Logic เก่าที่ซับซ้อน ดึงตรงๆ เลย
+    yr_df = results_df[results_df["Year"] == st.session_state.selected_year]
+    if not yr_df.empty:
+        # ใช้ bfill/ffill เพื่อรวมข้อมูลถ้ามีหลาย row ในปีเดียว
+        person_row = yr_df.bfill().ffill().iloc[0].to_dict()
+        st.session_state.person_row = person_row
+        st.session_state.selected_row_found = True
+    else:
         st.session_state.person_row = None
         st.session_state.selected_row_found = False
-
-    # 3. Load Person Row Data (โหลดข้อมูลจริง)
-    # ตรวจสอบว่า person_row มีข้อมูลหรือยัง ถ้าไม่มี ให้โหลดทันที
-    if st.session_state.get('person_row') is None:
-        yr_df = results_df[results_df["Year"] == st.session_state.selected_year]
-        if not yr_df.empty:
-            # ใช้ bfill/ffill เพื่อรวมข้อมูลถ้ามีหลาย row ในปีเดียว
-            st.session_state.person_row = yr_df.bfill().ffill().iloc[0].to_dict()
-            st.session_state.selected_row_found = True
-            # สำคัญ: สั่ง rerun ทันทีเพื่อให้หน้าเว็บอัปเดตข้อมูลใหม่
-            st.rerun()
-        else:
-            st.session_state.person_row = None
-            st.session_state.selected_row_found = False
 
     # --- Auto-Save LINE ID Logic ---
     if st.session_state.get("line_user_id") and not st.session_state.get("line_saved", False):
@@ -164,8 +158,7 @@ def main_app(df):
     # --- Event Handler ---
     def handle_year_change():
         st.session_state.selected_year = st.session_state.year_select
-        st.session_state.person_row = None # Clear old data to force reload
-        st.session_state.selected_row_found = False
+        # ไม่ต้องทำอะไรเพิ่ม เพราะโค้ดด้านบนจะดึงข้อมูลใหม่ให้เองเมื่อ rerun
 
     # --- Sidebar ---
     with st.sidebar:
@@ -178,7 +171,7 @@ def main_app(df):
         st.selectbox("เลือกปี พ.ศ.", available_years, index=idx, format_func=lambda y: f"พ.ศ. {y}", key="year_select", on_change=handle_year_change)
         
         st.markdown("---")
-        # ปุ่ม Print
+        # ปุ่ม Print (แสดงเฉพาะเมื่อมีข้อมูล)
         if st.session_state.get("selected_row_found", False):
             if st.button("พิมพ์รายงานสุขภาพ"): st.session_state.print_trigger = True
             if st.button("พิมพ์รายงานสมรรถภาพ"): st.session_state.print_performance_trigger = True
@@ -188,9 +181,9 @@ def main_app(df):
             st.session_state.clear()
             st.rerun()
 
-    # --- Main Content Area ---
-    # ถ้าข้อมูลพร้อมแล้ว ให้แสดงผล
-    if st.session_state.get("selected_row_found", False) and st.session_state.get("person_row") is not None:
+    # --- Main Content Area (แสดงผลทันที!) ---
+    # ตัดเงื่อนไขยุ่งยากออก ถ้ามี person_row ให้โชว์เลย
+    if st.session_state.get("person_row") is not None:
         p_data = st.session_state.person_row
         all_hist = st.session_state.search_result
         
@@ -198,16 +191,12 @@ def main_app(df):
         tabs_map = OrderedDict()
         if has_visualization_data(all_hist): tabs_map['ภาพรวม (Graphs)'] = 'viz'
         if has_basic_health_data(p_data): tabs_map['สุขภาพพื้นฐาน'] = 'main'
-        # เพิ่ม Tab อื่นๆ ตามข้อมูลที่มี
         if has_vision_data(p_data): tabs_map['การมองเห็น'] = 'vision'
         if has_hearing_data(p_data): tabs_map['การได้ยิน'] = 'hearing'
         if has_lung_data(p_data): tabs_map['ปอด'] = 'lung'
-        
-        # แสดงผล Header
-        display_common_header(p_data)
-        
-        # แสดง Tabs และเนื้อหา
+
         if tabs_map:
+            display_common_header(p_data)
             t_objs = st.tabs(list(tabs_map.keys()))
             for i, (k, v) in enumerate(tabs_map.items()):
                 with t_objs[i]:
@@ -217,8 +206,10 @@ def main_app(df):
                     elif v == 'hearing': display_performance_report(p_data, 'hearing', all_person_history_df=all_hist)
                     elif v == 'lung': display_performance_report(p_data, 'lung')
         else:
-            # Fallback ถ้าไม่มีข้อมูลพิเศษ ให้โชว์ Main Report ไว้ก่อน
-            display_main_report(p_data, all_hist)
+            # Fallback: ถ้าไม่มีข้อมูลพิเศษเลย ให้โชว์หน้าหลักไว้ก่อน
+            display_common_header(p_data)
+            st.warning("ไม่พบข้อมูลการตรวจสำหรับหมวดหมู่ที่กำหนด แต่พบประวัติการมาตรวจ")
+            display_main_report(p_data, all_hist) # บังคับโชว์
 
         # Print Components (Hidden)
         if st.session_state.get('print_trigger', False):
@@ -231,11 +222,9 @@ def main_app(df):
             st.session_state.print_performance_trigger = False
             
     else:
-        # กรณีข้อมูลยังไม่พร้อม (ไม่ควรเกิดขึ้นถ้า Auto-load ทำงานถูกต้อง)
+        # กรณีข้อมูลยังไม่พร้อม (ไม่ควรเกิดขึ้นเพราะเราบังคับโหลดข้างบนแล้ว)
         st.info(f"กำลังโหลดข้อมูลสำหรับปี {st.session_state.selected_year}...")
-        # ถ้ายังไม่ขึ้นจริงๆ ให้ปุ่มกดโหลด
-        if st.button("คลิกเพื่อแสดงข้อมูล"):
-            st.rerun()
+        st.rerun() # ลองรีเฟรชอีกทีเผื่อพลาด
 
 
 # --------------------------------------------------------------------------------
@@ -250,18 +239,16 @@ if 'pdpa_accepted' not in st.session_state: st.session_state['pdpa_accepted'] = 
 df = load_sqlite_data()
 if df is None: st.stop()
 
-# 3. Detect LINE UserID & Auto Login Logic
+# 3. Detect LINE UserID
 try:
-    # 3.1 Get UserID from URL
     q_userid = st.query_params.get("userid", "")
     if q_userid:
         st.session_state["line_user_id"] = q_userid
 
-    # 3.2 If have UserID but NOT Logged in -> Try Auto Login from CSV
+    # Auto Login from CSV
     if st.session_state.get("line_user_id") and not st.session_state['authenticated']:
         is_reg, info = check_if_user_registered(st.session_state["line_user_id"])
         if is_reg:
-            # หา User ใน DB เพื่อเอา HN
             found_rows = df[df['ชื่อ-สกุล'].str.contains(info['first_name'], na=False)]
             matched_user = None
             for _, row in found_rows.iterrows():
@@ -271,31 +258,26 @@ try:
                     break
             
             if matched_user is not None:
-                # Auto Login Success!
                 st.session_state['authenticated'] = True
                 st.session_state['user_hn'] = matched_user['HN']
                 st.session_state['user_name'] = matched_user['ชื่อ-สกุล']
-                # ถ้าเคยลงทะเบียนแล้ว ถือว่ายอมรับ PDPA แล้ว
                 st.session_state['pdpa_accepted'] = True 
                 st.rerun()
 
-    # 3.3 LIFF Initializer (ถ้าเข้าผ่าน link line แต่ยังไม่มี userid)
+    # LIFF Initializer
     q_page = st.query_params.get("page", "")
     if (q_page == "register" or q_userid) and "line_user_id" not in st.session_state:
         liff_initializer_component()
 
 except Exception as e:
-    # st.error(f"LINE Logic Error: {e}") # Uncomment to debug
     pass
 
-# 4. Final Routing Decision
+# 4. Routing Decision
 
 if not st.session_state['authenticated']:
-    # ยังไม่ Login -> ไปหน้า Login 3 ช่อง (เหมือนกันทุกคน)
     authentication_flow(df)
 
 elif not st.session_state['pdpa_accepted']:
-    # Login แล้ว -> ไปหน้า PDPA
     if st.session_state.get('is_admin', False):
         st.session_state['pdpa_accepted'] = True
         st.rerun()
@@ -303,7 +285,6 @@ elif not st.session_state['pdpa_accepted']:
         pdpa_consent_page()
 
 else:
-    # Login + PDPA แล้ว -> เข้าสู่ระบบ
     if st.session_state.get('is_admin', False):
         display_admin_panel(df)
     else:
