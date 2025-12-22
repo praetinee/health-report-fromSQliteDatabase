@@ -356,8 +356,8 @@ def inject_custom_css():
         /* Responsive Vitals Grid */
         .vitals-grid { 
             display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); 
-            gap: 1rem; 
+            grid-template-columns: 1fr 1fr; /* Fixed 2 columns */
+            gap: 1.5rem; 
             margin-bottom: 2rem; 
         }
         .vital-card { 
