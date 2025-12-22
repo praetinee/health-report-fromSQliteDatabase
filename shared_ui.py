@@ -494,36 +494,41 @@ def display_main_report(person_data, all_person_history_df):
             </div>
             """, unsafe_allow_html=True)
 
-            st.markdown("<h5 class='section-subtitle'>ผลการตรวจไวรัสตับอักเสบบี (Viral hepatitis B)</h5>", unsafe_allow_html=True)
-            
             # --- Logic to get correct Hepatitis B columns based on year ---
-            # Default to columns without suffix for current year
             hbsag_col = "HbsAg"
             hbsab_col = "HbsAb"
             hbcab_col = "HBcAB"
             
-            # If historical year (e.g. 66, 67), try adding suffix
+            # 1. Determine columns based on history
             current_thai_year = datetime.now().year + 543
             if selected_year != current_thai_year:
                 suffix = str(selected_year)[-2:]
-                # Check if suffixed column exists in data, otherwise fallback
                 if f"HbsAg{suffix}" in person: hbsag_col = f"HbsAg{suffix}"
                 if f"HbsAb{suffix}" in person: hbsab_col = f"HbsAb{suffix}"
                 if f"HBcAB{suffix}" in person: hbcab_col = f"HBcAB{suffix}"
+
+            # 2. Determine Header Suffix (Display Year)
+            # Priority: "ปีตรวจHEP" > selected_year
+            hep_year_rec = str(person.get("ปีตรวจHEP", "")).strip()
+            header_suffix = ""
+            if not is_empty(hep_year_rec):
+                 header_suffix = f" (ตรวจเมื่อ: {hep_year_rec})"
+            elif selected_year and selected_year != current_thai_year:
+                 header_suffix = f" (พ.ศ. {selected_year})"
+
+            st.markdown(f"<h5 class='section-subtitle'>ผลการตรวจไวรัสตับอักเสบบี (Viral hepatitis B){header_suffix}</h5>", unsafe_allow_html=True)
 
             hbsag = safe_text(person.get(hbsag_col))
             hbsab = safe_text(person.get(hbsab_col))
             hbcab = safe_text(person.get(hbcab_col))
             
+            # 3. Render Table (No year in <th>)
             st.markdown(f"""<div class="table-container"><table class='lab-table'>
-                <thead><tr><th style='text-align: center;'>HBsAg ({selected_year})</th><th style='text-align: center;'>HBsAb ({selected_year})</th><th style='text-align: center;'>HBcAb ({selected_year})</th></tr></thead>
+                <thead><tr><th style='text-align: center;'>HBsAg</th><th style='text-align: center;'>HBsAb</th><th style='text-align: center;'>HBcAb</th></tr></thead>
                 <tbody><tr><td style='text-align: center;'>{hbsag}</td><td style='text-align: center;'>{hbsab}</td><td style='text-align: center;'>{hbcab}</td></tr></tbody>
             </table></div>""", unsafe_allow_html=True)
 
-            # Check if any Hep B data exists to show advice
-            has_hepb_data = not (is_empty(person.get(hbsag_col)) and is_empty(person.get(hbsab_col)) and is_empty(person.get(hbcab_col)))
-            
-            if has_hepb_data:
+            if not (is_empty(hbsag) and is_empty(hbsab) and is_empty(hbcab)):
                 advice, status = hepatitis_b_advice(hbsag, hbsab, hbcab)
                 status_class = ""
                 if status == 'immune':
