@@ -516,7 +516,7 @@ def display_main_report(person_data, all_person_history_df):
             hbcab = safe_text(person.get(hbcab_col))
             
             st.markdown(f"""<div class="table-container"><table class='lab-table'>
-                <thead><tr><th style='text-align: center;'>HBsAg</th><th style='text-align: center;'>HBsAb</th><th style='text-align: center;'>HBcAb</th></tr></thead>
+                <thead><tr><th style='text-align: center;'>HBsAg ({selected_year})</th><th style='text-align: center;'>HBsAb ({selected_year})</th><th style='text-align: center;'>HBcAb ({selected_year})</th></tr></thead>
                 <tbody><tr><td style='text-align: center;'>{hbsag}</td><td style='text-align: center;'>{hbsab}</td><td style='text-align: center;'>{hbcab}</td></tr></tbody>
             </table></div>""", unsafe_allow_html=True)
 
