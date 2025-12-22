@@ -215,8 +215,7 @@ def display_common_header(person_data):
         bmi_val_str = f"{bmi:.1f} kg/m²"
         bmi_desc = interpret_bmi(bmi)
 
-    # แก้ไข: ใช้ CSS Grid แทน Table ใน Info Card (ฝั่งซ้าย)
-    # และปรับแก้ข้อความฝั่งขวาตามที่ user ต้องการ
+    # แก้ไข: เปลี่ยน Info Card เป็น CSS Grid (div) และปรับข้อความฝั่งขวา
     html_content = f"""
 <div class="report-header">
     <div class="header-left">
