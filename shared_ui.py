@@ -718,9 +718,35 @@ def render_vision_details_table(person_data):
 def display_performance_report_hearing(person_data, all_person_history_df):
     results = interpret_audiogram(person_data, all_person_history_df)
     
+    # แก้ไข: แมปชื่อคอลัมน์ให้ตรงกับฐานข้อมูล (R500, R1k ฯลฯ)
     freqs = [250, 500, 1000, 2000, 3000, 4000, 6000, 8000]
-    r_vals = [person_data.get(f'R_{f}', '-') for f in freqs]
-    l_vals = [person_data.get(f'L_{f}', '-') for f in freqs]
+    
+    # สร้าง Dictionary Map ชื่อความถี่ให้ตรงกับคอลัมน์
+    freq_col_map = {
+        250: ('R250', 'L250'),
+        500: ('R500', 'L500'),
+        1000: ('R1k', 'L1k'),
+        2000: ('R2k', 'L2k'),
+        3000: ('R3k', 'L3k'),
+        4000: ('R4k', 'L4k'),
+        6000: ('R6k', 'L6k'),
+        8000: ('R8k', 'L8k')
+    }
+    
+    # ดึงค่าตาม Map
+    r_vals = []
+    l_vals = []
+    for f in freqs:
+        if f in freq_col_map:
+            r_col, l_col = freq_col_map[f]
+            # ลองดึงค่า (ถ้าไม่เจอให้ลองหาแบบเก่า R_500 เผื่อไว้)
+            r_val = person_data.get(r_col, person_data.get(f'R_{f}', '-'))
+            l_val = person_data.get(l_col, person_data.get(f'L_{f}', '-'))
+            r_vals.append(r_val)
+            l_vals.append(l_val)
+        else:
+            r_vals.append('-')
+            l_vals.append('-')
     
     # New Table Layout
     table_html = clean_html_string(f"""
