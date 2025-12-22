@@ -65,8 +65,6 @@ def safe_value(val):
     return "-" if val.lower() in ["", "nan", "none", "-"] else val
 
 # ... (other helpers: parse_range_or_number, interpret_rbc, interpret_wbc, is_urine_abnormal, etc.) ...
-# I will include all of them to be safe and complete.
-
 def parse_range_or_number(val):
     val = val.replace("cell/hpf", "").replace("cells/hpf", "").replace("cell", "").strip().lower()
     try:
@@ -217,6 +215,7 @@ def display_common_header(person_data):
         bmi_val_str = f"{bmi:.1f} kg/m²"
         bmi_desc = interpret_bmi(bmi)
 
+    # ปรับ Header ให้ Responsive (Flex wrap)
     st.markdown(f"""
     <div class="report-header">
         <div class="header-left">
@@ -283,66 +282,172 @@ def inject_custom_css():
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap');
         
-        :root {
-            --abnormal-bg-color: rgba(220, 53, 69, 0.1);
-            --abnormal-text-color: #C53030;
-            --normal-bg-color: rgba(40, 167, 69, 0.1);
-            --normal-text-color: #1E4620;
-            --warning-bg-color: rgba(255, 193, 7, 0.1);
-            --neutral-bg-color: rgba(108, 117, 125, 0.1);
-            --neutral-text-color: #4A5568;
-        }
-        
-        html, body, [class*="st-"], .st-emotion-cache-10trblm, h1, h2, h3, h4, h5, h6 {
+        /* General Streamlit Overrides for Theme Adaptation */
+        .stApp, [data-testid="stAppViewContainer"] {
             font-family: 'Sarabun', sans-serif !important;
         }
+
+        h1, h2, h3, h4, h5, h6, p, div, span, label, button, input {
+            font-family: 'Sarabun', sans-serif !important;
+        }
+
+        /* Responsive Headings */
         h4 {
-            font-size: 1.25rem;
+            font-size: clamp(1.1rem, 4vw, 1.25rem);
             font-weight: 600;
-            border-bottom: 2px solid #ddd;
+            border-bottom: 2px solid var(--secondary-background-color);
             padding-bottom: 10px;
-            margin-top: 40px;
-            margin-bottom: 24px;
+            margin-top: 30px;
+            margin-bottom: 20px;
+            color: var(--text-color);
         }
         h5.section-subtitle {
             font-weight: 600;
             margin-top: 1.5rem;
             margin-bottom: 0.75rem;
-            opacity: 0.7;
+            opacity: 0.9;
+            color: var(--text-color);
         }
 
-        .report-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; }
-        .header-left h2 { font-size: 2rem; margin-bottom: 0.25rem;}
-        .header-left p { opacity: 0.7; margin: 0; }
-        .info-card { background-color: #f8f9fa; border-radius: 8px; padding: 1rem; display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem 1.5rem; min-width: 400px; border: 1px solid #dee2e6; }
-        .info-card-item { font-size: 0.9rem; }
-        .info-card-item span { opacity: 0.7; margin-right: 8px; }
+        /* Responsive Report Header */
+        .report-header { 
+            display: flex; 
+            flex-direction: row; 
+            justify-content: space-between; 
+            align-items: flex-start; 
+            margin-bottom: 2rem; 
+            flex-wrap: wrap; 
+            gap: 1.5rem;
+        }
+        .header-left {
+            flex: 1 1 300px;
+        }
+        .header-right {
+            flex: 1 1 400px;
+        }
+        
+        .header-left h2 { 
+            font-size: clamp(1.5rem, 5vw, 2rem); 
+            margin-bottom: 0.5rem;
+            color: var(--text-color);
+        }
+        .header-left p { opacity: 0.8; margin: 0; font-size: 0.95rem; color: var(--text-color); }
 
-        .vitals-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
-        .vital-card { background-color: #fff; border-radius: 12px; padding: 1rem; display: flex; align-items: center; gap: 1rem; border: 1px solid #e0e0e0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-        .vital-icon svg { color: #00796B; }
+        /* Responsive Info Card - Adaptive Theme */
+        .info-card { 
+            background-color: var(--secondary-background-color); 
+            border-radius: 8px; 
+            padding: 1.25rem; 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); 
+            gap: 0.75rem 1.5rem; 
+            width: 100%; 
+            border: 1px solid rgba(128, 128, 128, 0.2); 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .info-card-item { font-size: 0.9rem; word-break: break-word; color: var(--text-color); }
+        .info-card-item span { opacity: 0.7; margin-right: 8px; font-weight: 600; }
+
+        /* Responsive Vitals Grid */
+        .vitals-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); 
+            gap: 1rem; 
+            margin-bottom: 2rem; 
+        }
+        .vital-card { 
+            background-color: var(--background-color); 
+            border-radius: 12px; 
+            padding: 1.25rem; 
+            display: flex; 
+            align-items: center; 
+            gap: 1rem; 
+            border: 1px solid rgba(128, 128, 128, 0.2); 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
+        }
+        .vital-icon svg { stroke: var(--primary-color); }
         .vital-data { display: flex; flex-direction: column; }
-        .vital-label { font-size: 0.8rem; opacity: 0.7; }
-        .vital-value { font-size: 1.2rem; font-weight: 700; line-height: 1.2; white-space: nowrap;}
-        .vital-sub-value { font-size: 0.8rem; opacity: 0.6; }
+        .vital-label { font-size: 0.8rem; opacity: 0.7; color: var(--text-color); }
+        .vital-value { font-size: 1.25rem; font-weight: 700; line-height: 1.2; white-space: nowrap; color: var(--text-color); }
+        .vital-sub-value { font-size: 0.8rem; opacity: 0.6; color: var(--text-color); }
 
-        .table-container { overflow-x: auto; }
-        .lab-table, .info-detail-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        .lab-table th, .lab-table td, .info-detail-table th, .info-detail-table td { padding: 12px 15px; border: 1px solid transparent; border-bottom: 1px solid #e0e0e0; }
-        .lab-table th, .info-detail-table th { font-weight: 600; text-align: left; opacity: 0.7; }
-        .lab-table thead th { background-color: rgba(128, 128, 128, 0.1); }
-        .lab-table td:nth-child(2) { text-align: center; }
-        .lab-table .abnormal-row { background-color: var(--abnormal-bg-color); color: var(--abnormal-text-color); font-weight: 600; }
+        /* Scrollable Tables for Mobile */
+        .table-container { 
+            overflow-x: auto; 
+            -webkit-overflow-scrolling: touch; 
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            border: 1px solid rgba(128, 128, 128, 0.1);
+        }
+        .lab-table, .info-detail-table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            font-size: 0.95rem; 
+            min-width: 600px; /* Ensure table doesn't get squashed */
+        }
+        .lab-table th, .lab-table td, .info-detail-table th, .info-detail-table td { 
+            padding: 12px 15px; 
+            border-bottom: 1px solid rgba(128, 128, 128, 0.2); 
+            color: var(--text-color);
+        }
+        .lab-table th, .info-detail-table th { 
+            font-weight: 600; 
+            text-align: left; 
+            opacity: 0.9; 
+            background-color: var(--secondary-background-color); 
+        }
+        
+        /* Status Colors - Theme Compatible */
+        .lab-table .abnormal-row { 
+            background-color: rgba(255, 0, 0, 0.05); 
+            color: #d32f2f; /* Red that works on light and mostly dark */
+            font-weight: 600; 
+        }
+        /* Dark mode specific tweak for text visibility if needed */
+        @media (prefers-color-scheme: dark) {
+            .lab-table .abnormal-row { color: #ff6b6b; }
+        }
+
         .info-detail-table th { width: 35%; }
         
-        .recommendation-container { border-left: 5px solid #00796B; padding: 1.5rem; border-radius: 0 8px 8px 0; background-color: #fff; }
+        /* Recommendation Box */
+        .recommendation-container { 
+            border-left: 5px solid var(--primary-color); 
+            padding: 1.5rem; 
+            border-radius: 0 8px 8px 0; 
+            background-color: var(--secondary-background-color); 
+            color: var(--text-color);
+        }
         .recommendation-container ul { padding-left: 20px; }
         .recommendation-container li { margin-bottom: 0.5rem; }
 
+        /* Custom Advice Boxes */
         .custom-advice-box { padding: 1rem; border-radius: 8px; margin-top: 1rem; border: 1px solid transparent; font-weight: 600; }
-        .immune-box { background-color: var(--normal-bg-color); color: #2E7D32; border-color: rgba(40, 167, 69, 0.2); }
-        .no-immune-box { background-color: var(--abnormal-bg-color); color: #C62828; border-color: rgba(220, 53, 69, 0.2); }
-        .warning-box { background-color: var(--warning-bg-color); color: #AF6C00; border-color: rgba(255, 193, 7, 0.2); }
+        .immune-box { 
+            background-color: rgba(40, 167, 69, 0.1); 
+            color: #2e7d32; 
+            border-color: rgba(40, 167, 69, 0.2); 
+        }
+        .no-immune-box { 
+            background-color: rgba(220, 53, 69, 0.1); 
+            color: #c62828; 
+            border-color: rgba(220, 53, 69, 0.2); 
+        }
+        .warning-box { 
+            background-color: rgba(255, 193, 7, 0.1); 
+            color: #f57f17; 
+            border-color: rgba(255, 193, 7, 0.2); 
+        }
+
+        /* Mobile specific adjustments */
+        @media (max-width: 576px) {
+            h4 { margin-top: 20px; font-size: 1.1rem; }
+            .report-header { flex-direction: column; gap: 1rem; }
+            .info-card { grid-template-columns: 1fr; }
+            .vitals-grid { grid-template-columns: 1fr; } 
+            .vital-card { padding: 1rem; }
+            .vital-value { font-size: 1.1rem; }
+        }
     </style>
     """, unsafe_allow_html=True)
 
