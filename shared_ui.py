@@ -673,8 +673,13 @@ def inject_custom_css():
         }
         .vision-normal { background-color: #E8F5E9; color: #2E7D32; }
         .vision-abnormal { background-color: #FFEBEE; color: #C62828; }
-        .vision-not-tested { background-color: #ECEFF1; color: #90A4AE; }
-
+        .vision-not-tested { background-color: #f0f2f6; color: #6c757d; }
+        
+        .styled-df-table { width: 100%; border-collapse: collapse; font-family: 'Sarabun', sans-serif !important; font-size: 14px; }
+        .styled-df-table th, .styled-df-table td { border: 1px solid #e0e0e0; padding: 10px; text-align: left; color: #333; }
+        .styled-df-table thead th { background-color: #f8f9fa; font-weight: bold; text-align: center; }
+        .styled-df-table tbody td { text-align: center; }
+        .styled-df-table tbody td:first-child { text-align: left; }
     </style>""")
     st.markdown(css_content, unsafe_allow_html=True)
 
@@ -760,7 +765,8 @@ def render_vision_details_table(person_data):
     ]
     
     def check_vision(val, test_type):
-        if is_empty(val): return "Not Tested", "vision-not-tested"
+        # ถ้าค่าเป็นว่าง ให้คืนค่าเป็นขีด "-" พร้อม style สีเทาๆ
+        if is_empty(val): return "-", "vision-not-tested"
         val_str = str(val).strip().lower()
         
         # คำที่เป็นความหมายว่า "ปกติ"
@@ -777,21 +783,21 @@ def render_vision_details_table(person_data):
 
     # สร้าง HTML Rows
     html_rows = ""
-    has_data = False
+    any_data_found = False # ตัวแปรเช็คว่ามีข้อมูลบ้างไหม (ถ้าไม่มีเลยสักช่อง จะไม่แสดงตาราง)
     
+    # วนลูปสร้างแถวให้ครบทุกรายการตาม config
     for item in vision_config:
         val = None
         # วนหาค่าจาก keys ที่เป็นไปได้
         for key in item['keys']:
             if not is_empty(person_data.get(key)):
                 val = person_data.get(key)
+                any_data_found = True # เจอข้อมูลจริง
                 break
         
-        # แสดงผลถ้ามีค่า
-        if val is not None:
-            has_data = True
-            res_text, res_class = check_vision(val, item['id'])
-            html_rows += f"<tr><td>{item['label']}</td><td class='result-cell' style='text-align:center;'><span class='vision-result {res_class}'>{res_text}</span></td></tr>"
+        # ส่งค่าไปประมวลผล (ถ้า val เป็น None จะได้กลับมาเป็น "-")
+        res_text, res_class = check_vision(val, item['id'])
+        html_rows += f"<tr><td>{item['label']}</td><td class='result-cell' style='text-align:center;'><span class='vision-result {res_class}'>{res_text}</span></td></tr>"
     
     # เพิ่มส่วนสรุปและคำแนะนำแพทย์ (ถ้ามี)
     doctor_advice = person_data.get('แนะนำABN EYE', '')
@@ -822,7 +828,8 @@ def render_vision_details_table(person_data):
     {footer_html}
     """)
     
-    if has_data:
+    # แสดงผลตารางถ้ามีข้อมูลอย่างน้อย 1 รายการ
+    if any_data_found:
         st.markdown(html_content, unsafe_allow_html=True)
     else:
         st.info("ไม่พบข้อมูลการตรวจสายตา")
@@ -939,92 +946,98 @@ def display_main_report(person_data, all_person_history_df):
     blood_config = [("น้ำตาลในเลือด (FBS)", "FBS", "74 - 106 mg/dl", 74, 106), ("กรดยูริก (Uric Acid)", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2), ("การทำงานของเอนไซม์ตับ (ALK)", "ALP", "30 - 120 U/L", 30, 120), ("การทำงานของเอนไซม์ตับ (SGOT)", "SGOT", "< 37 U/L", None, 37), ("การทำงานของเอนไซม์ตับ (SGPT)", "SGPT", "< 41 U/L", None, 41), ("คลอเรสเตอรอล (CHOL)", "CHOL", "150 - 200 mg/dl", 150, 200), ("ไตรกลีเซอไรด์ (TGL)", "TGL", "35 - 150 mg/dl", 35, 150), ("ไขมันดี (HDL)", "HDL", "> 40 mg/dl", 40, None, True), ("ไขมันเลว (LDL)", "LDL", "0 - 160 mg/dl", 0, 160), ("การทำงานของไต (BUN)", "BUN", "7.9 - 20 mg/dl", 7.9, 20), ("การทำงานของไต (Cr)", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17), ("ประสิทธิภาพการกรองของไต (GFR)", "GFR", "> 60 mL/min", 60, None, True)]
     blood_rows = [([(label, is_abn), (result, is_abn), (norm, is_abn)]) for label, col, norm, low, high, *opt in blood_config for higher in [opt[0] if opt else False] for val in [get_float(col, person)] for result, is_abn in [flag(val, low, high, higher)]]
 
-    render_section_header("ผลการตรวจทางห้องปฏิบัติการ (Laboratory Results)")
-    col1, col2 = st.columns(2)
-    with col1: st.markdown(render_lab_table_html("ความสมบูรณ์ของเม็ดเลือด (CBC)", ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows), unsafe_allow_html=True)
-    with col2: st.markdown(render_lab_table_html("เคมีคลินิก (Blood Chemistry)", ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows), unsafe_allow_html=True)
+    with st.container(border=True):
+        render_section_header("ผลการตรวจทางห้องปฏิบัติการ (Laboratory Results)")
+        col1, col2 = st.columns(2)
+        with col1: st.markdown(render_lab_table_html("ผลตรวจความสมบูรณ์ของเม็ดเลือด (CBC)", ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows), unsafe_allow_html=True)
+        with col2: st.markdown(render_lab_table_html("ผลตรวจเลือด (Blood Chemistry)", ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows), unsafe_allow_html=True)
 
     selected_year = person.get("Year", datetime.now().year + 543)
 
-    render_section_header("ผลการตรวจอื่นๆ (Other Examinations)")
-    col_ua_left, col_ua_right = st.columns(2)
-    with col_ua_left:
-        render_urine_section(person, sex, selected_year)
-        st.markdown(render_stool_html_table(interpret_stool_exam(person.get("Stool exam", "")), interpret_stool_cs(person.get("Stool C/S", ""))), unsafe_allow_html=True)
+    with st.container(border=True):
+        render_section_header("ผลการตรวจอื่นๆ (Other Examinations)")
+        col_ua_left, col_ua_right = st.columns(2)
+        with col_ua_left:
+            render_urine_section(person, sex, selected_year)
+            st.markdown("<h5 class='section-subtitle'>ผลตรวจอุจจาระ (Stool Examination)</h5>", unsafe_allow_html=True)
+            st.markdown(render_stool_html_table(interpret_stool_exam(person.get("Stool exam", "")), interpret_stool_cs(person.get("Stool C/S", ""))), unsafe_allow_html=True)
 
-    with col_ua_right:
-        cxr_col = f"CXR{str(selected_year)[-2:]}" if selected_year != (datetime.now().year + 543) else "CXR"
-        ekg_col_name = get_ekg_col_name(selected_year)
-        hep_a_value = person.get("Hepatitis A")
-        hep_a_display_text = "ไม่ได้ตรวจ" if is_empty(hep_a_value) else safe_text(hep_a_value)
+        with col_ua_right:
+            st.markdown("<h5 class='section-subtitle'>ผลตรวจพิเศษ</h5>", unsafe_allow_html=True)
+            cxr_col = f"CXR{str(selected_year)[-2:]}" if selected_year != (datetime.now().year + 543) else "CXR"
+            ekg_col_name = get_ekg_col_name(selected_year)
+            hep_a_value = person.get("Hepatitis A")
+            hep_a_display_text = "ไม่ได้ตรวจ" if is_empty(hep_a_value) else safe_text(hep_a_value)
 
-        # แก้ไข: ใช้ clean_html_string เพื่อลบ Indentation
-        st.markdown(clean_html_string(f"""
-        <div class="card-container">
-            <div class="table-title">ผลตรวจพิเศษ</div>
-            <table class="info-detail-table">
-                <tbody>
-                    <tr><th width="40%">เอกซเรย์ (Chest X-ray)</th><td>{interpret_cxr(person.get(cxr_col, ''))}</td></tr>
-                    <tr><th>คลื่นไฟฟ้าหัวใจ (EKG)</th><td>{interpret_ekg(person.get(ekg_col_name, ''))}</td></tr>
-                    <tr><th>ไวรัสตับอักเสบเอ</th><td>{hep_a_display_text}</td></tr>
-                </tbody>
-            </table>
-        </div>
-        """), unsafe_allow_html=True)
-
-        # --- Logic to get correct Hepatitis B columns based on year ---
-        hbsag_col = "HbsAg"
-        hbsab_col = "HbsAb"
-        hbcab_col = "HBcAB"
-        
-        # 1. Determine columns based on history
-        current_thai_year = datetime.now().year + 543
-        if selected_year != current_thai_year:
-            suffix = str(selected_year)[-2:]
-            if f"HbsAg{suffix}" in person: hbsag_col = f"HbsAg{suffix}"
-            if f"HbsAb{suffix}" in person: hbsab_col = f"HbsAb{suffix}"
-            if f"HBcAB{suffix}" in person: hbcab_col = f"HBcAB{suffix}"
-
-        # 2. Determine Header Suffix (Display Year)
-        hep_year_rec = str(person.get("ปีตรวจHEP", "")).strip()
-        header_suffix = ""
-        if not is_empty(hep_year_rec):
-                header_suffix = f" (ตรวจเมื่อ: {hep_year_rec})"
-        elif selected_year and selected_year != current_thai_year:
-                header_suffix = f" (พ.ศ. {selected_year})"
-
-        hbsag = safe_text(person.get(hbsag_col))
-        hbsab = safe_text(person.get(hbsab_col))
-        hbcab = safe_text(person.get(hbcab_col))
-        
-        # แก้ไข: ใช้ clean_html_string เพื่อลบ Indentation
-        st.markdown(clean_html_string(f"""
-        <div class="card-container">
-            <div class="table-title">ไวรัสตับอักเสบบี (Hepatitis B){header_suffix}</div>
-            <table class='lab-table'>
-                <thead><tr><th style='text-align: center;'>HBsAg</th><th style='text-align: center;'>HBsAb</th><th style='text-align: center;'>HBcAb</th></tr></thead>
-                <tbody><tr><td style='text-align: center;'>{hbsag}</td><td style='text-align: center;'>{hbsab}</td><td style='text-align: center;'>{hbcab}</td></tr></tbody>
-            </table>
-        </div>
-        """), unsafe_allow_html=True)
-
-        if not (is_empty(hbsag) and is_empty(hbsab) and is_empty(hbcab)):
-            advice, status = hepatitis_b_advice(hbsag, hbsab, hbcab)
-            status_class = ""
-            if status == 'immune':
-                status_class = 'immune-box'
-            elif status == 'no_immune':
-                status_class = 'no-immune-box'
-            else:
-                status_class = 'warning-box'
-            
             # แก้ไข: ใช้ clean_html_string เพื่อลบ Indentation
             st.markdown(clean_html_string(f"""
-            <div class='custom-advice-box {status_class}'>
-                {advice}
+            <div class="table-container">
+                <table class="info-detail-table">
+                    <tbody>
+                        <tr><th>ผลเอกซเรย์ (Chest X-ray)</th><td>{interpret_cxr(person.get(cxr_col, ''))}</td></tr>
+                        <tr><th>ผลคลื่นไฟฟ้าหัวใจ (EKG)</th><td>{interpret_ekg(person.get(ekg_col_name, ''))}</td></tr>
+                        <tr><th>ไวรัสตับอักเสบเอ (Hepatitis A)</th><td>{hep_a_display_text}</td></tr>
+                    </tbody>
+                </table>
             </div>
             """), unsafe_allow_html=True)
 
-    render_section_header("สรุปและคำแนะนำการปฏิบัติตัว (Summary & Recommendations)")
-    recommendations_html = generate_comprehensive_recommendations(person_data)
-    st.markdown(f"<div class='recommendation-container'>{recommendations_html}</div>", unsafe_allow_html=True)
+            # --- Logic to get correct Hepatitis B columns based on year ---
+            hbsag_col = "HbsAg"
+            hbsab_col = "HbsAb"
+            hbcab_col = "HBcAB"
+            
+            # 1. Determine columns based on history
+            current_thai_year = datetime.now().year + 543
+            if selected_year != current_thai_year:
+                suffix = str(selected_year)[-2:]
+                if f"HbsAg{suffix}" in person: hbsag_col = f"HbsAg{suffix}"
+                if f"HbsAb{suffix}" in person: hbsab_col = f"HbsAb{suffix}"
+                if f"HBcAB{suffix}" in person: hbcab_col = f"HBcAB{suffix}"
+
+            # 2. Determine Header Suffix (Display Year)
+            # Priority: "ปีตรวจHEP" > selected_year
+            hep_year_rec = str(person.get("ปีตรวจHEP", "")).strip()
+            header_suffix = ""
+            if not is_empty(hep_year_rec):
+                 header_suffix = f" (ตรวจเมื่อ: {hep_year_rec})"
+            elif selected_year and selected_year != current_thai_year:
+                 header_suffix = f" (พ.ศ. {selected_year})"
+
+            st.markdown(f"<h5 class='section-subtitle'>ผลการตรวจไวรัสตับอักเสบบี (Viral hepatitis B){header_suffix}</h5>", unsafe_allow_html=True)
+
+            hbsag = safe_text(person.get(hbsag_col))
+            hbsab = safe_text(person.get(hbsab_col))
+            hbcab = safe_text(person.get(hbcab_col))
+            
+            # แก้ไข: ใช้ clean_html_string เพื่อลบ Indentation
+            st.markdown(clean_html_string(f"""
+            <div class="table-container">
+                <table class='lab-table'>
+                    <thead><tr><th style='text-align: center;'>HBsAg</th><th style='text-align: center;'>HBsAb</th><th style='text-align: center;'>HBcAb</th></tr></thead>
+                    <tbody><tr><td style='text-align: center;'>{hbsag}</td><td style='text-align: center;'>{hbsab}</td><td style='text-align: center;'>{hbcab}</td></tr></tbody>
+                </table>
+            </div>
+            """), unsafe_allow_html=True)
+
+            if not (is_empty(hbsag) and is_empty(hbsab) and is_empty(hbcab)):
+                advice, status = hepatitis_b_advice(hbsag, hbsab, hbcab)
+                status_class = ""
+                if status == 'immune':
+                    status_class = 'immune-box'
+                elif status == 'no_immune':
+                    status_class = 'no-immune-box'
+                else:
+                    status_class = 'warning-box'
+                
+                # แก้ไข: ใช้ clean_html_string เพื่อลบ Indentation
+                st.markdown(clean_html_string(f"""
+                <div class='custom-advice-box {status_class}'>
+                    {advice}
+                </div>
+                """), unsafe_allow_html=True)
+
+    with st.container(border=True):
+        render_section_header("สรุปและคำแนะนำการปฏิบัติตัว (Summary & Recommendations)")
+        recommendations_html = generate_comprehensive_recommendations(person_data)
+        st.markdown(f"<div class='recommendation-container'>{recommendations_html}</div>", unsafe_allow_html=True)
