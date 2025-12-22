@@ -427,8 +427,3 @@ def display_main_report(person_data, all_person_history_df):
                     {advice}
                 </div>
                 """, unsafe_allow_html=True)
-
-    with st.container(border=True):
-        render_section_header("สรุปและคำแนะนำการปฏิบัติตัว (Summary & Recommendations)")
-        recommendations_html = generate_comprehensive_recommendations(person_data)
-        st.markdown(f"<div class='recommendation-container'>{recommendations_html}</div>", unsafe_allow_html=True)
