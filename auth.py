@@ -107,13 +107,11 @@ def authentication_flow(df):
                 if user_data['role'] == 'admin':
                     st.session_state['is_admin'] = True
                     st.session_state['user_name'] = "Administrator"
-                    # Admin ข้าม PDPA ได้เลย
                     st.session_state['pdpa_accepted'] = True 
                 else:
                     st.session_state['is_admin'] = False
                     st.session_state['user_hn'] = user_data['HN']
                     st.session_state['user_name'] = user_data['ชื่อ-สกุล']
-                    # User ต้องไปกด PDPA ต่อ (ถ้ายังไม่กด)
                     st.session_state['pdpa_accepted'] = False 
                 
                 st.success(msg)
