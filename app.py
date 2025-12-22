@@ -148,7 +148,6 @@ def main_app(df):
             st.session_state.selected_row_found = False
 
     # --- Auto-Save LINE ID Logic ---
-    # ถ้ามี UserID จาก LINE แต่ยังไม่เคยบันทึก -> บันทึกเลย
     if st.session_state.get("line_user_id") and not st.session_state.get("line_saved", False):
         try:
             user_name_full = st.session_state.get('user_name', '')
@@ -197,19 +196,20 @@ def main_app(df):
         tabs_map = OrderedDict()
         if has_visualization_data(all_hist): tabs_map['ภาพรวม (Graphs)'] = 'viz'
         if has_basic_health_data(p_data): tabs_map['สุขภาพพื้นฐาน'] = 'main'
-        # เพิ่ม Tab อื่นๆ ตามข้อมูลที่มี
-        # (หมายเหตุ: ฟังก์ชันตรวจสอบ has_... อยู่ใน utils.py)
-        
-        # แสดงผล Header
-        display_common_header(p_data)
-        
-        # แสดง Tabs และเนื้อหา
+        if has_vision_data(p_data): tabs_map['การมองเห็น'] = 'vision'
+        if has_hearing_data(p_data): tabs_map['การได้ยิน'] = 'hearing'
+        if has_lung_data(p_data): tabs_map['ปอด'] = 'lung'
+
         if tabs_map:
+            display_common_header(p_data)
             t_objs = st.tabs(list(tabs_map.keys()))
             for i, (k, v) in enumerate(tabs_map.items()):
                 with t_objs[i]:
                     if v == 'viz': display_visualization_tab(p_data, all_hist)
                     elif v == 'main': display_main_report(p_data, all_hist)
+                    elif v == 'vision': display_performance_report(p_data, 'vision')
+                    elif v == 'hearing': display_performance_report(p_data, 'hearing', all_person_history_df=all_hist)
+                    elif v == 'lung': display_performance_report(p_data, 'lung')
         else:
             # Fallback ถ้าไม่มีข้อมูลพิเศษ ให้โชว์ Main Report ไว้ก่อน
             display_main_report(p_data, all_hist)
