@@ -233,13 +233,7 @@ if is_line_mode:
 
 elif not st.session_state['authenticated']:
     # 🔴 กรณีเข้าปกติแล้วยังไม่ Login -> โชว์หน้า Login เดิม
-    
-    # (Optional) ปุ่มแอบทดสอบสำหรับเรา (Dev)
-    # ถ้าไม่อยากให้รก เอาบรรทัด if st.checkbox... ออกได้เลยครับ
-    if st.checkbox("Dev: ลองเปิดโหมด LINE (กดเล่นๆ)", value=False):
-        render_registration_page(df)
-    else:
-        authentication_flow(df)
+    authentication_flow(df)
 
 elif not st.session_state['pdpa_accepted']:
     # 🟡 Login แล้วแต่ยังไม่กด PDPA
