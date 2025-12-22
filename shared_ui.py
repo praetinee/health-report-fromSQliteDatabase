@@ -215,85 +215,83 @@ def display_common_header(person_data):
         bmi_val_str = f"{bmi:.1f} kg/m²"
         bmi_desc = interpret_bmi(bmi)
 
-    # แก้ไข: ใช้ HTML Table 100% เพื่อการจัดวางที่สม่ำเสมอและแก้ปัญหาขอบขวา
-    # ใช้ตาราง 3 คอลัมน์:
-    # คอลัมน์ 1 (40%): ชื่อ, HN
-    # คอลัมน์ 2 (40%): เพศ, หน่วยงาน
-    # คอลัมน์ 3 (20%): อายุ, วันที่
-    st.markdown(f"""
-    <div class="report-header">
-        <div class="header-left">
-            <h2>รายงานผลการตรวจสุขภาพ</h2>
-            <p>คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย</p>
-            <p>ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167</p>
-        </div>
-        <div class="header-right">
-            <div class="info-card-wrapper">
-                <table class="info-card-table">
-                    <colgroup>
-                        <col style="width: 37%;">
-                        <col style="width: 37%;">
-                        <col style="width: 26%;">
-                    </colgroup>
-                    <tr>
-                        <td><span class="label">ชื่อ-สกุล:</span> {name}</td>
-                        <td><span class="label">เพศ:</span> {sex}</td>
-                        <td style="text-align: left;"><span class="label">อายุ:</span> {age} ปี</td>
-                    </tr>
-                    <tr>
-                        <td><span class="label">HN:</span> {hn}</td>
-                        <td><span class="label">หน่วยงาน:</span> {department}</td>
-                        <td style="text-align: left;"><span class="label">วันที่ตรวจ:</span> {check_date}</td>
-                    </tr>
-                </table>
-            </div>
+    # แก้ไข: สร้าง HTML string แบบชิดซ้าย (No indentation) เพื่อป้องกัน Streamlit มองเป็น Code block
+    html_content = f"""
+<div class="report-header">
+    <div class="header-left">
+        <h2>รายงานผลการตรวจสุขภาพ</h2>
+        <p>คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย</p>
+        <p>ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167</p>
+    </div>
+    <div class="header-right">
+        <div class="info-card-wrapper">
+            <table class="info-card-table">
+                <colgroup>
+                    <col style="width: 40%;">
+                    <col style="width: 35%;">
+                    <col style="width: 25%;">
+                </colgroup>
+                <tr>
+                    <td><span class="label">ชื่อ-สกุล:</span> {name}</td>
+                    <td><span class="label">เพศ:</span> {sex}</td>
+                    <td style="text-align: right;"><span class="label">อายุ:</span> {age} ปี</td>
+                </tr>
+                <tr>
+                    <td><span class="label">HN:</span> {hn}</td>
+                    <td><span class="label">หน่วยงาน:</span> {department}</td>
+                    <td style="text-align: right;"><span class="label">วันที่ตรวจ:</span> {check_date}</td>
+                </tr>
+            </table>
         </div>
     </div>
+</div>
 
-    <div class="vitals-grid">
-        <div class="vital-card">
-            <div class="vital-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="M12 6v6l4 2"></path></svg>
-            </div>
-            <div class="vital-data">
-                <span class="vital-label">น้ำหนัก / ส่วนสูง</span>
-                <span class="vital-value">{weight_val} kg / {height_val} cm</span>
-                <span class="vital-sub-value">BMI: {bmi_val_str} ({bmi_desc})</span>
-            </div>
+<div class="vitals-grid">
+    <div class="vital-card">
+        <div class="vital-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="M12 6v6l4 2"></path></svg>
         </div>
-        <div class="vital-card">
-            <div class="vital-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="M12 6v6l4 2"></path></svg>
-            </div>
-            <div class="vital-data">
-                <span class="vital-label">รอบเอว</span>
-                <span class="vital-value">{waist_val} cm</span>
-            </div>
-        </div>
-        <div class="vital-card">
-            <div class="vital-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-            </div>
-            <div class="vital-data">
-                <span class="vital-label">ความดัน (mmHg)</span>
-                <span class="vital-value">{bp_val}</span>
-                <span class="vital-sub-value">{bp_desc}</span>
-            </div>
-        </div>
-        <div class="vital-card">
-            <div class="vital-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-            </div>
-            <div class="vital-data">
-                <span class="vital-label">ชีพจร (BPM)</span>
-                <span class="vital-value">{pulse_val}</span>
-            </div>
+        <div class="vital-data">
+            <span class="vital-label">น้ำหนัก / ส่วนสูง</span>
+            <span class="vital-value">{weight_val} kg / {height_val} cm</span>
+            <span class="vital-sub-value">BMI: {bmi_val_str} ({bmi_desc})</span>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    <div class="vital-card">
+        <div class="vital-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="M12 6v6l4 2"></path></svg>
+        </div>
+        <div class="vital-data">
+            <span class="vital-label">รอบเอว</span>
+            <span class="vital-value">{waist_val} cm</span>
+        </div>
+    </div>
+    <div class="vital-card">
+        <div class="vital-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+        </div>
+        <div class="vital-data">
+            <span class="vital-label">ความดัน (mmHg)</span>
+            <span class="vital-value">{bp_val}</span>
+            <span class="vital-sub-value">{bp_desc}</span>
+        </div>
+    </div>
+    <div class="vital-card">
+        <div class="vital-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+        </div>
+        <div class="vital-data">
+            <span class="vital-label">ชีพจร (BPM)</span>
+            <span class="vital-value">{pulse_val}</span>
+        </div>
+    </div>
+</div>
+"""
+    st.markdown(html_content, unsafe_allow_html=True)
 
 def inject_custom_css():
-    st.markdown("""
+    # ใช้ string literal แบบไม่มี indentation เพื่อความปลอดภัย
+    css_content = """
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap');
         
@@ -333,7 +331,7 @@ def inject_custom_css():
             color: #333;
         }
 
-        /* แก้ไข: Header Layout */
+        /* Header Layout */
         .report-header { 
             display: flex; 
             justify-content: space-between; 
@@ -349,12 +347,12 @@ def inject_custom_css():
         .header-left p { opacity: 0.7; margin: 0; color: #555; }
         
         .header-right {
-            flex: 1; /* กินพื้นที่ที่เหลือทั้งหมด */
+            flex: 1; /* Expand to fill remaining space */
             display: flex;
-            justify-content: flex-end; /* ชิดขวา */
+            justify-content: flex-end; /* Align to the right */
         }
 
-        /* แก้ไข: Info Card แบบ Table เพื่อความชัวร์ 100% */
+        /* Info Card Table */
         .info-card-wrapper {
             background-color: #f8f9fa; 
             border-radius: 8px; 
@@ -368,7 +366,7 @@ def inject_custom_css():
         .info-card-table {
             width: 100%;
             border-collapse: collapse;
-            table-layout: fixed; /* บังคับความกว้างคอลัมน์ให้เท่ากัน */
+            table-layout: fixed;
         }
 
         .info-card-table td {
@@ -376,7 +374,7 @@ def inject_custom_css():
             vertical-align: middle;
             font-size: 0.95rem;
             color: #333;
-            border: none; /* ลบเส้นขอบตารางออก */
+            border: none;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -389,7 +387,7 @@ def inject_custom_css():
             font-weight: 600;
         }
 
-        /* Original Vitals Grid */
+        /* Vitals Grid */
         .vitals-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; }
         .vital-card { background-color: #fff; border-radius: 12px; padding: 1rem; display: flex; align-items: center; gap: 1rem; border: 1px solid #e0e0e0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
         .vital-icon svg { color: #00796B; width: 24px; height: 24px; }
@@ -398,7 +396,7 @@ def inject_custom_css():
         .vital-value { font-size: 1.2rem; font-weight: 700; line-height: 1.2; white-space: nowrap; color: #333; }
         .vital-sub-value { font-size: 0.8rem; opacity: 0.6; color: #555; }
 
-        /* Original Table Styles */
+        /* Tables */
         .table-container { overflow-x: auto; }
         .lab-table, .info-detail-table { width: 100%; border-collapse: collapse; font-size: 14px; }
         .lab-table th, .lab-table td, .info-detail-table th, .info-detail-table td { padding: 12px 15px; border: 1px solid transparent; border-bottom: 1px solid #e0e0e0; color: #333; }
@@ -416,7 +414,7 @@ def inject_custom_css():
         .no-immune-box { background-color: rgba(220, 53, 69, 0.1); color: #C62828; border-color: rgba(220, 53, 69, 0.2); }
         .warning-box { background-color: rgba(255, 193, 7, 0.1); color: #AF6C00; border-color: rgba(255, 193, 7, 0.2); }
         
-        /* Vision & Hearing Tables */
+        /* Vision & Hearing */
         .vision-table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 1.5rem; }
         .vision-table th, .vision-table td { border: 1px solid #e0e0e0; padding: 10px; text-align: left; vertical-align: middle; color: #333; }
         .vision-table th { background-color: #f8f9fa; font-weight: bold; }
@@ -432,7 +430,8 @@ def inject_custom_css():
         .styled-df-table tbody td { text-align: center; }
         .styled-df-table tbody td:first-child { text-align: left; }
     </style>
-    """, unsafe_allow_html=True)
+    """
+    st.markdown(css_content, unsafe_allow_html=True)
 
 # --- Functions for displaying specific report sections (Restored Logic) ---
 
