@@ -215,7 +215,11 @@ def display_common_header(person_data):
         bmi_val_str = f"{bmi:.1f} kg/m²"
         bmi_desc = interpret_bmi(bmi)
 
-    # แก้ไข: ใช้ Grid Layout 3 คอลัมน์ 2 แถว เพื่อการจัดวางที่สม่ำเสมอ
+    # แก้ไข: ใช้ HTML Table 100% เพื่อการจัดวางที่สม่ำเสมอและแก้ปัญหาขอบขวา
+    # ใช้ตาราง 3 คอลัมน์:
+    # คอลัมน์ 1 (40%): ชื่อ, HN
+    # คอลัมน์ 2 (40%): เพศ, หน่วยงาน
+    # คอลัมน์ 3 (20%): อายุ, วันที่
     st.markdown(f"""
     <div class="report-header">
         <div class="header-left">
@@ -224,16 +228,24 @@ def display_common_header(person_data):
             <p>ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167</p>
         </div>
         <div class="header-right">
-            <div class="info-card">
-                <!-- แถว 1 -->
-                <div class="info-card-item item-name"><span>ชื่อ-สกุล:</span> {name}</div>
-                <div class="info-card-item item-sex"><span>เพศ:</span> {sex}</div>
-                <div class="info-card-item item-age"><span>อายุ:</span> {age} ปี</div>
-                
-                <!-- แถว 2 -->
-                <div class="info-card-item item-hn"><span>HN:</span> {hn}</div>
-                <div class="info-card-item item-dept"><span>หน่วยงาน:</span> {department}</div>
-                <div class="info-card-item item-date"><span>วันที่ตรวจ:</span> {check_date}</div>
+            <div class="info-card-wrapper">
+                <table class="info-card-table">
+                    <colgroup>
+                        <col style="width: 37%;">
+                        <col style="width: 37%;">
+                        <col style="width: 26%;">
+                    </colgroup>
+                    <tr>
+                        <td><span class="label">ชื่อ-สกุล:</span> {name}</td>
+                        <td><span class="label">เพศ:</span> {sex}</td>
+                        <td style="text-align: left;"><span class="label">อายุ:</span> {age} ปี</td>
+                    </tr>
+                    <tr>
+                        <td><span class="label">HN:</span> {hn}</td>
+                        <td><span class="label">หน่วยงาน:</span> {department}</td>
+                        <td style="text-align: left;"><span class="label">วันที่ตรวจ:</span> {check_date}</td>
+                    </tr>
+                </table>
             </div>
         </div>
     </div>
@@ -285,7 +297,6 @@ def inject_custom_css():
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap');
         
-        /* Revert to Original Theme Colors and Font */
         :root {
             --abnormal-bg-color: rgba(220, 53, 69, 0.1);
             --abnormal-text-color: #C53030;
@@ -294,16 +305,15 @@ def inject_custom_css():
             --warning-bg-color: rgba(255, 193, 7, 0.1);
             --neutral-bg-color: rgba(108, 117, 125, 0.1);
             --neutral-text-color: #4A5568;
-            --light-line-color: rgba(0, 0, 0, 0.05); /* Light grid lines */
-            --primary-color: #00796B; /* Original Teal */
-            --text-color: #262730; /* Original dark grey text */
-            --background-color: #FFFFFF; /* Original white background */
-            --secondary-background-color: #F0F2F6; /* Original light grey sidebar */
+            --light-line-color: rgba(0, 0, 0, 0.05);
+            --primary-color: #00796B;
+            --text-color: #262730;
+            --background-color: #FFFFFF;
+            --secondary-background-color: #F0F2F6;
         }
         
         html, body, [class*="st-"], .st-emotion-cache-10trblm, h1, h2, h3, h4, h5, h6, p, div, span, label, button, input, th, td {
             font-family: 'Sarabun', sans-serif !important;
-            /* Force colors back to original unless strictly overridden by Streamlit's dark mode toggle which we can't fully disable without config, but we style components to look "classic" */
         }
 
         h4 {
@@ -323,7 +333,7 @@ def inject_custom_css():
             color: #333;
         }
 
-        /* แก้ไข: Header Layout แบบใหม่ */
+        /* แก้ไข: Header Layout */
         .report-header { 
             display: flex; 
             justify-content: space-between; 
@@ -339,49 +349,47 @@ def inject_custom_css():
         .header-left p { opacity: 0.7; margin: 0; color: #555; }
         
         .header-right {
-            flex: 1; /* กินพื้นที่ที่เหลือทั้งหมด เพื่อดันขอบขวาไปชนขอบจอ */
+            flex: 1; /* กินพื้นที่ที่เหลือทั้งหมด */
             display: flex;
             justify-content: flex-end; /* ชิดขวา */
         }
 
-        /* แก้ไข: info-card แบบ CSS Grid ปรับสัดส่วนให้สม่ำเสมอ */
-        .info-card { 
+        /* แก้ไข: Info Card แบบ Table เพื่อความชัวร์ 100% */
+        .info-card-wrapper {
             background-color: #f8f9fa; 
             border-radius: 8px; 
-            padding: 15px; 
-            display: grid;
-            /* แบ่งเป็น 2:2:1 = คอลัมน์ซ้ายกับกลางเท่ากัน คอลัมน์ขวาแคบกว่า */
-            grid-template-columns: 2fr 2fr 1fr; 
-            grid-template-rows: auto auto; 
-            gap: 12px 20px;
-            width: 100%; 
+            padding: 12px 15px; 
+            width: 100%;
             border: 1px solid #dee2e6; 
             box-sizing: border-box;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
-        
-        .info-card-item { 
-            font-size: 0.95rem; 
-            color: #333; 
-            white-space: nowrap; 
+
+        .info-card-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed; /* บังคับความกว้างคอลัมน์ให้เท่ากัน */
+        }
+
+        .info-card-table td {
+            padding: 6px 4px;
+            vertical-align: middle;
+            font-size: 0.95rem;
+            color: #333;
+            border: none; /* ลบเส้นขอบตารางออก */
+            white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            display: flex;
-            align-items: center;
         }
-        
-        .info-card-item span { 
-            opacity: 0.7; 
-            margin-right: 8px; 
-            color: #555; 
-            font-weight: 600;
-            min-width: fit-content;
-        }
-        
-        /* เอาการจัดชิดขวาออก เพื่อให้แนวสายตาตรงกัน */
-        .item-age, .item-date { justify-content: flex-start; }
 
-        /* Original Vitals Grid (2 Columns Fixed) */
+        .info-card-table .label {
+            opacity: 0.7;
+            margin-right: 5px;
+            color: #555;
+            font-weight: 600;
+        }
+
+        /* Original Vitals Grid */
         .vitals-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; }
         .vital-card { background-color: #fff; border-radius: 12px; padding: 1rem; display: flex; align-items: center; gap: 1rem; border: 1px solid #e0e0e0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
         .vital-icon svg { color: #00796B; width: 24px; height: 24px; }
