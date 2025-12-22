@@ -12,7 +12,6 @@ from datetime import datetime
 from auth import authentication_flow, pdpa_consent_page
 
 # --- Import Line Register (สำหรับ LINE User) ---
-# ใช้ try-except เพื่อป้องกันแอปพังถ้าไฟล์หาย
 try:
     from line_register import render_registration_page
 except Exception as e:
@@ -37,7 +36,6 @@ try:
         has_vision_data, has_hearing_data, has_lung_data, has_visualization_data
     )
 except Exception:
-    # Fallback functions
     def is_empty(v): return pd.isna(v) or str(v).strip() == ""
     def normalize_name(n): return str(n).strip()
     def has_basic_health_data(r): return True
@@ -49,7 +47,7 @@ except Exception:
 # --- Import Shared UI ---
 try:
     from shared_ui import inject_custom_css, display_common_header
-except Exception as e:
+except Exception:
     def inject_custom_css(): pass
     def display_common_header(data): st.write(f"**รายงานผลสุขภาพ:** {data.get('ชื่อ-สกุล', '-')}")
 
@@ -110,12 +108,6 @@ def main_app(df):
     user_hn = st.session_state['user_hn']
     results_df = df[df['HN'] == user_hn].copy()
     st.session_state['search_result'] = results_df
-
-    # ... (ส่วนจัดการ Sidebar และการแสดงผลรายงาน เหมือนเดิม) ...
-    # เพื่อความกระชับ ขอละไว้ในฐานที่เข้าใจ (ใช้โค้ดเดิมส่วน main_app ได้เลย)
-    
-    # ถ้า Copy ไปใช้จริง ให้เอา Code ใน main_app เดิมมาใส่ตรงนี้นะครับ
-    # หรือถ้าขี้เกียจแก้ เดี๋ยวผมใส่ตัวเต็มให้ข้างล่างครับ 👇
 
     def handle_year_change():
         st.session_state.selected_year = st.session_state.year_select
