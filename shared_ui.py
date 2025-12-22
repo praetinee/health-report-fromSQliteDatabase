@@ -370,6 +370,8 @@ def inject_custom_css():
             --danger-text: #C62828;
             --success-bg: #E8F5E9;
             --success-text: #2E7D32;
+            --warning-bg: #FFF3E0;
+            --warning-text: #E65100;
             --border-color: #E0E0E0;
             --card-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
@@ -673,6 +675,7 @@ def inject_custom_css():
         }
         .vision-normal { background-color: #E8F5E9; color: #2E7D32; }
         .vision-abnormal { background-color: #FFEBEE; color: #C62828; }
+        .vision-warning { background-color: #FFF3E0; color: #E65100; }
         .vision-not-tested { background-color: #f0f2f6; color: #6c757d; }
         
         .styled-df-table { width: 100%; border-collapse: collapse; font-family: 'Sarabun', sans-serif !important; font-size: 14px; }
@@ -769,16 +772,43 @@ def render_vision_details_table(person_data):
         if is_empty(val): return "-", "vision-not-tested"
         val_str = str(val).strip().lower()
         
-        # คำที่เป็นความหมายว่า "ปกติ"
-        normal_keywords = ['normal', 'ปกติ', 'pass', 'ผ่าน', 'within normal', 'no']
+        # 1. กลุ่มคำว่า "ปกติ" (Normal)
+        normal_keywords = [
+            'normal', 'ปกติ', 'pass', 'ผ่าน', 'within normal', 'no', 'none', 
+            'ortho', 'orthophoria', 'clear', 'ok', 'good', 'binocular', '6/6', '20/20'
+        ]
         
-        # เช็คกรณีพิเศษ
+        # 2. กลุ่มคำว่า "ต่ำกว่าเกณฑ์" (Below Standard / Mild Issue)
+        warning_keywords = ['mild', 'slight', 'เล็กน้อย', 'trace', 'low', 'ต่ำ', 'below', 'drop']
+
+        # 3. กลุ่มคำว่า "ผิดปกติ" (Abnormal)
+        abnormal_keywords = ['abnormal', 'ผิดปกติ', 'fail', 'ไม่ผ่าน', 'detect', 'found', 'พบ', 'deficiency', 'color blind', 'blind', 'eso', 'exo', 'hyper', 'hypo']
+
+        # Logic การตรวจสอบ
         if val_str in normal_keywords: 
             return "ปกติ", "vision-normal"
-        elif any(x in val_str for x in ['abnormal', 'ผิดปกติ', 'fail', 'ไม่ผ่าน', 'detect']):
-            return f"ผิดปกติ ({val})", "vision-abnormal"
         
-        # กรณีเป็นตัวเลข (เช่น 20/20) ให้ถือว่าเป็นค่าที่แสดงผลได้เลย (สีกลางๆ)
+        # ตรวจสอบว่ามี Keyword ผิดปกติหรือไม่
+        if any(kw in val_str for kw in abnormal_keywords):
+            # ถ้ามีความรุนแรงน้อย ให้เป็นต่ำกว่าเกณฑ์
+            if any(kw in val_str for kw in warning_keywords):
+                return "ต่ำกว่าเกณฑ์", "vision-warning"
+            return "ผิดปกติ", "vision-abnormal"
+            
+        # ตรวจสอบกลุ่มต่ำกว่าเกณฑ์โดยตรง (กรณีไม่มีคำว่าผิดปกติ แต่มีคำว่าต่ำ)
+        if any(kw in val_str for kw in warning_keywords):
+             return "ต่ำกว่าเกณฑ์", "vision-warning"
+
+        # กรณีเป็นตัวเลข (Visual Acuity เช่น 20/20, 20/40)
+        # ถ้าเป็นรูปแบบ ตัวเลข/ตัวเลข ให้แสดงค่าตามจริง (ถือว่าสั้นและเข้าใจได้)
+        if re.match(r'^\d+/\d+$', val_str):
+            return str(val), "vision-normal"
+            
+        # กรณีอื่นๆ ที่ไม่เข้าพวก ถ้าข้อความยาวเกินไป ให้เดาว่าเป็นคำอธิบายความผิดปกติ -> ย่อเหลือ "ผิดปกติ"
+        if len(val_str) > 20:
+            return "ผิดปกติ", "vision-abnormal"
+        
+        # ถ้าสั้นๆ และไม่รู้คืออะไร ให้แสดงตามนั้น
         return str(val), "vision-normal"
 
     # สร้าง HTML Rows
