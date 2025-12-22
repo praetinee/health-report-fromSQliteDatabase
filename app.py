@@ -12,22 +12,22 @@ from datetime import datetime
 from auth import authentication_flow, pdpa_consent_page
 
 # --- Import Line Register ---
-# ใช้ try-except เพื่อความชัวร์
+# ใช้ try-except Exception เพื่อดักจับทุก error ไม่ใช่แค่ ImportError
 try:
     from line_register import render_registration_page
-except ImportError:
+except Exception as e:
     def render_registration_page(df):
-        st.error("ไม่พบไฟล์ line_register.py กรุณาสร้างไฟล์นี้ก่อน")
+        st.error(f"ไม่พบไฟล์ line_register.py หรือมีข้อผิดพลาด: {e}")
 
 # --- Import Print Functions ---
 try:
     from print_report import generate_printable_report
-except ImportError:
+except Exception:
     def generate_printable_report(*args): return ""
 
 try:
     from print_performance_report import generate_performance_report_html
-except ImportError:
+except Exception:
     def generate_performance_report_html(*args): return ""
 
 # --- Import Utils ---
@@ -36,7 +36,7 @@ try:
         is_empty, normalize_name, has_basic_health_data, 
         has_vision_data, has_hearing_data, has_lung_data, has_visualization_data
     )
-except ImportError:
+except Exception:
     # Fallback
     def is_empty(v): return pd.isna(v) or str(v).strip() == ""
     def normalize_name(n): return str(n).strip()
@@ -47,22 +47,34 @@ except ImportError:
     def has_visualization_data(d): return False
 
 # --- Import Shared UI ---
+# ใช้ try-except Exception เพื่อป้องกันแอปพังถ้า shared_ui มีปัญหา
 try:
     from shared_ui import inject_custom_css, display_common_header
-except ImportError:
-    def inject_custom_css(): pass
-    def display_common_header(d): st.write(d)
+except Exception as e:
+    # ฟังก์ชันสำรองถ้า import ไม่ผ่าน
+    def inject_custom_css():
+        st.markdown("""
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap');
+            html, body, [class*="css"] { font-family: 'Sarabun', sans-serif; }
+            .sidebar-title { font-size: 1.2rem; font-weight: bold; color: #2C3E50; margin-bottom: 1rem; }
+        </style>
+        """, unsafe_allow_html=True)
+        
+    def display_common_header(data):
+        st.write(f"**รายงานผลสุขภาพ:** {data.get('ชื่อ-สกุล', '-')}")
+        st.markdown("---")
 
 # --- Import Display Functions ---
 try:
     from visualization import display_visualization_tab
-except ImportError:
-    def display_visualization_tab(d, a): st.info("No visualization")
+except Exception:
+    def display_visualization_tab(d, a): st.info("No visualization module")
 
 try:
     from admin_panel import display_admin_panel, display_main_report, display_performance_report
-except ImportError:
-    def display_admin_panel(df): st.error("Admin Panel Error")
+except Exception:
+    def display_admin_panel(df): st.error("Admin Panel Error: Module failed to load")
     def display_main_report(p, a): pass
     def display_performance_report(p, t, a=None): pass
 
