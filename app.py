@@ -38,7 +38,8 @@ try:
         is_empty, has_basic_health_data, 
         has_vision_data, has_hearing_data, has_lung_data, has_visualization_data
     )
-except Exception:
+except Exception as e:
+    st.error(f"Error loading utils: {e}")
     def is_empty(v): return pd.isna(v) or str(v).strip() == ""
     def has_basic_health_data(r): return True
     def has_vision_data(r): return False
@@ -46,25 +47,33 @@ except Exception:
     def has_lung_data(r): return False
     def has_visualization_data(d): return False
 
-# --- Import Shared UI ---
-try:
-    from shared_ui import inject_custom_css, display_common_header
-except Exception:
-    def inject_custom_css(): pass
-    def display_common_header(data): st.write(f"**รายงานผลสุขภาพ:** {data.get('ชื่อ-สกุล', '-')}")
-
-# --- Import Display Functions ---
+# --- Import Visualization ---
 try:
     from visualization import display_visualization_tab
 except Exception:
     def display_visualization_tab(d, a): st.info("No visualization module")
 
+# --- Import Shared UI (Main Display Logic) ---
+# แก้ไข: Import display functions จาก shared_ui แทน admin_panel
 try:
-    from admin_panel import display_admin_panel, display_main_report, display_performance_report
+    from shared_ui import (
+        inject_custom_css, 
+        display_common_header,
+        display_main_report, 
+        display_performance_report
+    )
+except Exception as e:
+    st.error(f"Critical Error loading shared_ui: {e}")
+    def inject_custom_css(): pass
+    def display_common_header(data): st.write(f"**รายงานผลสุขภาพ:** {data.get('ชื่อ-สกุล', '-')}")
+    def display_main_report(p, a): st.error("Main Report Module Missing")
+    def display_performance_report(p, t, a=None): pass
+
+# --- Import Admin Panel ---
+try:
+    from admin_panel import display_admin_panel
 except Exception:
     def display_admin_panel(df): st.error("Admin Panel Error")
-    def display_main_report(p, a): pass
-    def display_performance_report(p, t, a=None): pass
 
 # --- Data Loading ---
 @st.cache_data(ttl=600)
@@ -189,6 +198,8 @@ def main_app(df):
         
         # สร้าง Tabs
         tabs_map = OrderedDict()
+        
+        # ตรวจสอบการแสดงผลกราฟิก (ตอนนี้จะแสดงถ้ามีข้อมูล >= 1 ปี)
         if has_visualization_data(all_hist): tabs_map['ภาพรวม (Graphs)'] = 'viz'
         if has_basic_health_data(p_data): tabs_map['สุขภาพพื้นฐาน'] = 'main'
         if has_vision_data(p_data): tabs_map['การมองเห็น'] = 'vision'
