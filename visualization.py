@@ -1,5 +1,3 @@
-# visualization.py
-
 import streamlit as st
 import plotly.graph_objects as go
 import plotly.express as px
@@ -195,7 +193,8 @@ def plot_historical_trends(history_df, person_data):
                 showlegend=(isinstance(keys, list)), legend=dict(orientation="h", y=1.15, x=1, xanchor='right'),
                 font=dict(family=FONT_FAMILY)
             )
-            st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+            # แก้ไข: เพิ่ม staticPlot: True เพื่อป้องกันการคลิก/ลากกราฟ
+            st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False, 'staticPlot': True})
 
 def plot_audiogram(person_data):
     """Original Audiogram Plot"""
@@ -219,7 +218,8 @@ def plot_audiogram(person_data):
 
     fig = apply_medical_layout(fig, "ผลตรวจการได้ยิน (Audiogram)", "ความถี่ (Hz)", "dB HL")
     fig.update_layout(yaxis=dict(autorange='reversed', range=[-10, 120], zeroline=False))
-    st.plotly_chart(fig, use_container_width=True)
+    # แก้ไข: เพิ่ม staticPlot: True
+    st.plotly_chart(fig, use_container_width=True, config={'staticPlot': True})
 
 def plot_lung_comparison(person_data):
     """Original Lung Plot"""
@@ -239,7 +239,8 @@ def plot_lung_comparison(person_data):
 
     fig = apply_medical_layout(fig, "สมรรถภาพปอด (Spirometry)", "", "Liters")
     fig.update_layout(barmode='group')
-    st.plotly_chart(fig, use_container_width=True)
+    # แก้ไข: เพิ่ม staticPlot: True
+    st.plotly_chart(fig, use_container_width=True, config={'staticPlot': True})
 
 # --- HEALTH SHIELD (RADAR CHART) ---
 def plot_health_radar(person_data):
@@ -339,7 +340,8 @@ def plot_health_radar(person_data):
         height=500 
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    # แก้ไข: เพิ่ม staticPlot: True
+    st.plotly_chart(fig, use_container_width=True, config={'staticPlot': True})
 
 
 # --- MAIN DISPLAY FUNCTION ---
