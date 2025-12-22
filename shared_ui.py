@@ -282,13 +282,13 @@ def inject_custom_css():
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap');
         
-        /* General Streamlit Overrides for Theme Adaptation */
+        /* Force font family & Base Colors */
         .stApp, [data-testid="stAppViewContainer"] {
             font-family: 'Sarabun', sans-serif !important;
         }
-
-        h1, h2, h3, h4, h5, h6, p, div, span, label, button, input {
+        h1, h2, h3, h4, h5, h6, p, div, span, label, button, input, th, td {
             font-family: 'Sarabun', sans-serif !important;
+            color: var(--text-color); /* ใช้ตัวแปรธีมเป็นหลัก */
         }
 
         /* Responsive Headings */
@@ -299,14 +299,12 @@ def inject_custom_css():
             padding-bottom: 10px;
             margin-top: 30px;
             margin-bottom: 20px;
-            color: var(--text-color);
         }
         h5.section-subtitle {
             font-weight: 600;
             margin-top: 1.5rem;
             margin-bottom: 0.75rem;
             opacity: 0.9;
-            color: var(--text-color);
         }
 
         /* Responsive Report Header */
@@ -319,21 +317,17 @@ def inject_custom_css():
             flex-wrap: wrap; 
             gap: 1.5rem;
         }
-        .header-left {
-            flex: 1 1 300px;
-        }
-        .header-right {
-            flex: 1 1 400px;
-        }
+        .header-left { flex: 1 1 300px; }
+        .header-right { flex: 1 1 400px; }
         
         .header-left h2 { 
             font-size: clamp(1.5rem, 5vw, 2rem); 
             margin-bottom: 0.5rem;
-            color: var(--text-color);
+            font-weight: 700;
         }
-        .header-left p { opacity: 0.8; margin: 0; font-size: 0.95rem; color: var(--text-color); }
+        .header-left p { opacity: 0.8; margin: 0; font-size: 0.95rem; }
 
-        /* Responsive Info Card - Adaptive Theme */
+        /* Responsive Info Card */
         .info-card { 
             background-color: var(--secondary-background-color); 
             border-radius: 8px; 
@@ -345,7 +339,7 @@ def inject_custom_css():
             border: 1px solid rgba(128, 128, 128, 0.2); 
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
-        .info-card-item { font-size: 0.9rem; word-break: break-word; color: var(--text-color); }
+        .info-card-item { font-size: 0.9rem; word-break: break-word; }
         .info-card-item span { opacity: 0.7; margin-right: 8px; font-weight: 600; }
 
         /* Responsive Vitals Grid */
@@ -365,13 +359,16 @@ def inject_custom_css():
             border: 1px solid rgba(128, 128, 128, 0.2); 
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
         }
-        .vital-icon svg { stroke: var(--primary-color); }
+        .vital-icon svg { 
+            stroke: var(--primary-color); 
+            width: 32px; height: 32px;
+        }
         .vital-data { display: flex; flex-direction: column; }
-        .vital-label { font-size: 0.8rem; opacity: 0.7; color: var(--text-color); }
-        .vital-value { font-size: 1.25rem; font-weight: 700; line-height: 1.2; white-space: nowrap; color: var(--text-color); }
-        .vital-sub-value { font-size: 0.8rem; opacity: 0.6; color: var(--text-color); }
+        .vital-label { font-size: 0.8rem; opacity: 0.7; }
+        .vital-value { font-size: 1.25rem; font-weight: 700; line-height: 1.2; white-space: nowrap; }
+        .vital-sub-value { font-size: 0.8rem; opacity: 0.6; }
 
-        /* Scrollable Tables for Mobile */
+        /* Scrollable Tables */
         .table-container { 
             overflow-x: auto; 
             -webkit-overflow-scrolling: touch; 
@@ -383,12 +380,11 @@ def inject_custom_css():
             width: 100%; 
             border-collapse: collapse; 
             font-size: 0.95rem; 
-            min-width: 600px; /* Ensure table doesn't get squashed */
+            min-width: 600px; 
         }
         .lab-table th, .lab-table td, .info-detail-table th, .info-detail-table td { 
             padding: 12px 15px; 
             border-bottom: 1px solid rgba(128, 128, 128, 0.2); 
-            color: var(--text-color);
         }
         .lab-table th, .info-detail-table th { 
             font-weight: 600; 
@@ -397,32 +393,28 @@ def inject_custom_css():
             background-color: var(--secondary-background-color); 
         }
         
-        /* Status Colors - Theme Compatible */
-        .lab-table .abnormal-row { 
-            background-color: rgba(255, 0, 0, 0.05); 
-            color: #d32f2f; /* Red that works on light and mostly dark */
-            font-weight: 600; 
-        }
-        /* Dark mode specific tweak for text visibility if needed */
-        @media (prefers-color-scheme: dark) {
-            .lab-table .abnormal-row { color: #ff6b6b; }
-        }
-
-        .info-detail-table th { width: 35%; }
-        
         /* Recommendation Box */
         .recommendation-container { 
             border-left: 5px solid var(--primary-color); 
             padding: 1.5rem; 
             border-radius: 0 8px 8px 0; 
             background-color: var(--secondary-background-color); 
-            color: var(--text-color);
         }
         .recommendation-container ul { padding-left: 20px; }
         .recommendation-container li { margin-bottom: 0.5rem; }
 
         /* Custom Advice Boxes */
         .custom-advice-box { padding: 1rem; border-radius: 8px; margin-top: 1rem; border: 1px solid transparent; font-weight: 600; }
+
+        /* -----------------------------------------------------------
+           COLOR THEMES (รองรับทั้ง Light และ Dark Mode)
+           ----------------------------------------------------------- */
+        
+        /* Light Mode Defaults */
+        .lab-table .abnormal-row { 
+            background-color: rgba(255, 0, 0, 0.05); 
+            color: #c62828; /* แดงเข้ม */
+        }
         .immune-box { 
             background-color: rgba(40, 167, 69, 0.1); 
             color: #2e7d32; 
@@ -435,8 +427,35 @@ def inject_custom_css():
         }
         .warning-box { 
             background-color: rgba(255, 193, 7, 0.1); 
-            color: #f57f17; 
+            color: #ef6c00; 
             border-color: rgba(255, 193, 7, 0.2); 
+        }
+
+        /* Dark Mode Overrides (เปลี่ยนสีให้อ่านง่ายบนพื้นดำ) */
+        @media (prefers-color-scheme: dark) {
+            .lab-table .abnormal-row { 
+                background-color: rgba(255, 82, 82, 0.15) !important; 
+                color: #ff8a80 !important; /* แดงอ่อน */
+            }
+            .immune-box { 
+                background-color: rgba(129, 199, 132, 0.15) !important;
+                color: #a5d6a7 !important; /* เขียวอ่อน */
+                border-color: rgba(129, 199, 132, 0.3) !important;
+            }
+            .no-immune-box { 
+                background-color: rgba(229, 115, 115, 0.15) !important;
+                color: #ef9a9a !important; /* แดงอ่อน */
+                border-color: rgba(229, 115, 115, 0.3) !important;
+            }
+            .warning-box { 
+                background-color: rgba(255, 183, 77, 0.15) !important;
+                color: #ffcc80 !important; /* ส้มอ่อน */
+                border-color: rgba(255, 183, 77, 0.3) !important;
+            }
+            /* ปรับสีเส้นขอบให้สว่างขึ้นเล็กน้อย */
+            .info-card, .vital-card, .table-container, .lab-table th, .lab-table td {
+                border-color: rgba(255, 255, 255, 0.1) !important;
+            }
         }
 
         /* Mobile specific adjustments */
