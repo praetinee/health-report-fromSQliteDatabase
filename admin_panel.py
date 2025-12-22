@@ -111,8 +111,12 @@ def display_admin_panel(df):
     with tab_search:
         with st.form(key="admin_search_form"):
             c1, c2 = st.columns([4, 1])
-            with c1: search_term = st.text_input("ค้นหา (ชื่อ, HN, เลขบัตร)", value=st.session_state.admin_search_term)
-            with c2: submitted = st.form_submit_button("ค้นหา", use_container_width=True)
+            with c1: 
+                search_term = st.text_input("ค้นหา (ชื่อ, HN, เลขบัตร)", value=st.session_state.admin_search_term)
+            with c2: 
+                # เพิ่ม Spacer เพื่อดันปุ่มลงมาให้ตรงกับช่อง Input (แก้ปัญหาปุ่มลอยสูงกว่าช่องกรอก)
+                st.markdown('<div style="height: 29px;"></div>', unsafe_allow_html=True)
+                submitted = st.form_submit_button("ค้นหา", use_container_width=True)
         
         if submitted:
             st.session_state.admin_search_term = search_term
