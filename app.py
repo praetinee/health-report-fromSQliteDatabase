@@ -143,6 +143,8 @@ def main_app(df):
             # ใช้ bfill/ffill เพื่อรวมข้อมูลถ้ามีหลาย row ในปีเดียว
             st.session_state.person_row = yr_df.bfill().ffill().iloc[0].to_dict()
             st.session_state.selected_row_found = True
+            # สำคัญ: สั่ง rerun ทันทีเพื่อให้หน้าเว็บอัปเดตข้อมูลใหม่
+            st.rerun()
         else:
             st.session_state.person_row = None
             st.session_state.selected_row_found = False
@@ -196,12 +198,16 @@ def main_app(df):
         tabs_map = OrderedDict()
         if has_visualization_data(all_hist): tabs_map['ภาพรวม (Graphs)'] = 'viz'
         if has_basic_health_data(p_data): tabs_map['สุขภาพพื้นฐาน'] = 'main'
+        # เพิ่ม Tab อื่นๆ ตามข้อมูลที่มี
         if has_vision_data(p_data): tabs_map['การมองเห็น'] = 'vision'
         if has_hearing_data(p_data): tabs_map['การได้ยิน'] = 'hearing'
         if has_lung_data(p_data): tabs_map['ปอด'] = 'lung'
-
+        
+        # แสดงผล Header
+        display_common_header(p_data)
+        
+        # แสดง Tabs และเนื้อหา
         if tabs_map:
-            display_common_header(p_data)
             t_objs = st.tabs(list(tabs_map.keys()))
             for i, (k, v) in enumerate(tabs_map.items()):
                 with t_objs[i]:
@@ -227,7 +233,9 @@ def main_app(df):
     else:
         # กรณีข้อมูลยังไม่พร้อม (ไม่ควรเกิดขึ้นถ้า Auto-load ทำงานถูกต้อง)
         st.info(f"กำลังโหลดข้อมูลสำหรับปี {st.session_state.selected_year}...")
-        st.rerun()
+        # ถ้ายังไม่ขึ้นจริงๆ ให้ปุ่มกดโหลด
+        if st.button("คลิกเพื่อแสดงข้อมูล"):
+            st.rerun()
 
 
 # --------------------------------------------------------------------------------
