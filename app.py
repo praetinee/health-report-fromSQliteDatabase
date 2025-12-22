@@ -8,11 +8,11 @@ import json
 from collections import OrderedDict
 from datetime import datetime
 
-# --- Import Authentication ---
+# --- Import Authentication (สำหรับ Admin/PC) ---
 from auth import authentication_flow, pdpa_consent_page
 
-# --- Import Line Register ---
-# ใช้ try-except Exception เพื่อดักจับทุก error
+# --- Import Line Register (สำหรับ LINE User) ---
+# ใช้ try-except เพื่อป้องกันแอปพังถ้าไฟล์หาย
 try:
     from line_register import render_registration_page
 except Exception as e:
@@ -37,7 +37,7 @@ try:
         has_vision_data, has_hearing_data, has_lung_data, has_visualization_data
     )
 except Exception:
-    # Fallback
+    # Fallback functions
     def is_empty(v): return pd.isna(v) or str(v).strip() == ""
     def normalize_name(n): return str(n).strip()
     def has_basic_health_data(r): return True
@@ -50,19 +50,8 @@ except Exception:
 try:
     from shared_ui import inject_custom_css, display_common_header
 except Exception as e:
-    # ฟังก์ชันสำรองถ้า import ไม่ผ่าน
-    def inject_custom_css():
-        st.markdown("""
-        <style>
-            @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap');
-            html, body, [class*="css"] { font-family: 'Sarabun', sans-serif; }
-            .sidebar-title { font-size: 1.2rem; font-weight: bold; color: #2C3E50; margin-bottom: 1rem; }
-        </style>
-        """, unsafe_allow_html=True)
-        
-    def display_common_header(data):
-        st.write(f"**รายงานผลสุขภาพ:** {data.get('ชื่อ-สกุล', '-')}")
-        st.markdown("---")
+    def inject_custom_css(): pass
+    def display_common_header(data): st.write(f"**รายงานผลสุขภาพ:** {data.get('ชื่อ-สกุล', '-')}")
 
 # --- Import Display Functions ---
 try:
@@ -73,7 +62,7 @@ except Exception:
 try:
     from admin_panel import display_admin_panel, display_main_report, display_performance_report
 except Exception:
-    def display_admin_panel(df): st.error("Admin Panel Error: Module failed to load")
+    def display_admin_panel(df): st.error("Admin Panel Error")
     def display_main_report(p, a): pass
     def display_performance_report(p, t, a=None): pass
 
@@ -109,15 +98,24 @@ def load_sqlite_data():
     finally:
         if tmp_path and os.path.exists(tmp_path): os.remove(tmp_path)
 
-# --- Main App Logic (สำหรับ User ที่ผ่านการ Login แล้ว) ---
+# --- Main App Logic (สำหรับ User ที่ล็อกอินแล้ว) ---
 def main_app(df):
     st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
     inject_custom_css()
 
-    if 'user_hn' not in st.session_state: st.error("Error: No user data"); st.stop()
+    if 'user_hn' not in st.session_state: 
+        st.error("Error: No user data")
+        st.stop()
+        
     user_hn = st.session_state['user_hn']
     results_df = df[df['HN'] == user_hn].copy()
     st.session_state['search_result'] = results_df
+
+    # ... (ส่วนจัดการ Sidebar และการแสดงผลรายงาน เหมือนเดิม) ...
+    # เพื่อความกระชับ ขอละไว้ในฐานที่เข้าใจ (ใช้โค้ดเดิมส่วน main_app ได้เลย)
+    
+    # ถ้า Copy ไปใช้จริง ให้เอา Code ใน main_app เดิมมาใส่ตรงนี้นะครับ
+    # หรือถ้าขี้เกียจแก้ เดี๋ยวผมใส่ตัวเต็มให้ข้างล่างครับ 👇
 
     def handle_year_change():
         st.session_state.selected_year = st.session_state.year_select
@@ -162,7 +160,7 @@ def main_app(df):
             for key in list(st.session_state.keys()): del st.session_state[key]
             st.rerun()
 
-    # Content
+    # Content Area
     if "person_row" not in st.session_state or not st.session_state.get("selected_row_found", False):
         st.info("กรุณาเลือกปีที่ต้องการดูผลตรวจ")
     else:
@@ -190,7 +188,7 @@ def main_app(df):
             display_common_header(p_data)
             st.warning("ไม่พบข้อมูลการตรวจ")
         
-        # Print
+        # Print Components
         if st.session_state.print_trigger:
             h = generate_printable_report(p_data, all_hist)
             st.components.v1.html(f"<script>var w=window.open();w.document.write({json.dumps(h)});w.print();w.close();</script>", height=0)
@@ -202,49 +200,60 @@ def main_app(df):
 
 
 # --------------------------------------------------------------------------------
-# MAIN LOGIC (ส่วนตัดสินใจว่าจะโชว์หน้าไหน)
+# MAIN ROUTING LOGIC (หัวใจสำคัญ: ตัดสินใจว่าจะไปหน้าไหน)
 # --------------------------------------------------------------------------------
 
-# 1. Initialize State
+# 1. Initialize Global State
 if 'authenticated' not in st.session_state: st.session_state['authenticated'] = False
 if 'pdpa_accepted' not in st.session_state: st.session_state['pdpa_accepted'] = False
 
-# 2. Load Data
+# 2. Load Data (Load once)
 df = load_sqlite_data()
 if df is None: st.stop()
 
-# 3. Check LINE / LIFF Parameters (จุดสำคัญ!)
+# 3. Detect LINE Mode (ตรวจสอบว่าเข้าจาก LINE หรือไม่)
 is_line_mode = False
 try:
+    # เช็คจาก URL Parameters ที่ LIFF ส่งมา
     q_page = st.query_params.get("page", "")
     q_userid = st.query_params.get("userid", "")
-    # เงื่อนไข: ถ้ามี ?page=register หรือมี userid หรือเคยล็อกอินผ่านไลน์มาแล้ว -> เข้าโหมด LINE
-    if q_page == "register" or q_userid or st.session_state.get('is_line_login', False):
+    
+    # ถ้ามี page=register หรือมี userid ส่งมา -> คือมาจาก LINE แน่นอน
+    if q_page == "register" or q_userid:
+        is_line_mode = True
+        
+    # หรือถ้าเคยล็อกอินผ่าน LINE มาแล้วใน session นี้
+    if st.session_state.get('is_line_login', False):
         is_line_mode = True
 except:
     pass
 
-# 4. Routing (ตัดสินใจพาไปหน้าไหน)
+# 4. Routing Decision (แยกทางเดิน)
 
 if is_line_mode:
-    # 🟢 [LINE MODE] -> บังคับไปหน้า line_register.py
-    # หน้านี้จะมีแค่ฟอร์มลงทะเบียน (หรือหน้าผลตรวจถ้าลงทะเบียนแล้ว) เท่านั้น
+    # 🟢 [LINE USER] -> ไปหน้าลงทะเบียน/ดูผล (ไฟล์ line_register.py)
+    # หน้านี้จะจัดการ UI ของตัวเอง (ฟอร์มขาวๆ) ไม่เกี่ยวกับ auth.py
     render_registration_page(df)
 
-elif not st.session_state['authenticated']:
-    # 🔴 [PC MODE] -> ยังไม่ Login -> โชว์หน้า Login เดิม (สำหรับเจ้าหน้าที่)
-    authentication_flow(df)
-
-elif not st.session_state['pdpa_accepted']:
-    # 🟡 Login แล้วแต่ยังไม่กด PDPA
-    if st.session_state.get('is_admin', False):
-        st.session_state['pdpa_accepted'] = True; st.rerun()
-    else:
-        pdpa_consent_page()
-
 else:
-    # 🔵 Login เสร็จสมบูรณ์แล้ว -> เข้าใช้งานระบบหลัก
-    if st.session_state.get('is_admin', False):
-        display_admin_panel(df)
+    # 🔴 [PC/ADMIN USER] -> ทางเดินปกติ
+    if not st.session_state['authenticated']:
+        # ยังไม่ล็อกอิน -> หน้า Login เดิม (auth.py)
+        # (เอาปุ่ม Checkbox Dev ออกไปแล้ว เพื่อความสะอาดตา)
+        authentication_flow(df)
+        
+    elif not st.session_state['pdpa_accepted']:
+        # ล็อกอินผ่าน แต่ยังไม่กด PDPA
+        if st.session_state.get('is_admin', False):
+            # Admin ข้าม PDPA ได้เลย
+            st.session_state['pdpa_accepted'] = True
+            st.rerun()
+        else:
+            pdpa_consent_page()
+            
     else:
-        main_app(df)
+        # ล็อกอินผ่าน + PDPA แล้ว -> เข้าสู่ระบบหลัก
+        if st.session_state.get('is_admin', False):
+            display_admin_panel(df)
+        else:
+            main_app(df)
