@@ -289,54 +289,128 @@ def inject_custom_css():
             --warning-bg-color: rgba(255, 193, 7, 0.1);
             --neutral-bg-color: rgba(108, 117, 125, 0.1);
             --neutral-text-color: #4A5568;
+            --light-line-color: rgba(0, 0, 0, 0.05); /* Added for lighter grid lines */
         }
         
         html, body, [class*="st-"], .st-emotion-cache-10trblm, h1, h2, h3, h4, h5, h6 {
             font-family: 'Sarabun', sans-serif !important;
         }
+        .main {
+             background-color: var(--background-color);
+             color: var(--text-color);
+        }
         h4 {
             font-size: 1.25rem;
             font-weight: 600;
-            border-bottom: 2px solid #ddd;
+            border-bottom: 2px solid var(--light-line-color);
             padding-bottom: 10px;
             margin-top: 40px;
             margin-bottom: 24px;
+            color: var(--text-color);
         }
         h5.section-subtitle {
             font-weight: 600;
             margin-top: 1.5rem;
             margin-bottom: 0.75rem;
+            color: var(--text-color);
             opacity: 0.7;
         }
 
+        [data-testid="stSidebar"] {
+            background-color: var(--secondary-background-color);
+        }
+        [data-testid="stSidebar"] .stTextInput input {
+            border-color: var(--light-line-color);
+        }
+        .sidebar-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+        .stButton>button {
+            background-color: #00796B;
+            color: white !important;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            width: 100%;
+            padding: 0.5rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+            transition: background-color 0.2s, transform 0.2s;
+        }
+        .stButton>button:hover {
+            background-color: #00695C;
+            color: white !important;
+            transform: translateY(-1px);
+        }
+        .stButton>button:disabled {
+            background-color: #BDBDBD;
+            color: #757575 !important;
+            opacity: 1;
+            border: none;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
         .report-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; }
-        .header-left h2 { font-size: 2rem; margin-bottom: 0.25rem;}
-        .header-left p { opacity: 0.7; margin: 0; }
-        .info-card { background-color: #f8f9fa; border-radius: 8px; padding: 1rem; display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem 1.5rem; min-width: 400px; border: 1px solid #dee2e6; }
-        .info-card-item { font-size: 0.9rem; }
-        .info-card-item span { opacity: 0.7; margin-right: 8px; }
+        .header-left h2 { color: var(--text-color); font-size: 2rem; margin-bottom: 0.25rem;}
+        .header-left p { color: var(--text-color); opacity: 0.7; margin: 0; }
+        .info-card { background-color: var(--secondary-background-color); border-radius: 8px; padding: 1rem; display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem 1.5rem; min-width: 400px; border: 1px solid var(--light-line-color); }
+        .info-card-item { font-size: 0.9rem; color: var(--text-color); }
+        .info-card-item span { color: var(--text-color); opacity: 0.7; margin-right: 8px; }
 
         .vitals-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
-        .vital-card { background-color: #fff; border-radius: 12px; padding: 1rem; display: flex; align-items: center; gap: 1rem; border: 1px solid #e0e0e0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-        .vital-icon svg { color: #00796B; }
+        .vital-card { background-color: var(--secondary-background-color); border-radius: 12px; padding: 1rem; display: flex; align-items: center; gap: 1rem; border: 1px solid var(--light-line-color); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); }
+        .vital-icon svg { color: var(--primary-color); }
         .vital-data { display: flex; flex-direction: column; }
-        .vital-label { font-size: 0.8rem; opacity: 0.7; }
-        .vital-value { font-size: 1.2rem; font-weight: 700; line-height: 1.2; white-space: nowrap;}
-        .vital-sub-value { font-size: 0.8rem; opacity: 0.6; }
+        .vital-label { font-size: 0.8rem; color: var(--text-color); opacity: 0.7; }
+        .vital-value { font-size: 1.2rem; font-weight: 700; color: var(--text-color); line-height: 1.2; white-space: nowrap;}
+        .vital-sub-value { font-size: 0.8rem; color: var(--text-color); opacity: 0.6; }
+
+        div[data-testid="stTabs"] { border-bottom: 2px solid var(--light-line-color); }
+        div[data-testid="stTabs"] button { background-color: transparent; color: var(--text-color); opacity: 0.7; border-radius: 8px 8px 0 0; margin: 0; padding: 10px 20px; border: none; border-bottom: 2px solid transparent; }
+        div[data-testid="stTabs"] button[aria-selected="true"] { background-color: var(--secondary-background-color); color: var(--primary-color); font-weight: 600; opacity: 1; border: 2px solid var(--light-line-color); border-bottom: 2px solid var(--secondary-background-color); margin-bottom: -2px; }
+        
+        div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] > div.st-emotion-cache-1jicfl2.e1f1d6gn3 > div { background-color: var(--secondary-background-color); border: 1px solid var(--light-line-color); border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); }
 
         .table-container { overflow-x: auto; }
         .lab-table, .info-detail-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        .lab-table th, .lab-table td, .info-detail-table th, .info-detail-table td { padding: 12px 15px; border: 1px solid transparent; border-bottom: 1px solid #e0e0e0; }
-        .lab-table th, .info-detail-table th { font-weight: 600; text-align: left; opacity: 0.7; }
+        .lab-table th, .lab-table td, .info-detail-table th, .info-detail-table td { padding: 12px 15px; border: 1px solid transparent; border-bottom: 1px solid rgba(0, 0, 0, 0.05); }
+        .lab-table th, .info-detail-table th { font-weight: 600; text-align: left; color: var(--text-color); opacity: 0.7; }
         .lab-table thead th { background-color: rgba(128, 128, 128, 0.1); }
         .lab-table td:nth-child(2) { text-align: center; }
+        .lab-table tbody tr:hover { background-color: rgba(128, 128, 128, 0.1); }
         .lab-table .abnormal-row { background-color: var(--abnormal-bg-color); color: var(--abnormal-text-color); font-weight: 600; }
         .info-detail-table th { width: 35%; }
         
-        .recommendation-container { border-left: 5px solid #00796B; padding: 1.5rem; border-radius: 0 8px 8px 0; background-color: #fff; }
+        .recommendation-container { border-left: 5px solid var(--primary-color); padding: 1.5rem; border-radius: 0 8px 8px 0; background-color: var(--background-color); }
         .recommendation-container ul { padding-left: 20px; }
         .recommendation-container li { margin-bottom: 0.5rem; }
 
+        .status-summary-card { padding: 1rem; border-radius: 8px; text-align: center; height: 100%; }
+        .status-normal-bg { background-color: var(--normal-bg-color); }
+        .status-abnormal-bg { background-color: var(--abnormal-bg-color); }
+        .status-warning-bg { background-color: var(--warning-bg-color); }
+        .status-neutral-bg { background-color: var(--neutral-bg-color); }
+
+        .status-summary-card p { margin: 0; color: var(--text-color); }
+        .vision-table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 1.5rem; }
+        .vision-table th, .vision-table td { border: 1px solid var(--light-line-color); padding: 10px; text-align: left; vertical-align: middle; }
+        .vision-table th { background-color: var(--secondary-background-color); opacity: 0.7; font-weight: bold; }
+        .vision-table .result-cell { text-align: center; width: 180px; }
+        .vision-result { display: inline-block; padding: 6px 16px; border-radius: 16px; font-size: 13px; font-weight: bold; border: 1px solid transparent; }
+        .vision-normal { background-color: var(--normal-bg-color); color: #2E7D32; }
+        .vision-abnormal { background-color: var(--abnormal-bg-color); color: #C62828; }
+        .vision-not-tested { background-color: var(--neutral-bg-color); color: #455A64; }
+        .styled-df-table { width: 100%; border-collapse: collapse; font-family: 'Sarabun', sans-serif !important; font-size: 14px; }
+        .styled-df-table th, .styled-df-table td { border: 1px solid var(--light-line-color); padding: 10px; text-align: left; }
+        .styled-df-table thead th { background-color: var(--secondary-background-color); opacity: 0.7; font-weight: bold; text-align: center; vertical-align: middle; }
+        .styled-df-table tbody td { text-align: center; }
+        .styled-df-table tbody td:first-child { text-align: left; }
+        .styled-df-table tbody tr:hover { background-color: rgba(128, 128, 128, 0.1); }
+        .hearing-table { table-layout: fixed; }
+        
         .custom-advice-box { padding: 1rem; border-radius: 8px; margin-top: 1rem; border: 1px solid transparent; font-weight: 600; }
         .immune-box { background-color: var(--normal-bg-color); color: #2E7D32; border-color: rgba(40, 167, 69, 0.2); }
         .no-immune-box { background-color: var(--abnormal-bg-color); color: #C62828; border-color: rgba(220, 53, 69, 0.2); }
@@ -344,20 +418,37 @@ def inject_custom_css():
     </style>
     """, unsafe_allow_html=True)
 
+# --- Functions for displaying specific report sections ---
+# (ใส่โค้ดของ display_main_report, display_performance_report และส่วนอื่นๆ ที่เกี่ยวข้องที่นี่)
+# ... (โค้ดของ display_main_report และ display_performance_report ไม่ได้แสดงเพื่อความกระชับ) ...
+
+def render_vision_details_table(person_data):
+    # ... (โค้ดของ render_vision_details_table) ...
+    pass # Placeholder
+
+def display_performance_report_hearing(person_data, all_person_history_df):
+    # ... (โค้ดของ display_performance_report_hearing) ...
+    pass # Placeholder
+
+def display_performance_report_lung(person_data):
+    # ... (โค้ดของ display_performance_report_lung) ...
+    pass # Placeholder
+
+def display_performance_report_vision(person_data):
+    # ... (โค้ดของ display_performance_report_vision) ...
+    pass # Placeholder
+
 def display_performance_report(person_data, report_type, all_person_history_df=None):
     with st.container(border=True):
         if report_type == 'lung':
-            summary, advice, raw = interpret_lung_capacity(person_data)
-            st.markdown(f"**สรุป:** {summary}")
-            st.markdown(f"**คำแนะนำ:** {advice}")
+            display_performance_report_lung(person_data)
         elif report_type == 'vision':
-            st.info("ยังไม่รองรับการแสดงผลแบบละเอียดในหน้า Admin")
+            display_performance_report_vision(person_data)
         elif report_type == 'hearing':
-            results = interpret_audiogram(person_data, all_person_history_df)
-            st.markdown(f"**สรุป:** {results['summary']['overall']}")
-            st.markdown(f"**คำแนะนำ:** {results['advice']}")
+            display_performance_report_hearing(person_data, all_person_history_df)
 
 def display_main_report(person_data, all_person_history_df):
+    # ... (โค้ดส่วนใหญ่ของ display_main_report ถูกย้ายไป shared_ui.py) ...
     person = person_data
     sex = str(person.get("เพศ", "")).strip()
     if sex not in ["ชาย", "หญิง"]: sex = "ไม่ระบุ"
