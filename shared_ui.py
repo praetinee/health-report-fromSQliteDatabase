@@ -681,34 +681,67 @@ def inject_custom_css():
 # ... (Functions for displaying specific report sections) ...
 
 def render_vision_details_table(person_data):
-    v_map = {
-        'V_R_Far': 'ตาขวา ไกล (Right Far)', 'V_L_Far': 'ตาซ้าย ไกล (Left Far)',
-        'V_R_Near': 'ตาขวา ใกล้ (Right Near)', 'V_L_Near': 'ตาซ้าย ใกล้ (Left Near)',
-        'Color_Blind': 'ตาบอดสี (Color Blindness)'
-    }
+    # ปรับปรุง: สร้าง Config เพื่อ map ชื่อคอลัมน์ที่เป็นไปได้หลายๆ แบบ
+    vision_config = [
+        {
+            'id': 'V_R_Far', 
+            'label': 'ตาขวา ไกล (Right Far)', 
+            'keys': ['V_R_Far', 'R_Far', 'Far_R', 'Right Far', 'Far Vision Right', 'การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)', 'R-Far']
+        },
+        {
+            'id': 'V_L_Far', 
+            'label': 'ตาซ้าย ไกล (Left Far)', 
+            'keys': ['V_L_Far', 'L_Far', 'Far_L', 'Left Far', 'Far Vision Left', 'การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)', 'L-Far']
+        },
+        {
+            'id': 'V_R_Near', 
+            'label': 'ตาขวา ใกล้ (Right Near)', 
+            'keys': ['V_R_Near', 'R_Near', 'Near_R', 'Right Near', 'Near Vision Right', 'R-Near']
+        },
+        {
+            'id': 'V_L_Near', 
+            'label': 'ตาซ้าย ใกล้ (Left Near)', 
+            'keys': ['V_L_Near', 'L_Near', 'Near_L', 'Left Near', 'Near Vision Left', 'L-Near']
+        },
+        {
+            'id': 'Color_Blind', 
+            'label': 'ตาบอดสี (Color Blindness)', 
+            'keys': ['Color_Blind', 'ColorBlind', 'Ishihara', 'Color Vision', 'ตาบอดสี', 'Color']
+        }
+    ]
     
     def check_vision(val, test_type):
         if is_empty(val): return "Not Tested", "vision-not-tested"
-        val = str(val).strip().lower()
+        val_str = str(val).strip().lower()
+        
         if test_type == 'Color_Blind':
-            if val in ['normal', 'ปกติ']: return "ปกติ", "vision-normal"
+            if val_str in ['normal', 'ปกติ', 'pass', 'ผ่าน']: return "ปกติ", "vision-normal"
             else: return "ผิดปกติ", "vision-abnormal"
         else:
-            if val in ['normal', 'ปกติ']: return "ปกติ", "vision-normal"
-            elif val in ['abnormal', 'ผิดปกติ']: return "ผิดปกติ", "vision-abnormal"
-            return val, "vision-normal" # Default neutral style
+            # กรณีระบุค่าสายตา (เช่น 20/20) หรือระบุผล
+            if val_str in ['normal', 'ปกติ']: return "ปกติ", "vision-normal"
+            elif val_str in ['abnormal', 'ผิดปกติ']: return "ผิดปกติ", "vision-abnormal"
+            return str(val), "vision-normal" # แสดงค่าจริงถ้าไม่ใช่ ปกติ/ผิดปกติ
 
-    html_content = "<div class='card-container'><div class='table-title'>ผลการตรวจสายตา</div><table class='vision-table'><thead><tr><th>รายการทดสอบ</th><th style='text-align: center;'>ผลการตรวจ</th></tr></thead><tbody>"
-    
+    # สร้าง HTML Rows
+    html_rows = ""
     has_data = False
-    for key, label in v_map.items():
-        val = person_data.get(key)
-        if not is_empty(val):
-            has_data = True
-            res_text, res_class = check_vision(val, key)
-            html_content += f"<tr><td>{label}</td><td class='result-cell' style='text-align:center;'><span class='vision-result {res_class}'>{res_text}</span></td></tr>"
     
-    html_content += "</tbody></table></div>"
+    for item in vision_config:
+        # วนหาค่าจาก keys ที่เป็นไปได้
+        val = None
+        for key in item['keys']:
+            if not is_empty(person_data.get(key)):
+                val = person_data.get(key)
+                break
+        
+        # ถ้ามีค่า ให้แสดงผล (หรือถ้าต้องการแสดงแถวว่าง ก็เอาเงื่อนไข if val is not None ออกได้ แต่ปกติไม่ควรแสดงถ้าไม่มีข้อมูล)
+        if val is not None:
+            has_data = True
+            res_text, res_class = check_vision(val, item['id'])
+            html_rows += f"<tr><td>{item['label']}</td><td class='result-cell' style='text-align:center;'><span class='vision-result {res_class}'>{res_text}</span></td></tr>"
+    
+    html_content = clean_html_string(f"""<div class='card-container'><div class='table-title'>ผลการตรวจสายตา</div><table class='vision-table'><thead><tr><th>รายการทดสอบ</th><th style='text-align: center;'>ผลการตรวจ</th></tr></thead><tbody>{html_rows}</tbody></table></div>""")
     
     if has_data:
         st.markdown(html_content, unsafe_allow_html=True)
