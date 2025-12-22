@@ -43,12 +43,23 @@ def flag(val, low=None, high=None, higher_is_better=False):
         if high is not None and val > high: is_abnormal = True
     return formatted_val, is_abnormal
 
+def clean_html_string(html_str):
+    """
+    ฟังก์ชันล้างช่องว่างนำหน้าบรรทัด (Indentation) ทั้งหมด
+    เพื่อป้องกันไม่ให้ Streamlit ตีความ HTML เป็น Code Block
+    """
+    if not html_str: return ""
+    # แยกบรรทัด, ลบช่องว่างซ้ายขวาของแต่ละบรรทัด, แล้วต่อกลับด้วย newline
+    # วิธีนี้ปลอดภัยที่สุดสำหรับ HTML ที่ไม่ได้อยู่ใน tag <pre>
+    return "\n".join([line.strip() for line in html_str.split('\n') if line.strip()])
+
 def render_section_header(title):
     st.markdown(f"<h4>{title}</h4>", unsafe_allow_html=True)
 
 def render_lab_table_html(title, headers, rows, table_class="lab-table"):
     header_html = f"<h5 class='section-subtitle'>{title}</h5>"
-    html_content = f"{header_html}<div class='table-container'><table class='{table_class}'><colgroup><col style='width:40%;'><col style='width:20%;'><col style='width:40%;'></colgroup><thead><tr>"
+    # เขียนแบบต่อ String บรรทัดเดียว ลดความเสี่ยง
+    html_content = header_html + f"<div class='table-container'><table class='{table_class}'><colgroup><col style='width:40%;'><col style='width:20%;'><col style='width:40%;'></colgroup><thead><tr>"
     for i, h in enumerate(headers):
         align = "left" if i in [0, 2] else "center"
         html_content += f"<th style='text-align: {align};'>{h}</th>"
@@ -65,7 +76,7 @@ def safe_value(val):
     val = str(val or "").strip()
     return "-" if val.lower() in ["", "nan", "none", "-"] else val
 
-# ... (other helpers: parse_range_or_number, interpret_rbc, interpret_wbc, is_urine_abnormal, etc.) ...
+# ... (other helpers) ...
 def parse_range_or_number(val):
     val = val.replace("cell/hpf", "").replace("cells/hpf", "").replace("cell", "").strip().lower()
     try:
@@ -128,8 +139,8 @@ def interpret_stool_cs(value):
     return "พบการติดเชื้อในอุจจาระ ให้พบแพทย์เพื่อตรวจรักษาเพิ่มเติม"
 
 def render_stool_html_table(exam, cs):
-    # แก้ไข: เพิ่ม textwrap.dedent และ .strip() เพื่อลบช่องว่างนำหน้าที่ทำให้แสดงผลผิดเป็น Code Block
-    html_content = textwrap.dedent(f"""
+    # แก้ไข: ใช้ clean_html_string เพื่อลบ Indentation ทั้งหมด
+    html_content = clean_html_string(f"""
     <div class="table-container">
         <table class="info-detail-table">
             <tbody>
@@ -138,7 +149,7 @@ def render_stool_html_table(exam, cs):
             </tbody>
         </table>
     </div>
-    """).strip()
+    """)
     return html_content
 
 def get_ekg_col_name(year):
@@ -217,76 +228,73 @@ def display_common_header(person_data):
         bmi_val_str = f"{bmi:.1f} kg/m²"
         bmi_desc = interpret_bmi(bmi)
 
-    # แก้ไข: เปลี่ยน Info Card เป็น CSS Grid (div) และปรับข้อความฝั่งขวา
-    # ใช้ textwrap.dedent และ .strip() เพื่อลบ indentation ที่ทำให้ st.markdown แสดงเป็น code block
-    html_content = textwrap.dedent(f"""
-<div class="report-header">
-    <div class="header-left">
-        <h2>รายงานผลการตรวจสุขภาพ</h2>
-        <div class="info-card-grid">
-            <div class="info-item"><b>ชื่อ-สกุล:</b> {name}</div>
-            <div class="info-item"><b>เพศ:</b> {sex}</div>
-            <div class="info-item"><b>อายุ:</b> {age} ปี</div>
-            
-            <div class="info-item"><b>HN:</b> {hn}</div>
-            <div class="info-item"><b>หน่วยงาน:</b> {department}</div>
-            <div class="info-item"><b>วันที่ตรวจ:</b> {check_date}</div>
+    # แก้ไข: ใช้ clean_html_string เพื่อลบ Indentation
+    html_content = clean_html_string(f"""
+    <div class="report-header">
+        <div class="header-left">
+            <h2>รายงานผลการตรวจสุขภาพ</h2>
+            <div class="info-card-grid">
+                <div class="info-item"><b>ชื่อ-สกุล:</b> {name}</div>
+                <div class="info-item"><b>เพศ:</b> {sex}</div>
+                <div class="info-item"><b>อายุ:</b> {age} ปี</div>
+                <div class="info-item"><b>HN:</b> {hn}</div>
+                <div class="info-item"><b>หน่วยงาน:</b> {department}</div>
+                <div class="info-item"><b>วันที่ตรวจ:</b> {check_date}</div>
+            </div>
+        </div>
+        <div class="header-right">
+            <p class="hospital-name">คลินิกตรวจสุขภาพ</p>
+            <p>กลุ่มงานอาชีวเวชกรรม</p>
+            <p>โรงพยาบาลสันทราย</p>
+            <p>โทร 053 921 199 ต่อ 167</p>
         </div>
     </div>
-    <div class="header-right">
-        <p class="hospital-name">คลินิกตรวจสุขภาพ</p>
-        <p>กลุ่มงานอาชีวเวชกรรม</p>
-        <p>โรงพยาบาลสันทราย</p>
-        <p>โทร 053 921 199 ต่อ 167</p>
-    </div>
-</div>
-
-<div class="vitals-grid">
-    <div class="vital-card">
-        <div class="vital-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="M12 6v6l4 2"></path></svg>
+    <div class="vitals-grid">
+        <div class="vital-card">
+            <div class="vital-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="M12 6v6l4 2"></path></svg>
+            </div>
+            <div class="vital-data">
+                <span class="vital-label">น้ำหนัก / ส่วนสูง</span>
+                <span class="vital-value">{weight_val} kg / {height_val} cm</span>
+                <span class="vital-sub-value">BMI: {bmi_val_str} ({bmi_desc})</span>
+            </div>
         </div>
-        <div class="vital-data">
-            <span class="vital-label">น้ำหนัก / ส่วนสูง</span>
-            <span class="vital-value">{weight_val} kg / {height_val} cm</span>
-            <span class="vital-sub-value">BMI: {bmi_val_str} ({bmi_desc})</span>
+        <div class="vital-card">
+            <div class="vital-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="M12 6v6l4 2"></path></svg>
+            </div>
+            <div class="vital-data">
+                <span class="vital-label">รอบเอว</span>
+                <span class="vital-value">{waist_val} cm</span>
+            </div>
         </div>
-    </div>
-    <div class="vital-card">
-        <div class="vital-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="M12 6v6l4 2"></path></svg>
+        <div class="vital-card">
+            <div class="vital-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+            </div>
+            <div class="vital-data">
+                <span class="vital-label">ความดัน (mmHg)</span>
+                <span class="vital-value">{bp_val}</span>
+                <span class="vital-sub-value">{bp_desc}</span>
+            </div>
         </div>
-        <div class="vital-data">
-            <span class="vital-label">รอบเอว</span>
-            <span class="vital-value">{waist_val} cm</span>
-        </div>
-    </div>
-    <div class="vital-card">
-        <div class="vital-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-        </div>
-        <div class="vital-data">
-            <span class="vital-label">ความดัน (mmHg)</span>
-            <span class="vital-value">{bp_val}</span>
-            <span class="vital-sub-value">{bp_desc}</span>
-        </div>
-    </div>
-    <div class="vital-card">
-        <div class="vital-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-        </div>
-        <div class="vital-data">
-            <span class="vital-label">ชีพจร (BPM)</span>
-            <span class="vital-value">{pulse_val}</span>
+        <div class="vital-card">
+            <div class="vital-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+            </div>
+            <div class="vital-data">
+                <span class="vital-label">ชีพจร (BPM)</span>
+                <span class="vital-value">{pulse_val}</span>
+            </div>
         </div>
     </div>
-</div>
-""").strip()
+    """)
     st.markdown(html_content, unsafe_allow_html=True)
 
 def inject_custom_css():
-    # ใช้ textwrap.dedent เพื่อความปลอดภัยและสะอาดตา
-    css_content = textwrap.dedent("""
+    # แก้ไข: ใช้ clean_html_string สำหรับ CSS ด้วย
+    css_content = clean_html_string("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap');
         
@@ -424,11 +432,10 @@ def inject_custom_css():
         .styled-df-table thead th { background-color: #f8f9fa; font-weight: bold; text-align: center; }
         .styled-df-table tbody td { text-align: center; }
         .styled-df-table tbody td:first-child { text-align: left; }
-    </style>
-    """)
+    </style>""")
     st.markdown(css_content, unsafe_allow_html=True)
 
-# --- Functions for displaying specific report sections (Restored Logic) ---
+# ... (Functions for displaying specific report sections) ...
 
 def render_vision_details_table(person_data):
     v_map = {
@@ -466,14 +473,12 @@ def render_vision_details_table(person_data):
         st.info("ไม่พบข้อมูลการตรวจสายตา")
 
 def display_performance_report_hearing(person_data, all_person_history_df):
-    # Use existing interpretation logic
     results = interpret_audiogram(person_data, all_person_history_df)
     
     freqs = [250, 500, 1000, 2000, 3000, 4000, 6000, 8000]
     r_vals = [person_data.get(f'R_{f}', '-') for f in freqs]
     l_vals = [person_data.get(f'L_{f}', '-') for f in freqs]
     
-    # Simple Table Display
     table_html = "<div class='table-container'><table class='styled-df-table hearing-table'><thead><tr><th>ความถี่ (Hz)</th>"
     for f in freqs: table_html += f"<th>{f}</th>"
     table_html += "</tr></thead><tbody><tr><td><b>หูขวา (dB)</b></td>"
@@ -501,7 +506,8 @@ def display_performance_report_lung(person_data):
         ("FEV1/FVC Ratio", "-", raw_data['FEV1/FVC %'], "-")
     ]
     
-    html_content = """
+    # แก้ไข: ใช้ clean_html_string
+    html_content = clean_html_string("""
     <div class='table-container'>
     <table class='styled-df-table'>
         <thead>
@@ -513,7 +519,7 @@ def display_performance_report_lung(person_data):
             </tr>
         </thead>
         <tbody>
-    """
+    """)
     for label, pred, act, per in lung_items:
         html_content += f"<tr><td>{label}</td><td>{pred}</td><td>{act}</td><td>{per}</td></tr>"
     html_content += "</tbody></table></div>"
@@ -538,7 +544,6 @@ def display_performance_report(person_data, report_type, all_person_history_df=N
             display_performance_report_hearing(person_data, all_person_history_df)
 
 def display_main_report(person_data, all_person_history_df):
-    # ... (โค้ดส่วนใหญ่ของ display_main_report ถูกย้ายไป shared_ui.py) ...
     person = person_data
     sex = str(person.get("เพศ", "")).strip()
     if sex not in ["ชาย", "หญิง"]: sex = "ไม่ระบุ"
@@ -572,8 +577,8 @@ def display_main_report(person_data, all_person_history_df):
             hep_a_value = person.get("Hepatitis A")
             hep_a_display_text = "ไม่ได้ตรวจ" if is_empty(hep_a_value) else safe_text(hep_a_value)
 
-            # --- Fix: Use textwrap.dedent to prevent Markdown from interpreting as code block ---
-            st.markdown(textwrap.dedent(f"""
+            # แก้ไข: ใช้ clean_html_string เพื่อลบ Indentation
+            st.markdown(clean_html_string(f"""
             <div class="table-container">
                 <table class="info-detail-table">
                     <tbody>
@@ -583,7 +588,7 @@ def display_main_report(person_data, all_person_history_df):
                     </tbody>
                 </table>
             </div>
-            """).strip(), unsafe_allow_html=True)
+            """), unsafe_allow_html=True)
 
             # --- Logic to get correct Hepatitis B columns based on year ---
             hbsag_col = "HbsAg"
@@ -613,16 +618,15 @@ def display_main_report(person_data, all_person_history_df):
             hbsab = safe_text(person.get(hbsab_col))
             hbcab = safe_text(person.get(hbcab_col))
             
-            # 3. Render Table (No year in <th>)
-            # Use textwrap.dedent for safety here as well, although it was less indented
-            st.markdown(textwrap.dedent(f"""
+            # แก้ไข: ใช้ clean_html_string เพื่อลบ Indentation
+            st.markdown(clean_html_string(f"""
             <div class="table-container">
                 <table class='lab-table'>
                     <thead><tr><th style='text-align: center;'>HBsAg</th><th style='text-align: center;'>HBsAb</th><th style='text-align: center;'>HBcAb</th></tr></thead>
                     <tbody><tr><td style='text-align: center;'>{hbsag}</td><td style='text-align: center;'>{hbsab}</td><td style='text-align: center;'>{hbcab}</td></tr></tbody>
                 </table>
             </div>
-            """).strip(), unsafe_allow_html=True)
+            """), unsafe_allow_html=True)
 
             if not (is_empty(hbsag) and is_empty(hbsab) and is_empty(hbcab)):
                 advice, status = hepatitis_b_advice(hbsag, hbsab, hbcab)
@@ -633,12 +637,13 @@ def display_main_report(person_data, all_person_history_df):
                     status_class = 'no-immune-box'
                 else:
                     status_class = 'warning-box'
-
-                st.markdown(f"""
+                
+                # แก้ไข: ใช้ clean_html_string เพื่อลบ Indentation
+                st.markdown(clean_html_string(f"""
                 <div class='custom-advice-box {status_class}'>
                     {advice}
                 </div>
-                """, unsafe_allow_html=True)
+                """), unsafe_allow_html=True)
 
     with st.container(border=True):
         render_section_header("สรุปและคำแนะนำการปฏิบัติตัว (Summary & Recommendations)")
