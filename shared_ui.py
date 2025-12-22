@@ -301,6 +301,7 @@ def display_common_header(person_data):
                 <div class="meta-date">วันที่ตรวจ: {check_date}</div>
                 <div class="hospital-brand">
                     <div class="hosp-name">คลินิกตรวจสุขภาพ</div>
+                    <div class="hosp-dept">อาชีวเวชกรรม</div>
                     <div class="hosp-sub">รพ.สันทราย</div>
                 </div>
             </div>
@@ -538,6 +539,20 @@ def inject_custom_css():
             font-weight: 700;
             color: var(--primary);
             font-size: 1.1rem;
+            line-height: 1.2;
+        }
+        
+        .hospital-brand .hosp-dept {
+            font-size: 1rem;
+            color: #455A64;
+            font-weight: 600;
+            line-height: 1.2;
+        }
+        
+        .hospital-brand .hosp-sub {
+            font-size: 0.9rem;
+            color: #78909C;
+            line-height: 1.2;
         }
         
         /* Vitals Grid */
@@ -566,23 +581,24 @@ def inject_custom_css():
         }
         
         .vital-icon-box {
-            width: 50px;
-            height: 50px;
-            border-radius: 10px;
+            width: 48px;
+            height: 48px;
             display: flex;
             align-items: center;
             justify-content: center;
+            margin-right: 5px;
         }
         
         .vital-icon-box svg {
-            width: 24px;
-            height: 24px;
+            width: 36px;
+            height: 36px;
         }
         
-        .color-blue { background: #E3F2FD; color: #1976D2; }
-        .color-green { background: #E8F5E9; color: #388E3C; }
-        .color-red { background: #FFEBEE; color: #D32F2F; }
-        .color-orange { background: #FFF3E0; color: #F57C00; }
+        /* Remove background colors for icons */
+        .color-blue { background: transparent; color: #1976D2; }
+        .color-green { background: transparent; color: #388E3C; }
+        .color-red { background: transparent; color: #D32F2F; }
+        .color-orange { background: transparent; color: #F57C00; }
         
         .vital-content {
             flex: 1;
