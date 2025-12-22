@@ -681,32 +681,81 @@ def inject_custom_css():
 # ... (Functions for displaying specific report sections) ...
 
 def render_vision_details_table(person_data):
-    # ปรับปรุง: สร้าง Config เพื่อ map ชื่อคอลัมน์ที่เป็นไปได้หลายๆ แบบ
+    # ปรับปรุง: เพิ่มรายการตรวจสอบให้ครบ 13 รายการตามแบบฟอร์มมาตรฐาน
     vision_config = [
+        # --- กลุ่มที่ 1: การมองเห็นระยะไกล (Far Vision) ---
+        {
+            'id': 'V_Binocular_Far',
+            'label': '1. การมองด้วย 2 ตา (Binocular vision)',
+            'keys': ['ป.การรวมภาพ', 'ผ.การรวมภาพ', 'Binocular', 'Binocular Vision']
+        },
+        {
+            'id': 'V_Both_Far',
+            'label': '2. ความชัดระยะไกล - สองตา (Far vision - Both)',
+            'keys': ['ป.ความชัดของภาพระยะไกล', 'ผ.ความชัดของภาพระยะไกล', 'Far Both', 'V_Both_Far']
+        },
         {
             'id': 'V_R_Far', 
-            'label': 'ตาขวา ไกล (Right Far)', 
-            'keys': ['V_R_Far', 'R_Far', 'Far_R', 'Right Far', 'Far Vision Right', 'การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)', 'R-Far']
+            'label': '3. ความชัดระยะไกล - ตาขวา (Far vision - Right)', 
+            'keys': ['V_R_Far', 'R_Far', 'Right Far', 'Far Vision Right', 'การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)', 'R-Far']
         },
         {
             'id': 'V_L_Far', 
-            'label': 'ตาซ้าย ไกล (Left Far)', 
-            'keys': ['V_L_Far', 'L_Far', 'Far_L', 'Left Far', 'Far Vision Left', 'การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)', 'L-Far']
+            'label': '4. ความชัดระยะไกล - ตาซ้าย (Far vision - Left)', 
+            'keys': ['V_L_Far', 'L_Far', 'Left Far', 'Far Vision Left', 'การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)', 'L-Far']
         },
+        
+        # --- กลุ่มที่ 2: การรับรู้พิเศษ (Special Perception) ---
         {
-            'id': 'V_R_Near', 
-            'label': 'ตาขวา ใกล้ (Right Near)', 
-            'keys': ['V_R_Near', 'R_Near', 'Near_R', 'Right Near', 'Near Vision Right', 'R-Near']
-        },
-        {
-            'id': 'V_L_Near', 
-            'label': 'ตาซ้าย ใกล้ (Left Near)', 
-            'keys': ['V_L_Near', 'L_Near', 'Near_L', 'Left Near', 'Near Vision Left', 'L-Near']
+            'id': 'Stereo',
+            'label': '5. การมองภาพ 3 มิติ (Stereo depth)',
+            'keys': ['ป.การกะระยะและมองความชัดลึกของภาพ', 'ผ.การกะระยะและมองความชัดลึกของภาพ', 'Stereo', 'Stereopsis']
         },
         {
             'id': 'Color_Blind', 
-            'label': 'ตาบอดสี (Color Blindness)', 
-            'keys': ['Color_Blind', 'ColorBlind', 'Ishihara', 'Color Vision', 'ตาบอดสี', 'Color']
+            'label': '6. การจำแนกสี (Color discrimination)', 
+            'keys': ['Color_Blind', 'ColorBlind', 'Ishihara', 'Color', 'ตาบอดสี', 'ป.การจำแนกสี', 'ผ.การจำแนกสี']
+        },
+
+        # --- กลุ่มที่ 3: กล้ามเนื้อตา (Muscle Balance / Phoria) ---
+        {
+            'id': 'Phoria_V_Far',
+            'label': '7. สมดุลกล้ามเนื้อตาแนวดิ่ง (Far vertical phoria)',
+            'keys': ['ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง', 'Far Vertical Phoria', 'Phoria V Far']
+        },
+        {
+            'id': 'Phoria_H_Far',
+            'label': '8. สมดุลกล้ามเนื้อตาแนวนอน (Far lateral phoria)',
+            'keys': ['ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน', 'Far Lateral Phoria', 'Phoria H Far']
+        },
+
+        # --- กลุ่มที่ 4: การมองเห็นระยะใกล้ (Near Vision) ---
+        {
+            'id': 'V_Both_Near',
+            'label': '9. ความชัดระยะใกล้ - สองตา (Near vision - Both)',
+            'keys': ['ป.ความชัดของภาพระยะใกล้', 'ผ.ความชัดของภาพระยะใกล้', 'Near Both', 'V_Both_Near']
+        },
+        {
+            'id': 'V_R_Near', 
+            'label': '10. ความชัดระยะใกล้ - ตาขวา (Near vision - Right)', 
+            'keys': ['V_R_Near', 'R_Near', 'Right Near', 'Near Vision Right', 'การมองภาพระยะใกล้ด้วยตาขวา (Near vision – Right)', 'R-Near']
+        },
+        {
+            'id': 'V_L_Near', 
+            'label': '11. ความชัดระยะใกล้ - ตาซ้าย (Near vision - Left)', 
+            'keys': ['V_L_Near', 'L_Near', 'Left Near', 'Near Vision Left', 'การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision – Left)', 'L-Near']
+        },
+        {
+            'id': 'Phoria_H_Near',
+            'label': '12. สมดุลกล้ามเนื้อตาแนวนอน-ใกล้ (Near lateral phoria)',
+            'keys': ['ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'Near Lateral Phoria', 'Phoria H Near']
+        },
+
+        # --- กลุ่มที่ 5: ลานสายตา (Visual Field) ---
+        {
+            'id': 'Visual_Field',
+            'label': '13. ลานสายตา (Visual field)',
+            'keys': ['ป.ลานสายตา', 'ผ.ลานสายตา', 'Visual Field', 'Perimetry']
         }
     ]
     
@@ -714,34 +763,64 @@ def render_vision_details_table(person_data):
         if is_empty(val): return "Not Tested", "vision-not-tested"
         val_str = str(val).strip().lower()
         
-        if test_type == 'Color_Blind':
-            if val_str in ['normal', 'ปกติ', 'pass', 'ผ่าน']: return "ปกติ", "vision-normal"
-            else: return "ผิดปกติ", "vision-abnormal"
-        else:
-            # กรณีระบุค่าสายตา (เช่น 20/20) หรือระบุผล
-            if val_str in ['normal', 'ปกติ']: return "ปกติ", "vision-normal"
-            elif val_str in ['abnormal', 'ผิดปกติ']: return "ผิดปกติ", "vision-abnormal"
-            return str(val), "vision-normal" # แสดงค่าจริงถ้าไม่ใช่ ปกติ/ผิดปกติ
+        # คำที่เป็นความหมายว่า "ปกติ"
+        normal_keywords = ['normal', 'ปกติ', 'pass', 'ผ่าน', 'within normal', 'no']
+        
+        # เช็คกรณีพิเศษ
+        if val_str in normal_keywords: 
+            return "ปกติ", "vision-normal"
+        elif any(x in val_str for x in ['abnormal', 'ผิดปกติ', 'fail', 'ไม่ผ่าน', 'detect']):
+            return f"ผิดปกติ ({val})", "vision-abnormal"
+        
+        # กรณีเป็นตัวเลข (เช่น 20/20) ให้ถือว่าเป็นค่าที่แสดงผลได้เลย (สีกลางๆ)
+        return str(val), "vision-normal"
 
     # สร้าง HTML Rows
     html_rows = ""
     has_data = False
     
     for item in vision_config:
-        # วนหาค่าจาก keys ที่เป็นไปได้
         val = None
+        # วนหาค่าจาก keys ที่เป็นไปได้
         for key in item['keys']:
             if not is_empty(person_data.get(key)):
                 val = person_data.get(key)
                 break
         
-        # ถ้ามีค่า ให้แสดงผล (หรือถ้าต้องการแสดงแถวว่าง ก็เอาเงื่อนไข if val is not None ออกได้ แต่ปกติไม่ควรแสดงถ้าไม่มีข้อมูล)
+        # แสดงผลถ้ามีค่า
         if val is not None:
             has_data = True
             res_text, res_class = check_vision(val, item['id'])
             html_rows += f"<tr><td>{item['label']}</td><td class='result-cell' style='text-align:center;'><span class='vision-result {res_class}'>{res_text}</span></td></tr>"
     
-    html_content = clean_html_string(f"""<div class='card-container'><div class='table-title'>ผลการตรวจสายตา</div><table class='vision-table'><thead><tr><th>รายการทดสอบ</th><th style='text-align: center;'>ผลการตรวจ</th></tr></thead><tbody>{html_rows}</tbody></table></div>""")
+    # เพิ่มส่วนสรุปและคำแนะนำแพทย์ (ถ้ามี)
+    doctor_advice = person_data.get('แนะนำABN EYE', '')
+    summary_advice = person_data.get('สรุปเหมาะสมกับงาน', '')
+    footer_html = ""
+    
+    if not is_empty(summary_advice) or not is_empty(doctor_advice):
+        footer_html = "<div class='card-container' style='margin-top: 10px; background-color: #fff3e0; border-color: #ffcc80;'>"
+        if not is_empty(summary_advice):
+            footer_html += f"<b>สรุปความเหมาะสมกับงาน:</b> {summary_advice}<br>"
+        if not is_empty(doctor_advice):
+            footer_html += f"<b>คำแนะนำแพทย์:</b> {doctor_advice}"
+        footer_html += "</div>"
+
+    html_content = clean_html_string(f"""
+    <div class='card-container'>
+        <div class='table-title'>ผลการตรวจสมรรถภาพการมองเห็น (Vision Test)</div>
+        <table class='vision-table'>
+            <thead>
+                <tr>
+                    <th>รายการทดสอบ</th>
+                    <th style='text-align: center; width: 150px;'>ผลการตรวจ</th>
+                </tr>
+            </thead>
+            <tbody>{html_rows}</tbody>
+        </table>
+    </div>
+    {footer_html}
+    """)
     
     if has_data:
         st.markdown(html_content, unsafe_allow_html=True)
