@@ -572,7 +572,8 @@ def display_main_report(person_data, all_person_history_df):
             hep_a_value = person.get("Hepatitis A")
             hep_a_display_text = "ไม่ได้ตรวจ" if is_empty(hep_a_value) else safe_text(hep_a_value)
 
-            st.markdown(f"""
+            # --- Fix: Use textwrap.dedent to prevent Markdown from interpreting as code block ---
+            st.markdown(textwrap.dedent(f"""
             <div class="table-container">
                 <table class="info-detail-table">
                     <tbody>
@@ -582,7 +583,7 @@ def display_main_report(person_data, all_person_history_df):
                     </tbody>
                 </table>
             </div>
-            """, unsafe_allow_html=True)
+            """).strip(), unsafe_allow_html=True)
 
             # --- Logic to get correct Hepatitis B columns based on year ---
             hbsag_col = "HbsAg"
@@ -613,10 +614,15 @@ def display_main_report(person_data, all_person_history_df):
             hbcab = safe_text(person.get(hbcab_col))
             
             # 3. Render Table (No year in <th>)
-            st.markdown(f"""<div class="table-container"><table class='lab-table'>
-                <thead><tr><th style='text-align: center;'>HBsAg</th><th style='text-align: center;'>HBsAb</th><th style='text-align: center;'>HBcAb</th></tr></thead>
-                <tbody><tr><td style='text-align: center;'>{hbsag}</td><td style='text-align: center;'>{hbsab}</td><td style='text-align: center;'>{hbcab}</td></tr></tbody>
-            </table></div>""", unsafe_allow_html=True)
+            # Use textwrap.dedent for safety here as well, although it was less indented
+            st.markdown(textwrap.dedent(f"""
+            <div class="table-container">
+                <table class='lab-table'>
+                    <thead><tr><th style='text-align: center;'>HBsAg</th><th style='text-align: center;'>HBsAb</th><th style='text-align: center;'>HBcAb</th></tr></thead>
+                    <tbody><tr><td style='text-align: center;'>{hbsag}</td><td style='text-align: center;'>{hbsab}</td><td style='text-align: center;'>{hbcab}</td></tr></tbody>
+                </table>
+            </div>
+            """).strip(), unsafe_allow_html=True)
 
             if not (is_empty(hbsag) and is_empty(hbsab) and is_empty(hbcab)):
                 advice, status = hepatitis_b_advice(hbsag, hbsab, hbcab)
