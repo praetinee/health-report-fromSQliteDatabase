@@ -8,15 +8,16 @@ import json
 from collections import OrderedDict
 from datetime import datetime
 
-# --- Import Authentication (สำหรับ Admin/PC) ---
+# --- Import Authentication & Consent ---
 from auth import authentication_flow, pdpa_consent_page
 
-# --- Import Line Register (สำหรับ LINE User) ---
+# --- Import CSV Saving Function (จาก line_register) ---
 try:
-    from line_register import render_registration_page
-except Exception as e:
-    def render_registration_page(df):
-        st.error(f"ไม่พบไฟล์ line_register.py หรือมีข้อผิดพลาด: {e}")
+    from line_register import save_new_user_to_csv, liff_initializer_component
+except ImportError:
+    # Fallback function
+    def save_new_user_to_csv(f, l, uid): return True, "Saved"
+    def liff_initializer_component(): pass
 
 # --- Import Print Functions ---
 try:
@@ -109,6 +110,21 @@ def main_app(df):
     results_df = df[df['HN'] == user_hn].copy()
     st.session_state['search_result'] = results_df
 
+    # --- Auto-Save LINE ID Logic ---
+    # ถ้าเข้ามาผ่าน LINE แล้ว Login สำเร็จ -> บันทึกข้อมูลลง CSV อัตโนมัติ
+    if st.session_state.get("line_user_id") and not st.session_state.get("line_saved", False):
+        try:
+            # ดึงข้อมูลชื่อ-นามสกุลจาก Session (ที่ได้จากการ Login)
+            user_name_full = st.session_state.get('user_name', '')
+            parts = user_name_full.split()
+            f_name = parts[0] if len(parts) > 0 else ""
+            l_name = " ".join(parts[1:]) if len(parts) > 1 else ""
+            
+            save_new_user_to_csv(f_name, l_name, st.session_state["line_user_id"])
+            st.session_state["line_saved"] = True # บันทึกแล้ว ไม่ต้องบันทึกซ้ำ
+        except:
+            pass # ถ้าบันทึกไม่ได้ก็ข้ามไป ไม่ให้กระทบ User
+
     def handle_year_change():
         st.session_state.selected_year = st.session_state.year_select
         st.session_state.pop("person_row", None)
@@ -192,7 +208,7 @@ def main_app(df):
 
 
 # --------------------------------------------------------------------------------
-# MAIN ROUTING LOGIC (หัวใจสำคัญ: ตัดสินใจว่าจะไปหน้าไหน)
+# MAIN ROUTING LOGIC
 # --------------------------------------------------------------------------------
 
 # 1. Initialize Global State
@@ -203,49 +219,42 @@ if 'pdpa_accepted' not in st.session_state: st.session_state['pdpa_accepted'] = 
 df = load_sqlite_data()
 if df is None: st.stop()
 
-# 3. Detect LINE Mode (ตรวจสอบว่าเข้าจาก LINE หรือไม่)
-is_line_mode = False
+# 3. Detect LINE UserID (ถ้ามี)
+# พยายามเก็บ UserID จาก URL (ถ้าเข้าผ่าน LINE)
 try:
-    # เช็คจาก URL Parameters ที่ LIFF ส่งมา
-    q_page = st.query_params.get("page", "")
     q_userid = st.query_params.get("userid", "")
-    
-    # ถ้ามี page=register หรือมี userid ส่งมา -> คือมาจาก LINE แน่นอน
-    if q_page == "register" or q_userid:
-        is_line_mode = True
-        
-    # หรือถ้าเคยล็อกอินผ่าน LINE มาแล้วใน session นี้
-    if st.session_state.get('is_line_login', False):
-        is_line_mode = True
+    if q_userid:
+        st.session_state["line_user_id"] = q_userid
 except:
     pass
 
-# 4. Routing Decision (แยกทางเดิน)
+# ถ้ายังไม่มี UserID แต่เข้าผ่าน ?page=register หรือเป็นโหมด LINE
+# ให้เรียก LIFF Script เพื่อพยายามดึง ID (แต่ไม่บังคับ)
+try:
+    q_page = st.query_params.get("page", "")
+    if q_page == "register" and "line_user_id" not in st.session_state:
+        liff_initializer_component()
+except:
+    pass
 
-if is_line_mode:
-    # 🟢 [LINE USER] -> ไปหน้าลงทะเบียน/ดูผล (ไฟล์ line_register.py)
-    # หน้านี้จะจัดการ UI ของตัวเอง (ฟอร์มขาวๆ) ไม่เกี่ยวกับ auth.py
-    render_registration_page(df)
+# 4. Routing Decision (Simplified)
+# ไม่แยกหน้าแล้ว ใช้หน้าเดียวกันหมด
+
+if not st.session_state['authenticated']:
+    # 🔴 ยังไม่ Login -> หน้ากรอก 3 ช่อง (เหมือนกันทุกคน)
+    authentication_flow(df)
+
+elif not st.session_state['pdpa_accepted']:
+    # 🟡 Login แล้ว -> หน้า PDPA (Admin ข้ามได้)
+    if st.session_state.get('is_admin', False):
+        st.session_state['pdpa_accepted'] = True
+        st.rerun()
+    else:
+        pdpa_consent_page()
 
 else:
-    # 🔴 [PC/ADMIN USER] -> ทางเดินปกติ
-    if not st.session_state['authenticated']:
-        # ยังไม่ล็อกอิน -> หน้า Login เดิม (auth.py)
-        # (เอาปุ่ม Checkbox Dev ออกไปแล้ว เพื่อความสะอาดตา)
-        authentication_flow(df)
-        
-    elif not st.session_state['pdpa_accepted']:
-        # ล็อกอินผ่าน แต่ยังไม่กด PDPA
-        if st.session_state.get('is_admin', False):
-            # Admin ข้าม PDPA ได้เลย
-            st.session_state['pdpa_accepted'] = True
-            st.rerun()
-        else:
-            pdpa_consent_page()
-            
+    # 🔵 Login + PDPA แล้ว -> เข้าสู่ระบบ
+    if st.session_state.get('is_admin', False):
+        display_admin_panel(df)
     else:
-        # ล็อกอินผ่าน + PDPA แล้ว -> เข้าสู่ระบบหลัก
-        if st.session_state.get('is_admin', False):
-            display_admin_panel(df)
-        else:
-            main_app(df)
+        main_app(df)
