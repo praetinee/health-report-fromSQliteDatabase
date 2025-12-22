@@ -215,7 +215,7 @@ def display_common_header(person_data):
         bmi_val_str = f"{bmi:.1f} kg/m²"
         bmi_desc = interpret_bmi(bmi)
 
-    # แก้ไข: ปรับ HTML ให้เป็น Flexbox 2 rows และจัดเรียงใหม่ตามต้องการ
+    # แก้ไข: ใช้ Grid Layout 3 คอลัมน์ 2 แถว เพื่อการจัดวางที่สม่ำเสมอ
     st.markdown(f"""
     <div class="report-header">
         <div class="header-left">
@@ -225,16 +225,15 @@ def display_common_header(person_data):
         </div>
         <div class="header-right">
             <div class="info-card">
-                <div class="info-card-row">
-                    <div class="info-card-item item-name"><span>ชื่อ-สกุล:</span> {name}</div>
-                    <div class="info-card-item item-sex"><span>เพศ:</span> {sex}</div>
-                    <div class="info-card-item item-age"><span>อายุ:</span> {age} ปี</div>
-                </div>
-                <div class="info-card-row">
-                    <div class="info-card-item item-hn"><span>HN:</span> {hn}</div>
-                    <div class="info-card-item item-dept"><span>หน่วยงาน:</span> {department}</div>
-                    <div class="info-card-item item-date"><span>วันที่ตรวจ:</span> {check_date}</div>
-                </div>
+                <!-- แถว 1 -->
+                <div class="info-card-item item-name"><span>ชื่อ-สกุล:</span> {name}</div>
+                <div class="info-card-item item-sex"><span>เพศ:</span> {sex}</div>
+                <div class="info-card-item item-age"><span>อายุ:</span> {age} ปี</div>
+                
+                <!-- แถว 2 -->
+                <div class="info-card-item item-hn"><span>HN:</span> {hn}</div>
+                <div class="info-card-item item-dept"><span>หน่วยงาน:</span> {department}</div>
+                <div class="info-card-item item-date"><span>วันที่ตรวจ:</span> {check_date}</div>
             </div>
         </div>
     </div>
@@ -328,7 +327,7 @@ def inject_custom_css():
         .report-header { 
             display: flex; 
             justify-content: space-between; 
-            align-items: stretch; /* ให้สูงเท่ากัน */
+            align-items: stretch; 
             margin-bottom: 2rem; 
             flex-wrap: wrap; 
             gap: 20px; 
@@ -345,39 +344,34 @@ def inject_custom_css():
             justify-content: flex-end; /* ชิดขวา */
         }
 
-        /* แก้ไข: info-card แบบ Flexbox 2 Rows */
+        /* แก้ไข: info-card แบบ CSS Grid เพื่อความสม่ำเสมอ */
         .info-card { 
             background-color: #f8f9fa; 
             border-radius: 8px; 
-            padding: 1.2rem; 
-            display: flex;
-            flex-direction: column;
-            gap: 0.8rem;
-            width: 100%; /* ยืดเต็มพื้นที่ header-right */
-            max-width: 850px; /* จำกัดความกว้างสูงสุดไม่ให้ยาวเกินไป แต่ยังชิดขวา */
+            padding: 15px; 
+            display: grid;
+            /* 3 คอลัมน์: ซ้ายกว้างสุด (ชื่อ), กลางกว้างรองลงมา (เพศ/หน่วยงาน), ขวาพอดีคำ (อายุ/วันที่) */
+            grid-template-columns: 1.5fr 1.5fr 0.8fr; 
+            grid-template-rows: auto auto; /* 2 แถว */
+            gap: 10px 20px; /* ระยะห่างบรรทัด 10px, ระยะห่างคอลัมน์ 20px */
+            width: 100%; /* ยืดเต็มพื้นที่ header-right เพื่อให้ขอบขวาชนขอบ */
             border: 1px solid #dee2e6; 
             box-sizing: border-box;
-        }
-        
-        .info-card-row {
-            display: flex;
-            justify-content: space-between; /* กระจาย element ให้เต็มบรรทัด */
-            align-items: center;
-            gap: 1rem;
-            flex-wrap: wrap;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
         
         .info-card-item { 
             font-size: 0.95rem; 
             color: #333; 
             white-space: nowrap; 
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         
-        /* ปรับสัดส่วนการขยาย */
-        .item-name { flex-grow: 2; }
-        .item-dept { flex-grow: 2; }
+        .info-card-item span { opacity: 0.7; margin-right: 5px; color: #555; font-weight: 600; }
         
-        .info-card-item span { opacity: 0.7; margin-right: 8px; color: #555; }
+        /* จัดชิดขวาสำหรับคอลัมน์สุดท้าย (อายุ, วันที่) */
+        .item-age, .item-date { text-align: right; }
 
         /* Original Vitals Grid (2 Columns Fixed) */
         .vitals-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; }
