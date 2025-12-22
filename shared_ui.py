@@ -216,14 +216,11 @@ def display_common_header(person_data):
         bmi_desc = interpret_bmi(bmi)
 
     # แก้ไข: สร้าง HTML string แบบชิดซ้าย (No indentation) เพื่อป้องกัน Streamlit มองเป็น Code block
+    # ปรับ Layout: ฝั่งซ้ายมี Title และ InfoCard, ฝั่งขวามีชื่อโรงพยาบาลและเบอร์โทร
     html_content = f"""
 <div class="report-header">
     <div class="header-left">
         <h2>รายงานผลการตรวจสุขภาพ</h2>
-        <p>คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย</p>
-        <p>ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167</p>
-    </div>
-    <div class="header-right">
         <div class="info-card-wrapper">
             <table class="info-card-table">
                 <colgroup>
@@ -243,6 +240,10 @@ def display_common_header(person_data):
                 </tr>
             </table>
         </div>
+    </div>
+    <div class="header-right">
+        <p class="hospital-name">คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย</p>
+        <p>ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167</p>
     </div>
 </div>
 
@@ -335,22 +336,27 @@ def inject_custom_css():
         .report-header { 
             display: flex; 
             justify-content: space-between; 
-            align-items: stretch; 
+            align-items: flex-start; 
             margin-bottom: 2rem; 
             flex-wrap: wrap; 
             gap: 20px; 
         }
         .header-left { 
-            flex: 0 0 auto;
+            flex: 2; /* ให้พื้นที่ฝั่งซ้าย (ชื่อ+ตาราง) มากกว่า */
+            min-width: 300px;
         }
-        .header-left h2 { font-size: 2rem; margin-bottom: 0.25rem; color: #333; }
-        .header-left p { opacity: 0.7; margin: 0; color: #555; }
+        .header-left h2 { font-size: 2rem; margin-bottom: 15px; color: #333; }
         
         .header-right {
-            flex: 1; /* Expand to fill remaining space */
+            flex: 1; /* ฝั่งขวา (โรงพยาบาล) พื้นที่น้อยกว่า */
             display: flex;
-            justify-content: flex-end; /* Align to the right */
+            flex-direction: column;
+            justify-content: flex-start;
+            text-align: right;
+            padding-top: 10px; /* ดันลงมานิดหน่อยให้สวยงาม */
         }
+        .header-right p { opacity: 0.7; margin: 2px 0; color: #555; }
+        .header-right .hospital-name { font-weight: 600; font-size: 1.1rem; color: #00796B; opacity: 1; }
 
         /* Info Card Table */
         .info-card-wrapper {
