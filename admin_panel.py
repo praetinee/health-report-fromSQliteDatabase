@@ -157,13 +157,8 @@ def display_admin_panel(df):
                         if st.session_state.admin_selected_year not in years: st.session_state.admin_selected_year = years[0]
                         sel_year = st.selectbox("เลือกปี พ.ศ.", years, index=years.index(st.session_state.admin_selected_year), format_func=lambda y: f"พ.ศ. {y}")
                         
-                        c_p1, c_p2 = st.columns(2)
-                        with c_p1: 
-                            if st.button("พิมพ์รายงานสุขภาพ", key="adm_p1"): st.session_state.admin_print_trigger = True
-                        with c_p2: 
-                            if st.button("พิมพ์รายงานสมรรถภาพ", key="adm_p2"): st.session_state.admin_print_performance_trigger = True
-                        st.markdown("---")
-
+                        # --- REMOVED PRINT BUTTONS AS REQUESTED ---
+                        
                         if sel_year != st.session_state.admin_selected_year:
                             st.session_state.admin_selected_year = sel_year
                             st.session_state.admin_person_row = None
