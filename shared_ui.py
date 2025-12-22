@@ -215,6 +215,7 @@ def display_common_header(person_data):
         bmi_val_str = f"{bmi:.1f} kg/m²"
         bmi_desc = interpret_bmi(bmi)
 
+    # แก้ไข: ปรับ HTML ให้เป็น Flexbox 2 rows และจัดเรียงใหม่ตามต้องการ
     st.markdown(f"""
     <div class="report-header">
         <div class="header-left">
@@ -224,12 +225,16 @@ def display_common_header(person_data):
         </div>
         <div class="header-right">
             <div class="info-card">
-                <div class="info-card-item"><span>ชื่อ-สกุล:</span> {name}</div>
-                <div class="info-card-item"><span>HN:</span> {hn}</div>
-                <div class="info-card-item"><span>อายุ:</span> {age} ปี</div>
-                <div class="info-card-item"><span>เพศ:</span> {sex}</div>
-                <div class="info-card-item"><span>หน่วยงาน:</span> {department}</div>
-                <div class="info-card-item"><span>วันที่ตรวจ:</span> {check_date}</div>
+                <div class="info-card-row">
+                    <div class="info-card-item item-name"><span>ชื่อ-สกุล:</span> {name}</div>
+                    <div class="info-card-item item-sex"><span>เพศ:</span> {sex}</div>
+                    <div class="info-card-item item-age"><span>อายุ:</span> {age} ปี</div>
+                </div>
+                <div class="info-card-row">
+                    <div class="info-card-item item-hn"><span>HN:</span> {hn}</div>
+                    <div class="info-card-item item-dept"><span>หน่วยงาน:</span> {department}</div>
+                    <div class="info-card-item item-date"><span>วันที่ตรวจ:</span> {check_date}</div>
+                </div>
             </div>
         </div>
     </div>
@@ -319,30 +324,58 @@ def inject_custom_css():
             color: #333;
         }
 
-        /* Original Header Layout */
-        .report-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; flex-wrap: wrap; gap: 20px; }
+        /* แก้ไข: Header Layout แบบใหม่ */
+        .report-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: stretch; /* ให้สูงเท่ากัน */
+            margin-bottom: 2rem; 
+            flex-wrap: wrap; 
+            gap: 20px; 
+        }
+        .header-left { 
+            flex: 0 0 auto;
+        }
         .header-left h2 { font-size: 2rem; margin-bottom: 0.25rem; color: #333; }
         .header-left p { opacity: 0.7; margin: 0; color: #555; }
         
-        /* แก้ไข: ปรับ Grid ให้ช่องชื่อ-สกุลกว้างขึ้น (2fr vs 1fr) และใส่ nowrap เพื่อไม่ให้ชื่อตกบรรทัด */
+        .header-right {
+            flex: 1; /* กินพื้นที่ที่เหลือทั้งหมด เพื่อดันขอบขวาไปชนขอบจอ */
+            display: flex;
+            justify-content: flex-end; /* ชิดขวา */
+        }
+
+        /* แก้ไข: info-card แบบ Flexbox 2 Rows */
         .info-card { 
             background-color: #f8f9fa; 
             border-radius: 8px; 
-            padding: 1rem; 
-            display: grid; 
-            grid-template-columns: 2fr 1fr; /* เปลี่ยนจาก repeat(2, 1fr) เป็น 2:1 */
-            gap: 0.5rem 1.5rem; 
-            min-width: 450px; 
+            padding: 1.2rem; 
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            width: 100%; /* ยืดเต็มพื้นที่ header-right */
+            max-width: 850px; /* จำกัดความกว้างสูงสุดไม่ให้ยาวเกินไป แต่ยังชิดขวา */
             border: 1px solid #dee2e6; 
+            box-sizing: border-box;
+        }
+        
+        .info-card-row {
+            display: flex;
+            justify-content: space-between; /* กระจาย element ให้เต็มบรรทัด */
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
         }
         
         .info-card-item { 
-            font-size: 0.9rem; 
+            font-size: 0.95rem; 
             color: #333; 
-            white-space: nowrap; /* ห้ามตัดบรรทัด */
-            overflow: hidden;
-            text-overflow: ellipsis; /* ถ้าล้นจริงๆ ให้เป็นจุดไข่ปลาดีกว่าตกบรรทัด */
+            white-space: nowrap; 
         }
+        
+        /* ปรับสัดส่วนการขยาย */
+        .item-name { flex-grow: 2; }
+        .item-dept { flex-grow: 2; }
         
         .info-card-item span { opacity: 0.7; margin-right: 8px; color: #555; }
 
