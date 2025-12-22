@@ -264,12 +264,29 @@ def display_common_header(person_data):
         bmi_val_str = f"{bmi:.1f}"
         bmi_desc = interpret_bmi(bmi)
 
-    # แก้ไข: Layout Header ให้ดูเป็น Dashboard มากขึ้น
+    # แก้ไข: เปลี่ยนจาก Emoji กลับเป็น SVG Icons (Minimal Style)
+    # ใช้ SVG มาตรฐาน (Feather Icons Style) ที่มีความคมชัดและดูเป็นทางการ
+    
+    # 1. Profile Icon (User)
+    icon_profile = """<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>"""
+    
+    # 2. Body/Scale Icon (User Body)
+    icon_body = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>"""
+    
+    # 3. Waist Icon (Circle with diameter/measure) - Using 'Disc' or 'Circle' concept
+    icon_waist = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 12h8"></path></svg>"""
+    
+    # 4. BP Icon (Heart)
+    icon_heart = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>"""
+    
+    # 5. Pulse Icon (Activity)
+    icon_pulse = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>"""
+
     html_content = clean_html_string(f"""
     <div class="report-header-container">
         <div class="header-main">
             <div class="patient-profile">
-                <div class="profile-icon">👤</div>
+                <div class="profile-icon">{icon_profile}</div>
                 <div class="profile-details">
                     <div class="patient-name">{name}</div>
                     <div class="patient-meta">
@@ -293,7 +310,7 @@ def display_common_header(person_data):
     <div class="vitals-grid-container">
         <div class="vital-card">
             <div class="vital-icon-box color-blue">
-                ⚖️
+                {icon_body}
             </div>
             <div class="vital-content">
                 <div class="vital-label">สัดส่วนร่างกาย</div>
@@ -304,7 +321,7 @@ def display_common_header(person_data):
         
         <div class="vital-card">
             <div class="vital-icon-box color-green">
-                📏
+                {icon_waist}
             </div>
             <div class="vital-content">
                 <div class="vital-label">รอบเอว</div>
@@ -314,7 +331,7 @@ def display_common_header(person_data):
 
         <div class="vital-card">
             <div class="vital-icon-box color-red">
-                ❤️
+                {icon_heart}
             </div>
             <div class="vital-content">
                 <div class="vital-label">ความดันโลหิต</div>
@@ -325,7 +342,7 @@ def display_common_header(person_data):
 
         <div class="vital-card">
             <div class="vital-icon-box color-orange">
-                💓
+                {icon_pulse}
             </div>
             <div class="vital-content">
                 <div class="vital-label">ชีพจร</div>
@@ -337,7 +354,7 @@ def display_common_header(person_data):
     st.markdown(html_content, unsafe_allow_html=True)
 
 def inject_custom_css():
-    # แก้ไข: ปรับ CSS ให้สวยงามและทันสมัย (Modern Clean Look)
+    # แก้ไข: ปรับ CSS ให้รองรับ SVG และยังคงความสวยงาม (Modern Clean Look)
     css_content = clean_html_string("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
@@ -482,7 +499,11 @@ def inject_custom_css():
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 30px;
+        }
+        
+        .profile-icon svg {
+            width: 32px;
+            height: 32px;
         }
         
         .patient-name {
@@ -551,7 +572,11 @@ def inject_custom_css():
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
+        }
+        
+        .vital-icon-box svg {
+            width: 24px;
+            height: 24px;
         }
         
         .color-blue { background: #E3F2FD; color: #1976D2; }
