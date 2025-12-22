@@ -12,75 +12,59 @@ from datetime import datetime
 from auth import authentication_flow, pdpa_consent_page
 
 # --- Import Line Register ---
+# ใช้ try-except เพื่อความชัวร์
 try:
     from line_register import render_registration_page
 except ImportError:
     def render_registration_page(df):
-        st.error("ไม่พบไฟล์ line_register.py กรุณาสร้างไฟล์นี้")
+        st.error("ไม่พบไฟล์ line_register.py กรุณาสร้างไฟล์นี้ก่อน")
 
 # --- Import Print Functions ---
-from print_report import generate_printable_report
-from print_performance_report import generate_performance_report_html
+try:
+    from print_report import generate_printable_report
+except ImportError:
+    def generate_printable_report(*args): return ""
 
-# --- Import Utils (ตัวช่วยตรวจสอบข้อมูล) ---
+try:
+    from print_performance_report import generate_performance_report_html
+except ImportError:
+    def generate_performance_report_html(*args): return ""
+
+# --- Import Utils ---
 try:
     from utils import (
-        is_empty,
-        normalize_name,
-        has_basic_health_data,
-        has_vision_data,
-        has_hearing_data,
-        has_lung_data,
-        has_visualization_data
+        is_empty, normalize_name, has_basic_health_data, 
+        has_vision_data, has_hearing_data, has_lung_data, has_visualization_data
     )
 except ImportError:
-    # Fallback ถ้าหา utils ไม่เจอ (ป้องกัน App พัง)
-    def is_empty(val): return pd.isna(val) or str(val).strip() == ""
-    def normalize_name(name): return str(name).strip()
-    def has_basic_health_data(row): return True
-    def has_vision_data(row): return False
-    def has_hearing_data(row): return False
-    def has_lung_data(row): return False
-    def has_visualization_data(df): return False
+    # Fallback
+    def is_empty(v): return pd.isna(v) or str(v).strip() == ""
+    def normalize_name(n): return str(n).strip()
+    def has_basic_health_data(r): return True
+    def has_vision_data(r): return False
+    def has_hearing_data(r): return False
+    def has_lung_data(r): return False
+    def has_visualization_data(d): return False
 
-# --- Import Shared UI (ใช้ try-except แบบครอบจักรวาลป้องกันพัง) ---
+# --- Import Shared UI ---
 try:
-    from shared_ui import (
-        inject_custom_css,
-        display_common_header
-    )
-except Exception as e:
-    # ถ้า shared_ui พัง ให้ใช้ฟังก์ชันสำรองเหล่านี้แทน
-    # st.error(f"Warning: shared_ui module error: {e}") # (Uncomment เพื่อดู error จริง)
-    
-    def inject_custom_css():
-        st.markdown("""
-        <style>
-            @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap');
-            html, body, [class*="css"] { font-family: 'Sarabun', sans-serif; }
-            .sidebar-title { font-size: 1.2rem; font-weight: bold; color: #2C3E50; margin-bottom: 1rem; }
-        </style>
-        """, unsafe_allow_html=True)
-        
-    def display_common_header(data):
-        st.markdown(f"## รายงานผลสุขภาพ: {data.get('ชื่อ-สกุล', '-')}")
-        st.write(f"HN: {data.get('HN', '-')} | วันที่ตรวจ: {data.get('วันที่ตรวจ', '-')}")
-        st.markdown("---")
+    from shared_ui import inject_custom_css, display_common_header
+except ImportError:
+    def inject_custom_css(): pass
+    def display_common_header(d): st.write(d)
 
 # --- Import Display Functions ---
 try:
     from visualization import display_visualization_tab
 except ImportError:
-    def display_visualization_tab(d, all_df): st.info("No visualization module")
+    def display_visualization_tab(d, a): st.info("No visualization")
 
 try:
     from admin_panel import display_admin_panel, display_main_report, display_performance_report
 except ImportError:
-    st.error("Critical Error: admin_panel module not found or has errors.")
-    # สร้าง Dummy function กันพัง
     def display_admin_panel(df): st.error("Admin Panel Error")
-    def display_main_report(p, a): st.write("Main Report Error")
-    def display_performance_report(p, t, a=None): st.write("Perf Report Error")
+    def display_main_report(p, a): pass
+    def display_performance_report(p, t, a=None): pass
 
 # --- Data Loading ---
 @st.cache_data(ttl=600)
@@ -206,26 +190,55 @@ def main_app(df):
             st.session_state.print_performance_trigger = False
 
 
-# --- Entry Point ---
+# --------------------------------------------------------------------------------
+# MAIN LOGIC (ส่วนตัดสินใจว่าจะโชว์หน้าไหน)
+# --------------------------------------------------------------------------------
+
+# 1. Initialize State
 if 'authenticated' not in st.session_state: st.session_state['authenticated'] = False
 if 'pdpa_accepted' not in st.session_state: st.session_state['pdpa_accepted'] = False
 
+# 2. Load Data
 df = load_sqlite_data()
 if df is None: st.stop()
 
-# LINE Logic
-try: q_page = st.query_params.get("page", "")
-except: q_page = ""
+# 3. Check LINE / LIFF Parameters (จุดสำคัญ!)
+# เช็คว่ามี ?page=register หรือ ?userid=... ส่งมาไหม
+is_line_mode = False
+try:
+    q_page = st.query_params.get("page", "")
+    q_userid = st.query_params.get("userid", "")
+    if q_page == "register" or q_userid:
+        is_line_mode = True
+except:
+    pass
 
-if q_page == "register":
+# 4. Routing (ตัดสินใจพาไปหน้าไหน)
+
+if is_line_mode:
+    # 🟢 กรณีเข้าจาก LINE -> บังคับไปหน้าลงทะเบียนใหม่ทันที (ไม่สน Login เก่า)
     render_registration_page(df)
+
 elif not st.session_state['authenticated']:
-    if st.checkbox("ทดสอบโหมดลงทะเบียน LINE OA (Dev Only)"): render_registration_page(df)
-    else: authentication_flow(df)
+    # 🔴 กรณีเข้าปกติแล้วยังไม่ Login -> โชว์หน้า Login เดิม
+    
+    # (Optional) ปุ่มแอบทดสอบสำหรับเรา (Dev)
+    # ถ้าไม่อยากให้รก เอาบรรทัด if st.checkbox... ออกได้เลยครับ
+    if st.checkbox("Dev: ลองเปิดโหมด LINE (กดเล่นๆ)", value=False):
+        render_registration_page(df)
+    else:
+        authentication_flow(df)
+
 elif not st.session_state['pdpa_accepted']:
+    # 🟡 Login แล้วแต่ยังไม่กด PDPA
     if st.session_state.get('is_admin', False):
         st.session_state['pdpa_accepted'] = True; st.rerun()
-    else: pdpa_consent_page()
+    else:
+        pdpa_consent_page()
+
 else:
-    if st.session_state.get('is_admin', False): display_admin_panel(df)
-    else: main_app(df)
+    # 🔵 Login เสร็จสมบูรณ์แล้ว -> เข้าใช้งานระบบ
+    if st.session_state.get('is_admin', False):
+        display_admin_panel(df)
+    else:
+        main_app(df)
