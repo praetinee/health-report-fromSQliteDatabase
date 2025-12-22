@@ -29,4 +29,5 @@ def has_lung_data(row):
     return any(not is_empty(row.get(col)) for col in columns)
 
 def has_visualization_data(df):
-    return not df.empty and len(df) > 1
+    # แก้ไข: ให้แสดง Visualization ได้ทันทีที่มีข้อมูล (แม้จะมีแค่ 1 ปีก็ดู Radar Chart ได้)
+    return df is not None and not df.empty
