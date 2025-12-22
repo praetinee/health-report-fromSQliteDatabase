@@ -290,6 +290,17 @@ def inject_custom_css():
             font-family: 'Sarabun', sans-serif !important;
             color: var(--text-color); /* ใช้ตัวแปรธีมเป็นหลัก */
         }
+        
+        /* --- Define Theme Colors for Icons --- */
+        :root {
+            --icon-color: #00796B; /* Default Teal for Light Mode */
+        }
+        
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --icon-color: #80cbc4; /* Lighter Teal for Dark Mode */
+            }
+        }
 
         /* Responsive Headings */
         h4 {
@@ -360,7 +371,7 @@ def inject_custom_css():
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
         }
         .vital-icon svg { 
-            stroke: var(--primary-color); 
+            stroke: var(--icon-color) !important; /* ใช้ตัวแปรสีที่ปรับตามธีม */
             width: 32px; height: 32px;
         }
         .vital-data { display: flex; flex-direction: column; }
@@ -395,7 +406,7 @@ def inject_custom_css():
         
         /* Recommendation Box */
         .recommendation-container { 
-            border-left: 5px solid var(--primary-color); 
+            border-left: 5px solid var(--icon-color); /* ใช้สีเดียวกับไอคอน */
             padding: 1.5rem; 
             border-radius: 0 8px 8px 0; 
             background-color: var(--secondary-background-color); 
