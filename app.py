@@ -103,12 +103,45 @@ def main_app(df):
     inject_custom_css()
 
     if 'user_hn' not in st.session_state: 
-        st.error("Error: No user data")
+        st.error("Error: No user data found in session.")
         st.stop()
         
     user_hn = st.session_state['user_hn']
+    
+    # 1. Filter Data for User
+    # คัดกรองข้อมูลเฉพาะ HN นี้
     results_df = df[df['HN'] == user_hn].copy()
     st.session_state['search_result'] = results_df
+
+    if results_df.empty:
+        st.error(f"ไม่พบข้อมูลผลตรวจสำหรับ HN: {user_hn}")
+        return
+
+    # 2. Auto-Select Latest Year (หัวใจสำคัญ!)
+    # ถ้ายังไม่มีปีที่เลือก หรือปีที่เลือกไม่ถูกต้อง ให้เลือกปีล่าสุดอัตโนมัติ
+    available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
+    
+    if not available_years:
+        st.warning("ไม่พบประวัติการตรวจสุขภาพรายปี")
+        return
+
+    if 'selected_year' not in st.session_state or st.session_state.selected_year not in available_years:
+        st.session_state.selected_year = available_years[0]
+        # บังคับรีเซ็ตข้อมูลแถวเพื่อให้โหลดใหม่
+        st.session_state.person_row = None
+        st.session_state.selected_row_found = False
+
+    # 3. Load Person Row Data (โหลดข้อมูลจริง)
+    # ดึงข้อมูลของปีที่เลือกมาใส่ตัวแปร person_row
+    if st.session_state.get('person_row') is None:
+        yr_df = results_df[results_df["Year"] == st.session_state.selected_year]
+        if not yr_df.empty:
+            # ใช้ bfill/ffill เพื่อรวมข้อมูลถ้ามีหลาย row ในปีเดียว
+            st.session_state.person_row = yr_df.bfill().ffill().iloc[0].to_dict()
+            st.session_state.selected_row_found = True
+        else:
+            st.session_state.person_row = None
+            st.session_state.selected_row_found = False
 
     # --- Auto-Save LINE ID Logic ---
     if st.session_state.get("line_user_id") and not st.session_state.get("line_saved", False):
@@ -117,53 +150,27 @@ def main_app(df):
             parts = user_name_full.split()
             f_name = parts[0] if len(parts) > 0 else ""
             l_name = " ".join(parts[1:]) if len(parts) > 1 else ""
-            
             save_new_user_to_csv(f_name, l_name, st.session_state["line_user_id"])
             st.session_state["line_saved"] = True
         except:
             pass
 
-    # --- Pre-load Data Logic (แก้ไขจุดนี้เพื่อให้แสดงผลทันที) ---
-    if 'selected_year' not in st.session_state or st.session_state.selected_year is None:
-        if not results_df.empty:
-            years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
-            if years:
-                st.session_state.selected_year = years[0]
-                yr_df = results_df[results_df["Year"] == st.session_state.selected_year]
-                if not yr_df.empty:
-                    st.session_state.person_row = yr_df.bfill().ffill().iloc[0].to_dict()
-                    st.session_state.selected_row_found = True
-    
-    if 'print_trigger' not in st.session_state: st.session_state.print_trigger = False
-    if 'print_performance_trigger' not in st.session_state: st.session_state.print_performance_trigger = False
-
+    # --- Event Handler ---
     def handle_year_change():
         st.session_state.selected_year = st.session_state.year_select
-        # อัปเดตข้อมูลทันทีเมื่อเปลี่ยนปี
-        yr_df = results_df[results_df["Year"] == st.session_state.selected_year]
-        if not yr_df.empty:
-            st.session_state.person_row = yr_df.bfill().ffill().iloc[0].to_dict()
-            st.session_state.selected_row_found = True
-        else:
-            st.session_state.person_row = None
-            st.session_state.selected_row_found = False
+        st.session_state.person_row = None # Clear old data
+        st.session_state.selected_row_found = False
 
+    # --- Sidebar ---
     with st.sidebar:
         st.markdown(f"<div class='sidebar-title'>ยินดีต้อนรับ</div><h3>{st.session_state.get('user_name', '')}</h3>", unsafe_allow_html=True)
         st.markdown(f"**HN:** {user_hn}")
         st.markdown("---")
         
-        if not results_df.empty:
-            years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
-            if years:
-                if st.session_state.selected_year not in years: st.session_state.selected_year = years[0]
-                idx = years.index(st.session_state.selected_year)
-                st.selectbox("เลือกปี พ.ศ.", years, index=idx, format_func=lambda y: f"พ.ศ. {y}", key="year_select", on_change=handle_year_change)
-            else:
-                st.warning("ไม่พบข้อมูลรายปี")
-        else:
-            st.warning("ไม่พบข้อมูลสำหรับผู้ใช้นี้")
-
+        # Year Selector
+        idx = available_years.index(st.session_state.selected_year)
+        st.selectbox("เลือกปี พ.ศ.", available_years, index=idx, format_func=lambda y: f"พ.ศ. {y}", key="year_select", on_change=handle_year_change)
+        
         st.markdown("---")
         if st.session_state.get("selected_row_found", False):
             if st.button("พิมพ์รายงานสุขภาพ"): st.session_state.print_trigger = True
@@ -174,23 +181,17 @@ def main_app(df):
             for key in list(st.session_state.keys()): del st.session_state[key]
             st.rerun()
 
-    # Content Area
-    if "person_row" not in st.session_state or not st.session_state.get("selected_row_found", False):
-        # พยายามโหลดอีกครั้งถ้ายังไม่มีข้อมูล
-        if not results_df.empty and 'selected_year' in st.session_state:
-             yr_df = results_df[results_df["Year"] == st.session_state.selected_year]
-             if not yr_df.empty:
-                 p_data = yr_df.bfill().ffill().iloc[0].to_dict()
-                 st.session_state.person_row = p_data
-                 st.session_state.selected_row_found = True
-                 # รีรันเพื่อให้ข้อมูลแสดงผล
-                 st.rerun()
-        else:
-            st.info("กรุณาเลือกปีที่ต้องการดูผลตรวจ")
+    # --- Main Content Area ---
+    if not st.session_state.get("selected_row_found", False) or st.session_state.get("person_row") is None:
+        st.info(f"ไม่พบข้อมูลผลตรวจสำหรับปี {st.session_state.selected_year}")
     else:
         p_data = st.session_state.person_row
         all_hist = st.session_state.search_result
         
+        # Debug: Uncomment บรรทัดล่างถ้ายังไม่ขึ้น เพื่อดูว่าข้อมูลมาจริงไหม
+        # st.write(p_data) 
+
+        # Tabs Logic
         tabs_map = OrderedDict()
         if has_visualization_data(all_hist): tabs_map['ภาพรวม (Graphs)'] = 'viz'
         if has_basic_health_data(p_data): tabs_map['สุขภาพพื้นฐาน'] = 'main'
@@ -210,14 +211,14 @@ def main_app(df):
                     elif v == 'lung': display_performance_report(p_data, 'lung')
         else:
             display_common_header(p_data)
-            st.warning("ไม่พบข้อมูลการตรวจสำหรับปีนี้")
+            st.warning("ไม่มีข้อมูลการตรวจที่สามารถแสดงผลได้สำหรับปีนี้")
         
-        # Print Components
-        if st.session_state.print_trigger:
+        # Print Components (Hidden)
+        if st.session_state.get('print_trigger', False):
             h = generate_printable_report(p_data, all_hist)
             st.components.v1.html(f"<script>var w=window.open();w.document.write({json.dumps(h)});w.print();w.close();</script>", height=0)
             st.session_state.print_trigger = False
-        if st.session_state.print_performance_trigger:
+        if st.session_state.get('print_performance_trigger', False):
             h = generate_performance_report_html(p_data, all_hist)
             st.components.v1.html(f"<script>var w=window.open();w.document.write({json.dumps(h)});w.print();w.close();</script>", height=0)
             st.session_state.print_performance_trigger = False
