@@ -344,17 +344,17 @@ def inject_custom_css():
             justify-content: flex-end; /* ชิดขวา */
         }
 
-        /* แก้ไข: info-card แบบ CSS Grid เพื่อความสม่ำเสมอ */
+        /* แก้ไข: info-card แบบ CSS Grid ปรับสัดส่วนให้สม่ำเสมอ */
         .info-card { 
             background-color: #f8f9fa; 
             border-radius: 8px; 
             padding: 15px; 
             display: grid;
-            /* 3 คอลัมน์: ซ้ายกว้างสุด (ชื่อ), กลางกว้างรองลงมา (เพศ/หน่วยงาน), ขวาพอดีคำ (อายุ/วันที่) */
-            grid-template-columns: 1.5fr 1.5fr 0.8fr; 
-            grid-template-rows: auto auto; /* 2 แถว */
-            gap: 10px 20px; /* ระยะห่างบรรทัด 10px, ระยะห่างคอลัมน์ 20px */
-            width: 100%; /* ยืดเต็มพื้นที่ header-right เพื่อให้ขอบขวาชนขอบ */
+            /* แบ่งเป็น 2:2:1 = คอลัมน์ซ้ายกับกลางเท่ากัน คอลัมน์ขวาแคบกว่า */
+            grid-template-columns: 2fr 2fr 1fr; 
+            grid-template-rows: auto auto; 
+            gap: 12px 20px;
+            width: 100%; 
             border: 1px solid #dee2e6; 
             box-sizing: border-box;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
@@ -366,12 +366,20 @@ def inject_custom_css():
             white-space: nowrap; 
             overflow: hidden;
             text-overflow: ellipsis;
+            display: flex;
+            align-items: center;
         }
         
-        .info-card-item span { opacity: 0.7; margin-right: 5px; color: #555; font-weight: 600; }
+        .info-card-item span { 
+            opacity: 0.7; 
+            margin-right: 8px; 
+            color: #555; 
+            font-weight: 600;
+            min-width: fit-content;
+        }
         
-        /* จัดชิดขวาสำหรับคอลัมน์สุดท้าย (อายุ, วันที่) */
-        .item-age, .item-date { text-align: right; }
+        /* เอาการจัดชิดขวาออก เพื่อให้แนวสายตาตรงกัน */
+        .item-age, .item-date { justify-content: flex-start; }
 
         /* Original Vitals Grid (2 Columns Fixed) */
         .vitals-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; }
