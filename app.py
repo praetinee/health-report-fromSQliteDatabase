@@ -111,28 +111,42 @@ def main_app(df):
     st.session_state['search_result'] = results_df
 
     # --- Auto-Save LINE ID Logic ---
-    # ถ้าเข้ามาผ่าน LINE แล้ว Login สำเร็จ -> บันทึกข้อมูลลง CSV อัตโนมัติ
     if st.session_state.get("line_user_id") and not st.session_state.get("line_saved", False):
         try:
-            # ดึงข้อมูลชื่อ-นามสกุลจาก Session (ที่ได้จากการ Login)
             user_name_full = st.session_state.get('user_name', '')
             parts = user_name_full.split()
             f_name = parts[0] if len(parts) > 0 else ""
             l_name = " ".join(parts[1:]) if len(parts) > 1 else ""
             
             save_new_user_to_csv(f_name, l_name, st.session_state["line_user_id"])
-            st.session_state["line_saved"] = True # บันทึกแล้ว ไม่ต้องบันทึกซ้ำ
+            st.session_state["line_saved"] = True
         except:
-            pass # ถ้าบันทึกไม่ได้ก็ข้ามไป ไม่ให้กระทบ User
+            pass
+
+    # --- Pre-load Data Logic (แก้ไขจุดนี้เพื่อให้แสดงผลทันที) ---
+    if 'selected_year' not in st.session_state or st.session_state.selected_year is None:
+        if not results_df.empty:
+            years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
+            if years:
+                st.session_state.selected_year = years[0]
+                yr_df = results_df[results_df["Year"] == st.session_state.selected_year]
+                if not yr_df.empty:
+                    st.session_state.person_row = yr_df.bfill().ffill().iloc[0].to_dict()
+                    st.session_state.selected_row_found = True
+    
+    if 'print_trigger' not in st.session_state: st.session_state.print_trigger = False
+    if 'print_performance_trigger' not in st.session_state: st.session_state.print_performance_trigger = False
 
     def handle_year_change():
         st.session_state.selected_year = st.session_state.year_select
-        st.session_state.pop("person_row", None)
-        st.session_state.pop("selected_row_found", None)
-
-    if 'selected_year' not in st.session_state: st.session_state.selected_year = None
-    if 'print_trigger' not in st.session_state: st.session_state.print_trigger = False
-    if 'print_performance_trigger' not in st.session_state: st.session_state.print_performance_trigger = False
+        # อัปเดตข้อมูลทันทีเมื่อเปลี่ยนปี
+        yr_df = results_df[results_df["Year"] == st.session_state.selected_year]
+        if not yr_df.empty:
+            st.session_state.person_row = yr_df.bfill().ffill().iloc[0].to_dict()
+            st.session_state.selected_row_found = True
+        else:
+            st.session_state.person_row = None
+            st.session_state.selected_row_found = False
 
     with st.sidebar:
         st.markdown(f"<div class='sidebar-title'>ยินดีต้อนรับ</div><h3>{st.session_state.get('user_name', '')}</h3>", unsafe_allow_html=True)
@@ -145,14 +159,6 @@ def main_app(df):
                 if st.session_state.selected_year not in years: st.session_state.selected_year = years[0]
                 idx = years.index(st.session_state.selected_year)
                 st.selectbox("เลือกปี พ.ศ.", years, index=idx, format_func=lambda y: f"พ.ศ. {y}", key="year_select", on_change=handle_year_change)
-                
-                yr_df = results_df[results_df["Year"] == st.session_state.selected_year]
-                if not yr_df.empty:
-                    st.session_state.person_row = yr_df.bfill().ffill().iloc[0].to_dict()
-                    st.session_state.selected_row_found = True
-                else:
-                    st.session_state.person_row = None
-                    st.session_state.selected_row_found = False
             else:
                 st.warning("ไม่พบข้อมูลรายปี")
         else:
@@ -170,7 +176,17 @@ def main_app(df):
 
     # Content Area
     if "person_row" not in st.session_state or not st.session_state.get("selected_row_found", False):
-        st.info("กรุณาเลือกปีที่ต้องการดูผลตรวจ")
+        # พยายามโหลดอีกครั้งถ้ายังไม่มีข้อมูล
+        if not results_df.empty and 'selected_year' in st.session_state:
+             yr_df = results_df[results_df["Year"] == st.session_state.selected_year]
+             if not yr_df.empty:
+                 p_data = yr_df.bfill().ffill().iloc[0].to_dict()
+                 st.session_state.person_row = p_data
+                 st.session_state.selected_row_found = True
+                 # รีรันเพื่อให้ข้อมูลแสดงผล
+                 st.rerun()
+        else:
+            st.info("กรุณาเลือกปีที่ต้องการดูผลตรวจ")
     else:
         p_data = st.session_state.person_row
         all_hist = st.session_state.search_result
@@ -194,7 +210,7 @@ def main_app(df):
                     elif v == 'lung': display_performance_report(p_data, 'lung')
         else:
             display_common_header(p_data)
-            st.warning("ไม่พบข้อมูลการตรวจ")
+            st.warning("ไม่พบข้อมูลการตรวจสำหรับปีนี้")
         
         # Print Components
         if st.session_state.print_trigger:
@@ -220,7 +236,6 @@ df = load_sqlite_data()
 if df is None: st.stop()
 
 # 3. Detect LINE UserID (ถ้ามี)
-# พยายามเก็บ UserID จาก URL (ถ้าเข้าผ่าน LINE)
 try:
     q_userid = st.query_params.get("userid", "")
     if q_userid:
@@ -228,8 +243,7 @@ try:
 except:
     pass
 
-# ถ้ายังไม่มี UserID แต่เข้าผ่าน ?page=register หรือเป็นโหมด LINE
-# ให้เรียก LIFF Script เพื่อพยายามดึง ID (แต่ไม่บังคับ)
+# LIFF Initializer
 try:
     q_page = st.query_params.get("page", "")
     if q_page == "register" and "line_user_id" not in st.session_state:
@@ -237,23 +251,24 @@ try:
 except:
     pass
 
-# 4. Routing Decision (Simplified)
-# ไม่แยกหน้าแล้ว ใช้หน้าเดียวกันหมด
+# 4. Routing Decision (Strict Order)
 
 if not st.session_state['authenticated']:
-    # 🔴 ยังไม่ Login -> หน้ากรอก 3 ช่อง (เหมือนกันทุกคน)
+    # 🔴 1. ยังไม่ Login -> ไปหน้า Login 3 ช่อง
     authentication_flow(df)
 
 elif not st.session_state['pdpa_accepted']:
-    # 🟡 Login แล้ว -> หน้า PDPA (Admin ข้ามได้)
+    # 🟡 2. Login แล้ว แต่ยังไม่ยอมรับ PDPA -> ไปหน้า PDPA
+    # (ยกเว้น Admin ให้ข้ามได้เลย)
     if st.session_state.get('is_admin', False):
         st.session_state['pdpa_accepted'] = True
         st.rerun()
     else:
+        # User ทั่วไป ต้องเจอหน้านี้ก่อนเสมอ
         pdpa_consent_page()
 
 else:
-    # 🔵 Login + PDPA แล้ว -> เข้าสู่ระบบ
+    # 🔵 3. Login + PDPA แล้ว -> เข้าสู่ระบบหลัก
     if st.session_state.get('is_admin', False):
         display_admin_panel(df)
     else:
