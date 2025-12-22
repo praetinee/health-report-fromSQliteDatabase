@@ -7,7 +7,7 @@ import re
 import html 
 import numpy as np 
 
-# --- Import Utils (ตัวช่วยตรวจสอบข้อมูล - ถ้าไม่มีก็ใช้ Fallback) ---
+# --- Import Utils ---
 try:
     from utils import (
         is_empty,
@@ -29,7 +29,6 @@ except ImportError:
     def has_visualization_data(df): return False
 
 # --- Import ฟังก์ชันอื่นๆ ---
-# ใช้ try-except เพื่อป้องกัน error หากไฟล์เหล่านี้มีปัญหา
 try:
     from performance_tests import interpret_audiogram, interpret_lung_capacity, interpret_cxr, generate_comprehensive_recommendations
 except ImportError:
@@ -53,26 +52,21 @@ try:
 except ImportError:
     def display_visualization_tab(person_data, all_df): st.info("Visualization module not found")
 
-# --- Import Shared UI Functions (จุดที่เคยเกิด Error) ---
-# ใช้ try-except Exception เพื่อดักจับ Error ทุกประเภทจาก shared_ui
+# --- Import Shared UI Functions ---
+# แก้ไข: เพิ่มการ Import display_main_report และ display_performance_report จาก shared_ui
 try:
     from shared_ui import (
         inject_custom_css,
         display_common_header,
+        display_main_report,
+        display_performance_report
     )
 except Exception as e:
-    # ถ้า shared_ui พัง ให้ใช้ฟังก์ชันสำรองเหล่านี้แทน
-    def inject_custom_css():
-        st.markdown("""
-        <style>
-            @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap');
-            html, body, [class*="css"] { font-family: 'Sarabun', sans-serif; }
-        </style>
-        """, unsafe_allow_html=True)
-        
-    def display_common_header(data):
-        st.write(f"**Reports for:** {data.get('ชื่อ-สกุล', 'Unknown')}")
-        st.markdown("---")
+    st.error(f"Error loading shared_ui: {e}")
+    def inject_custom_css(): pass
+    def display_common_header(data): st.write(f"**Reports for:** {data.get('ชื่อ-สกุล', 'Unknown')}")
+    def display_main_report(p, a): st.error("Main Report Function Missing in shared_ui")
+    def display_performance_report(p, r, a=None): st.error("Performance Report Function Missing")
 
 # --- Import LINE Manager Function ---
 try:
@@ -82,18 +76,7 @@ except ImportError:
         st.error("ไม่พบไฟล์ line_register.py กรุณาสร้างไฟล์นี้ก่อน")
 
 # ------------------------------------------------------------------
-# ส่วนแสดงผลรายงาน (นิยามไว้ที่นี่เพื่อให้ app.py เรียกใช้ได้โดยไม่ Error)
-# ------------------------------------------------------------------
-
-def display_main_report(person_data, all_person_history_df):
-    """แสดงผลสุขภาพพื้นฐาน"""
-    st.info("ℹ️ ส่วนแสดงผลสุขภาพพื้นฐาน (Main Report)")
-    # คุณสามารถนำโค้ดแสดงผล BMI, ความดัน ฯลฯ มาใส่ตรงนี้ได้
-
-def display_performance_report(person_data, report_type, all_person_history_df=None):
-    """แสดงผลสมรรถภาพ"""
-    st.info(f"ℹ️ ส่วนแสดงผลสมรรถภาพ: {report_type}")
-
+# (ลบ Placeholder Function ออกแล้ว เพื่อใช้จาก shared_ui แทน)
 # ------------------------------------------------------------------
 
 def display_admin_panel(df):
@@ -193,6 +176,7 @@ def display_admin_panel(df):
                     
                     if st.session_state.admin_person_row:
                         p_row = st.session_state.admin_person_row
+                        # ใช้ display_common_header จาก shared_ui
                         display_common_header(p_row)
                         
                         tabs_map = OrderedDict()
