@@ -320,11 +320,30 @@ def inject_custom_css():
         }
 
         /* Original Header Layout */
-        .report-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; }
+        .report-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; flex-wrap: wrap; gap: 20px; }
         .header-left h2 { font-size: 2rem; margin-bottom: 0.25rem; color: #333; }
         .header-left p { opacity: 0.7; margin: 0; color: #555; }
-        .info-card { background-color: #f8f9fa; border-radius: 8px; padding: 1rem; display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem 1.5rem; min-width: 400px; border: 1px solid #dee2e6; }
-        .info-card-item { font-size: 0.9rem; color: #333; }
+        
+        /* แก้ไข: ปรับ Grid ให้ช่องชื่อ-สกุลกว้างขึ้น (2fr vs 1fr) และใส่ nowrap เพื่อไม่ให้ชื่อตกบรรทัด */
+        .info-card { 
+            background-color: #f8f9fa; 
+            border-radius: 8px; 
+            padding: 1rem; 
+            display: grid; 
+            grid-template-columns: 2fr 1fr; /* เปลี่ยนจาก repeat(2, 1fr) เป็น 2:1 */
+            gap: 0.5rem 1.5rem; 
+            min-width: 450px; 
+            border: 1px solid #dee2e6; 
+        }
+        
+        .info-card-item { 
+            font-size: 0.9rem; 
+            color: #333; 
+            white-space: nowrap; /* ห้ามตัดบรรทัด */
+            overflow: hidden;
+            text-overflow: ellipsis; /* ถ้าล้นจริงๆ ให้เป็นจุดไข่ปลาดีกว่าตกบรรทัด */
+        }
+        
         .info-card-item span { opacity: 0.7; margin-right: 8px; color: #555; }
 
         /* Original Vitals Grid (2 Columns Fixed) */
