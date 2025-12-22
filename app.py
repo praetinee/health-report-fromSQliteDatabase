@@ -12,7 +12,7 @@ from datetime import datetime
 from auth import authentication_flow, pdpa_consent_page
 
 # --- Import Line Register ---
-# ใช้ try-except Exception เพื่อดักจับทุก error ไม่ใช่แค่ ImportError
+# ใช้ try-except Exception เพื่อดักจับทุก error
 try:
     from line_register import render_registration_page
 except Exception as e:
@@ -47,7 +47,6 @@ except Exception:
     def has_visualization_data(d): return False
 
 # --- Import Shared UI ---
-# ใช้ try-except Exception เพื่อป้องกันแอปพังถ้า shared_ui มีปัญหา
 try:
     from shared_ui import inject_custom_css, display_common_header
 except Exception as e:
@@ -110,7 +109,7 @@ def load_sqlite_data():
     finally:
         if tmp_path and os.path.exists(tmp_path): os.remove(tmp_path)
 
-# --- Main App Logic ---
+# --- Main App Logic (สำหรับ User ที่ผ่านการ Login แล้ว) ---
 def main_app(df):
     st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
     inject_custom_css()
@@ -215,12 +214,11 @@ df = load_sqlite_data()
 if df is None: st.stop()
 
 # 3. Check LINE / LIFF Parameters (จุดสำคัญ!)
-# เช็คว่ามี ?page=register หรือ ?userid=... ส่งมาไหม หรืออยู่ใน session แล้ว
 is_line_mode = False
 try:
     q_page = st.query_params.get("page", "")
     q_userid = st.query_params.get("userid", "")
-    # เช็คว่าอยู่ในโหมด LINE Login หรือไม่ (จาก URL หรือ Session)
+    # เงื่อนไข: ถ้ามี ?page=register หรือมี userid หรือเคยล็อกอินผ่านไลน์มาแล้ว -> เข้าโหมด LINE
     if q_page == "register" or q_userid or st.session_state.get('is_line_login', False):
         is_line_mode = True
 except:
@@ -229,12 +227,12 @@ except:
 # 4. Routing (ตัดสินใจพาไปหน้าไหน)
 
 if is_line_mode:
-    # 🟢 กรณีเข้าจาก LINE -> บังคับไปหน้าลงทะเบียนใหม่/หน้าผลตรวจ ทันที (ไม่สน Login เก่า)
-    # ไฟล์ line_register.py จะจัดการ Logic การแสดงผลเอง (ถ้าลงทะเบียนแล้ว -> แสดงผล, ยังไม่ลง -> แสดงฟอร์ม)
+    # 🟢 [LINE MODE] -> บังคับไปหน้า line_register.py
+    # หน้านี้จะมีแค่ฟอร์มลงทะเบียน (หรือหน้าผลตรวจถ้าลงทะเบียนแล้ว) เท่านั้น
     render_registration_page(df)
 
 elif not st.session_state['authenticated']:
-    # 🔴 กรณีเข้าปกติแล้วยังไม่ Login -> โชว์หน้า Login เดิม
+    # 🔴 [PC MODE] -> ยังไม่ Login -> โชว์หน้า Login เดิม (สำหรับเจ้าหน้าที่)
     authentication_flow(df)
 
 elif not st.session_state['pdpa_accepted']:
@@ -245,7 +243,7 @@ elif not st.session_state['pdpa_accepted']:
         pdpa_consent_page()
 
 else:
-    # 🔵 Login เสร็จสมบูรณ์แล้ว -> เข้าใช้งานระบบ
+    # 🔵 Login เสร็จสมบูรณ์แล้ว -> เข้าใช้งานระบบหลัก
     if st.session_state.get('is_admin', False):
         display_admin_panel(df)
     else:
