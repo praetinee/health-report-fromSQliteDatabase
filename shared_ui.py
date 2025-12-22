@@ -419,32 +419,135 @@ def inject_custom_css():
     """, unsafe_allow_html=True)
 
 # --- Functions for displaying specific report sections ---
-# (ใส่โค้ดของ display_main_report, display_performance_report และส่วนอื่นๆ ที่เกี่ยวข้องที่นี่)
-# ... (โค้ดของ display_main_report และ display_performance_report ไม่ได้แสดงเพื่อความกระชับ) ...
 
 def render_vision_details_table(person_data):
-    # ... (โค้ดของ render_vision_details_table) ...
-    pass # Placeholder
+    # Mapping for vision
+    v_map = {
+        'V_R_Far': 'ตาขวา ไกล (Right Far)', 'V_L_Far': 'ตาซ้าย ไกล (Left Far)',
+        'V_R_Near': 'ตาขวา ใกล้ (Right Near)', 'V_L_Near': 'ตาซ้าย ใกล้ (Left Near)',
+        'Color_Blind': 'ตาบอดสี (Color Blindness)'
+    }
+    
+    # Helper to check vision normality (Normal/Abnormal)
+    def check_vision(val, test_type):
+        if is_empty(val): return "Not Tested", "vision-not-tested"
+        val = str(val).strip().lower()
+        if test_type == 'Color_Blind':
+            if val in ['normal', 'ปกติ']: return "ปกติ", "vision-normal"
+            else: return "ผิดปกติ", "vision-abnormal"
+        else: # Visual Acuity
+            if val in ['normal', 'ปกติ']: return "ปกติ", "vision-normal"
+            elif val in ['abnormal', 'ผิดปกติ']: return "ผิดปกติ", "vision-abnormal"
+            # Try parsing numeric logic if needed (e.g. 20/20) - simplifed here
+            return val, "vision-neutral"
+
+    html_content = "<table class='vision-table'><thead><tr><th>รายการทดสอบ</th><th style='text-align: center;'>ผลการตรวจ</th></tr></thead><tbody>"
+    
+    for key, label in v_map.items():
+        val = person_data.get(key)
+        res_text, res_class = check_vision(val, key)
+        
+        # Only show rows with data? Or show all? Let's show all for completeness in report
+        html_content += f"""
+        <tr>
+            <td>{label}</td>
+            <td class='result-cell'><span class='vision-result {res_class}'>{res_text}</span></td>
+        </tr>
+        """
+    html_content += "</tbody></table>"
+    st.markdown(html_content, unsafe_allow_html=True)
 
 def display_performance_report_hearing(person_data, all_person_history_df):
-    # ... (โค้ดของ display_performance_report_hearing) ...
-    pass # Placeholder
+    results = interpret_audiogram(person_data, all_person_history_df)
+    
+    st.markdown("##### กราฟการได้ยิน (Audiogram)")
+    # Note: Real graph plotting would go here using plotly/matplotlib.
+    # For now, we show the data table as placeholder or simplified view.
+    
+    freqs = [250, 500, 1000, 2000, 3000, 4000, 6000, 8000]
+    
+    # Prepare DataFrame for Table
+    r_vals = [person_data.get(f'R_{f}', '-') for f in freqs]
+    l_vals = [person_data.get(f'L_{f}', '-') for f in freqs]
+    
+    df_audio = pd.DataFrame({
+        'ความถี่ (Hz)': freqs,
+        'หูขวา (dB)': r_vals,
+        'หูซ้าย (dB)': l_vals
+    })
+    
+    # Custom HTML Table for Audio
+    table_html = "<div class='table-container'><table class='styled-df-table hearing-table'><thead><tr><th>ความถี่ (Hz)</th>"
+    for f in freqs: table_html += f"<th>{f}</th>"
+    table_html += "</tr></thead><tbody><tr><td><b>หูขวา (dB)</b></td>"
+    for v in r_vals: table_html += f"<td>{v}</td>"
+    table_html += "</tr><tr><td><b>หูซ้าย (dB)</b></td>"
+    for v in l_vals: table_html += f"<td>{v}</td>"
+    table_html += "</tr></tbody></table></div>"
+    
+    st.markdown(table_html, unsafe_allow_html=True)
+    
+    st.markdown("---")
+    col_sum1, col_sum2 = st.columns(2)
+    with col_sum1:
+        st.markdown(f"**หูขวา:** {results['summary']['right_ear']}")
+    with col_sum2:
+        st.markdown(f"**หูซ้าย:** {results['summary']['left_ear']}")
+    
+    if results['advice']:
+        st.markdown(f"""
+        <div class="alert alert-warning" style="background-color: var(--warning-bg-color); padding: 15px; border-radius: 5px; margin-top: 10px;">
+            <strong>คำแนะนำ:</strong> {results['advice']}
+        </div>
+        """, unsafe_allow_html=True)
 
 def display_performance_report_lung(person_data):
-    # ... (โค้ดของ display_performance_report_lung) ...
-    pass # Placeholder
+    summary, advice, raw_data = interpret_lung_capacity(person_data)
+    
+    # Display Data Table
+    lung_items = [
+        ("FVC (ความจุรอดชีวิต)", raw_data['fvc_pred'], raw_data['fvc_act'], raw_data['fvc_per']),
+        ("FEV1 (ปริมาตรหายใจออกใน 1 วินาทีแรก)", raw_data['fev1_pred'], raw_data['fev1_act'], raw_data['fev1_per']),
+        ("FEV1/FVC Ratio", "-", raw_data['ratio'], "-")
+    ]
+    
+    html_content = """
+    <div class='table-container'>
+    <table class='styled-df-table'>
+        <thead>
+            <tr>
+                <th style='width: 40%;'>รายการ (Parameter)</th>
+                <th>ค่ามาตรฐาน (Predicted)</th>
+                <th>ค่าที่วัดได้ (Actual)</th>
+                <th>ร้อยละ (% Predicted)</th>
+            </tr>
+        </thead>
+        <tbody>
+    """
+    for label, pred, act, per in lung_items:
+        html_content += f"<tr><td>{label}</td><td>{pred}</td><td>{act}</td><td>{per}</td></tr>"
+    html_content += "</tbody></table></div>"
+    
+    st.markdown(html_content, unsafe_allow_html=True)
+    
+    st.markdown("---")
+    st.markdown(f"**ผลการแปลผล:** {summary}")
+    if advice:
+        st.markdown(f"**คำแนะนำ:** {advice}")
 
 def display_performance_report_vision(person_data):
-    # ... (โค้ดของ display_performance_report_vision) ...
-    pass # Placeholder
+    render_vision_details_table(person_data)
 
 def display_performance_report(person_data, report_type, all_person_history_df=None):
     with st.container(border=True):
         if report_type == 'lung':
+            render_section_header("ผลตรวจสมรรถภาพปอด (Lung Function Test)")
             display_performance_report_lung(person_data)
         elif report_type == 'vision':
+            render_section_header("ผลตรวจการมองเห็น (Vision Test)")
             display_performance_report_vision(person_data)
         elif report_type == 'hearing':
+            render_section_header("ผลตรวจการได้ยิน (Audiometry)")
             display_performance_report_hearing(person_data, all_person_history_df)
 
 def display_main_report(person_data, all_person_history_df):
