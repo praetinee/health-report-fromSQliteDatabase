@@ -3,6 +3,7 @@ import pandas as pd
 import re
 import html
 import numpy as np
+import textwrap
 from collections import OrderedDict
 from datetime import datetime
 import json
@@ -216,7 +217,8 @@ def display_common_header(person_data):
         bmi_desc = interpret_bmi(bmi)
 
     # แก้ไข: เปลี่ยน Info Card เป็น CSS Grid (div) และปรับข้อความฝั่งขวา
-    html_content = f"""
+    # ใช้ textwrap.dedent เพื่อลบ indentation ที่ทำให้ st.markdown แสดงเป็น code block
+    html_content = textwrap.dedent(f"""
 <div class="report-header">
     <div class="header-left">
         <h2>รายงานผลการตรวจสุขภาพ</h2>
@@ -278,12 +280,12 @@ def display_common_header(person_data):
         </div>
     </div>
 </div>
-"""
+""")
     st.markdown(html_content, unsafe_allow_html=True)
 
 def inject_custom_css():
-    # ใช้ string literal แบบไม่มี indentation เพื่อความปลอดภัย
-    css_content = """
+    # ใช้ textwrap.dedent เพื่อความปลอดภัยและสะอาดตา
+    css_content = textwrap.dedent("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap');
         
@@ -422,7 +424,7 @@ def inject_custom_css():
         .styled-df-table tbody td { text-align: center; }
         .styled-df-table tbody td:first-child { text-align: left; }
     </style>
-    """
+    """)
     st.markdown(css_content, unsafe_allow_html=True)
 
 # --- Functions for displaying specific report sections (Restored Logic) ---
@@ -483,8 +485,8 @@ def display_performance_report_hearing(person_data, all_person_history_df):
     
     st.markdown("---")
     col1, col2 = st.columns(2)
-    with col1: st.write(f"**หูขวา:** {results['summary']['right_ear']}")
-    with col2: st.write(f"**หูซ้าย:** {results['summary']['left_ear']}")
+    with col1: st.write(f"**หูขวา:** {results['summary']['right']}")
+    with col2: st.write(f"**หูซ้าย:** {results['summary']['left']}")
     
     if results['advice']:
         st.warning(f"คำแนะนำ: {results['advice']}")
@@ -493,9 +495,9 @@ def display_performance_report_lung(person_data):
     summary, advice, raw_data = interpret_lung_capacity(person_data)
     
     lung_items = [
-        ("FVC (ความจุรอดชีวิต)", raw_data['fvc_pred'], raw_data['fvc_act'], raw_data['fvc_per']),
-        ("FEV1 (ปริมาตรหายใจออกใน 1 วินาทีแรก)", raw_data['fev1_pred'], raw_data['fev1_act'], raw_data['fev1_per']),
-        ("FEV1/FVC Ratio", "-", raw_data['ratio'], "-")
+        ("FVC (ความจุรอดชีวิต)", raw_data['FVC predic'], raw_data['FVC'], raw_data['FVC %']),
+        ("FEV1 (ปริมาตรหายใจออกใน 1 วินาทีแรก)", raw_data['FEV1 predic'], raw_data['FEV1'], raw_data['FEV1 %']),
+        ("FEV1/FVC Ratio", "-", raw_data['FEV1/FVC %'], "-")
     ]
     
     html_content = """
