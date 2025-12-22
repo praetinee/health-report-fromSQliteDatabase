@@ -128,7 +128,8 @@ def interpret_stool_cs(value):
     return "พบการติดเชื้อในอุจจาระ ให้พบแพทย์เพื่อตรวจรักษาเพิ่มเติม"
 
 def render_stool_html_table(exam, cs):
-    html_content = f"""
+    # แก้ไข: เพิ่ม textwrap.dedent และ .strip() เพื่อลบช่องว่างนำหน้าที่ทำให้แสดงผลผิดเป็น Code Block
+    html_content = textwrap.dedent(f"""
     <div class="table-container">
         <table class="info-detail-table">
             <tbody>
@@ -137,7 +138,7 @@ def render_stool_html_table(exam, cs):
             </tbody>
         </table>
     </div>
-    """
+    """).strip()
     return html_content
 
 def get_ekg_col_name(year):
@@ -217,7 +218,7 @@ def display_common_header(person_data):
         bmi_desc = interpret_bmi(bmi)
 
     # แก้ไข: เปลี่ยน Info Card เป็น CSS Grid (div) และปรับข้อความฝั่งขวา
-    # ใช้ textwrap.dedent เพื่อลบ indentation ที่ทำให้ st.markdown แสดงเป็น code block
+    # ใช้ textwrap.dedent และ .strip() เพื่อลบ indentation ที่ทำให้ st.markdown แสดงเป็น code block
     html_content = textwrap.dedent(f"""
 <div class="report-header">
     <div class="header-left">
@@ -280,7 +281,7 @@ def display_common_header(person_data):
         </div>
     </div>
 </div>
-""")
+""").strip()
     st.markdown(html_content, unsafe_allow_html=True)
 
 def inject_custom_css():
