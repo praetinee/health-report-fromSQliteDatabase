@@ -215,7 +215,6 @@ def display_common_header(person_data):
         bmi_val_str = f"{bmi:.1f} kg/m²"
         bmi_desc = interpret_bmi(bmi)
 
-    # ปรับ Header ให้ Responsive (Flex wrap)
     st.markdown(f"""
     <div class="report-header">
         <div class="header-left">
@@ -282,202 +281,66 @@ def inject_custom_css():
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap');
         
-        /* Force font family & Base Colors */
-        .stApp, [data-testid="stAppViewContainer"] {
-            font-family: 'Sarabun', sans-serif !important;
-        }
-        h1, h2, h3, h4, h5, h6, p, div, span, label, button, input, th, td {
-            font-family: 'Sarabun', sans-serif !important;
-            color: var(--text-color); /* ใช้ตัวแปรธีมเป็นหลัก */
-        }
-        
-        /* --- Define Theme Colors for Icons --- */
         :root {
-            --icon-color: #00796B; /* Default Teal for Light Mode */
+            --abnormal-bg-color: rgba(220, 53, 69, 0.1);
+            --abnormal-text-color: #C53030;
+            --normal-bg-color: rgba(40, 167, 69, 0.1);
+            --normal-text-color: #1E4620;
+            --warning-bg-color: rgba(255, 193, 7, 0.1);
+            --neutral-bg-color: rgba(108, 117, 125, 0.1);
+            --neutral-text-color: #4A5568;
         }
         
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --icon-color: #80cbc4; /* Lighter Teal for Dark Mode */
-            }
+        html, body, [class*="st-"], .st-emotion-cache-10trblm, h1, h2, h3, h4, h5, h6 {
+            font-family: 'Sarabun', sans-serif !important;
         }
-
-        /* Responsive Headings */
         h4 {
-            font-size: clamp(1.1rem, 4vw, 1.25rem);
+            font-size: 1.25rem;
             font-weight: 600;
-            border-bottom: 2px solid var(--secondary-background-color);
+            border-bottom: 2px solid #ddd;
             padding-bottom: 10px;
-            margin-top: 30px;
-            margin-bottom: 20px;
+            margin-top: 40px;
+            margin-bottom: 24px;
         }
         h5.section-subtitle {
             font-weight: 600;
             margin-top: 1.5rem;
             margin-bottom: 0.75rem;
-            opacity: 0.9;
+            opacity: 0.7;
         }
 
-        /* Responsive Report Header */
-        .report-header { 
-            display: flex; 
-            flex-direction: row; 
-            justify-content: space-between; 
-            align-items: flex-start; 
-            margin-bottom: 2rem; 
-            flex-wrap: wrap; 
-            gap: 1.5rem;
-        }
-        .header-left { flex: 1 1 300px; }
-        .header-right { flex: 1 1 400px; }
-        
-        .header-left h2 { 
-            font-size: clamp(1.5rem, 5vw, 2rem); 
-            margin-bottom: 0.5rem;
-            font-weight: 700;
-        }
-        .header-left p { opacity: 0.8; margin: 0; font-size: 0.95rem; }
+        .report-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; }
+        .header-left h2 { font-size: 2rem; margin-bottom: 0.25rem;}
+        .header-left p { opacity: 0.7; margin: 0; }
+        .info-card { background-color: #f8f9fa; border-radius: 8px; padding: 1rem; display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem 1.5rem; min-width: 400px; border: 1px solid #dee2e6; }
+        .info-card-item { font-size: 0.9rem; }
+        .info-card-item span { opacity: 0.7; margin-right: 8px; }
 
-        /* Responsive Info Card */
-        .info-card { 
-            background-color: var(--secondary-background-color); 
-            border-radius: 8px; 
-            padding: 1.25rem; 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); 
-            gap: 0.75rem 1.5rem; 
-            width: 100%; 
-            border: 1px solid rgba(128, 128, 128, 0.2); 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-        .info-card-item { font-size: 0.9rem; word-break: break-word; }
-        .info-card-item span { opacity: 0.7; margin-right: 8px; font-weight: 600; }
-
-        /* Responsive Vitals Grid */
-        .vitals-grid { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; /* Fixed 2 columns */
-            gap: 1.5rem; 
-            margin-bottom: 2rem; 
-        }
-        .vital-card { 
-            background-color: var(--background-color); 
-            border-radius: 12px; 
-            padding: 1.25rem; 
-            display: flex; 
-            align-items: center; 
-            gap: 1rem; 
-            border: 1px solid rgba(128, 128, 128, 0.2); 
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
-        }
-        .vital-icon svg { 
-            stroke: var(--icon-color) !important; /* ใช้ตัวแปรสีที่ปรับตามธีม */
-            width: 32px; height: 32px;
-        }
+        .vitals-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+        .vital-card { background-color: #fff; border-radius: 12px; padding: 1rem; display: flex; align-items: center; gap: 1rem; border: 1px solid #e0e0e0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        .vital-icon svg { color: #00796B; }
         .vital-data { display: flex; flex-direction: column; }
         .vital-label { font-size: 0.8rem; opacity: 0.7; }
-        .vital-value { font-size: 1.25rem; font-weight: 700; line-height: 1.2; white-space: nowrap; }
+        .vital-value { font-size: 1.2rem; font-weight: 700; line-height: 1.2; white-space: nowrap;}
         .vital-sub-value { font-size: 0.8rem; opacity: 0.6; }
 
-        /* Scrollable Tables */
-        .table-container { 
-            overflow-x: auto; 
-            -webkit-overflow-scrolling: touch; 
-            border-radius: 4px;
-            margin-bottom: 1rem;
-            border: 1px solid rgba(128, 128, 128, 0.1);
-        }
-        .lab-table, .info-detail-table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            font-size: 0.95rem; 
-            min-width: 600px; 
-        }
-        .lab-table th, .lab-table td, .info-detail-table th, .info-detail-table td { 
-            padding: 12px 15px; 
-            border-bottom: 1px solid rgba(128, 128, 128, 0.2); 
-        }
-        .lab-table th, .info-detail-table th { 
-            font-weight: 600; 
-            text-align: left; 
-            opacity: 0.9; 
-            background-color: var(--secondary-background-color); 
-        }
+        .table-container { overflow-x: auto; }
+        .lab-table, .info-detail-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .lab-table th, .lab-table td, .info-detail-table th, .info-detail-table td { padding: 12px 15px; border: 1px solid transparent; border-bottom: 1px solid #e0e0e0; }
+        .lab-table th, .info-detail-table th { font-weight: 600; text-align: left; opacity: 0.7; }
+        .lab-table thead th { background-color: rgba(128, 128, 128, 0.1); }
+        .lab-table td:nth-child(2) { text-align: center; }
+        .lab-table .abnormal-row { background-color: var(--abnormal-bg-color); color: var(--abnormal-text-color); font-weight: 600; }
+        .info-detail-table th { width: 35%; }
         
-        /* Recommendation Box */
-        .recommendation-container { 
-            border-left: 5px solid var(--icon-color); /* ใช้สีเดียวกับไอคอน */
-            padding: 1.5rem; 
-            border-radius: 0 8px 8px 0; 
-            background-color: var(--secondary-background-color); 
-        }
+        .recommendation-container { border-left: 5px solid #00796B; padding: 1.5rem; border-radius: 0 8px 8px 0; background-color: #fff; }
         .recommendation-container ul { padding-left: 20px; }
         .recommendation-container li { margin-bottom: 0.5rem; }
 
-        /* Custom Advice Boxes */
         .custom-advice-box { padding: 1rem; border-radius: 8px; margin-top: 1rem; border: 1px solid transparent; font-weight: 600; }
-
-        /* -----------------------------------------------------------
-           COLOR THEMES (รองรับทั้ง Light และ Dark Mode)
-           ----------------------------------------------------------- */
-        
-        /* Light Mode Defaults */
-        .lab-table .abnormal-row { 
-            background-color: rgba(255, 0, 0, 0.05); 
-            color: #c62828; /* แดงเข้ม */
-        }
-        .immune-box { 
-            background-color: rgba(40, 167, 69, 0.1); 
-            color: #2e7d32; 
-            border-color: rgba(40, 167, 69, 0.2); 
-        }
-        .no-immune-box { 
-            background-color: rgba(220, 53, 69, 0.1); 
-            color: #c62828; 
-            border-color: rgba(220, 53, 69, 0.2); 
-        }
-        .warning-box { 
-            background-color: rgba(255, 193, 7, 0.1); 
-            color: #ef6c00; 
-            border-color: rgba(255, 193, 7, 0.2); 
-        }
-
-        /* Dark Mode Overrides (เปลี่ยนสีให้อ่านง่ายบนพื้นดำ) */
-        @media (prefers-color-scheme: dark) {
-            .lab-table .abnormal-row { 
-                background-color: rgba(255, 82, 82, 0.15) !important; 
-                color: #ff8a80 !important; /* แดงอ่อน */
-            }
-            .immune-box { 
-                background-color: rgba(129, 199, 132, 0.15) !important;
-                color: #a5d6a7 !important; /* เขียวอ่อน */
-                border-color: rgba(129, 199, 132, 0.3) !important;
-            }
-            .no-immune-box { 
-                background-color: rgba(229, 115, 115, 0.15) !important;
-                color: #ef9a9a !important; /* แดงอ่อน */
-                border-color: rgba(229, 115, 115, 0.3) !important;
-            }
-            .warning-box { 
-                background-color: rgba(255, 183, 77, 0.15) !important;
-                color: #ffcc80 !important; /* ส้มอ่อน */
-                border-color: rgba(255, 183, 77, 0.3) !important;
-            }
-            /* ปรับสีเส้นขอบให้สว่างขึ้นเล็กน้อย */
-            .info-card, .vital-card, .table-container, .lab-table th, .lab-table td {
-                border-color: rgba(255, 255, 255, 0.1) !important;
-            }
-        }
-
-        /* Mobile specific adjustments */
-        @media (max-width: 576px) {
-            h4 { margin-top: 20px; font-size: 1.1rem; }
-            .report-header { flex-direction: column; gap: 1rem; }
-            .info-card { grid-template-columns: 1fr; }
-            .vitals-grid { grid-template-columns: 1fr; } 
-            .vital-card { padding: 1rem; }
-            .vital-value { font-size: 1.1rem; }
-        }
+        .immune-box { background-color: var(--normal-bg-color); color: #2E7D32; border-color: rgba(40, 167, 69, 0.2); }
+        .no-immune-box { background-color: var(--abnormal-bg-color); color: #C62828; border-color: rgba(220, 53, 69, 0.2); }
+        .warning-box { background-color: var(--warning-bg-color); color: #AF6C00; border-color: rgba(255, 193, 7, 0.2); }
     </style>
     """, unsafe_allow_html=True)
 
@@ -562,3 +425,8 @@ def display_main_report(person_data, all_person_history_df):
                     {advice}
                 </div>
                 """, unsafe_allow_html=True)
+
+    with st.container(border=True):
+        render_section_header("สรุปและคำแนะนำการปฏิบัติตัว (Summary & Recommendations)")
+        recommendations_html = generate_comprehensive_recommendations(person_data)
+        st.markdown(f"<div class='recommendation-container'>{recommendations_html}</div>", unsafe_allow_html=True)
