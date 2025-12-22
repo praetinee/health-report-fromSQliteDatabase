@@ -370,6 +370,55 @@ def display_main_report(person_data, all_person_history_df):
     blood_config = [("น้ำตาลในเลือด (FBS)", "FBS", "74 - 106 mg/dl", 74, 106), ("กรดยูริก (Uric Acid)", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2), ("การทำงานของเอนไซม์ตับ (ALK)", "ALP", "30 - 120 U/L", 30, 120), ("การทำงานของเอนไซม์ตับ (SGOT)", "SGOT", "< 37 U/L", None, 37), ("การทำงานของเอนไซม์ตับ (SGPT)", "SGPT", "< 41 U/L", None, 41), ("คลอเรสเตอรอล (CHOL)", "CHOL", "150 - 200 mg/dl", 150, 200), ("ไตรกลีเซอไรด์ (TGL)", "TGL", "35 - 150 mg/dl", 35, 150), ("ไขมันดี (HDL)", "HDL", "> 40 mg/dl", 40, None, True), ("ไขมันเลว (LDL)", "LDL", "0 - 160 mg/dl", 0, 160), ("การทำงานของไต (BUN)", "BUN", "7.9 - 20 mg/dl", 7.9, 20), ("การทำงานของไต (Cr)", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17), ("ประสิทธิภาพการกรองของไต (GFR)", "GFR", "> 60 mL/min", 60, None, True)]
     blood_rows = [([(label, is_abn), (result, is_abn), (norm, is_abn)]) for label, col, norm, low, high, *opt in blood_config for higher in [opt[0] if opt else False] for val in [get_float(col, person)] for result, is_abn in [flag(val, low, high, higher)]]
 
+    # --- เพิ่มส่วน Physical Examination (ให้เหมือนรายงานกระดาษ) ---
+    with st.container(border=True):
+        render_section_header("ผลการตรวจร่างกาย (Physical Examination)")
+        
+        # ดึงค่าเพื่อแสดงในตาราง
+        weight = get_float('น้ำหนัก', person)
+        height = get_float('ส่วนสูง', person)
+        bmi_val, bmi_abn = "-", False
+        if weight and height:
+            bmi = weight / ((height / 100) ** 2)
+            bmi_val = f"{bmi:.1f}"
+            bmi_abn = not (18.5 <= bmi < 25)
+
+        try:
+            sbp, dbp = float(person.get("SBP", 0)), float(person.get("DBP", 0))
+            bp_val = f"{int(sbp)}/{int(dbp)}"
+            bp_abn = (sbp >= 140 or dbp >= 90)
+        except:
+            bp_val, bp_abn = "-", False
+
+        pulse_val = str(int(float(person.get('pulse', 0)))) if get_float('pulse', person) else "-"
+        pulse_abn = False
+        if pulse_val != "-":
+            p = float(pulse_val)
+            if p < 60 or p > 100: pulse_abn = True
+            
+        waist = person.get('รอบเอว', '-')
+        
+        phy_data = [
+            ("น้ำหนัก (Weight)", f"{weight if weight else '-'} kg", "-"),
+            ("ส่วนสูง (Height)", f"{height if height else '-'} cm", "-"),
+            ("ดัชนีมวลกาย (BMI)", bmi_val, "18.5 - 22.9 kg/m²"),
+            ("รอบเอว (Waist)", f"{waist} cm", "ช < 90, ญ < 80"),
+            ("ความดันโลหิต (Blood Pressure)", bp_val, "< 120/80 mmHg"),
+            ("ชีพจร (Pulse)", f"{pulse_val} bpm", "60 - 100 bpm")
+        ]
+        
+        # สร้าง row สำหรับ render_lab_table_html โดยใช้ flag logic manual นิดหน่อยเพราะ data format ต่างกัน
+        phy_rows = []
+        for label, res, norm in phy_data:
+            is_abn = False
+            if "BMI" in label: is_abn = bmi_abn
+            elif "Pressure" in label: is_abn = bp_abn
+            elif "Pulse" in label: is_abn = pulse_abn
+            phy_rows.append([ (label, is_abn), (res, is_abn), (norm, is_abn) ])
+
+        st.markdown(render_lab_table_html("สัญญาณชีพและสัดส่วนร่างกาย", ["รายการ", "ผลตรวจ", "ค่าปกติ"], phy_rows), unsafe_allow_html=True)
+
+
     with st.container(border=True):
         render_section_header("ผลการตรวจทางห้องปฏิบัติการ (Laboratory Results)")
         col1, col2 = st.columns(2)
