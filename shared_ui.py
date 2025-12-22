@@ -215,35 +215,27 @@ def display_common_header(person_data):
         bmi_val_str = f"{bmi:.1f} kg/m²"
         bmi_desc = interpret_bmi(bmi)
 
-    # แก้ไข: สร้าง HTML string แบบชิดซ้าย (No indentation) เพื่อป้องกัน Streamlit มองเป็น Code block
-    # ปรับ Layout: ฝั่งซ้ายมี Title และ InfoCard, ฝั่งขวามีชื่อโรงพยาบาลและเบอร์โทร
+    # แก้ไข: ใช้ CSS Grid แทน Table ใน Info Card (ฝั่งซ้าย)
+    # และปรับแก้ข้อความฝั่งขวาตามที่ user ต้องการ
     html_content = f"""
 <div class="report-header">
     <div class="header-left">
         <h2>รายงานผลการตรวจสุขภาพ</h2>
-        <div class="info-card-wrapper">
-            <table class="info-card-table">
-                <colgroup>
-                    <col style="width: 40%;">
-                    <col style="width: 35%;">
-                    <col style="width: 25%;">
-                </colgroup>
-                <tr>
-                    <td><span class="label">ชื่อ-สกุล:</span> {name}</td>
-                    <td><span class="label">เพศ:</span> {sex}</td>
-                    <td style="text-align: right;"><span class="label">อายุ:</span> {age} ปี</td>
-                </tr>
-                <tr>
-                    <td><span class="label">HN:</span> {hn}</td>
-                    <td><span class="label">หน่วยงาน:</span> {department}</td>
-                    <td style="text-align: right;"><span class="label">วันที่ตรวจ:</span> {check_date}</td>
-                </tr>
-            </table>
+        <div class="info-card-grid">
+            <div class="info-item"><b>ชื่อ-สกุล:</b> {name}</div>
+            <div class="info-item"><b>เพศ:</b> {sex}</div>
+            <div class="info-item"><b>อายุ:</b> {age} ปี</div>
+            
+            <div class="info-item"><b>HN:</b> {hn}</div>
+            <div class="info-item"><b>หน่วยงาน:</b> {department}</div>
+            <div class="info-item"><b>วันที่ตรวจ:</b> {check_date}</div>
         </div>
     </div>
     <div class="header-right">
-        <p class="hospital-name">คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย</p>
-        <p>ติดต่อกลุ่มงานอาชีวเวชกรรม โทร 053 921 199 ต่อ 167</p>
+        <p class="hospital-name">คลินิกตรวจสุขภาพ</p>
+        <p>กลุ่มงานอาชีวเวชกรรม</p>
+        <p>โรงพยาบาลสันทราย</p>
+        <p>โทร 053 921 199 ต่อ 167</p>
     </div>
 </div>
 
@@ -342,51 +334,46 @@ def inject_custom_css():
             gap: 20px; 
         }
         .header-left { 
-            flex: 2; /* ให้พื้นที่ฝั่งซ้าย (ชื่อ+ตาราง) มากกว่า */
-            min-width: 300px;
+            flex: 2; 
+            min-width: 350px;
         }
         .header-left h2 { font-size: 2rem; margin-bottom: 15px; color: #333; }
         
         .header-right {
-            flex: 1; /* ฝั่งขวา (โรงพยาบาล) พื้นที่น้อยกว่า */
+            flex: 1; 
             display: flex;
             flex-direction: column;
             justify-content: flex-start;
             text-align: right;
-            padding-top: 10px; /* ดันลงมานิดหน่อยให้สวยงาม */
+            padding-top: 10px; 
         }
-        .header-right p { opacity: 0.7; margin: 2px 0; color: #555; }
-        .header-right .hospital-name { font-weight: 600; font-size: 1.1rem; color: #00796B; opacity: 1; }
+        .header-right p { opacity: 0.8; margin: 2px 0; color: #333; font-weight: 500; }
+        .header-right .hospital-name { font-weight: 700; font-size: 1.1rem; color: #00796B; opacity: 1; }
 
-        /* Info Card Table */
-        .info-card-wrapper {
+        /* Info Card Grid (No Table!) */
+        .info-card-grid {
             background-color: #f8f9fa; 
             border-radius: 8px; 
-            padding: 12px 15px; 
+            padding: 15px; 
             width: 100%;
             border: 1px solid #dee2e6; 
             box-sizing: border-box;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            display: grid;
+            /* 3 Columns: 40% 35% 25% */
+            grid-template-columns: 40% 35% 25%;
+            grid-gap: 8px; /* space between rows */
         }
 
-        .info-card-table {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
-        }
-
-        .info-card-table td {
-            padding: 6px 4px;
-            vertical-align: middle;
+        .info-item {
             font-size: 0.95rem;
             color: #333;
-            border: none;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
-
-        .info-card-table .label {
+        
+        .info-item b {
             opacity: 0.7;
             margin-right: 5px;
             color: #555;
