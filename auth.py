@@ -31,8 +31,10 @@ def check_user_credentials(df, fname, lname, cid):
     i_lname = clean_string(lname)
     i_id = clean_string(cid)
 
-    if i_fname.lower() == "admin" and i_lname.lower() == "admin" and i_id.lower() == "admin":
+    # --- แก้ไขกลับคืน: เข้า Admin ด้วยการพิมพ์ชื่อ "admin" อย่างเดียว ---
+    if i_fname.lower() == "admin":
         return True, "เข้าสู่ระบบผู้ดูแลระบบ", {"role": "admin", "name": "Administrator"}
+    # -----------------------------------------------------------
 
     if not i_fname or not i_lname or not i_id:
         return False, "กรุณากรอกข้อมูลให้ครบทุกช่อง", None
