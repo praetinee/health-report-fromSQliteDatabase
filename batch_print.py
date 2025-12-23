@@ -188,17 +188,31 @@ def display_print_center_page(df):
     st.title("🖨️ ศูนย์จัดการพิมพ์รายงาน (Print Center)")
     st.markdown("---")
     
-    # --- CSS Styling (Modern & Clean) ---
+    # --- CSS Styling (Modern & Clean & Responsive) ---
     st.markdown("""
     <style>
-        /* ปรับแต่งปุ่มเพิ่ม */
+        /* ปรับแต่งปุ่มเพิ่ม (Primary) ให้สวยงามและยืดหยุ่น */
         div[data-testid="stButton"] > button[kind="primary"] {
             background-color: #1B5E20 !important;
             color: #ffffff !important;
             border: none;
-            padding: 0.5rem 1rem;
+            padding: 0.6rem 1.2rem;
             border-radius: 8px;
             width: 100%;
+            font-size: 1rem;
+            font-weight: 600;
+            min-height: 48px; /* Touch target size */
+            transition: transform 0.1s, box-shadow 0.1s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        div[data-testid="stButton"] > button[kind="primary"]:hover {
+            background-color: #2E7D32 !important;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            transform: translateY(-1px);
+        }
+        div[data-testid="stButton"] > button[kind="primary"]:active {
+            transform: translateY(1px);
+            box-shadow: none;
         }
         
         /* สไตล์ตารางแบบ Custom Row */
@@ -206,7 +220,7 @@ def display_print_center_page(df):
             background-color: var(--secondary-background-color);
             border: 1px solid rgba(128,128,128,0.1);
             border-radius: 8px;
-            padding: 8px 15px;
+            padding: 10px 15px;
             margin-bottom: 8px;
             transition: background-color 0.2s;
         }
@@ -218,8 +232,8 @@ def display_print_center_page(df):
         .print-row-header {
             background-color: var(--background-color);
             border-bottom: 2px solid var(--text-color);
-            padding: 10px 15px;
-            margin-bottom: 10px;
+            padding: 12px 15px;
+            margin-bottom: 12px;
             font-weight: bold;
             font-size: 0.95rem;
             opacity: 0.9;
@@ -227,45 +241,47 @@ def display_print_center_page(df):
         
         .status-badge {
             display: inline-block;
-            padding: 2px 8px;
-            border-radius: 4px;
+            padding: 4px 10px;
+            border-radius: 6px;
             font-size: 0.8rem;
             font-weight: bold;
+            white-space: nowrap;
         }
-        .status-green { background-color: #e8f5e9; color: #1b5e20; }
-        .status-orange { background-color: #fff3e0; color: #e65100; }
-        .status-red { background-color: #ffebee; color: #c62828; }
-        .status-blue { background-color: #e3f2fd; color: #0d47a1; }
-        .status-gray { background-color: #f5f5f5; color: #616161; }
+        .status-green { background-color: rgba(76, 175, 80, 0.15); color: #1b5e20; border: 1px solid rgba(76, 175, 80, 0.2); }
+        .status-orange { background-color: rgba(255, 152, 0, 0.15); color: #e65100; border: 1px solid rgba(255, 152, 0, 0.2); }
+        .status-red { background-color: rgba(244, 67, 54, 0.15); color: #c62828; border: 1px solid rgba(244, 67, 54, 0.2); }
+        .status-blue { background-color: rgba(33, 150, 243, 0.15); color: #0d47a1; border: 1px solid rgba(33, 150, 243, 0.2); }
+        .status-gray { background-color: rgba(158, 158, 158, 0.15); color: var(--text-color); border: 1px solid rgba(158, 158, 158, 0.2); }
 
-        /* ปรับปุ่มลบให้ดูดี (Gray/Neutral Theme) */
+        /* ปรับปุ่มลบให้ดูดี (Theme Adaptive) */
         button[kind="secondary"] {
-            border: 1px solid #e0e0e0 !important; /* ขอบสีเทาอ่อน */
-            color: #757575 !important; /* ไอคอนสีเทาเข้ม */
+            border: 1px solid rgba(128, 128, 128, 0.2) !important;
+            color: var(--text-color) !important; /* ปรับตาม Theme */
+            opacity: 0.7;
             background-color: transparent !important;
             padding: 0px !important;
-            font-size: 0.8rem !important;
-            min-height: 32px !important;
-            height: 32px !important;
+            font-size: 1rem !important;
+            min-height: 36px !important;
+            height: 36px !important;
             width: 100% !important;
             display: flex !important;
             justify-content: center !important;
             align-items: center !important;
             transition: all 0.2s ease !important;
+            border-radius: 6px !important;
         }
         button[kind="secondary"]:hover {
-            background-color: #f5f5f5 !important; /* พื้นหลังเทาอ่อนเมื่อชี้ */
-            border-color: #bdbdbd !important; /* ขอบเข้มขึ้นเล็กน้อย */
-            color: #424242 !important; /* ไอคอนเข้มขึ้น */
-            transform: scale(1.05); /* ขยายเล็กน้อย */
+            background-color: rgba(128, 128, 128, 0.1) !important;
+            opacity: 1;
+            border-color: var(--text-color) !important;
+            transform: scale(1.05);
         }
         
-        /* เพิ่ม Flex container ให้ปุ่มลบอยู่กลางคอลัมน์ */
-        div[data-testid="column"]:nth-of-type(1) div[data-testid="stButton"] {
+        /* จัดกึ่งกลาง Flex Items */
+        div[data-testid="column"] {
             display: flex;
+            flex-direction: column;
             justify-content: center;
-            align-items: center;
-            height: 100%;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -310,6 +326,7 @@ def display_print_center_page(df):
             st.error(msg['text'])
         del st.session_state.bp_action_msg
     
+    # Input Row
     c1, c2, c3 = st.columns([2, 1.5, 1.5])
     with c1:
         all_names = sorted(df['ชื่อ-สกุล'].dropna().unique().tolist())
@@ -319,7 +336,8 @@ def display_print_center_page(df):
     with c3:
         st.text_input("ค้นหาด้วยเลขบัตรฯ", key="bp_cid_search", placeholder="พิมพ์เลขบัตร")
 
-    col_add, _, _ = st.columns([2, 2, 4])
+    # Button Row: ใช้สัดส่วน 2:3 เพื่อให้ปุ่มตรงกับช่อง "ชื่อ-สกุล" ด้านบน (2 ส่วนจาก 5 ส่วน)
+    col_add, _ = st.columns([2, 3])
     with col_add:
         st.button("➕ เพิ่มลงรายการ", use_container_width=True, on_click=add_patient_to_list_callback, args=(df,))
     
