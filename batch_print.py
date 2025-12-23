@@ -194,6 +194,11 @@ def add_patient_to_list_callback(df):
         st.session_state.bp_name_search = "(ไม่ระบุ)"
         st.session_state.bp_hn_search = ""
         st.session_state.bp_cid_search = ""
+        
+        # *** เพิ่มการ Reset Filters อื่นๆ ด้วย เพื่อให้ตารางแสดงเฉพาะคนที่เลือกเท่านั้น ***
+        st.session_state.bp_dept_filter = []
+        st.session_state.bp_date_filter = "(ทั้งหมด)"
+        
     else:
         st.session_state.bp_action_msg = {"type": "error", "text": "❌ ไม่พบข้อมูล หรือไม่ได้ระบุเงื่อนไขการค้นหา"}
 
@@ -374,13 +379,16 @@ def display_print_center_page(df):
     manual_hns = list(st.session_state.bp_manual_hns)
     manual_df = df[df['HN'].isin(manual_hns)].copy()
     
-    # C. รวม A และ B
-    if not filter_active and not manual_hns:
-        # ถ้าไม่ได้กรองอะไรและไม่ได้กดบวกใครมาเลย -> แสดงตารางว่าง (Default empty)
-        display_pool = pd.DataFrame(columns=df.columns)
-    else:
-        # รวมกันและตัดตัวซ้ำ
+    # C. รวม A และ B (Logic แก้ไขใหม่)
+    if filter_active:
+        # กรณีมีการค้นหา: แสดง รายการที่เลือกไว้ + ผลการค้นหา
         display_pool = pd.concat([manual_df, filtered_df]).drop_duplicates(subset=['HN'])
+    elif manual_hns:
+        # กรณีไม่ได้ค้นหา (หรือเคลียร์ช่องค้นหาแล้ว): แสดงเฉพาะรายการที่เลือกไว้เท่านั้น
+        display_pool = manual_df
+    else:
+        # กรณีเริ่มต้น (ไม่มีการค้นหา และยังไม่ได้เลือกใคร): แสดงตารางว่าง
+        display_pool = pd.DataFrame(columns=df.columns)
 
     # Process for Display
     display_pool = display_pool.sort_values(by=['Year'], ascending=False)
