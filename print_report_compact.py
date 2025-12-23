@@ -2,7 +2,7 @@ import pandas as pd
 from datetime import datetime
 import html
 
-# --- Helper Functions & Constants (Copy from print_report.py to be standalone) ---
+# --- Helper Functions & Constants ---
 
 RECOMMENDATION_TEXTS_CBC = {
     "C2": "รับประทานอาหารที่มีประโยชน์ (นม, ผักใบเขียว, ตับ, เนื้อสัตว์) พักผ่อนให้เพียงพอ หากมีอาการหน้ามืดให้พบแพทย์",
@@ -12,14 +12,6 @@ RECOMMENDATION_TEXTS_CBC = {
     "C9": "พบแพทย์หาสาเหตุภาวะโลหิตจาง และดูแลสุขภาพ",
     "C10": "พบแพทย์หาสาเหตุเกล็ดเลือดสูง",
     "C13": "รับประทานอาหารที่มีธาตุเหล็ก พักผ่อนให้เพียงพอ",
-}
-
-RECOMMENDATION_TEXTS_URINE = {
-    "E11": "หลีกเลี่ยงอาหารหวานจัด",
-    "E4": "ตรวจซ้ำ อาจปนเปื้อนประจำเดือน หากผิดปกติให้พบแพทย์",
-    "E10": "ตรวจซ้ำ หากผิดปกติให้พบแพทย์",
-    "F3": "",
-    "E2": "ดื่มน้ำมากๆ ไม่กลั้นปัสสาวะ หากมีไข้/ปวดเอวให้พบแพทย์",
 }
 
 def is_empty(val):
@@ -64,7 +56,7 @@ def interpret_ekg(val):
         return f"<span style='color:red;font-weight:bold;'>{val}</span>"
     return val
 
-# --- Compact CSS ---
+# --- Compact CSS (ออกแบบเพื่อให้อยู่ในหน้าเดียว) ---
 def get_compact_css():
     return """
     <style>
