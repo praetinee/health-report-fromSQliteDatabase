@@ -62,21 +62,33 @@ def authentication_flow(df):
     """หน้า Login แบบ Responsive และ Theme-Aware พร้อมโลโก้"""
     
     # CSS Style สำหรับหน้า Login
+    # ปรับปรุง: ใช้ Sarabun 100%, รองรับ Theme (var(--...)), และ Responsive
     login_style = """
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+        
+        /* บังคับใช้ Sarabun กับทุก Element */
+        html, body, [class*="st-"], h1, h2, h3, h4, h5, h6, p, div, span, input, button, label, .stTextInput > label, .stTextInput input {
+            font-family: 'Sarabun', sans-serif !important;
+        }
+
         .login-container {
             /* ลบกรอบพื้นหลังและเงาออก ให้เหลือแต่โครงสร้างจัดกึ่งกลาง */
             max-width: 500px;
+            width: 100%;
             margin: auto;
             padding: 0; /* ลด padding เพื่อให้ชิดกับ logo ยิ่งขึ้น */
         }
+        
         .login-header {
             text-align: center;
             color: #00B900; 
             margin-bottom: 1.5rem;
             margin-top: 0px; /* ลดระยะห่างด้านบนของ header */
             font-weight: bold;
+            font-size: 1.8rem;
         }
+        
         .stButton>button {
             width: 100%;
             border-radius: 50px;
@@ -86,16 +98,32 @@ def authentication_flow(df):
             background-color: #00B900 !important;
             color: white !important;
             border: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
         }
+        
         .stButton>button:hover {
             filter: brightness(1.1);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0,0,0,0.15);
         }
+        
         .logo-container {
             display: flex;
             justify-content: center;
             align-items: center;
             margin-bottom: 5px; /* ลดระยะห่างระหว่างโลโก้กับหัวข้อลง */
             width: 100%;
+        }
+
+        /* ปรับ Input fields ให้เข้ากับธีม */
+        .stTextInput input {
+            border-radius: 10px;
+        }
+        
+        /* รองรับ Dark Mode อัตโนมัติด้วย Streamlit Variables */
+        :root {
+            --primary-color: #00B900;
         }
     </style>
     """
@@ -166,8 +194,15 @@ def pdpa_consent_page():
     """หน้ายอมรับ PDPA ดีไซน์สวยงาม พร้อมข้อความที่กำหนด"""
     
     # CSS สำหรับหน้า PDPA
+    # ปรับปรุง: ใช้ Sarabun, Theme-aware variables, และ Responsive layout
     st.markdown("""
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+        
+        html, body, [class*="st-"], h1, h2, h3, h4, h5, h6, p, div, span, li {
+            font-family: 'Sarabun', sans-serif !important;
+        }
+
         .pdpa-card {
             background-color: var(--secondary-background-color);
             padding: 30px;
@@ -175,8 +210,11 @@ def pdpa_consent_page():
             box-shadow: 0 4px 20px rgba(0,0,0,0.08);
             border: 1px solid rgba(128,128,128,0.1);
             max-width: 800px;
+            width: 100%;
             margin: 20px auto;
+            color: var(--text-color);
         }
+        
         .pdpa-header {
             text-align: center;
             font-family: 'Sarabun', sans-serif;
@@ -187,6 +225,7 @@ def pdpa_consent_page():
             border-bottom: 1px solid rgba(128,128,128,0.2);
             padding-bottom: 15px;
         }
+        
         .pdpa-content {
             background-color: var(--background-color);
             padding: 25px;
@@ -199,15 +238,50 @@ def pdpa_consent_page():
             line-height: 1.8;
             color: var(--text-color);
         }
+        
         .pdpa-content p {
             margin-bottom: 15px;
         }
+        
         .pdpa-content ul {
             margin-bottom: 15px;
             padding-left: 25px;
         }
+        
         .pdpa-content strong {
             color: #00796B;
+            font-weight: 700;
+        }
+
+        /* ปรับแต่ง Scrollbar ให้สวยงามและเข้ากับธีม */
+        .pdpa-content::-webkit-scrollbar {
+            width: 8px;
+        }
+        .pdpa-content::-webkit-scrollbar-track {
+            background: var(--secondary-background-color);
+            border-radius: 4px;
+        }
+        .pdpa-content::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        .pdpa-content::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        /* Responsive Design สำหรับมือถือ */
+        @media (max-width: 600px) {
+            .pdpa-card {
+                padding: 15px;
+                margin: 10px auto;
+            }
+            .pdpa-content {
+                padding: 15px;
+                height: 350px;
+            }
+            .pdpa-header {
+                font-size: 18px;
+            }
         }
     </style>
     """, unsafe_allow_html=True)
