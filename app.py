@@ -112,6 +112,56 @@ def main_app(df):
     st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
     inject_custom_css()
 
+    # --- Inject Custom CSS สำหรับปุ่ม Sidebar โดยเฉพาะ ---
+    st.markdown("""
+    <style>
+        /* Styling เฉพาะปุ่ม Primary ใน Sidebar */
+        section[data-testid="stSidebar"] div[data-testid="stButton"] > button[kind="primary"] {
+            background: linear-gradient(90deg, #00C853 0%, #00796B 100%) !important;
+            color: #ffffff !important;
+            border: none !important;
+            padding: 10px 20px !important;
+            font-size: 16px !important;
+            font-weight: 700 !important;
+            border-radius: 50px !important;
+            box-shadow: 0 4px 15px rgba(0, 121, 107, 0.4), inset 0 2px 2px rgba(255, 255, 255, 0.3) !important;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+            letter-spacing: 0.5px !important;
+            width: 100%;
+            margin-bottom: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        section[data-testid="stSidebar"] div[data-testid="stButton"] > button[kind="primary"]:hover {
+            background: linear-gradient(90deg, #00E676 0%, #009688 100%) !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 8px 20px rgba(0, 121, 107, 0.5), inset 0 2px 2px rgba(255, 255, 255, 0.5) !important;
+        }
+        
+        section[data-testid="stSidebar"] div[data-testid="stButton"] > button[kind="primary"]:active {
+            transform: translateY(1px) !important;
+            box-shadow: 0 2px 5px rgba(0, 121, 107, 0.4) !important;
+        }
+
+        /* Shine Effect */
+        section[data-testid="stSidebar"] div[data-testid="stButton"] > button[kind="primary"]::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: 0.5s;
+        }
+        
+        section[data-testid="stSidebar"] div[data-testid="stButton"] > button[kind="primary"]:hover::after {
+            left: 100%;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
     if 'user_hn' not in st.session_state: 
         st.error("Error: No user data found in session.")
         st.stop()
@@ -182,8 +232,9 @@ def main_app(df):
         st.markdown("---")
         # ปุ่ม Print (แสดงเฉพาะเมื่อมีข้อมูล)
         if st.session_state.get("selected_row_found", False):
-            if st.button("พิมพ์รายงานสุขภาพ"): st.session_state.print_trigger = True
-            if st.button("พิมพ์รายงานสมรรถภาพ"): st.session_state.print_performance_trigger = True
+            # ปรับให้ใช้ type="primary" เพื่อรับ CSS สีเขียวหรูหรา
+            if st.button("🖨️ พิมพ์รายงานสุขภาพ", type="primary", use_container_width=True): st.session_state.print_trigger = True
+            if st.button("🖨️ พิมพ์รายงานสมรรถภาพ", type="primary", use_container_width=True): st.session_state.print_performance_trigger = True
         
         st.markdown("---")
         if st.button("ออกจากระบบ (Logout)"):
