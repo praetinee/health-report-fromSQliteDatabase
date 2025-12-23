@@ -65,13 +65,10 @@ def authentication_flow(df):
     login_style = """
     <style>
         .login-container {
-            background-color: var(--secondary-background-color);
-            padding: 2rem;
-            border-radius: 15px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            /* ลบกรอบพื้นหลังและเงาออก ให้เหลือแต่โครงสร้างจัดกึ่งกลาง */
             max-width: 500px;
             margin: auto;
-            border: 1px solid rgba(128, 128, 128, 0.2);
+            padding: 1rem 0;
         }
         .login-header {
             text-align: center;
@@ -125,7 +122,7 @@ def authentication_flow(df):
     c1, c2, c3 = st.columns([1, 6, 1])
     with c2:
         with st.container():
-            # ย้ายโลโก้ออกมาไว้นอก .login-container เพื่อไม่ให้มีกรอบครอบโลโก้
+            # ย้ายโลโก้ออกมาไว้นอก .login-container (แม้ตอนนี้ container จะใสแล้ว แต่แยกไว้ก็จัดระเบียบง่ายกว่า)
             st.markdown(logo_html, unsafe_allow_html=True)
 
             st.markdown("<div class='login-container'>", unsafe_allow_html=True)
