@@ -98,7 +98,7 @@ def authentication_flow(df):
             width: 100%;
         }
         .logo-img {
-            max-width: 100px; /* ลดขนาดรูปลงจาก 150px เป็น 100px */
+            max-width: 100px; /* ลดขนาดรูปลงตามคำขอ */
             height: auto;
             object-fit: contain;
         }
