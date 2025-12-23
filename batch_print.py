@@ -376,9 +376,8 @@ def display_print_center_page(df):
     
     # C. รวม A และ B
     if not filter_active and not manual_hns:
-        # ถ้าไม่ได้กรองอะไรและไม่ได้กดบวกใครมาเลย -> แสดงว่างๆ หรือแสดงทั้งหมด (ในที่นี้แสดงว่างดีกว่าเพื่อไม่ให้รก)
-        # แต่เดิมแสดงทั้งหมด งั้นแสดงทั้งหมดถ้าระบบโหลดไม่หนัก
-        display_pool = filtered_df 
+        # ถ้าไม่ได้กรองอะไรและไม่ได้กดบวกใครมาเลย -> แสดงตารางว่าง (Default empty)
+        display_pool = pd.DataFrame(columns=df.columns)
     else:
         # รวมกันและตัดตัวซ้ำ
         display_pool = pd.concat([manual_df, filtered_df]).drop_duplicates(subset=['HN'])
@@ -420,7 +419,11 @@ def display_print_center_page(df):
 
     # Display Table
     if display_df.empty:
-        st.info("ไม่พบข้อมูลตามเงื่อนไขที่เลือก")
+        if filter_active or manual_hns:
+            st.info("ไม่พบข้อมูลตามเงื่อนไขที่เลือก")
+        else:
+            st.info("กรุณาค้นหาหรือเพิ่มรายชื่อเพื่อเริ่มใช้งาน")
+            
         selected_hns = []
         count_selected = 0
     else:
