@@ -774,6 +774,20 @@ def display_performance_report_hearing(person_data, all_person_history_df):
     r_vals = [get_hearing_val('R', f) for f in freqs]
     l_vals = [get_hearing_val('L', f) for f in freqs]
     
+    # เพิ่ม Info Cards (ทุ้ม-แหลม และ ระดับเสียง)
+    st.markdown(clean_html_string("""
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px;">
+        <div class="card-container" style="margin: 0; border-left: 4px solid #FF9800;">
+            <div style="font-weight: bold; color: var(--main-text-color); margin-bottom: 5px;">🔊 ความถี่ (Hz)</div>
+            <div style="font-size: 0.85rem; opacity: 0.8;">คือ ระดับเสียงทุ้ม-แหลม (250=ทุ้มต่ำ, 8000=แหลมสูง)</div>
+        </div>
+        <div class="card-container" style="margin: 0; border-left: 4px solid #4CAF50;">
+            <div style="font-weight: bold; color: var(--main-text-color); margin-bottom: 5px;">👂 ระดับการได้ยิน (dB)</div>
+            <div style="font-size: 0.85rem; opacity: 0.8;">คือ ความดังที่เริ่มได้ยิน <b>(ค่าปกติ ≤ 25 dB)</b> *ค่ายิ่งน้อย ยิ่งได้ยินดี</div>
+        </div>
+    </div>
+    """), unsafe_allow_html=True)
+
     table_html = clean_html_string(f"""
     <div class='card-container'>
         <div class='table-title'>ตารางระดับการได้ยิน (dB)</div>
