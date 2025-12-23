@@ -126,60 +126,42 @@ def display_print_center_page(df):
     st.title("🖨️ ศูนย์จัดการพิมพ์รายงาน (Print Center)")
     st.markdown("---")
     
-    # --- Custom CSS for Print Button (Luxurious Green Style) ---
+    # --- Custom CSS for Print Button (Matte Dark Green Style) ---
     st.markdown("""
     <style>
-        /* Action Button Styling - Luxurious Green */
+        /* Action Button Styling - Matte Dark Green */
         div[data-testid="stButton"] > button[kind="primary"] {
-            background: linear-gradient(90deg, #00C853 0%, #00796B 100%) !important;
+            background-color: #1B5E20 !important; /* Dark Green Matte */
             color: #ffffff !important;
             border: none !important;
             padding: 12px 32px !important;
             font-size: 20px !important;
-            font-weight: 700 !important;
-            border-radius: 50px !important;
-            box-shadow: 0 10px 25px rgba(0, 121, 107, 0.5), inset 0 2px 2px rgba(255, 255, 255, 0.4) !important;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-            letter-spacing: 1px !important;
-            text-transform: uppercase !important;
+            font-weight: 600 !important; /* Slightly less bold than before */
+            border-radius: 8px !important; /* Rounded corners, not pill */
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2) !important; /* Subtle shadow */
+            transition: all 0.2s ease-in-out !important;
+            letter-spacing: 0.5px !important;
+            text-transform: none !important; /* Normal case */
             width: 100%;
-            position: relative;
-            overflow: hidden;
         }
         
         div[data-testid="stButton"] > button[kind="primary"]:hover {
-            background: linear-gradient(90deg, #00E676 0%, #009688 100%) !important;
-            transform: translateY(-4px) !important;
-            box-shadow: 0 15px 35px rgba(0, 121, 107, 0.6), inset 0 2px 2px rgba(255, 255, 255, 0.5) !important;
+            background-color: #2E7D32 !important; /* Slightly lighter on hover */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3) !important;
+            transform: translateY(-1px) !important;
         }
         
         div[data-testid="stButton"] > button[kind="primary"]:active {
-            transform: translateY(2px) !important;
-            box-shadow: 0 5px 15px rgba(0, 121, 107, 0.4) !important;
+            background-color: #1B5E20 !important;
+            transform: translateY(1px) !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
         }
 
         div[data-testid="stButton"] > button[kind="primary"]:disabled {
-            background: #bdbdbd !important;
-            color: #757575 !important;
+            background-color: #9E9E9E !important;
+            color: #E0E0E0 !important;
             box-shadow: none !important;
             cursor: not-allowed !important;
-            transform: none !important;
-        }
-        
-        /* Shine Effect */
-        div[data-testid="stButton"] > button[kind="primary"]::after {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-            transition: 0.5s;
-        }
-        
-        div[data-testid="stButton"] > button[kind="primary"]:hover::after {
-            left: 100%;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -316,7 +298,8 @@ def display_print_center_page(df):
     col_l, col_c, col_r = st.columns([1, 2, 1])
     
     with col_c:
-        if st.button(f"🖨️ สั่งพิมพ์รายงาน ({count_selected} ท่าน)", type="primary", use_container_width=True, disabled=(count_selected == 0)):
+        # เปลี่ยนข้อความปุ่ม เอา emoji ออก
+        if st.button(f"สั่งพิมพ์รายงาน ({count_selected} ท่าน)", type="primary", use_container_width=True, disabled=(count_selected == 0)):
             if count_selected > 0:
                 html_content, skipped = generate_batch_html(df, selected_hns, report_type)
                 
