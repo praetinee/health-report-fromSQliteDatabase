@@ -99,12 +99,6 @@ def authentication_flow(df):
             margin-bottom: 20px;
             width: 100%;
         }
-        .logo-img-custom {
-            width: 60px !important;
-            max-width: 60px !important;
-            height: auto !important;
-            object-fit: contain;
-        }
     </style>
     """
     st.markdown(login_style, unsafe_allow_html=True)
@@ -117,7 +111,7 @@ def authentication_flow(df):
     img_b64 = get_image_base64(logo_path)
     
     # กำหนดสไตล์แบบ Inline และ Attribute โดยตรง
-    img_attrs = 'width="60" class="logo-img-custom"'
+    img_attrs = 'width="80" style="width: 80px; max-width: 80px; height: auto;"'
 
     if img_b64:
         # ถ้าเจอไฟล์ แปลงเป็น base64
@@ -138,7 +132,8 @@ def authentication_flow(df):
             
             st.markdown("<h2 class='login-header'>ลงทะเบียน / เข้าสู่ระบบ</h2>", unsafe_allow_html=True)
             
-            with st.form("login_form"):
+            # ป้องกัน Duplicate Key โดยการไม่กำหนด Key ตายตัวหรือใช้ Key ที่ unique
+            with st.form("login_form", clear_on_submit=False):
                 st.write("กรุณากรอกข้อมูลเพื่อยืนยันตัวตน")
                 fname = st.text_input("ชื่อ (ไม่ต้องระบุคำนำหน้า)", placeholder="เช่น สมชาย")
                 lname = st.text_input("นามสกุล", placeholder="เช่น ใจดี")
@@ -170,108 +165,38 @@ def authentication_flow(df):
                 st.error(f"❌ {msg}")
 
 def pdpa_consent_page():
-    """หน้ายอมรับ PDPA ดีไซน์ใหม่ สวยงาม อ่านง่าย"""
-    
-    # 1. CSS Styling (Modern Card & Scrollbar)
-    st.markdown("""
-    <style>
-        .pdpa-card {
-            background-color: var(--secondary-background-color);
-            padding: 30px;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            border: 1px solid rgba(128,128,128,0.1);
-            max-width: 800px;
-            margin: 20px auto;
-        }
-        .pdpa-header {
-            text-align: center;
-            font-family: 'Sarabun', sans-serif;
-            color: var(--text-color);
-            margin-bottom: 20px;
-            font-size: 24px;
-            font-weight: bold;
-        }
-        .pdpa-content-box {
-            background-color: var(--background-color);
-            padding: 25px;
-            border-radius: 8px;
-            height: 350px;
-            overflow-y: auto;
-            border: 1px solid rgba(128,128,128,0.2);
-            font-family: 'Sarabun', sans-serif;
-            font-size: 16px;
-            line-height: 1.8;
-            color: var(--text-color);
-        }
-        /* Custom Scrollbar */
-        .pdpa-content-box::-webkit-scrollbar {
-            width: 8px;
-        }
-        .pdpa-content-box::-webkit-scrollbar-track {
-            background: rgba(0,0,0,0.05);
-            border-radius: 4px;
-        }
-        .pdpa-content-box::-webkit-scrollbar-thumb {
-            background: #bdbdbd; 
-            border-radius: 4px;
-        }
-        .pdpa-content-box::-webkit-scrollbar-thumb:hover {
-            background: #9e9e9e; 
-        }
-        .pdpa-footer {
-            margin-top: 25px;
-            text-align: center;
-        }
-        .highlight-text {
-            color: #00796B;
-            font-weight: bold;
-        }
-    </style>
-    """, unsafe_allow_html=True)
-
-    # 2. HTML Structure (Clean & Indentation-Free)
-    # ใช้การเขียน string แบบต่อกันเพื่อหลีกเลี่ยงปัญหา indentation ของ python multi-line string
-    content_html = (
-        "<p><span class='highlight-text'>โรงพยาบาลสันทราย</span> ให้ความสำคัญกับการคุ้มครองข้อมูลส่วนบุคคลของท่าน "
-        "เพื่อให้ท่านมั่นใจได้ว่าข้อมูลส่วนบุคคลของท่านที่เราได้รับจะถูกนำไปใช้ตรงตามความต้องการของท่านและถูกต้องตามกฎหมายคุ้มครองข้อมูลส่วนบุคคล</p>"
-        "<br>"
-        "<p><strong>วัตถุประสงค์ในการเก็บรวบรวม ใช้ หรือเปิดเผยข้อมูลส่วนบุคคล</strong></p>"
-        "<ul>"
-        "<li>เพื่อใช้ในการระบุและยืนยันตัวตนของท่านก่อนเข้าใช้งานระบบรายงานผลตรวจสุขภาพ</li>"
-        "<li>เพื่อแสดงผลการตรวจสุขภาพและข้อมูลที่เกี่ยวข้องซึ่งเป็นข้อมูลส่วนบุคคลที่มีความอ่อนไหว</li>"
-        "<li>เพื่อการวิเคราะห์ข้อมูลในภาพรวมสำหรับการพัฒนาคุณภาพบริการ (โดยไม่ระบุตัวตน)</li>"
-        "</ul>"
-        "<br>"
-        "<p><strong>การรักษาความปลอดภัยของข้อมูล</strong></p>"
-        "<p>ระบบมีมาตรการรักษาความปลอดภัยของข้อมูลส่วนบุคคลของท่านอย่างเข้มงวด เพื่อป้องกันการเข้าถึง การใช้ หรือการเปิดเผยข้อมูลโดยไม่ได้รับอนุญาต</p>"
-        "<br>"
-        "<p><strong>การเปิดเผยข้อมูลส่วนบุคคล</strong></p>"
-        "<p>ระบบจะไม่เปิดเผยข้อมูลส่วนบุคคลของท่านแก่บุคคลภายนอก เว้นแต่จะได้รับความยินยอมจากท่าน หรือเป็นไปตามที่กฎหมายกำหนด</p>"
-        "<hr style='margin: 20px 0; border: 0; border-top: 1px solid rgba(128,128,128,0.2);'>"
-        "<p style='font-size: 0.9em; opacity: 0.8;'>โดยการคลิกปุ่ม <strong>\"ยอมรับ\"</strong> ด้านล่างนี้ ท่านรับทราบและยินยอมให้ระบบเก็บรวบรวม ใช้ และเปิดเผยข้อมูลส่วนบุคคลของท่านตามวัตถุประสงค์ที่ระบุไว้ในคำประกาศนี้</p>"
-    )
-
-    # 3. Render Component
-    st.markdown(f"""
-    <div class="pdpa-card">
-        <div class="pdpa-header">
-            คำประกาศเกี่ยวกับความเป็นส่วนตัว<br>
-            <span style="font-size: 16px; font-weight: normal; opacity: 0.7;">(Privacy Notice)</span>
-        </div>
-        <div class="pdpa-content-box">
-            {content_html}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # 4. Action Section
-    c1, c2, c3 = st.columns([1, 2, 1])
-    with c2:
-        st.write("")
-        agree = st.checkbox("ข้าพเจ้าได้อ่านและยอมรับคำประกาศฯ ข้างต้น")
+    """หน้ายอมรับ PDPA แบบ Theme-Aware"""
+    # ใช้ตัวแปรเก็บ HTML และใช้ .strip() เพื่อให้แน่ใจว่าไม่มีช่องว่างนำหน้าบรรทัด
+    pdpa_html_content = """
+<div style='background-color: var(--secondary-background-color); padding: 2rem; border-radius: 10px; margin-top: 1rem; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid rgba(128,128,128,0.2);'>
+    <h3 style='text-align: center; color: var(--text-color);'>คำประกาศเกี่ยวกับความเป็นส่วนตัว (Privacy Notice)</h3>
+    <hr style='border-color: rgba(128,128,128,0.2);'>
+    <div style='height: 300px; overflow-y: auto; background-color: var(--background-color); padding: 20px; border-radius: 5px; font-size: 14px; border: 1px solid rgba(128,128,128,0.1); color: var(--text-color); line-height: 1.6;'>
+        <p><strong>ระบบรายงานผลตรวจสุขภาพ</strong> ให้ความสำคัญกับการคุ้มครองข้อมูลส่วนบุคคลของท่าน เพื่อให้ท่านมั่นใจได้ว่าข้อมูลส่วนบุคคลของท่านที่เราได้รับจะถูกนำไปใช้ตรงตามความต้องการของท่านและถูกต้องตามกฎหมายคุ้มครองข้อมูลส่วนบุคคล</p>
         
-        # ปุ่มยอมรับ
-        if st.button("ยอมรับและเข้าใช้งาน", type="primary", use_container_width=True, disabled=not agree):
-            st.session_state['pdpa_accepted'] = True
-            st.rerun()
+        <p><strong>วัตถุประสงค์ในการเก็บรวบรวม ใช้ หรือเปิดเผยข้อมูลส่วนบุคคล</strong></p>
+        <ul style="margin-top: 0;">
+            <li>เพื่อใช้ในการระบุและยืนยันตัวตนของท่านก่อนเข้าใช้งานระบบรายงานผลตรวจสุขภาพ</li>
+            <li>เพื่อแสดงผลการตรวจสุขภาพและข้อมูลที่เกี่ยวข้องซึ่งเป็นข้อมูลส่วนบุคคลที่มีความอ่อนไหว</li>
+            <li>เพื่อการวิเคราะห์ข้อมูลในภาพรวมสำหรับการพัฒนาคุณภาพบริการ (โดยไม่ระบุตัวตน)</li>
+        </ul>
+
+        <p><strong>การรักษาความปลอดภัยของข้อมูล</strong></p>
+        <p>ระบบมีมาตรการรักษาความปลอดภัยของข้อมูลส่วนบุคคลของท่านอย่างเข้มงวด เพื่อป้องกันการเข้าถึง การใช้ หรือการเปิดเผยข้อมูลโดยไม่ได้รับอนุญาต</p>
+
+        <p><strong>การเปิดเผยข้อมูลส่วนบุคคล</strong></p>
+        <p>ระบบจะไม่เปิดเผยข้อมูลส่วนบุคคลของท่านแก่บุคคลภายนอก เว้นแต่จะได้รับความยินยอมจากท่าน หรือเป็นไปตามที่กฎหมายกำหนด</p>
+        
+        <p>โดยการคลิกปุ่ม <strong>"ยอมรับ"</strong> ด้านล่างนี้ ท่านรับทราบและยินยอมให้ระบบเก็บรวบรวม ใช้ และเปิดเผยข้อมูลส่วนบุคคลของท่านตามวัตถุประสงค์ที่ระบุไว้ในคำประกาศนี้</p>
+    </div>
+</div>
+"""
+    st.markdown(pdpa_html_content.strip(), unsafe_allow_html=True)
+    
+    st.write("")
+    # เปลี่ยนข้อความ Checkbox ให้สอดคล้อง
+    agree = st.checkbox("ข้าพเจ้าได้อ่านและยอมรับคำประกาศเกี่ยวกับความเป็นส่วนตัวข้างต้น")
+    
+    if st.button("ยอมรับและเข้าใช้งาน", type="primary", use_container_width=True, disabled=not agree):
+        st.session_state['pdpa_accepted'] = True
+        st.rerun()
