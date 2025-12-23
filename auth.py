@@ -106,8 +106,8 @@ def authentication_flow(df):
     # พยายามโหลดรูปจากไฟล์ก่อน
     img_b64 = get_image_base64(logo_path)
     
-    # กำหนดสไตล์แบบ Inline เพื่อบังคับขนาดรูปภาพให้เล็กลง (80px)
-    img_style = "width: 80px; max-width: 80px; height: auto;"
+    # กำหนดสไตล์แบบ Inline เพื่อบังคับขนาดรูปภาพ (ปรับจาก 80px เป็น 120px)
+    img_style = "width: 120px; max-width: 120px; height: auto;"
 
     if img_b64:
         # ถ้าเจอไฟล์ แปลงเป็น base64
@@ -122,7 +122,7 @@ def authentication_flow(df):
     c1, c2, c3 = st.columns([1, 6, 1])
     with c2:
         with st.container():
-            # ย้ายโลโก้ออกมาไว้นอก .login-container (แม้ตอนนี้ container จะใสแล้ว แต่แยกไว้ก็จัดระเบียบง่ายกว่า)
+            # ย้ายโลโก้ออกมาไว้นอก .login-container
             st.markdown(logo_html, unsafe_allow_html=True)
 
             st.markdown("<div class='login-container'>", unsafe_allow_html=True)
