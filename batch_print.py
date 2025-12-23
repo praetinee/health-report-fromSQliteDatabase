@@ -243,14 +243,26 @@ def display_print_center_page(df):
             border: 1px solid #ffcdd2 !important;
             color: #c62828 !important;
             background-color: transparent !important;
-            padding: 2px 8px !important;
+            padding: 0px !important;
             font-size: 0.8rem !important;
-            min-height: 0px !important;
+            min-height: 32px !important;
             height: 32px !important;
+            width: 100% !important; /* เต็มความกว้างคอลัมน์ */
+            display: flex !important;
+            justify-content: center !important; /* จัดกึ่งกลางแนวนอน */
+            align-items: center !important; /* จัดกึ่งกลางแนวตั้ง */
         }
         button[kind="secondary"]:hover {
             background-color: #ffebee !important;
             border-color: #c62828 !important;
+        }
+        
+        /* เพิ่ม Flex container ให้ปุ่มลบอยู่กลางคอลัมน์ */
+        div[data-testid="column"]:nth-of-type(1) div[data-testid="stButton"] {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -395,7 +407,7 @@ def display_print_center_page(df):
                 
                 # 1. Delete Button
                 with cols[0]:
-                    # ใช้ st.empty เพื่อจัดกึ่งกลางปุ่ม
+                    # เพิ่ม flex container ใน CSS เพื่อจัดกึ่งกลางให้ชัวร์ๆ
                     if st.button("🗑️", key=f"del_{hn}", help="ลบรายการนี้", type="secondary"):
                         remove_hn_callback(hn)
                         st.rerun()
