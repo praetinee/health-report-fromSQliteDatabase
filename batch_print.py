@@ -158,8 +158,8 @@ def add_patient_to_list_callback(df):
     target_hn = None
     found_msg = ""
     
-    # 1. เช็คจากชื่อ
-    if name and name != "(ไม่ระบุ)":
+    # 1. เช็คจากชื่อ (ตรวจสอบทั้ง None และสตริงว่าง)
+    if name:
         matched = df[df['ชื่อ-สกุล'] == name]
         if not matched.empty:
             target_hn = matched.iloc[0]['HN']
@@ -191,13 +191,9 @@ def add_patient_to_list_callback(df):
         st.session_state.bp_action_msg = {"type": "success", "text": found_msg}
         
         # Reset inputs: ทำให้ช่องกรอกว่างพร้อมพิมพ์ใหม่
-        st.session_state.bp_name_search = "(ไม่ระบุ)"
+        st.session_state.bp_name_search = None # ตั้งเป็น None เพื่อให้ selectbox ว่างเปล่า
         st.session_state.bp_hn_search = ""
         st.session_state.bp_cid_search = ""
-        
-        # เคลียร์ตัวกรองหน่วยงานด้วย เพื่อให้เห็นเฉพาะคนที่เลือกชัดๆ (ถ้าต้องการ)
-        # st.session_state.bp_dept_filter = []
-        # st.session_state.bp_date_filter = "(ทั้งหมด)"
         
     else:
         st.session_state.bp_action_msg = {"type": "error", "text": "❌ ไม่พบข้อมูล หรือไม่ได้ระบุเงื่อนไขการค้นหา"}
@@ -289,8 +285,9 @@ def display_print_center_page(df):
         all_names = sorted(df['ชื่อ-สกุล'].dropna().unique().tolist())
         st.selectbox(
             "ค้นหาด้วยชื่อ-สกุล", 
-            options=["(ไม่ระบุ)"] + all_names,
-            index=0,
+            options=all_names, # เอา "(ไม่ระบุ)" ออก เพื่อให้ใช้ index=None ได้อย่างสะอาดตา
+            index=None,
+            placeholder="พิมพ์หรือเลือกชื่อ...",
             key="bp_name_search"
         )
     with c2:
@@ -428,7 +425,7 @@ def display_print_center_page(df):
         edited_df = st.data_editor(
             display_df,
             column_config={
-                "ลบ": st.column_config.CheckboxColumn("ลบ", help="ติ๊กเพื่อลบรายชื่อนี้ออก", default=False),
+                "ลบ": st.column_config.CheckboxColumn("❌", help="กดเพื่อลบรายชื่อนี้", default=False, width="small"),
                 "เลือก": st.column_config.CheckboxColumn("เลือกพิมพ์", default=False),
                 "สถานะ": st.column_config.TextColumn("สถานะข้อมูล", help="✅=พร้อม, ⚠️=ไม่ครบ, ❌=ไม่มี", disabled=True),
                 "HN": st.column_config.TextColumn("HN", disabled=True),
@@ -442,17 +439,16 @@ def display_print_center_page(df):
             key="data_editor_print" 
         )
         
-        # Logic การลบ (ถ้ามีการติ๊กช่อง 'ลบ')
+        # Logic การลบ (ถ้ามีการติ๊กช่อง 'ลบ' หรือ '❌')
         to_delete_hns = edited_df[edited_df['ลบ'] == True]['HN'].tolist()
         if to_delete_hns:
             # ลบออกจาก Session State
-            deleted_names = []
             for hn in to_delete_hns:
                 if hn in st.session_state.bp_manual_hns:
                     st.session_state.bp_manual_hns.remove(hn)
                     
             st.toast(f"🗑️ ลบ {len(to_delete_hns)} รายการเรียบร้อย", icon="🗑️")
-            st.rerun() # รีโหลดหน้าจอเพื่อให้แถวนั้นหายไปทันที
+            st.rerun() # รีโหลดหน้าจอเพื่อให้แถวนั้นหายไปทันที (Simulate click-to-delete)
 
         selected_hns = edited_df[edited_df['เลือก'] == True]['HN'].tolist()
         count_selected = len(selected_hns)
