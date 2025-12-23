@@ -64,51 +64,57 @@ def render_section_header(title, subtitle=None):
 def render_html_header_and_personal_info(person):
     """Renders the main header and personal info table for the print report."""
     check_date = person.get("วันที่ตรวจ", "-")
+    name = person.get('ชื่อ-สกุล', '-')
+    age = str(int(float(person.get('อายุ')))) if str(person.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')
+    sex = person.get('เพศ', '-')
+    hn = str(int(float(person.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person.get('HN', '-')
+    department = person.get('หน่วยงาน', '-')
     
     sbp = person.get("SBP", "")
     dbp = person.get("DBP", "")
     try:
         sbp_int, dbp_int = int(float(sbp)), int(float(dbp))
-        bp_val = f"{sbp_int}/{dbp_int} ม.ม.ปรอท"
+        bp_val = f"{sbp_int}/{dbp_int}"
     except: bp_val = "-"
     
     pulse_raw = person.get("pulse", "-")
     pulse_val = str(int(float(pulse_raw))) if not is_empty(pulse_raw) and str(pulse_raw).replace('.', '', 1).isdigit() else "-"
 
     waist_val = person.get("รอบเอว", "-")
-    waist_display = f"{waist_val} ซม." if not is_empty(waist_val) else "-"
+    waist_display = f"{waist_val}" if not is_empty(waist_val) else "-"
+    
+    weight = person.get("น้ำหนัก", "-")
+    height = person.get("ส่วนสูง", "-")
 
-    header_html = f"""
-    <div class="header-grid">
-        <div class="header-left">
-            <h1 style="font-size: 1.5rem; margin:0; text-align: center;">รายงานผลการตรวจสมรรถภาพ</h1>
-            <p style="font-size: 0.8rem; margin:0;">คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย</p>
-            <p style="font-size: 0.8rem; margin:0;"><b>วันที่ตรวจ:</b> {check_date or "-"}</p>
+    return f"""
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #00796B; padding-bottom: 10px; margin-bottom: 15px; font-family: 'Sarabun', sans-serif;">
+        <div style="width: 40%;">
+            <h3 style="margin: 0; color: #00796B; font-size: 18px; line-height: 1.2;">รายงานผลการตรวจสมรรถภาพ</h3>
+            <p style="margin: 4px 0 0 0; font-size: 12px; font-weight: 600;">คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม</p>
+            <p style="margin: 0; font-size: 12px;">โรงพยาบาลสันทราย</p>
+            <p style="margin-top: 8px; font-size: 11px;"><b>วันที่ตรวจ:</b> {check_date}</p>
         </div>
-        <div class="header-right">
-            <table class="info-table">
-                <tr>
-                    <td><b>ชื่อ-สกุล:</b> {person.get('ชื่อ-สกุล', '-')}</td>
-                    <td><b>อายุ:</b> {str(int(float(person.get('อายุ')))) if str(person.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')} ปี</td>
-                    <td><b>เพศ:</b> {person.get('เพศ', '-')}</td>
-                    <td><b>HN:</b> {str(int(float(person.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person.get('HN', '-')}</td>
-                </tr>
-                <tr>
-                    <td><b>หน่วยงาน:</b> {person.get('หน่วยงาน', '-')}</td>
-                    <td><b>น้ำหนัก:</b> {person.get("น้ำหนัก", "-")} กก.</td>
-                    <td><b>ส่วนสูง:</b> {person.get("ส่วนสูง", "-")} ซม.</td>
-                    <td><b>รอบเอว:</b> {waist_display}</td>
-                </tr>
-                 <tr>
-                    <td colspan="2"><b>ความดันโลหิต:</b> {bp_val}</td>
-                    <td colspan="2"><b>ชีพจร:</b> {pulse_val} ครั้ง/นาที</td>
-                </tr>
-            </table>
+        <div style="width: 60%; text-align: right;">
+            <h3 style="margin: 0; font-size: 20px; line-height: 1.2;">{name}</h3>
+            <p style="margin: 4px 0 0 0; font-size: 13px;">
+                <b>HN:</b> {hn}
+                <span style="color: #ddd; margin: 0 8px;">|</span>
+                <b>เพศ:</b> {sex}
+                <span style="color: #ddd; margin: 0 8px;">|</span>
+                <b>อายุ:</b> {age} ปี
+            </p>
+            <p style="margin: 2px 0 0 0; font-size: 13px;"><b>หน่วยงาน:</b> {department}</p>
+            
+            <div style="margin-top: 8px; font-size: 12px; background-color: #f8f9fa; display: inline-block; padding: 4px 10px; border-radius: 4px; border: 1px solid #e0e0e0;">
+                <span style="white-space: nowrap;"><b>นน.</b> {weight}</span> <span style="color: #ccc; margin: 0 4px;">|</span>
+                <span style="white-space: nowrap;"><b>ส่วนสูง</b> {height}</span> <span style="color: #ccc; margin: 0 4px;">|</span>
+                <span style="white-space: nowrap;"><b>รอบเอว</b> {waist_display}</span> <span style="color: #ccc; margin: 0 8px; font-weight: 300;">/</span>
+                <span style="white-space: nowrap;"><b>BP:</b> {bp_val}</span> <span style="color: #ccc; margin: 0 4px;">|</span>
+                <span style="white-space: nowrap;"><b>PR:</b> {pulse_val}</span>
+            </div>
         </div>
     </div>
-    <hr>
     """
-    return header_html
 
 
 def render_print_vision(person_data):
