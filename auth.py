@@ -18,9 +18,11 @@ def normalize_db_name_field(full_name_str):
 def get_image_base64(path):
     """แปลงไฟล์รูปภาพเป็น Base64 เพื่อแสดงใน HTML"""
     try:
+        if not os.path.exists(path):
+            return None
         with open(path, "rb") as image_file:
             return base64.b64encode(image_file.read()).decode()
-    except FileNotFoundError:
+    except Exception:
         return None
 
 def check_user_credentials(df, fname, lname, cid):
@@ -89,39 +91,45 @@ def authentication_flow(df):
             filter: brightness(1.1);
         }
         .logo-container {
-            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             margin-bottom: 20px;
+            width: 100%;
         }
         .logo-img {
             max-width: 150px;
             height: auto;
+            object-fit: contain;
         }
     </style>
     """, unsafe_allow_html=True)
 
     # เตรียม HTML สำหรับโลโก้
+    logo_path = "image_0809c0.png"
     logo_html = ""
-    logo_path = "image_0809c0.png" # ชื่อไฟล์โลโก้ที่คุณอัปโหลด
     
-    # ตรวจสอบว่ามีไฟล์อยู่จริงหรือไม่
-    if os.path.exists(logo_path):
-        img_b64 = get_image_base64(logo_path)
-        if img_b64:
-            logo_html = f"<div class='logo-container'><img src='data:image/png;base64,{img_b64}' class='logo-img'></div>"
+    # พยายามโหลดรูปจากไฟล์ก่อน
+    img_b64 = get_image_base64(logo_path)
+    
+    if img_b64:
+        # ถ้าเจอไฟล์ แปลงเป็น base64
+        logo_src = f"data:image/png;base64,{img_b64}"
+        logo_html = f"<div class='logo-container'><img src='{logo_src}' class='logo-img'></div>"
     else:
-        # กรณีไม่เจอไฟล์ อาจจะใส่ Placeholder หรือข้ามไป
-        pass
+        # ถ้าไม่เจอไฟล์ ให้ใช้ URL รูป placeholder หรือ URL รูป รพ. (ถ้ามี)
+        # ตัวอย่างนี้ใช้ icon โรงพยาบาลฟรีเป็นตัวอย่าง
+        fallback_url = "https://cdn-icons-png.flaticon.com/512/3063/3063176.png" 
+        logo_html = f"<div class='logo-container'><img src='{fallback_url}' class='logo-img'></div>"
 
     c1, c2, c3 = st.columns([1, 6, 1])
     with c2:
         with st.container():
-            # เปิด div container
             st.markdown("<div class='login-container'>", unsafe_allow_html=True)
             
-            # แสดงโลโก้ (ถ้ามี)
+            # แสดงโลโก้ (จะแสดงแน่นอนเพราะมี fallback)
             st.markdown(logo_html, unsafe_allow_html=True)
             
-            # แสดงหัวข้อ
             st.markdown("<h2 class='login-header'>ลงทะเบียน / เข้าสู่ระบบ</h2>", unsafe_allow_html=True)
             
             with st.form("login_form"):
@@ -132,7 +140,6 @@ def authentication_flow(df):
                 
                 submitted = st.form_submit_button("ยืนยันตัวตน")
 
-            # ปิด div container
             st.markdown("</div>", unsafe_allow_html=True)
 
         if submitted:
