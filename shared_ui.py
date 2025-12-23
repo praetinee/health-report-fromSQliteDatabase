@@ -518,6 +518,7 @@ def display_main_report(person_data, all_person_history_df):
             </div>
             """), unsafe_allow_html=True)
 
+            # --- Logic to get correct Hepatitis B columns based on year ---
             hbsag_col = "HbsAg"
             hbsab_col = "HbsAb"
             hbcab_col = "HBcAB"
