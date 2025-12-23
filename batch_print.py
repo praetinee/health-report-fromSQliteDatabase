@@ -402,34 +402,33 @@ def display_print_center_page(df):
     
     display_df['สถานะ'] = status_list
     display_df['เลือก'] = default_select_list 
+    
+    # เพิ่มคอลัมน์ "ลบ" (Checkbox)
+    display_df['ลบ'] = False
 
     # Sorting: เอาคนที่เลือก (กดบวกมา) ขึ้นก่อน
     display_df = display_df.sort_values(by=['เลือก', 'ชื่อ-สกุล'], ascending=[False, True])
     
-    # Reorder columns
-    cols = ['เลือก', 'สถานะ', 'HN', 'ชื่อ-สกุล', 'หน่วยงาน', 'วันที่ตรวจ']
+    # Reorder columns: เอาปุ่มลบไว้หน้าสุด
+    cols = ['ลบ', 'เลือก', 'สถานะ', 'HN', 'ชื่อ-สกุล', 'หน่วยงาน', 'วันที่ตรวจ']
     display_df = display_df[cols]
 
-    # --- Tool bar for List ---
-    col_tools_L, col_tools_R = st.columns([6, 2])
-    with col_tools_R:
-        if manual_hns:
-            if st.button("🗑️ ล้างรายการทั้งหมด", type="secondary", use_container_width=True):
-                st.session_state.bp_manual_hns = set()
-                st.rerun()
-
+    # --- Tool bar for List (REMOVED: Old Clear Button) ---
+    
     # Display Table
+    selected_hns = []
+    count_selected = 0
+    
     if display_df.empty:
         if filter_active:
             st.info("ไม่พบข้อมูลตามเงื่อนไขหน่วยงาน/วันที่")
         else:
             st.info("ตารางว่าง... กรุณาค้นหาและกดปุ่ม ➕ เพื่อเพิ่มรายชื่อ")
-        selected_hns = []
-        count_selected = 0
     else:
         edited_df = st.data_editor(
             display_df,
             column_config={
+                "ลบ": st.column_config.CheckboxColumn("ลบ", help="ติ๊กเพื่อลบรายชื่อนี้ออก", default=False),
                 "เลือก": st.column_config.CheckboxColumn("เลือกพิมพ์", default=False),
                 "สถานะ": st.column_config.TextColumn("สถานะข้อมูล", help="✅=พร้อม, ⚠️=ไม่ครบ, ❌=ไม่มี", disabled=True),
                 "HN": st.column_config.TextColumn("HN", disabled=True),
@@ -443,9 +442,29 @@ def display_print_center_page(df):
             key="data_editor_print" 
         )
         
+        # Logic การลบ (ถ้ามีการติ๊กช่อง 'ลบ')
+        to_delete_hns = edited_df[edited_df['ลบ'] == True]['HN'].tolist()
+        if to_delete_hns:
+            # ลบออกจาก Session State
+            deleted_names = []
+            for hn in to_delete_hns:
+                if hn in st.session_state.bp_manual_hns:
+                    st.session_state.bp_manual_hns.remove(hn)
+                    
+            st.toast(f"🗑️ ลบ {len(to_delete_hns)} รายการเรียบร้อย", icon="🗑️")
+            st.rerun() # รีโหลดหน้าจอเพื่อให้แถวนั้นหายไปทันที
+
         selected_hns = edited_df[edited_df['เลือก'] == True]['HN'].tolist()
         count_selected = len(selected_hns)
         st.caption(f"กำลังเลือก {count_selected} คน")
+        
+        # --- Clear All Button (Moved to Below Table) ---
+        col_summary, col_clear_btn = st.columns([4, 1])
+        with col_clear_btn:
+             if manual_hns:
+                if st.button("🗑️ ล้างรายการทั้งหมด", type="secondary", use_container_width=True, help="ลบรายชื่อทั้งหมดที่เลือกมา"):
+                    st.session_state.bp_manual_hns = set()
+                    st.rerun()
 
     # --- Print Button ---
     st.markdown("---")
