@@ -183,6 +183,50 @@ def plot_lung_comparison(person_data):
     fig.update_layout(barmode='group')
     st.plotly_chart(fig, use_container_width=True, config={'staticPlot': True})
 
+def get_status_text(val, m_type):
+    """
+    ฟังก์ชันช่วยสำหรับกำหนดข้อความสถานะตามค่าผลตรวจ (ใช้สำหรับ Label ใน Radar Chart)
+    """
+    if val is None: return ""
+    
+    if m_type == 'BMI':
+        if val < 18.5: return "น้ำหนักน้อย"
+        if 18.5 <= val < 23: return "สมส่วน"
+        if 23 <= val < 25: return "ท้วม"
+        if 25 <= val < 30: return "อ้วน"
+        return "อ้วนมาก"
+    
+    if m_type == 'BP': # SBP
+        if val < 120: return "ปกติ"
+        if val < 140: return "เริ่มสูง"
+        return "สูง"
+        
+    if m_type == 'FBS':
+        if val < 100: return "ปกติ"
+        if val < 126: return "เสี่ยง"
+        return "สูง"
+        
+    if m_type == 'LDL':
+        if val < 100: return "ดีมาก"
+        if val < 130: return "ปกติ"
+        if val < 160: return "เริ่มสูง"
+        return "สูง"
+        
+    if m_type == 'GFR':
+        if val >= 90: return "ดีมาก"
+        if val >= 60: return "ปกติ"
+        return "เสื่อม"
+        
+    if m_type == 'Liver': # SGPT
+        if val <= 40: return "ปกติ"
+        return "สูง"
+        
+    if m_type == 'Uric':
+        if val <= 7.0: return "ปกติ"
+        return "สูง"
+        
+    return ""
+
 def plot_health_radar(person_data):
     bmi = get_float(person_data, 'BMI')
     if bmi is None:
@@ -203,7 +247,14 @@ def plot_health_radar(person_data):
     for m in metrics:
         if m['val'] is not None:
             scores.append(calculate_metric_score(m['val'], m['type']))
-            categories.append(m['label'])
+            
+            # ปรับ Label ให้แสดงสถานะด้วย
+            status = get_status_text(m['val'], m['type'])
+            if status:
+                categories.append(f"{m['label']}<br>({status})")
+            else:
+                categories.append(m['label'])
+                
             display_vals.append(m['fmt'].format(m['val']))
     
     if scores:
@@ -279,7 +330,7 @@ def display_visualization_tab(person_data, history_df):
             * **พื้นที่กราฟเต็มวง** หมายถึง ผลตรวจอยู่ในเกณฑ์ดีเยี่ยมตามมาตรฐาน
             * **ส่วนที่เว้าแหว่ง** หมายถึง ด้านที่มีความเสี่ยงหรือควรได้รับการดูแลเพิ่มเติม
 
-            <small>*(เกณฑ์การประเมินอ้างอิงตามค่ามาตรฐานทางการแพทย์)*</small>
+            <small>*(เกณฑ์การประเมินอ้างอิงตามค่ามาตรฐานทางการแพทย์ทั่วไป)*</small>
             """, unsafe_allow_html=True)
         with c2: plot_health_radar(person_data)
 
