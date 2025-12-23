@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+import os
+import base64
 
 # --- Helper Functions ---
 def clean_string(val):
@@ -12,6 +14,14 @@ def normalize_db_name_field(full_name_str):
     if len(parts) >= 2: return parts[0], " ".join(parts[1:])
     elif len(parts) == 1: return parts[0], ""
     return "", ""
+
+def get_image_base64(path):
+    """แปลงไฟล์รูปภาพเป็น Base64 เพื่อแสดงใน HTML"""
+    try:
+        with open(path, "rb") as image_file:
+            return base64.b64encode(image_file.read()).decode()
+    except FileNotFoundError:
+        return None
 
 def check_user_credentials(df, fname, lname, cid):
     i_fname = clean_string(fname)
@@ -46,7 +56,7 @@ def check_user_credentials(df, fname, lname, cid):
         return False, "ชื่อหรือนามสกุลไม่ตรงกับฐานข้อมูล (แต่เลขบัตรถูกต้อง)", None
 
 def authentication_flow(df):
-    """หน้า Login แบบ Responsive และ Theme-Aware"""
+    """หน้า Login แบบ Responsive และ Theme-Aware พร้อมโลโก้"""
     
     st.markdown("""
     <style>
@@ -78,13 +88,40 @@ def authentication_flow(df):
         .stButton>button:hover {
             filter: brightness(1.1);
         }
+        .logo-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .logo-img {
+            max-width: 150px;
+            height: auto;
+        }
     </style>
     """, unsafe_allow_html=True)
+
+    # เตรียม HTML สำหรับโลโก้
+    logo_html = ""
+    logo_path = "image_0809c0.png" # ชื่อไฟล์โลโก้ที่คุณอัปโหลด
+    
+    # ตรวจสอบว่ามีไฟล์อยู่จริงหรือไม่
+    if os.path.exists(logo_path):
+        img_b64 = get_image_base64(logo_path)
+        if img_b64:
+            logo_html = f"<div class='logo-container'><img src='data:image/png;base64,{img_b64}' class='logo-img'></div>"
+    else:
+        # กรณีไม่เจอไฟล์ อาจจะใส่ Placeholder หรือข้ามไป
+        pass
 
     c1, c2, c3 = st.columns([1, 6, 1])
     with c2:
         with st.container():
+            # เปิด div container
             st.markdown("<div class='login-container'>", unsafe_allow_html=True)
+            
+            # แสดงโลโก้ (ถ้ามี)
+            st.markdown(logo_html, unsafe_allow_html=True)
+            
+            # แสดงหัวข้อ
             st.markdown("<h2 class='login-header'>ลงทะเบียน / เข้าสู่ระบบ</h2>", unsafe_allow_html=True)
             
             with st.form("login_form"):
@@ -95,6 +132,7 @@ def authentication_flow(df):
                 
                 submitted = st.form_submit_button("ยืนยันตัวตน")
 
+            # ปิด div container
             st.markdown("</div>", unsafe_allow_html=True)
 
         if submitted:
