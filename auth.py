@@ -68,12 +68,13 @@ def authentication_flow(df):
             /* ลบกรอบพื้นหลังและเงาออก ให้เหลือแต่โครงสร้างจัดกึ่งกลาง */
             max-width: 500px;
             margin: auto;
-            padding: 1rem 0;
+            padding: 0; /* ลด padding เพื่อให้ชิดกับ logo ยิ่งขึ้น */
         }
         .login-header {
             text-align: center;
             color: #00B900; 
             margin-bottom: 1.5rem;
+            margin-top: 0px; /* ลดระยะห่างด้านบนของ header */
             font-weight: bold;
         }
         .stButton>button {
@@ -93,7 +94,7 @@ def authentication_flow(df):
             display: flex;
             justify-content: center;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 5px; /* ลดระยะห่างระหว่างโลโก้กับหัวข้อลง */
             width: 100%;
         }
     </style>
