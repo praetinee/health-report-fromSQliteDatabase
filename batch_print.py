@@ -44,9 +44,9 @@ def check_data_readiness(person_data, report_type):
 
     if report_type == "รายงานสุขภาพ (Health Report)":
         if has_main:
-            return True, "✅ ข้อมูลพร้อม", "green"
+            return True, "ข้อมูลพร้อม", "green"
         else:
-            return False, "⚠️ ขาดผลตรวจ", "orange"
+            return False, "ขาดผลตรวจสุขภาพ", "orange"
             
     elif report_type == "รายงานสมรรถภาพ (Performance Report)":
         if has_perf:
@@ -54,19 +54,19 @@ def check_data_readiness(person_data, report_type):
             if has_vis: details.append("ตา")
             if has_hear: details.append("หู")
             if has_lung: details.append("ปอด")
-            return True, f"✅ มีผล: {','.join(details)}", "green"
+            return True, f"มีผล: {','.join(details)}", "green"
         else:
-            return False, "⚠️ ไม่มีผลสมรรถภาพ", "orange"
+            return False, "ไม่มีผลสมรรถภาพ", "orange"
             
     elif report_type == "ทั้งรายงานสุขภาพและสมรรถภาพ":
         if has_main and has_perf:
-            return True, "✅ ครบถ้วน", "green"
+            return True, "ข้อมูลครบถ้วน", "green"
         elif has_main:
-            return True, "⚠️ ขาดสมรรถภาพ", "blue" 
+            return True, "ขาดผลสมรรถภาพ", "blue" 
         elif has_perf:
-            return True, "⚠️ ขาดผลสุขภาพ", "blue"
+            return True, "ขาดผลสุขภาพ", "blue"
         else:
-            return False, "❌ ไม่มีข้อมูล", "red"
+            return False, "ไม่มีข้อมูล", "red"
 
     return is_ready, status_text, status_color
 
@@ -195,108 +195,118 @@ def display_print_center_page(df):
     st.title("🖨️ ศูนย์จัดการพิมพ์รายงาน (Print Center)")
     st.markdown("---")
     
-    # --- CSS Styling (Clean & Precise Alignment) ---
+    # --- Modern & Beautiful CSS ---
     st.markdown("""
     <style>
-        /* ปุ่มเพิ่มรายการ (Primary) */
+        /* ปุ่มเพิ่มรายการ (Primary) - สีเขียว */
         div[data-testid="stButton"] > button[kind="primary"] {
-            background-color: #1B5E20 !important;
-            color: #ffffff !important;
+            background: linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%);
+            color: white !important;
             border: none;
             padding: 0.6rem 1.2rem;
             border-radius: 8px;
             width: 100%;
-            font-size: 1rem;
             font-weight: 600;
-            min-height: 48px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.2s ease;
         }
         div[data-testid="stButton"] > button[kind="primary"]:hover {
-            background-color: #2E7D32 !important;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
         }
 
-        /* --- Custom Grid Styling --- */
+        /* --- List Card Design --- */
+        .queue-container {
+            margin-top: 10px;
+        }
         
-        /* Header */
-        .grid-header {
-            font-weight: bold;
-            color: var(--text-color);
-            background-color: var(--background-color);
-            border-bottom: 2px solid var(--text-color);
-            padding: 10px 5px;
-            margin-bottom: 5px;
-            opacity: 0.9;
+        .queue-header-row {
             display: flex;
             align-items: center;
-            height: 40px; /* Fix Header Height */
-        }
-
-        /* Data Row Container */
-        .grid-row {
-            background-color: var(--secondary-background-color);
-            border: 1px solid rgba(128,128,128,0.1);
+            background-color: #f1f3f4;
+            color: #555;
+            font-weight: 600;
+            padding: 10px 15px;
             border-radius: 8px;
-            padding: 5px 0;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center; /* Vertical Center */
-            min-height: 50px;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
         }
-        
-        /* Text Cell Content */
-        .grid-cell-text {
-            font-size: 0.95rem;
-            color: var(--text-color);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            padding: 0 5px;
-            line-height: 1.5;
-        }
-        
-        /* Status Badge */
-        .status-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            font-weight: bold;
-            white-space: nowrap;
-        }
-        .status-green { background-color: rgba(76, 175, 80, 0.15); color: #1b5e20; }
-        .status-orange { background-color: rgba(255, 152, 0, 0.15); color: #e65100; }
-        .status-red { background-color: rgba(244, 67, 54, 0.15); color: #c62828; }
-        .status-blue { background-color: rgba(33, 150, 243, 0.15); color: #0d47a1; }
-        .status-gray { background-color: rgba(158, 158, 158, 0.15); color: var(--text-color); }
 
-        /* ปุ่มลบ (Secondary) - Minimal Gray Style */
+        .queue-card {
+            background-color: white;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+        }
+        .queue-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border-color: #ddd;
+            transform: translateX(2px);
+        }
+
+        /* Text Styles */
+        .patient-name {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 2px;
+        }
+        .patient-hn {
+            font-size: 0.8rem;
+            color: #888;
+            font-family: monospace;
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .meta-text {
+            font-size: 0.85rem;
+            color: #555;
+            line-height: 1.4;
+        }
+        .meta-label {
+            color: #999;
+            font-size: 0.75rem;
+            margin-right: 4px;
+        }
+
+        /* Status Badge Pills */
+        .status-pill {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .status-green { background-color: #E8F5E9; color: #2E7D32; border: 1px solid #C8E6C9; }
+        .status-orange { background-color: #FFF3E0; color: #EF6C00; border: 1px solid #FFE0B2; }
+        .status-red { background-color: #FFEBEE; color: #C62828; border: 1px solid #FFCDD2; }
+        .status-blue { background-color: #E3F2FD; color: #1565C0; border: 1px solid #BBDEFB; }
+        .status-gray { background-color: #F5F5F5; color: #757575; border: 1px solid #E0E0E0; }
+
+        /* Delete Button Customization */
         div[data-testid="column"] button[kind="secondary"] {
             border: 1px solid transparent !important;
             background-color: transparent !important;
-            color: #757575 !important; /* สีเทา */
-            padding: 0 !important;
-            font-size: 1.2rem !important; /* ไอคอนใหญ่ขึ้น */
-            line-height: 1 !important;
-            height: 40px !important;
-            width: 40px !important;
-            border-radius: 50% !important;
-            display: flex !important;
-            justify-content: center !important;
-            align-items: center !important;
-            margin: 0 auto !important; /* จัดกึ่งกลางแนวนอน */
+            color: #9E9E9E !important;
+            transition: color 0.2s;
         }
         div[data-testid="column"] button[kind="secondary"]:hover {
-            background-color: rgba(0,0,0,0.05) !important;
-            color: #333 !important;
-            transform: scale(1.1);
+            color: #D32F2F !important;
+            background-color: #FFEBEE !important;
+            border-color: #FFCDD2 !important;
         }
         
-        /* บังคับให้ Column ของ Streamlit จัด Vertical Center */
-        div[data-testid="column"] {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
+        /* Checkbox Customization */
+        label[data-testid="stCheckbox"] {
+            margin-top: 4px; /* Align with text */
         }
     </style>
     """, unsafe_allow_html=True)
@@ -351,7 +361,7 @@ def display_print_center_page(df):
     with c3:
         st.text_input("ค้นหาด้วยเลขบัตรฯ", key="bp_cid_search", placeholder="พิมพ์เลขบัตร")
 
-    # Button Row: ใช้สัดส่วน 2:3 เพื่อให้ปุ่มตรงกับช่อง "ชื่อ-สกุล" ด้านบน
+    # Button Row
     col_add, _ = st.columns([2, 3])
     with col_add:
         st.button("➕ เพิ่มลงรายการ", use_container_width=True, on_click=add_patient_to_list_callback, args=(df,))
@@ -359,23 +369,23 @@ def display_print_center_page(df):
     st.markdown("---")
     
     # Bulk Filter
-    st.write("หรือเลือกเพิ่มจากกลุ่มหน่วยงาน (Bulk Selection)")
-    c4, c5 = st.columns(2)
-    with c4:
-        all_depts = sorted(df['หน่วยงาน'].dropna().astype(str).str.strip().unique())
-        selected_depts = st.multiselect("กรองตามหน่วยงาน", options=all_depts, placeholder="เลือกหน่วยงาน...", key="bp_dept_filter")
-    with c5:
-        temp_df = df.copy()
-        if selected_depts:
-            temp_df = temp_df[temp_df['หน่วยงาน'].astype(str).str.strip().isin(selected_depts)]
-        available_dates = sorted(temp_df['วันที่ตรวจ'].dropna().astype(str).unique(), reverse=True)
-        date_options = ["(ทั้งหมด)"] + list(available_dates)
-        
-        idx = 0
-        if st.session_state.bp_date_filter in date_options: idx = date_options.index(st.session_state.bp_date_filter)
-        selected_date = st.selectbox("กรองตามวันที่ตรวจ", options=date_options, index=idx, key="bp_date_filter")
+    with st.expander("📂 เพิ่มจากกลุ่มหน่วยงาน (Bulk Selection)", expanded=False):
+        c4, c5 = st.columns(2)
+        with c4:
+            all_depts = sorted(df['หน่วยงาน'].dropna().astype(str).str.strip().unique())
+            selected_depts = st.multiselect("กรองตามหน่วยงาน", options=all_depts, placeholder="เลือกหน่วยงาน...", key="bp_dept_filter")
+        with c5:
+            temp_df = df.copy()
+            if selected_depts:
+                temp_df = temp_df[temp_df['หน่วยงาน'].astype(str).str.strip().isin(selected_depts)]
+            available_dates = sorted(temp_df['วันที่ตรวจ'].dropna().astype(str).unique(), reverse=True)
+            date_options = ["(ทั้งหมด)"] + list(available_dates)
+            
+            idx = 0
+            if st.session_state.bp_date_filter in date_options: idx = date_options.index(st.session_state.bp_date_filter)
+            selected_date = st.selectbox("กรองตามวันที่ตรวจ", options=date_options, index=idx, key="bp_date_filter")
 
-    # --- 3. รายชื่อที่เลือก (Custom Grid Table) ---
+    # --- 3. รายชื่อที่เลือก (รอสั่งพิมพ์) - NEW DESIGN ---
     st.subheader("3. รายชื่อที่เลือก (รอสั่งพิมพ์)")
     
     # Data Preparation
@@ -409,22 +419,31 @@ def display_print_center_page(df):
         unique_patients_df = unique_patients_df.head(ROW_LIMIT)
 
     if unique_patients_df.empty:
-        if filter_active: st.info("ไม่พบข้อมูลตามเงื่อนไขหน่วยงาน/วันที่")
-        else: st.info("ยังไม่มีรายชื่อในรายการ กรุณากดปุ่ม ➕ เพิ่มรายชื่อ")
+        st.info("💡 ยังไม่มีรายชื่อในรายการ กรุณากดปุ่ม ➕ เพิ่มรายชื่อด้านบน")
     else:
-        # --- Config Ratio ---
-        col_ratios = [0.6, 0.6, 1.2, 1.2, 2.5, 1.5, 1.2]
+        # --- List Action Bar ---
+        col_select_all, _, col_clear = st.columns([2, 3, 2])
+        with col_clear:
+             if manual_hns:
+                if st.button("🗑️ ล้างรายการทั้งหมด", type="secondary", use_container_width=True):
+                    st.session_state.bp_manual_hns = set()
+                    st.rerun()
 
-        # --- Header Row ---
-        st.markdown('<div class="grid-header">', unsafe_allow_html=True)
-        h_cols = st.columns(col_ratios)
-        headers = ["ลบ", "เลือก", "สถานะข้อมูล", "HN", "ชื่อ-สกุล", "หน่วยงาน", "วันที่"]
-        for i, h in enumerate(headers):
-            align = "center" if i < 4 or i == 6 else "left"
-            h_cols[i].markdown(f"<div style='text-align:{align}; width:100%;'>{h}</div>", unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        # --- Queue Container ---
+        st.markdown('<div class="queue-container">', unsafe_allow_html=True)
+        
+        # Header Row
+        h_ratios = [0.5, 3, 2, 1.5, 0.5]
+        h_cols = st.columns(h_ratios)
+        h_cols[0].markdown("<div style='text-align:center; font-weight:bold; color:#777;'>เลือก</div>", unsafe_allow_html=True)
+        h_cols[1].markdown("<div style='text-align:left; font-weight:bold; color:#777;'>ชื่อ-สกุล / HN</div>", unsafe_allow_html=True)
+        h_cols[2].markdown("<div style='text-align:left; font-weight:bold; color:#777;'>หน่วยงาน / วันที่</div>", unsafe_allow_html=True)
+        h_cols[3].markdown("<div style='text-align:center; font-weight:bold; color:#777;'>สถานะข้อมูล</div>", unsafe_allow_html=True)
+        h_cols[4].markdown("<div style='text-align:center; font-weight:bold; color:#777;'>ลบ</div>", unsafe_allow_html=True)
+        
+        st.markdown("<hr style='margin: 5px 0 15px 0; border-top: 1px solid #ddd;'>", unsafe_allow_html=True)
 
-        # --- Data Rows Loop ---
+        # Loop Rows
         for i, row in unique_patients_df.iterrows():
             hn = row['HN']
             full_data = row.to_dict()
@@ -433,62 +452,85 @@ def display_print_center_page(df):
             is_manual = hn in manual_hns
             default_chk = is_ready and is_manual
             
-            # Row Container (Styled by CSS .grid-row to be flex)
+            # Card Styling wrapper
             with st.container():
-                # ใช้ vertical_alignment="center" ช่วยจัด widget ให้ตรงกลางแนวตั้ง
-                cols = st.columns(col_ratios, vertical_alignment="center")
+                st.markdown(f"""
+                <div class="queue-card">
+                """, unsafe_allow_html=True)
                 
-                # 1. Delete Button
+                # Widget Layout inside the card
+                cols = st.columns(h_ratios, vertical_alignment="center")
+                
+                # 1. Checkbox (Center)
                 with cols[0]:
-                    if st.button("🗑️", key=f"del_{hn}", help="ลบรายการนี้", type="secondary"):
-                        remove_hn_callback(hn)
-                        st.rerun()
-                
-                # 2. Checkbox
-                with cols[1]:
-                    _, mid, _ = st.columns([1,1,1]) 
-                    with mid:
+                    _, chk_col, _ = st.columns([0.2, 1, 0.2])
+                    with chk_col:
                         is_selected = st.checkbox("เลือก", value=default_chk, key=f"sel_{hn}", label_visibility="collapsed")
                         if is_selected:
                             selected_to_print_hns.append(hn)
 
-                # 3. Status Badge (Use HTML for consistent height)
+                # 2. Patient Info (Name + HN)
+                with cols[1]:
+                    st.markdown(f"""
+                    <div class="patient-name">{row['ชื่อ-สกุล']}</div>
+                    <span class="patient-hn">{hn}</span>
+                    """, unsafe_allow_html=True)
+
+                # 3. Meta Info (Dept + Date)
                 with cols[2]:
-                    st.markdown(f"<div style='text-align:center;'><span class='status-badge status-{status_color}'>{status_text}</span></div>", unsafe_allow_html=True)
+                    check_date = str(row['วันที่ตรวจ']).split(' ')[0]
+                    st.markdown(f"""
+                    <div class="meta-text"><span class="meta-label">แผนก:</span> {row['หน่วยงาน']}</div>
+                    <div class="meta-text"><span class="meta-label">วันที่:</span> {check_date}</div>
+                    """, unsafe_allow_html=True)
 
-                # 4. HN (Use HTML)
+                # 4. Status Badge
                 with cols[3]:
-                    st.markdown(f"<div class='grid-cell-text' style='text-align:center; font-family:monospace;'>{hn}</div>", unsafe_allow_html=True)
+                    st.markdown(f"""
+                    <div style="text-align:center;">
+                        <span class="status-pill status-{status_color}">{status_text}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
 
-                # 5. Name (Use HTML)
+                # 5. Delete Button
                 with cols[4]:
-                    st.markdown(f"<div class='grid-cell-text' style='text-align:left;'>{row['ชื่อ-สกุล']}</div>", unsafe_allow_html=True)
-
-                # 6. Dept (Use HTML)
-                with cols[5]:
-                    st.markdown(f"<div class='grid-cell-text' style='text-align:left; color:#666;'>{row['หน่วยงาน']}</div>", unsafe_allow_html=True)
-
-                # 7. Date (Use HTML)
-                with cols[6]:
-                    st.markdown(f"<div class='grid-cell-text' style='text-align:center;'>{str(row['วันที่ตรวจ']).split(' ')[0]}</div>", unsafe_allow_html=True)
+                    if st.button("🗑️", key=f"del_{hn}", help="ลบรายการนี้ออกจากคิว", type="secondary"):
+                        remove_hn_callback(hn)
+                        st.rerun()
                 
-                st.markdown("<hr style='margin:0; opacity:0.1; border-top:1px solid #ddd;'>", unsafe_allow_html=True)
+                st.markdown("</div>", unsafe_allow_html=True) # End queue-card
 
-        # --- Footer Actions ---
-        col_summary, col_clear_btn = st.columns([4, 1])
-        with col_clear_btn:
-             if manual_hns:
-                if st.button("🗑️ ล้างรายการทั้งหมด", type="secondary", use_container_width=True):
-                    st.session_state.bp_manual_hns = set()
-                    st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True) # End queue-container
 
-    # --- Print Button ---
+
+    # --- Print Button Section ---
     count_selected = len(selected_to_print_hns)
     st.markdown("")
-    col_l, col_c, col_r = st.columns([1, 2, 1])
-    with col_c:
-        if st.button(f"สั่งพิมพ์รายงาน ({count_selected} ท่าน)", type="primary", use_container_width=True, disabled=(count_selected == 0)):
-            if count_selected > 0:
+    
+    # Floating Bottom Bar Styling
+    st.markdown("""
+    <style>
+        .print-action-bar {
+            background-color: #F0F4C3;
+            border: 1px solid #DCE775;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: center;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    if count_selected > 0:
+        st.markdown(f"""
+        <div class="print-action-bar">
+            <h4 style="margin:0; color:#33691E;">พร้อมพิมพ์รายงาน {count_selected} ท่าน</h4>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        col_l, col_c, col_r = st.columns([1, 2, 1])
+        with col_c:
+            if st.button(f"🖨️ สั่งพิมพ์รายงาน ({count_selected})", type="primary", use_container_width=True):
                 html_content, skipped = generate_batch_html(df, selected_to_print_hns, report_type)
                 if html_content:
                     st.session_state.batch_print_html = html_content
@@ -500,6 +542,9 @@ def display_print_center_page(df):
                     st.rerun()
                 else:
                     st.error("ไม่สามารถสร้างรายงานได้")
+    else:
+        if not unique_patients_df.empty:
+            st.info("กรุณาเลือกรายชื่อที่ต้องการพิมพ์จากรายการด้านบน")
 
     # --- Hidden Print Trigger ---
     if st.session_state.get("batch_print_ready", False):
