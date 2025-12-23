@@ -195,10 +195,10 @@ def display_print_center_page(df):
     st.title("🖨️ ศูนย์จัดการพิมพ์รายงาน (Print Center)")
     st.markdown("---")
     
-    # --- CSS Styling (Modern & Clean & Responsive) ---
+    # --- CSS Styling (Clean & Precise Alignment) ---
     st.markdown("""
     <style>
-        /* ปรับแต่งปุ่มเพิ่ม (Primary) ให้สวยงามและยืดหยุ่น */
+        /* ปุ่มเพิ่มรายการ (Primary) */
         div[data-testid="stButton"] > button[kind="primary"] {
             background-color: #1B5E20 !important;
             color: #ffffff !important;
@@ -208,83 +208,91 @@ def display_print_center_page(df):
             width: 100%;
             font-size: 1rem;
             font-weight: 600;
-            min-height: 48px; /* Touch target size */
-            transition: transform 0.1s, box-shadow 0.1s;
+            min-height: 48px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         div[data-testid="stButton"] > button[kind="primary"]:hover {
             background-color: #2E7D32 !important;
             box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-            transform: translateY(-1px);
         }
-        div[data-testid="stButton"] > button[kind="primary"]:active {
-            transform: translateY(1px);
-            box-shadow: none;
-        }
+
+        /* --- Custom Grid Styling --- */
         
-        /* สไตล์ตารางแบบ Custom Row */
-        .print-row-container {
+        /* Header */
+        .grid-header {
+            font-weight: bold;
+            color: var(--text-color);
+            background-color: var(--background-color);
+            border-bottom: 2px solid var(--text-color);
+            padding: 10px 5px;
+            margin-bottom: 5px;
+            opacity: 0.9;
+            display: flex;
+            align-items: center;
+            height: 40px; /* Fix Header Height */
+        }
+
+        /* Data Row Container */
+        .grid-row {
             background-color: var(--secondary-background-color);
             border: 1px solid rgba(128,128,128,0.1);
             border-radius: 8px;
-            padding: 10px 15px;
+            padding: 5px 0;
             margin-bottom: 8px;
-            transition: background-color 0.2s;
-        }
-        .print-row-container:hover {
-            border-color: rgba(128,128,128,0.3);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center; /* Vertical Center */
+            min-height: 50px;
         }
         
-        .print-row-header {
-            background-color: var(--background-color);
-            border-bottom: 2px solid var(--text-color);
-            padding: 12px 15px;
-            margin-bottom: 12px;
-            font-weight: bold;
+        /* Text Cell Content */
+        .grid-cell-text {
             font-size: 0.95rem;
-            opacity: 0.9;
+            color: var(--text-color);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding: 0 5px;
+            line-height: 1.5;
         }
         
+        /* Status Badge */
         .status-badge {
             display: inline-block;
-            padding: 4px 10px;
-            border-radius: 6px;
+            padding: 2px 8px;
+            border-radius: 4px;
             font-size: 0.8rem;
             font-weight: bold;
             white-space: nowrap;
         }
-        .status-green { background-color: rgba(76, 175, 80, 0.15); color: #1b5e20; border: 1px solid rgba(76, 175, 80, 0.2); }
-        .status-orange { background-color: rgba(255, 152, 0, 0.15); color: #e65100; border: 1px solid rgba(255, 152, 0, 0.2); }
-        .status-red { background-color: rgba(244, 67, 54, 0.15); color: #c62828; border: 1px solid rgba(244, 67, 54, 0.2); }
-        .status-blue { background-color: rgba(33, 150, 243, 0.15); color: #0d47a1; border: 1px solid rgba(33, 150, 243, 0.2); }
-        .status-gray { background-color: rgba(158, 158, 158, 0.15); color: var(--text-color); border: 1px solid rgba(158, 158, 158, 0.2); }
+        .status-green { background-color: rgba(76, 175, 80, 0.15); color: #1b5e20; }
+        .status-orange { background-color: rgba(255, 152, 0, 0.15); color: #e65100; }
+        .status-red { background-color: rgba(244, 67, 54, 0.15); color: #c62828; }
+        .status-blue { background-color: rgba(33, 150, 243, 0.15); color: #0d47a1; }
+        .status-gray { background-color: rgba(158, 158, 158, 0.15); color: var(--text-color); }
 
-        /* ปรับปุ่มลบให้ดูดี (Theme Adaptive) */
-        button[kind="secondary"] {
-            border: 1px solid rgba(128, 128, 128, 0.2) !important;
-            color: var(--text-color) !important; /* ปรับตาม Theme */
-            opacity: 0.7;
+        /* ปุ่มลบ (Secondary) - Minimal Gray Style */
+        div[data-testid="column"] button[kind="secondary"] {
+            border: 1px solid transparent !important;
             background-color: transparent !important;
-            padding: 0px !important;
-            font-size: 1rem !important;
-            min-height: 36px !important;
-            height: 36px !important;
-            width: 100% !important;
+            color: #757575 !important; /* สีเทา */
+            padding: 0 !important;
+            font-size: 1.2rem !important; /* ไอคอนใหญ่ขึ้น */
+            line-height: 1 !important;
+            height: 40px !important;
+            width: 40px !important;
+            border-radius: 50% !important;
             display: flex !important;
             justify-content: center !important;
             align-items: center !important;
-            transition: all 0.2s ease !important;
-            border-radius: 6px !important;
+            margin: 0 auto !important; /* จัดกึ่งกลางแนวนอน */
         }
-        button[kind="secondary"]:hover {
-            background-color: rgba(128, 128, 128, 0.1) !important;
-            opacity: 1;
-            border-color: var(--text-color) !important;
-            transform: scale(1.05);
+        div[data-testid="column"] button[kind="secondary"]:hover {
+            background-color: rgba(0,0,0,0.05) !important;
+            color: #333 !important;
+            transform: scale(1.1);
         }
         
-        /* จัดกึ่งกลาง Flex Items */
+        /* บังคับให้ Column ของ Streamlit จัด Vertical Center */
         div[data-testid="column"] {
             display: flex;
             flex-direction: column;
@@ -343,7 +351,7 @@ def display_print_center_page(df):
     with c3:
         st.text_input("ค้นหาด้วยเลขบัตรฯ", key="bp_cid_search", placeholder="พิมพ์เลขบัตร")
 
-    # Button Row: ใช้สัดส่วน 2:3 เพื่อให้ปุ่มตรงกับช่อง "ชื่อ-สกุล" ด้านบน (2 ส่วนจาก 5 ส่วน)
+    # Button Row: ใช้สัดส่วน 2:3 เพื่อให้ปุ่มตรงกับช่อง "ชื่อ-สกุล" ด้านบน
     col_add, _ = st.columns([2, 3])
     with col_add:
         st.button("➕ เพิ่มลงรายการ", use_container_width=True, on_click=add_patient_to_list_callback, args=(df,))
@@ -404,19 +412,17 @@ def display_print_center_page(df):
         if filter_active: st.info("ไม่พบข้อมูลตามเงื่อนไขหน่วยงาน/วันที่")
         else: st.info("ยังไม่มีรายชื่อในรายการ กรุณากดปุ่ม ➕ เพิ่มรายชื่อ")
     else:
+        # --- Config Ratio ---
+        col_ratios = [0.6, 0.6, 1.2, 1.2, 2.5, 1.5, 1.2]
+
         # --- Header Row ---
-        # กำหนดสัดส่วน: [ลบ, เลือก, สถานะ, HN, ชื่อ, หน่วยงาน, วันที่]
-        col_ratios = [0.8, 0.8, 1.5, 1.2, 2.5, 2, 1.2]
-        
-        # Header Container
-        with st.container():
-            st.markdown("<div class='print-row-header'>", unsafe_allow_html=True)
-            cols = st.columns(col_ratios)
-            headers = ["ลบ", "เลือก", "สถานะข้อมูล", "HN", "ชื่อ-สกุล", "หน่วยงาน", "วันที่"]
-            for i, h in enumerate(headers):
-                align = "center" if i < 4 or i == 6 else "left"
-                cols[i].markdown(f"<div style='text-align:{align}; width:100%;'>{h}</div>", unsafe_allow_html=True)
-            st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown('<div class="grid-header">', unsafe_allow_html=True)
+        h_cols = st.columns(col_ratios)
+        headers = ["ลบ", "เลือก", "สถานะข้อมูล", "HN", "ชื่อ-สกุล", "หน่วยงาน", "วันที่"]
+        for i, h in enumerate(headers):
+            align = "center" if i < 4 or i == 6 else "left"
+            h_cols[i].markdown(f"<div style='text-align:{align}; width:100%;'>{h}</div>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
         # --- Data Rows Loop ---
         for i, row in unique_patients_df.iterrows():
@@ -427,50 +433,46 @@ def display_print_center_page(df):
             is_manual = hn in manual_hns
             default_chk = is_ready and is_manual
             
-            # Row Container
+            # Row Container (Styled by CSS .grid-row to be flex)
             with st.container():
-                # ใช้ vertical_alignment='center' ใน Streamlit เวอร์ชันใหม่ (ถ้าใช้ได้)
-                # ถ้ายังใช้ไม่ได้ CSS ด้านบนจะช่วยจัดกึ่งกลางให้ในระดับหนึ่ง
+                # ใช้ vertical_alignment="center" ช่วยจัด widget ให้ตรงกลางแนวตั้ง
                 cols = st.columns(col_ratios, vertical_alignment="center")
                 
                 # 1. Delete Button
                 with cols[0]:
-                    # เพิ่ม flex container ใน CSS เพื่อจัดกึ่งกลางให้ชัวร์ๆ
                     if st.button("🗑️", key=f"del_{hn}", help="ลบรายการนี้", type="secondary"):
                         remove_hn_callback(hn)
                         st.rerun()
                 
                 # 2. Checkbox
                 with cols[1]:
-                    # ใช้ columns ย่อยเพื่อจัด checkbox ให้อยู่ตรงกลาง column
                     _, mid, _ = st.columns([1,1,1]) 
                     with mid:
                         is_selected = st.checkbox("เลือก", value=default_chk, key=f"sel_{hn}", label_visibility="collapsed")
                         if is_selected:
                             selected_to_print_hns.append(hn)
 
-                # 3. Status Badge
+                # 3. Status Badge (Use HTML for consistent height)
                 with cols[2]:
                     st.markdown(f"<div style='text-align:center;'><span class='status-badge status-{status_color}'>{status_text}</span></div>", unsafe_allow_html=True)
 
-                # 4. HN
+                # 4. HN (Use HTML)
                 with cols[3]:
-                    st.markdown(f"<div style='text-align:center; font-family:monospace;'>{hn}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='grid-cell-text' style='text-align:center; font-family:monospace;'>{hn}</div>", unsafe_allow_html=True)
 
-                # 5. Name
+                # 5. Name (Use HTML)
                 with cols[4]:
-                    st.write(row['ชื่อ-สกุล'])
+                    st.markdown(f"<div class='grid-cell-text' style='text-align:left;'>{row['ชื่อ-สกุล']}</div>", unsafe_allow_html=True)
 
-                # 6. Dept
+                # 6. Dept (Use HTML)
                 with cols[5]:
-                    st.caption(row['หน่วยงาน'])
+                    st.markdown(f"<div class='grid-cell-text' style='text-align:left; color:#666;'>{row['หน่วยงาน']}</div>", unsafe_allow_html=True)
 
-                # 7. Date
+                # 7. Date (Use HTML)
                 with cols[6]:
-                    st.markdown(f"<div style='text-align:center;'>{str(row['วันที่ตรวจ']).split(' ')[0]}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='grid-cell-text' style='text-align:center;'>{str(row['วันที่ตรวจ']).split(' ')[0]}</div>", unsafe_allow_html=True)
                 
-                # เส้นแบ่งบางๆ ระหว่างแถว (Optional เพราะมี Container Border แล้ว)
-                # st.markdown("<hr style='margin:0; opacity:0.1;'>", unsafe_allow_html=True)
+                st.markdown("<hr style='margin:0; opacity:0.1; border-top:1px solid #ddd;'>", unsafe_allow_html=True)
 
         # --- Footer Actions ---
         col_summary, col_clear_btn = st.columns([4, 1])
