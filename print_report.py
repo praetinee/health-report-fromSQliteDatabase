@@ -458,42 +458,42 @@ def render_header_and_vitals(person_data):
     department = person_data.get('หน่วยงาน', '-')
     check_date = person_data.get("วันที่ตรวจ", "-")
     sbp, dbp = get_float("SBP", person_data), get_float("DBP", person_data)
-    bp_val = f"{int(sbp)}/{int(dbp)} ม.ม.ปรอท" if sbp and dbp else "-"
-    pulse_val = f"{int(get_float('pulse', person_data))} ครั้ง/นาที" if get_float('pulse', person_data) else "-"
+    bp_val = f"{int(sbp)}/{int(dbp)}" if sbp and dbp else "-" # Remove unit here for compactness
+    pulse_val = f"{int(get_float('pulse', person_data))}" if get_float('pulse', person_data) else "-" # Remove unit here for compactness
     weight = get_float('น้ำหนัก', person_data)
     height = get_float('ส่วนสูง', person_data)
-    weight_val = f"{weight} กก." if weight else "-"
-    height_val = f"{height} ซม." if height else "-"
-    waist_val = f"{person_data.get('รอบเอว', '-')} ซม." if not is_empty(person_data.get('รอบเอว')) else "-"
+    weight_val = f"{weight}" if weight else "-"
+    height_val = f"{height}" if height else "-"
+    waist_val = f"{person_data.get('รอบเอว', '-')}" if not is_empty(person_data.get('รอบเอว')) else "-"
+    
     return f"""
-    <div class="header-grid">
-        <div class="header-left">
-            <h1 style="font-size: 1.5rem; margin:0;">รายงานผลการตรวจสุขภาพ</h1>
-            <p style="font-size: 0.8rem; margin:0;">คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย</p>
-            <p style="font-size: 0.8rem; margin:0;"><b>วันที่ตรวจ:</b> {check_date}</p>
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #00796B; padding-bottom: 10px; margin-bottom: 15px; font-family: 'Sarabun', sans-serif;">
+        <div style="width: 40%;">
+            <h3 style="margin: 0; color: #00796B; font-size: 18px; line-height: 1.2;">รายงานผลการตรวจสุขภาพ</h3>
+            <p style="margin: 4px 0 0 0; font-size: 12px; font-weight: 600;">คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม</p>
+            <p style="margin: 0; font-size: 12px;">โรงพยาบาลสันทราย</p>
+            <p style="margin-top: 8px; font-size: 11px;"><b>วันที่ตรวจ:</b> {check_date}</p>
         </div>
-        <div class="header-right">
-            <table class="info-table">
-                <tr>
-                    <td><b>ชื่อ-สกุล:</b> {name}</td>
-                    <td><b>อายุ:</b> {age} ปี</td>
-                    <td><b>เพศ:</b> {sex}</td>
-                    <td><b>HN:</b> {hn}</td>
-                </tr>
-                <tr>
-                    <td><b>หน่วยงาน:</b> {department}</td>
-                    <td><b>น้ำหนัก:</b> {weight_val}</td>
-                    <td><b>ส่วนสูง:</b> {height_val}</td>
-                    <td><b>รอบเอว:</b> {waist_val}</td>
-                </tr>
-                 <tr>
-                    <td colspan="2"><b>ความดันโลหิต:</b> {bp_val}</td>
-                    <td colspan="2"><b>ชีพจร:</b> {pulse_val}</td>
-                </tr>
-            </table>
+        <div style="width: 60%; text-align: right;">
+            <h3 style="margin: 0; font-size: 20px; line-height: 1.2;">{name}</h3>
+            <p style="margin: 4px 0 0 0; font-size: 13px;">
+                <b>HN:</b> {hn}
+                <span style="color: #ddd; margin: 0 8px;">|</span>
+                <b>เพศ:</b> {sex}
+                <span style="color: #ddd; margin: 0 8px;">|</span>
+                <b>อายุ:</b> {age} ปี
+            </p>
+            <p style="margin: 2px 0 0 0; font-size: 13px;"><b>หน่วยงาน:</b> {department}</p>
+            
+            <div style="margin-top: 8px; font-size: 12px; background-color: #f8f9fa; display: inline-block; padding: 4px 10px; border-radius: 4px; border: 1px solid #e0e0e0;">
+                <span style="white-space: nowrap;"><b>นน.</b> {weight_val}</span> <span style="color: #ccc; margin: 0 4px;">|</span>
+                <span style="white-space: nowrap;"><b>ส่วนสูง</b> {height_val}</span> <span style="color: #ccc; margin: 0 4px;">|</span>
+                <span style="white-space: nowrap;"><b>รอบเอว</b> {waist_val}</span> <span style="color: #ccc; margin: 0 8px; font-weight: 300;">/</span>
+                <span style="white-space: nowrap;"><b>BP:</b> {bp_val}</span> <span style="color: #ccc; margin: 0 4px;">|</span>
+                <span style="white-space: nowrap;"><b>PR:</b> {pulse_val}</span>
+            </div>
         </div>
     </div>
-    <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 0.5rem 0;">
     """
 
 def render_lab_section(person, sex, cbc_statuses):
