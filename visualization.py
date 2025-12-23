@@ -198,32 +198,33 @@ def get_status_text(val, m_type):
     
     if m_type == 'BP': # SBP
         if val < 120: return "ปกติ"
-        if val < 140: return "เริ่มสูง"
-        return "สูง"
+        if val < 140: return "เสี่ยงความดันสูง"
+        return "ความดันสูง" # ชัดเจน
         
     if m_type == 'FBS':
         if val < 100: return "ปกติ"
-        if val < 126: return "เริ่มสูง"
-        return "เสี่ยงเบาหวาน"
+        if val < 126: return "เสี่ยงเบาหวาน"
+        return "เบาหวาน" # ชัดเจน (ตามเกณฑ์คัดกรองเบื้องต้น)
         
     if m_type == 'LDL':
-        if val < 100: return "ดีมาก"
         if val < 130: return "ปกติ"
-        if val < 160: return "เริ่มสูง"
-        return "เสี่ยงไขมันอุดตัน"
+        if val < 160: return "เสี่ยงไขมันสูง"
+        return "ไขมันสูง" # ชัดเจน
         
     if m_type == 'GFR':
         if val >= 90: return "ดีมาก"
         if val >= 60: return "ปกติ"
-        return "เสี่ยงไตเสื่อม"
+        return "เสื่อม"
         
     if m_type == 'Liver': # SGPT
         if val <= 40: return "ปกติ"
-        return "เสี่ยงตับอักเสบ"
+        if val <= 80: return "เสี่ยงตับอักเสบ"
+        return "ตับอักเสบ" # สูง > 2 เท่า ถือว่าชัดเจน
         
     if m_type == 'Uric':
         if val <= 7.0: return "ปกติ"
-        return "เสี่ยงโรคเกาต์"
+        if val <= 9.0: return "เสี่ยงโรคเกาต์"
+        return "กรดยูริกสูงมาก" # ปรับเป็น "สูงมาก" ตามที่ user ต้องการ
         
     return ""
 
