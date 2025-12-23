@@ -220,18 +220,23 @@ def display_print_center_page(df):
         div[data-testid="stButton"] > button[kind="secondary"] {
              border-color: #ff4b4b;
              color: #ff4b4b;
+             padding: 0px 10px !important;
+             border-radius: 5px !important;
+             height: 32px !important;
+             line-height: 1 !important;
         }
         div[data-testid="stButton"] > button[kind="secondary"]:hover {
              background-color: #ff4b4b;
              color: white;
         }
-        /* Style for the custom table header */
+        /* Table Header Style */
         .custom-table-header {
+            background-color: #f0f2f6;
+            padding: 12px 0;
+            border-radius: 5px;
             font-weight: bold;
-            color: #333;
-            border-bottom: 2px solid #ddd;
-            padding-bottom: 5px;
-            margin-bottom: 10px;
+            color: #31333F;
+            margin-bottom: 5px;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -376,17 +381,21 @@ def display_print_center_page(df):
         unique_patients_df = unique_patients_df.head(ROW_LIMIT)
 
     if not unique_patients_df.empty:
-        # Header Row
-        h1, h2, h3, h4, h5, h6, h7 = st.columns([0.5, 0.7, 1.5, 1, 2, 1.5, 1])
-        with h1: st.markdown("**ลบ**")
-        with h2: st.markdown("**เลือก**")
-        with h3: st.markdown("**สถานะข้อมูล**")
-        with h4: st.markdown("**HN**")
-        with h5: st.markdown("**ชื่อ-สกุล**")
-        with h6: st.markdown("**หน่วยงาน**")
-        with h7: st.markdown("**วันที่**")
-        
-        st.divider()
+        # กำหนดสัดส่วนคอลัมน์ (ปรับให้เหมาะกับเนื้อหา)
+        # [Delete, Select, Status, HN, Name, Dept, Date]
+        col_ratios = [0.6, 0.6, 1.3, 1.2, 2.5, 1.5, 1.2]
+
+        # Header Row (Styled with Gray Background)
+        st.markdown('<div class="custom-table-header">', unsafe_allow_html=True)
+        h1, h2, h3, h4, h5, h6, h7 = st.columns(col_ratios, vertical_alignment="center")
+        with h1: st.markdown("<div style='text-align:center;'>ลบ</div>", unsafe_allow_html=True)
+        with h2: st.markdown("<div style='text-align:center;'>เลือก</div>", unsafe_allow_html=True)
+        with h3: st.markdown("สถานะข้อมูล")
+        with h4: st.markdown("HN")
+        with h5: st.markdown("ชื่อ-สกุล")
+        with h6: st.markdown("หน่วยงาน")
+        with h7: st.markdown("วันที่")
+        st.markdown('</div>', unsafe_allow_html=True)
 
         # Data Rows
         for i, row in unique_patients_df.iterrows():
@@ -398,33 +407,32 @@ def display_print_center_page(df):
             is_manual = hn in manual_hns
             default_chk = is_ready and is_manual
             
-            # Row Layout
-            c1, c2, c3, c4, c5, c6, c7 = st.columns([0.5, 0.7, 1.5, 1, 2, 1.5, 1])
+            # ใช้ vertical_alignment="center" ช่วยจัดกึ่งกลาง
+            c1, c2, c3, c4, c5, c6, c7 = st.columns(col_ratios, vertical_alignment="center")
             
             # Column 1: Delete Button (❌)
             with c1:
-                # แสดงปุ่มลบเฉพาะรายการที่อยู่ใน Manual List หรือแสดงตลอดก็ได้ แต่ Logic คือลบจาก Manual
-                # เพื่อความชัดเจน ให้กดได้ทุกคน ถ้ากดแล้วไม่ได้อยู่ใน list ก็ไม่มีผล (หรือถือว่าลบออกจากมุมมองถ้าทำได้)
-                # ในที่นี้เอาตาม Requirement: "ปรากฏในทุกเซลล์"
+                # ปุ่มลบ
                 if st.button("❌", key=f"del_{hn}", help="ลบรายการนี้", type="secondary"):
                     remove_hn_callback(hn)
                     st.rerun()
 
             # Column 2: Select Checkbox
             with c2:
-                # ใช้ key เพื่อจำค่าการติ๊ก
+                # Checkbox จัดกลาง
                 is_selected = st.checkbox("เลือก", value=default_chk, key=f"sel_{hn}", label_visibility="collapsed")
                 if is_selected:
                     selected_to_print_hns.append(hn)
 
-            # Column 3-7: Info
+            # Column 3-7: Info (Use st.write / st.caption)
             with c3: st.caption(status_text)
             with c4: st.write(hn)
             with c5: st.write(row['ชื่อ-สกุล'])
             with c6: st.write(row['หน่วยงาน'])
             with c7: st.write(str(row['วันที่ตรวจ']).split(' ')[0]) # Show only date
             
-        st.divider()
+            # Add thin separator line
+            st.markdown("<hr style='margin: 0px 0px 5px 0px; border: 0; border-top: 1px solid #f0f0f0;'>", unsafe_allow_html=True)
 
         # Footer Actions
         col_summary, col_clear_btn = st.columns([4, 1])
