@@ -10,34 +10,36 @@ from print_performance_report import render_performance_report_body, get_perform
 # นำเข้าฟังก์ชันเช็คข้อมูลจากไฟล์อื่นเพื่อนำมาใช้ตรวจสอบสถานะ
 from print_performance_report import has_vision_data, has_hearing_data, has_lung_data
 
-# --- Helper Functions สำหรับตรวจสอบความพร้อมข้อมูลในไฟล์นี้ ---
+# --- Helper Functions ---
 def is_empty(val):
     return pd.isna(val) or str(val).strip().lower() in ["", "-", "none", "nan", "null"]
 
 def has_basic_health_data(person_data):
     """ตรวจสอบว่ามีข้อมูลสุขภาพพื้นฐาน (Main Report) หรือไม่"""
-    # เช็คคอลัมน์หลักๆ ของ Lab และ Vitals
     key_indicators = ['FBS', 'CHOL', 'HCT', 'Cr', 'WBC (cumm)', 'SBP', 'Hb(%)']
     return any(not is_empty(person_data.get(key)) for key in key_indicators)
 
 def check_data_readiness(person_data, report_type):
     """
     ตรวจสอบสถานะความพร้อมของข้อมูลตามประเภทรายงาน
-    Returns: (is_ready: bool, status_text: str)
+    Returns: (is_ready: bool, status_text: str, status_color: str)
     """
     has_main = has_basic_health_data(person_data)
     
-    # Check Performance Data
     has_vis = has_vision_data(person_data)
     has_hear = has_hearing_data(person_data)
     has_lung = has_lung_data(person_data)
     has_perf = has_vis or has_hear or has_lung
 
+    status_color = "gray"
+    status_text = "❓ ไม่ระบุ"
+    is_ready = False
+
     if report_type == "รายงานสุขภาพ (Health Report)":
         if has_main:
-            return True, "✅ พร้อมพิมพ์"
+            return True, "✅ ข้อมูลพร้อม", "green"
         else:
-            return False, "⚠️ ไม่มีผลเลือด/ร่างกาย"
+            return False, "⚠️ ขาดผลตรวจ", "orange"
             
     elif report_type == "รายงานสมรรถภาพ (Performance Report)":
         if has_perf:
@@ -45,35 +47,29 @@ def check_data_readiness(person_data, report_type):
             if has_vis: details.append("ตา")
             if has_hear: details.append("หู")
             if has_lung: details.append("ปอด")
-            return True, f"✅ มีผล: {','.join(details)}"
+            return True, f"✅ มีผล: {','.join(details)}", "green"
         else:
-            return False, "⚠️ ไม่มีผลสมรรถภาพ"
+            return False, "⚠️ ไม่มีผลสมรรถภาพ", "orange"
             
     elif report_type == "ทั้งรายงานสุขภาพและสมรรถภาพ":
         if has_main and has_perf:
-            return True, "✅ พร้อมครบทั้ง 2 ส่วน"
+            return True, "✅ ครบถ้วน", "green"
         elif has_main:
-            return True, "⚠️ ขาดผลสมรรถภาพ" # ยังให้ True เพราะพิมพ์ส่วนที่มีได้
+            return True, "⚠️ ขาดสมรรถภาพ", "blue" 
         elif has_perf:
-            return True, "⚠️ ขาดผลสุขภาพ"   # ยังให้ True เพราะพิมพ์ส่วนที่มีได้
+            return True, "⚠️ ขาดผลสุขภาพ", "blue"
         else:
-            return False, "❌ ไม่พบข้อมูลใดๆ"
+            return False, "❌ ไม่มีข้อมูล", "red"
 
-    return False, "❓ ไม่ระบุ"
+    return is_ready, status_text, status_color
 
 def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข้อมูลปีล่าสุดของแต่ละคน"):
-    """
-    สร้าง HTML ฉบับยาวสำหรับคนไข้หลายคน โดยมี Page Break คั่น
-    รองรับการพิมพ์ทั้ง 2 แบบพร้อมกัน
-    """
+    """สร้าง HTML สำหรับพิมพ์"""
     report_bodies = []
     page_break_div = "<div style='page-break-after: always;'></div>"
     
-    # Prepare CSS
     css_main = get_main_report_css()
     css_perf = get_performance_report_css()
-    
-    # รวม CSS กรณีเลือกทั้งคู่ (CSS อาจจะซ้ำกันบ้าง แต่ Browser จัดการได้)
     full_css = f"{css_main}\n{css_perf}" 
 
     progress_bar = st.progress(0)
@@ -82,26 +78,22 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
     
     for i, hn in enumerate(selected_hns):
         try:
-            progress_bar.progress((i + 1) / total_patients, text=f"กำลังตรวจสอบและสร้างรายงานคนที่ {i+1}/{total_patients} (HN: {hn})")
+            progress_bar.progress((i + 1) / total_patients, text=f"กำลังสร้างรายงานคนที่ {i+1}/{total_patients} (HN: {hn})")
             
             person_history_df = df[df['HN'] == hn].copy()
             if person_history_df.empty:
                 skipped_count += 1
                 continue
 
-            # เลือกข้อมูลปีล่าสุด
             latest_year_series = person_history_df.sort_values(by='Year', ascending=False).iloc[0]
             person_data = latest_year_series.to_dict()
 
-            # Logic การสร้าง Body ตามประเภทรายงาน
             patient_bodies = []
             
-            # 1. ตรวจสอบว่าจะเอา Main Report ไหม
             need_main = report_type in ["รายงานสุขภาพ (Health Report)", "ทั้งรายงานสุขภาพและสมรรถภาพ"]
             if need_main and has_basic_health_data(person_data):
                 patient_bodies.append(render_printable_report_body(person_data, person_history_df))
             
-            # 2. ตรวจสอบว่าจะเอา Performance Report ไหม
             need_perf = report_type in ["รายงานสมรรถภาพ (Performance Report)", "ทั้งรายงานสุขภาพและสมรรถภาพ"]
             has_vis = has_vision_data(person_data)
             has_hear = has_hearing_data(person_data)
@@ -109,12 +101,10 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
             if need_perf and (has_vis or has_hear or has_lung):
                 patient_bodies.append(render_performance_report_body(person_data, person_history_df))
 
-            # ถ้าไม่มีข้อมูลเลยสำหรับ HN นี้
             if not patient_bodies:
                 skipped_count += 1
                 continue
             
-            # รวม Body ของคนคนนี้ (ถ้าเลือกทั้งคู่ จะมี 2 ส่วน คั่นด้วย Page Break)
             combined_patient_html = page_break_div.join(patient_bodies)
             report_bodies.append(combined_patient_html)
 
@@ -127,7 +117,6 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
     if not report_bodies:
         return None, skipped_count
 
-    # รวม HTML ของทุกคน คั่นด้วย Page Break
     all_bodies = page_break_div.join(report_bodies)
     
     full_html = f"""
@@ -148,9 +137,7 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
 # --- Callback Functions ---
 
 def add_patient_to_list_callback(df):
-    """
-    Callback function สำหรับปุ่มเพิ่มรายการ
-    """
+    """Callback สำหรับปุ่มเพิ่มรายการ"""
     name = st.session_state.get("bp_name_search")
     hn = st.session_state.get("bp_hn_search")
     cid = st.session_state.get("bp_cid_search")
@@ -192,123 +179,102 @@ def add_patient_to_list_callback(df):
         st.session_state.bp_action_msg = {"type": "error", "text": "❌ ไม่พบข้อมูล หรือไม่ได้ระบุเงื่อนไขการค้นหา"}
 
 def remove_hn_callback(hn_to_remove):
-    """Callback สำหรับลบ HN ออกจากรายการ manual"""
+    """Callback ลบ HN"""
     if 'bp_manual_hns' in st.session_state and hn_to_remove in st.session_state.bp_manual_hns:
         st.session_state.bp_manual_hns.remove(hn_to_remove)
-        # ไม่ต้อง rerun เพราะปุ่มกดจะ trigger rerun อัตโนมัติ
 
 def display_print_center_page(df):
-    """
-    แสดงหน้าจอ 'ศูนย์จัดการพิมพ์รายงาน' (Print Center)
-    """
+    """แสดงหน้าจอ Print Center"""
     st.title("🖨️ ศูนย์จัดการพิมพ์รายงาน (Print Center)")
     st.markdown("---")
     
-    # --- CSS for UI Enhancements (Theme Aware) ---
+    # --- CSS Styling (Modern & Clean) ---
     st.markdown("""
     <style>
+        /* ปรับแต่งปุ่มเพิ่ม */
         div[data-testid="stButton"] > button[kind="primary"] {
             background-color: #1B5E20 !important;
             color: #ffffff !important;
-            border: none !important;
-            padding: 12px 32px !important;
-            font-size: 20px !important;
-            font-weight: 600 !important;
-            border-radius: 8px !important;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
             width: 100%;
         }
-        div[data-testid="stButton"] > button[kind="secondary"] {
-             border-color: #ff4b4b;
-             color: #ff4b4b;
-             padding: 0px 10px !important;
-             border-radius: 5px !important;
-             height: 32px !important;
-             line-height: 1 !important;
-        }
-        div[data-testid="stButton"] > button[kind="secondary"]:hover {
-             background-color: #ff4b4b;
-             color: white;
-        }
-        /* Table Header Style - Clean and Minimal */
-        .custom-table-header {
-            font-weight: bold;
-            color: var(--text-color);
-            margin-bottom: 5px;
-            padding: 10px 0;
-            border-bottom: 2px solid var(--text-color); /* ขีดเส้นใต้ชัดเจนแทนกรอบ */
-        }
-        .row-separator {
-            margin: 0px 0px 5px 0px; 
-            border: 0; 
-            border-top: 1px solid var(--text-color); 
-            opacity: 0.1; 
-        }
         
-        /* New Table Styles */
-        .header-cell {
-            font-weight: bold;
-            text-align: center;
-            padding: 10px 5px;
-            border-bottom: 2px solid var(--text-color);
+        /* สไตล์ตารางแบบ Custom Row */
+        .print-row-container {
             background-color: var(--secondary-background-color);
+            border: 1px solid rgba(128,128,128,0.1);
+            border-radius: 8px;
+            padding: 8px 15px;
+            margin-bottom: 8px;
+            transition: background-color 0.2s;
+        }
+        .print-row-container:hover {
+            border-color: rgba(128,128,128,0.3);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
         
-        .row-cell {
-            padding: 10px 5px;
-            border-bottom: 1px solid rgba(128, 128, 128, 0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-        }
-        .row-cell-left {
-            justify-content: flex-start;
-            text-align: left;
+        .print-row-header {
+            background-color: var(--background-color);
+            border-bottom: 2px solid var(--text-color);
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            font-weight: bold;
+            font-size: 0.95rem;
+            opacity: 0.9;
         }
         
-        /* ปรับแต่งปุ่มลบให้ดูดีขึ้น */
-        .delete-btn-container button {
-            border: none !important;
-            background: transparent !important;
-            font-size: 1.2rem !important;
-            padding: 0 !important;
-            color: #ff4b4b !important;
-            line-height: 1 !important;
-            min-height: auto !important;
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
         }
-        .delete-btn-container button:hover {
-            color: #d32f2f !important;
-            background: transparent !important;
-            transform: scale(1.2);
+        .status-green { background-color: #e8f5e9; color: #1b5e20; }
+        .status-orange { background-color: #fff3e0; color: #e65100; }
+        .status-red { background-color: #ffebee; color: #c62828; }
+        .status-blue { background-color: #e3f2fd; color: #0d47a1; }
+        .status-gray { background-color: #f5f5f5; color: #616161; }
+
+        /* ปรับปุ่มลบให้ดูดี */
+        button[kind="secondary"] {
+            border: 1px solid #ffcdd2 !important;
+            color: #c62828 !important;
+            background-color: transparent !important;
+            padding: 2px 8px !important;
+            font-size: 0.8rem !important;
+            min-height: 0px !important;
+            height: 32px !important;
+        }
+        button[kind="secondary"]:hover {
+            background-color: #ffebee !important;
+            border-color: #c62828 !important;
         }
     </style>
     """, unsafe_allow_html=True)
 
-    # --- Initialize Session State ---
+    # --- Session State Init ---
     if 'bp_dept_filter' not in st.session_state: st.session_state.bp_dept_filter = []
     if 'bp_date_filter' not in st.session_state: st.session_state.bp_date_filter = "(ทั้งหมด)"
     if 'bp_report_type' not in st.session_state: st.session_state.bp_report_type = "รายงานสุขภาพ (Health Report)"
-    # New filters state
     if 'bp_name_search' not in st.session_state: st.session_state.bp_name_search = None
     if 'bp_hn_search' not in st.session_state: st.session_state.bp_hn_search = ""
     if 'bp_cid_search' not in st.session_state: st.session_state.bp_cid_search = ""
-    
-    # --- State สำหรับเก็บรายการที่กดบวก (Manual Queue) ---
     if 'bp_manual_hns' not in st.session_state: st.session_state.bp_manual_hns = set()
 
-    # --- 1. เลือกประเภทรายงาน (Moved to Top) ---
+    # --- 1. เลือกประเภทรายงาน ---
     st.subheader("1. เลือกประเภทรายงาน")
-    
     report_type_options = [
         "รายงานสุขภาพ (Health Report)", 
         "รายงานสมรรถภาพ (Performance Report)",
         "ทั้งรายงานสุขภาพและสมรรถภาพ"
     ]
-    
     type_idx = 0
     if st.session_state.bp_report_type in report_type_options:
         type_idx = report_type_options.index(st.session_state.bp_report_type)
-        
+    
     report_type = st.selectbox(
         "เลือกรูปแบบรายงานที่จะพิมพ์", 
         options=report_type_options,
@@ -316,11 +282,10 @@ def display_print_center_page(df):
         key="bp_report_type",
         label_visibility="collapsed"
     )
-
     st.markdown("---")
 
-    # --- 2. ค้นหาและเพิ่มผู้ป่วย (Search & Add) ---
-    st.subheader("2. ค้นหาและเพิ่มรายชื่อ (พิมพ์ค้นหาทีละคน)")
+    # --- 2. ค้นหาและเพิ่มผู้ป่วย ---
+    st.subheader("2. ค้นหาและเพิ่มรายชื่อ (ทีละคน)")
     
     if 'bp_action_msg' in st.session_state:
         msg = st.session_state.bp_action_msg
@@ -333,24 +298,15 @@ def display_print_center_page(df):
     c1, c2, c3 = st.columns([2, 1.5, 1.5])
     with c1:
         all_names = sorted(df['ชื่อ-สกุล'].dropna().unique().tolist())
-        st.selectbox(
-            "ค้นหาด้วยชื่อ-สกุล", 
-            options=all_names, 
-            index=None,
-            placeholder="พิมพ์หรือเลือกชื่อ...",
-            key="bp_name_search"
-        )
+        st.selectbox("ค้นหาด้วยชื่อ-สกุล", options=all_names, index=None, placeholder="พิมพ์หรือเลือกชื่อ...", key="bp_name_search")
     with c2:
         st.text_input("ค้นหาด้วย HN", key="bp_hn_search", placeholder="พิมพ์ HN")
     with c3:
         st.text_input("ค้นหาด้วยเลขบัตรฯ", key="bp_cid_search", placeholder="พิมพ์เลขบัตร")
 
-    col_add_btn, _, _ = st.columns([2, 2, 4])
-    with col_add_btn:
-        st.button("➕ เพิ่มลงรายการ", use_container_width=True, 
-                  help="กดเพื่อเพิ่มคนที่ค้นหาลงในลิสต์ด้านล่าง",
-                  on_click=add_patient_to_list_callback,
-                  args=(df,))
+    col_add, _, _ = st.columns([2, 2, 4])
+    with col_add:
+        st.button("➕ เพิ่มลงรายการ", use_container_width=True, on_click=add_patient_to_list_callback, args=(df,))
     
     st.markdown("---")
     
@@ -359,40 +315,28 @@ def display_print_center_page(df):
     c4, c5 = st.columns(2)
     with c4:
         all_depts = sorted(df['หน่วยงาน'].dropna().astype(str).str.strip().unique())
-        selected_depts = st.multiselect(
-            "กรองตามหน่วยงาน", 
-            options=all_depts,
-            placeholder="เลือกหน่วยงาน...",
-            key="bp_dept_filter" 
-        )
+        selected_depts = st.multiselect("กรองตามหน่วยงาน", options=all_depts, placeholder="เลือกหน่วยงาน...", key="bp_dept_filter")
     with c5:
         temp_df = df.copy()
         if selected_depts:
             temp_df = temp_df[temp_df['หน่วยงาน'].astype(str).str.strip().isin(selected_depts)]
         available_dates = sorted(temp_df['วันที่ตรวจ'].dropna().astype(str).unique(), reverse=True)
         date_options = ["(ทั้งหมด)"] + list(available_dates)
+        
         idx = 0
-        if st.session_state.bp_date_filter in date_options:
-            idx = date_options.index(st.session_state.bp_date_filter)
-        selected_date = st.selectbox(
-            "กรองตามวันที่ตรวจ", 
-            options=date_options,
-            index=idx,
-            key="bp_date_filter"
-        )
+        if st.session_state.bp_date_filter in date_options: idx = date_options.index(st.session_state.bp_date_filter)
+        selected_date = st.selectbox("กรองตามวันที่ตรวจ", options=date_options, index=idx, key="bp_date_filter")
 
-    # --- 3. ตรวจสอบรายชื่อและสั่งพิมพ์ (Custom Table Layout) ---
+    # --- 3. รายชื่อที่เลือก (Custom Grid Table) ---
     st.subheader("3. รายชื่อที่เลือก (รอสั่งพิมพ์)")
     
+    # Data Preparation
     filtered_df = pd.DataFrame(columns=df.columns)
     filter_active = False
-
     if selected_depts or (selected_date != "(ทั้งหมด)"):
         filtered_df = df.copy()
-        if selected_depts: 
-            filtered_df = filtered_df[filtered_df['หน่วยงาน'].astype(str).str.strip().isin(selected_depts)]
-        if selected_date != "(ทั้งหมด)": 
-            filtered_df = filtered_df[filtered_df['วันที่ตรวจ'].astype(str) == selected_date]
+        if selected_depts: filtered_df = filtered_df[filtered_df['หน่วยงาน'].astype(str).str.strip().isin(selected_depts)]
+        if selected_date != "(ทั้งหมด)": filtered_df = filtered_df[filtered_df['วันที่ตรวจ'].astype(str) == selected_date]
         filter_active = True
 
     manual_hns = list(st.session_state.bp_manual_hns)
@@ -408,80 +352,96 @@ def display_print_center_page(df):
     display_pool = display_pool.sort_values(by=['Year'], ascending=False)
     unique_patients_df = display_pool.drop_duplicates(subset=['HN'])
     
-    final_display_hns = []
     selected_to_print_hns = []
     
-    # Limit row count for performance if using custom widgets
-    ROW_LIMIT = 200 
-    
-    if unique_patients_df.empty:
-        if filter_active:
-            st.info("ไม่พบข้อมูลตามเงื่อนไขหน่วยงาน/วันที่")
-        else:
-            st.info("ตารางว่าง... กรุณาค้นหาและกดปุ่ม ➕ เพื่อเพิ่มรายชื่อ")
-    elif len(unique_patients_df) > ROW_LIMIT:
-        st.warning(f"⚠️ รายการมีจำนวนมาก ({len(unique_patients_df)} คน) กรุณากรองข้อมูลให้เฉพาะเจาะจงมากขึ้น (แสดงผลจำกัดที่ {ROW_LIMIT} คนแรก)")
+    # Limit rows
+    ROW_LIMIT = 200
+    if len(unique_patients_df) > ROW_LIMIT:
+        st.warning(f"⚠️ แสดงผล {ROW_LIMIT} คนแรก จากทั้งหมด {len(unique_patients_df)} คน (เพื่อความรวดเร็ว)")
         unique_patients_df = unique_patients_df.head(ROW_LIMIT)
 
-    if not unique_patients_df.empty:
-        # กำหนดสัดส่วนคอลัมน์ที่แม่นยำขึ้น
-        # [Delete, Select, Status, HN, Name, Dept, Date]
-        col_ratios = [0.8, 0.8, 1.5, 1.5, 3, 2, 1.5]
+    if unique_patients_df.empty:
+        if filter_active: st.info("ไม่พบข้อมูลตามเงื่อนไขหน่วยงาน/วันที่")
+        else: st.info("ยังไม่มีรายชื่อในรายการ กรุณากดปุ่ม ➕ เพิ่มรายชื่อ")
+    else:
+        # --- Header Row ---
+        # กำหนดสัดส่วน: [ลบ, เลือก, สถานะ, HN, ชื่อ, หน่วยงาน, วันที่]
+        col_ratios = [0.8, 0.8, 1.5, 1.2, 2.5, 2, 1.2]
+        
+        # Header Container
+        with st.container():
+            st.markdown("<div class='print-row-header'>", unsafe_allow_html=True)
+            cols = st.columns(col_ratios)
+            headers = ["ลบ", "เลือก", "สถานะข้อมูล", "HN", "ชื่อ-สกุล", "หน่วยงาน", "วันที่"]
+            for i, h in enumerate(headers):
+                align = "center" if i < 4 or i == 6 else "left"
+                cols[i].markdown(f"<div style='text-align:{align}; width:100%;'>{h}</div>", unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
-        # Header Row (Styled cleanly)
-        h_cols = st.columns(col_ratios)
-        headers = ["ลบ", "เลือก", "สถานะข้อมูล", "HN", "ชื่อ-สกุล", "หน่วยงาน", "วันที่"]
-        for i, header_text in enumerate(headers):
-            with h_cols[i]:
-                st.markdown(f"<div class='header-cell'>{header_text}</div>", unsafe_allow_html=True)
-
-        # Data Rows
+        # --- Data Rows Loop ---
         for i, row in unique_patients_df.iterrows():
             hn = row['HN']
             full_data = row.to_dict()
-            is_ready, status_text = check_data_readiness(full_data, report_type)
+            is_ready, status_text, status_color = check_data_readiness(full_data, report_type)
             
-            # Default selection logic: ถ้ามาจาก Manual List (กดบวก) และข้อมูลพร้อม -> ติ๊กถูก
             is_manual = hn in manual_hns
             default_chk = is_ready and is_manual
             
-            # Row Columns
-            cols = st.columns(col_ratios)
-            
-            # Column 1: Delete Button (❌) - Custom Style
-            with cols[0]:
-                st.markdown("<div class='row-cell delete-btn-container'>", unsafe_allow_html=True)
-                if st.button("❌", key=f"del_{hn}", help="ลบรายการนี้"):
-                    remove_hn_callback(hn)
-                    st.rerun()
-                st.markdown("</div>", unsafe_allow_html=True)
+            # Row Container
+            with st.container():
+                # ใช้ vertical_alignment='center' ใน Streamlit เวอร์ชันใหม่ (ถ้าใช้ได้)
+                # ถ้ายังใช้ไม่ได้ CSS ด้านบนจะช่วยจัดกึ่งกลางให้ในระดับหนึ่ง
+                cols = st.columns(col_ratios, vertical_alignment="center")
+                
+                # 1. Delete Button
+                with cols[0]:
+                    # ใช้ st.empty เพื่อจัดกึ่งกลางปุ่ม
+                    if st.button("🗑️", key=f"del_{hn}", help="ลบรายการนี้", type="secondary"):
+                        remove_hn_callback(hn)
+                        st.rerun()
+                
+                # 2. Checkbox
+                with cols[1]:
+                    # ใช้ columns ย่อยเพื่อจัด checkbox ให้อยู่ตรงกลาง column
+                    _, mid, _ = st.columns([1,1,1]) 
+                    with mid:
+                        is_selected = st.checkbox("เลือก", value=default_chk, key=f"sel_{hn}", label_visibility="collapsed")
+                        if is_selected:
+                            selected_to_print_hns.append(hn)
 
-            # Column 2: Select Checkbox
-            with cols[1]:
-                st.markdown("<div class='row-cell'>", unsafe_allow_html=True)
-                is_selected = st.checkbox("เลือก", value=default_chk, key=f"sel_{hn}", label_visibility="collapsed")
-                st.markdown("</div>", unsafe_allow_html=True)
-                if is_selected:
-                    selected_to_print_hns.append(hn)
+                # 3. Status Badge
+                with cols[2]:
+                    st.markdown(f"<div style='text-align:center;'><span class='status-badge status-{status_color}'>{status_text}</span></div>", unsafe_allow_html=True)
 
-            # Column 3-7: Info with styled cells
-            with cols[2]: st.markdown(f"<div class='row-cell'><small>{status_text}</small></div>", unsafe_allow_html=True)
-            with cols[3]: st.markdown(f"<div class='row-cell'>{hn}</div>", unsafe_allow_html=True)
-            with cols[4]: st.markdown(f"<div class='row-cell row-cell-left'>{row['ชื่อ-สกุล']}</div>", unsafe_allow_html=True)
-            with cols[5]: st.markdown(f"<div class='row-cell row-cell-left'>{row['หน่วยงาน']}</div>", unsafe_allow_html=True)
-            with cols[6]: st.markdown(f"<div class='row-cell'>{str(row['วันที่ตรวจ']).split(' ')[0]}</div>", unsafe_allow_html=True)
+                # 4. HN
+                with cols[3]:
+                    st.markdown(f"<div style='text-align:center; font-family:monospace;'>{hn}</div>", unsafe_allow_html=True)
 
-        # Footer Actions
+                # 5. Name
+                with cols[4]:
+                    st.write(row['ชื่อ-สกุล'])
+
+                # 6. Dept
+                with cols[5]:
+                    st.caption(row['หน่วยงาน'])
+
+                # 7. Date
+                with cols[6]:
+                    st.markdown(f"<div style='text-align:center;'>{str(row['วันที่ตรวจ']).split(' ')[0]}</div>", unsafe_allow_html=True)
+                
+                # เส้นแบ่งบางๆ ระหว่างแถว (Optional เพราะมี Container Border แล้ว)
+                # st.markdown("<hr style='margin:0; opacity:0.1;'>", unsafe_allow_html=True)
+
+        # --- Footer Actions ---
         col_summary, col_clear_btn = st.columns([4, 1])
         with col_clear_btn:
              if manual_hns:
-                if st.button("🗑️ ล้างทั้งหมด", type="secondary", use_container_width=True):
+                if st.button("🗑️ ล้างรายการทั้งหมด", type="secondary", use_container_width=True):
                     st.session_state.bp_manual_hns = set()
                     st.rerun()
-    
-    count_selected = len(selected_to_print_hns)
-    
+
     # --- Print Button ---
+    count_selected = len(selected_to_print_hns)
     st.markdown("")
     col_l, col_c, col_r = st.columns([1, 2, 1])
     with col_c:
