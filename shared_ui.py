@@ -84,7 +84,7 @@ def render_lab_table_html(title, headers, rows, table_class="lab-table"):
         val_class = "text-danger" if row[1][1] else ""
         tbody += f"<td class='{val_class}' style='text-align: center; font-weight: bold;'>{row[1][0]}</td>"
         
-        tbody += f"<td style='text-align: left; color: #666;'>{row[2][0]}</td>" # ค่าปกติ
+        tbody += f"<td style='text-align: left; opacity: 0.8;'>{row[2][0]}</td>" # ค่าปกติ
         tbody += "</tr>"
     tbody += "</tbody>"
 
@@ -264,22 +264,11 @@ def display_common_header(person_data):
         bmi_val_str = f"{bmi:.1f}"
         bmi_desc = interpret_bmi(bmi)
 
-    # แก้ไข: เปลี่ยนจาก Emoji กลับเป็น SVG Icons (Minimal Style)
-    # ใช้ SVG มาตรฐาน (Feather Icons Style) ที่มีความคมชัดและดูเป็นทางการ
-    
-    # 1. Profile Icon (User)
+    # SVG Icons (Minimal Style)
     icon_profile = """<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>"""
-    
-    # 2. Body/Scale Icon (User Body)
     icon_body = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>"""
-    
-    # 3. Waist Icon (Circle with diameter/measure) - Using 'Disc' or 'Circle' concept
     icon_waist = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 12h8"></path></svg>"""
-    
-    # 4. BP Icon (Heart)
     icon_heart = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>"""
-    
-    # 5. Pulse Icon (Activity)
     icon_pulse = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>"""
 
     html_content = clean_html_string(f"""
@@ -355,25 +344,27 @@ def display_common_header(person_data):
     st.markdown(html_content, unsafe_allow_html=True)
 
 def inject_custom_css():
-    # แก้ไข: ปรับ CSS ให้รองรับ SVG และยังคงความสวยงาม (Modern Clean Look)
+    # แก้ไข: ใช้ CSS Variable ของ Streamlit (var(--...)) เพื่อรองรับ Dark/Light Mode และ Mobile Responsive
     css_content = clean_html_string("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
         
         :root {
+            /* ใช้ตัวแปรสีจาก Theme ของ Streamlit */
+            --main-bg-color: var(--background-color);
+            --card-bg-color: var(--secondary-background-color);
+            --main-text-color: var(--text-color);
+            --border-color: rgba(128, 128, 128, 0.2);
             --primary: #00796B;
-            --primary-light: #B2DFDB;
-            --bg-light: #F8F9FA;
-            --text-dark: #2C3E50;
-            --text-grey: #607D8B;
-            --danger-bg: #FFEBEE;
-            --danger-text: #C62828;
-            --success-bg: #E8F5E9;
-            --success-text: #2E7D32;
-            --warning-bg: #FFF3E0;
-            --warning-text: #E65100;
-            --border-color: #E0E0E0;
-            --card-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            --danger-text: #FF5252;
+            --warning-text: #FF9800;
+            --success-text: #4CAF50;
+            
+            /* พื้นหลังสีอ่อนๆ สำหรับสถานะ (ใช้ opacity เพื่อรองรับ dark mode) */
+            --danger-bg: rgba(255, 82, 82, 0.1);
+            --warning-bg: rgba(255, 152, 0, 0.1);
+            --success-bg: rgba(76, 175, 80, 0.1);
+            --header-bg: rgba(128, 128, 128, 0.05);
         }
         
         html, body, [class*="st-"], h1, h2, h3, h4, h5, h6, p, div, span, th, td {
@@ -389,7 +380,7 @@ def inject_custom_css():
             padding-left: 15px;
             margin-top: 30px;
             margin-bottom: 20px;
-            background: linear-gradient(90deg, rgba(0,121,107,0.05) 0%, rgba(255,255,255,0) 100%);
+            background: linear-gradient(90deg, rgba(0,121,107,0.1) 0%, rgba(0,0,0,0) 100%);
             padding-top: 10px;
             padding-bottom: 10px;
             border-radius: 0 8px 8px 0;
@@ -397,32 +388,34 @@ def inject_custom_css():
         
         .section-subtitle {
             font-weight: 600;
-            color: #455A64;
+            color: var(--main-text-color);
+            opacity: 0.8;
             margin-top: 1rem;
             margin-bottom: 0.5rem;
             font-size: 1.1rem;
         }
 
-        /* Card Container Styles */
+        /* Card Container Styles - Adaptive Background */
         .card-container {
-            background: white;
+            background-color: var(--card-bg-color);
             border-radius: 12px;
             padding: 20px;
-            box-shadow: var(--card-shadow);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             border: 1px solid var(--border-color);
             margin-bottom: 20px;
+            color: var(--main-text-color);
         }
 
         .table-title {
             font-weight: 700;
-            color: var(--text-dark);
+            color: var(--main-text-color);
             margin-bottom: 15px;
             font-size: 1.1rem;
-            border-bottom: 2px solid #F0F0F0;
+            border-bottom: 2px solid var(--border-color);
             padding-bottom: 10px;
         }
 
-        /* Modern Tables */
+        /* Modern Tables - Adaptive */
         .table-responsive {
             overflow-x: auto;
         }
@@ -431,52 +424,47 @@ def inject_custom_css():
             width: 100%;
             border-collapse: collapse;
             font-size: 14px;
+            color: var(--main-text-color);
         }
         
         .lab-table th, .info-detail-table th {
-            background-color: #F5F7F9;
-            color: #546E7A;
+            background-color: var(--header-bg);
+            color: var(--main-text-color);
+            opacity: 0.9;
             font-weight: 600;
             padding: 12px 15px;
             text-transform: uppercase;
             font-size: 0.85rem;
-            border-bottom: 2px solid #CFD8DC;
+            border-bottom: 2px solid var(--border-color);
         }
         
         .lab-table td, .info-detail-table td {
             padding: 12px 15px;
-            border-bottom: 1px solid #ECEFF1;
-            color: #37474F;
+            border-bottom: 1px solid var(--border-color);
         }
         
         .lab-table tr:last-child td {
             border-bottom: none;
         }
         
-        .lab-table tr:hover {
-            background-color: #FAFAFA;
-        }
-
         /* Abnormal Rows */
         .abnormal-row {
-            background-color: #FFEBEE !important;
-        }
-        .abnormal-row td {
-            border-bottom: 1px solid #FFCDD2;
+            background-color: var(--danger-bg) !important;
         }
         .text-danger {
-            color: #D32F2F !important;
+            color: var(--danger-text) !important;
             font-weight: bold;
         }
 
-        /* Header Layout */
+        /* Header Layout - Responsive Grid */
         .report-header-container {
-            background-color: white;
+            background-color: var(--card-bg-color);
             border-radius: 15px;
             padding: 25px;
-            box-shadow: var(--card-shadow);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             border: 1px solid var(--border-color);
             margin-bottom: 25px;
+            color: var(--main-text-color);
         }
         
         .header-main {
@@ -491,12 +479,13 @@ def inject_custom_css():
             display: flex;
             gap: 20px;
             align-items: center;
+            flex-wrap: wrap; /* Allow wrapping on small screens */
         }
         
         .profile-icon {
             width: 60px;
             height: 60px;
-            background-color: var(--primary-light);
+            background-color: rgba(0, 121, 107, 0.1);
             color: var(--primary);
             border-radius: 50%;
             display: flex;
@@ -504,27 +493,23 @@ def inject_custom_css():
             justify-content: center;
         }
         
-        .profile-icon svg {
-            width: 32px;
-            height: 32px;
-        }
+        .profile-icon svg { width: 32px; height: 32px; }
         
         .patient-name {
             font-size: 1.5rem;
             font-weight: 700;
-            color: var(--text-dark);
             line-height: 1.2;
         }
         
         .patient-meta {
-            color: var(--text-grey);
+            opacity: 0.7;
             font-size: 0.95rem;
             margin-top: 5px;
         }
         
         .patient-dept {
-            background-color: #ECEFF1;
-            color: #455A64;
+            background-color: var(--header-bg);
+            opacity: 0.9;
             display: inline-block;
             padding: 2px 10px;
             border-radius: 4px;
@@ -546,40 +531,35 @@ def inject_custom_css():
         
         .hospital-brand .hosp-dept {
             font-size: 1rem;
-            color: #455A64;
+            opacity: 0.8;
             font-weight: 600;
             line-height: 1.2;
         }
         
         .hospital-brand .hosp-sub {
             font-size: 0.9rem;
-            color: #78909C;
+            opacity: 0.6;
             line-height: 1.2;
         }
         
-        /* Vitals Grid */
+        /* Vitals Grid - Responsive */
         .vitals-grid-container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Responsive columns */
             gap: 20px;
             margin-bottom: 30px;
         }
         
         .vital-card {
-            background: white;
+            background: var(--card-bg-color);
             border-radius: 12px;
             padding: 20px;
             display: flex;
             align-items: center;
             gap: 15px;
-            box-shadow: var(--card-shadow);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             border: 1px solid var(--border-color);
-            transition: transform 0.2s;
-        }
-        
-        .vital-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 12px rgba(0,0,0,0.1);
+            color: var(--main-text-color);
         }
         
         .vital-icon-box {
@@ -591,43 +571,37 @@ def inject_custom_css():
             margin-right: 5px;
         }
         
-        .vital-icon-box svg {
-            width: 36px;
-            height: 36px;
-        }
+        .vital-icon-box svg { width: 36px; height: 36px; }
         
-        /* Remove background colors for icons */
-        .color-blue { background: transparent; color: #1976D2; }
-        .color-green { background: transparent; color: #388E3C; }
-        .color-red { background: transparent; color: #D32F2F; }
-        .color-orange { background: transparent; color: #F57C00; }
+        /* Icon Colors */
+        .color-blue { color: #2196F3; }
+        .color-green { color: #4CAF50; }
+        .color-red { color: #F44336; }
+        .color-orange { color: #FF9800; }
         
-        .vital-content {
-            flex: 1;
-        }
+        .vital-content { flex: 1; }
         
         .vital-label {
             font-size: 0.85rem;
-            color: #78909C;
+            opacity: 0.7;
             font-weight: 500;
         }
         
         .vital-value {
             font-size: 1.4rem;
             font-weight: 700;
-            color: var(--text-dark);
             line-height: 1.2;
         }
         
         .unit {
             font-size: 0.9rem;
-            color: #90A4AE;
+            opacity: 0.6;
             font-weight: 400;
         }
         
         .vital-sub {
             font-size: 0.8rem;
-            color: #78909C;
+            opacity: 0.6;
             margin-top: 2px;
         }
         
@@ -638,15 +612,16 @@ def inject_custom_css():
             font-size: 0.75rem;
             font-weight: 600;
         }
-        .badge-bmi { background-color: #ECEFF1; color: #455A64; }
+        .badge-bmi { background-color: var(--header-bg); opacity: 0.8; }
 
-        /* Advice Boxes */
+        /* Advice Boxes - Adaptive */
         .recommendation-container {
-            background-color: white;
+            background-color: var(--card-bg-color);
             border-radius: 12px;
             padding: 25px;
             border-left: 6px solid var(--primary);
-            box-shadow: var(--card-shadow);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            color: var(--main-text-color);
         }
         
         .custom-advice-box {
@@ -661,28 +636,49 @@ def inject_custom_css():
         }
         .custom-advice-box::before { content: "💡"; font-size: 1.2rem; }
         
-        .immune-box { background-color: #E8F5E9; color: #2E7D32; border-color: #C8E6C9; }
-        .no-immune-box { background-color: #FFEBEE; color: #C62828; border-color: #FFCDD2; }
-        .warning-box { background-color: #FFF8E1; color: #F57F17; border-color: #FFE082; }
+        /* Status Boxes with Adaptive Backgrounds */
+        .immune-box { background-color: var(--success-bg); color: var(--success-text); border: 1px solid rgba(76, 175, 80, 0.2); }
+        .no-immune-box { background-color: var(--danger-bg); color: var(--danger-text); border: 1px solid rgba(255, 82, 82, 0.2); }
+        .warning-box { background-color: var(--warning-bg); color: var(--warning-text); border: 1px solid rgba(255, 152, 0, 0.2); }
         
         /* Vision Table Specifics */
-        .vision-table th { background-color: #F5F5F5; }
+        .vision-table th { background-color: var(--header-bg); }
         .vision-result {
             padding: 4px 12px;
             border-radius: 20px;
             font-size: 0.85rem;
             font-weight: 600;
         }
-        .vision-normal { background-color: #E8F5E9; color: #2E7D32; }
-        .vision-abnormal { background-color: #FFEBEE; color: #C62828; }
-        .vision-warning { background-color: #FFF3E0; color: #E65100; }
-        .vision-not-tested { background-color: #f0f2f6; color: #6c757d; }
+        .vision-normal { background-color: var(--success-bg); color: var(--success-text); }
+        .vision-abnormal { background-color: var(--danger-bg); color: var(--danger-text); }
+        .vision-warning { background-color: var(--warning-bg); color: var(--warning-text); }
+        .vision-not-tested { background-color: var(--header-bg); opacity: 0.5; }
         
-        .styled-df-table { width: 100%; border-collapse: collapse; font-family: 'Sarabun', sans-serif !important; font-size: 14px; }
-        .styled-df-table th, .styled-df-table td { border: 1px solid #e0e0e0; padding: 10px; text-align: left; color: #333; }
-        .styled-df-table thead th { background-color: #f8f9fa; font-weight: bold; text-align: center; }
-        .styled-df-table tbody td { text-align: center; }
-        .styled-df-table tbody td:first-child { text-align: left; }
+        /* Mobile Adjustments (Media Query) */
+        @media (max-width: 768px) {
+            .header-main {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            .report-meta {
+                text-align: left;
+                margin-top: 10px;
+                padding-top: 10px;
+                border-top: 1px solid var(--border-color);
+                width: 100%;
+            }
+            .vital-value {
+                font-size: 1.2rem;
+            }
+            .table-responsive {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            .info-card-grid {
+                grid-template-columns: 1fr; /* Stack vertically on mobile */
+            }
+        }
     </style>""")
     st.markdown(css_content, unsafe_allow_html=True)
 
@@ -691,215 +687,99 @@ def inject_custom_css():
 def render_vision_details_table(person_data):
     # ปรับปรุง: เพิ่มรายการตรวจสอบให้ครบ 13 รายการตามแบบฟอร์มมาตรฐาน
     vision_config = [
-        # --- กลุ่มที่ 1: การมองเห็นระยะไกล (Far Vision) ---
-        {
-            'id': 'V_Binocular_Far',
-            'label': '1. การมองด้วย 2 ตา (Binocular vision)',
-            'keys': ['ป.การรวมภาพ', 'ผ.การรวมภาพ', 'Binocular', 'Binocular Vision']
-        },
-        {
-            'id': 'V_Both_Far',
-            'label': '2. ความชัดระยะไกล - สองตา (Far vision - Both)',
-            'keys': ['ป.ความชัดของภาพระยะไกล', 'ผ.ความชัดของภาพระยะไกล', 'Far Both', 'V_Both_Far']
-        },
-        {
-            'id': 'V_R_Far', 
-            'label': '3. ความชัดระยะไกล - ตาขวา (Far vision - Right)', 
-            'keys': ['V_R_Far', 'R_Far', 'Right Far', 'Far Vision Right', 'การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)', 'R-Far']
-        },
-        {
-            'id': 'V_L_Far', 
-            'label': '4. ความชัดระยะไกล - ตาซ้าย (Far vision - Left)', 
-            'keys': ['V_L_Far', 'L_Far', 'Left Far', 'Far Vision Left', 'การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)', 'L-Far']
-        },
-        
-        # --- กลุ่มที่ 2: การรับรู้พิเศษ (Special Perception) ---
-        {
-            'id': 'Stereo',
-            'label': '5. การมองภาพ 3 มิติ (Stereo depth)',
-            'keys': ['ป.การกะระยะและมองความชัดลึกของภาพ', 'ผ.การกะระยะและมองความชัดลึกของภาพ', 'Stereo', 'Stereopsis']
-        },
-        {
-            'id': 'Color_Blind', 
-            'label': '6. การจำแนกสี (Color discrimination)', 
-            'keys': ['Color_Blind', 'ColorBlind', 'Ishihara', 'Color', 'ตาบอดสี', 'ป.การจำแนกสี', 'ผ.การจำแนกสี']
-        },
-
-        # --- กลุ่มที่ 3: กล้ามเนื้อตา (Muscle Balance / Phoria) ---
-        {
-            'id': 'Phoria_V_Far',
-            'label': '7. สมดุลกล้ามเนื้อตาแนวดิ่ง (Far vertical phoria)',
-            'keys': ['ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง', 'Far Vertical Phoria', 'Phoria V Far']
-        },
-        {
-            'id': 'Phoria_H_Far',
-            'label': '8. สมดุลกล้ามเนื้อตาแนวนอน (Far lateral phoria)',
-            'keys': ['ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน', 'Far Lateral Phoria', 'Phoria H Far']
-        },
-
-        # --- กลุ่มที่ 4: การมองเห็นระยะใกล้ (Near Vision) ---
-        {
-            'id': 'V_Both_Near',
-            'label': '9. ความชัดระยะใกล้ - สองตา (Near vision - Both)',
-            'keys': ['ป.ความชัดของภาพระยะใกล้', 'ผ.ความชัดของภาพระยะใกล้', 'Near Both', 'V_Both_Near']
-        },
-        {
-            'id': 'V_R_Near', 
-            'label': '10. ความชัดระยะใกล้ - ตาขวา (Near vision - Right)', 
-            'keys': ['V_R_Near', 'R_Near', 'Right Near', 'Near Vision Right', 'การมองภาพระยะใกล้ด้วยตาขวา (Near vision – Right)', 'R-Near']
-        },
-        {
-            'id': 'V_L_Near', 
-            'label': '11. ความชัดระยะใกล้ - ตาซ้าย (Near vision - Left)', 
-            'keys': ['V_L_Near', 'L_Near', 'Left Near', 'Near Vision Left', 'การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision – Left)', 'L-Near']
-        },
-        {
-            'id': 'Phoria_H_Near',
-            'label': '12. สมดุลกล้ามเนื้อตาแนวนอน-ใกล้ (Near lateral phoria)',
-            'keys': ['ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'Near Lateral Phoria', 'Phoria H Near']
-        },
-
-        # --- กลุ่มที่ 5: ลานสายตา (Visual Field) ---
-        {
-            'id': 'Visual_Field',
-            'label': '13. ลานสายตา (Visual field)',
-            'keys': ['ป.ลานสายตา', 'ผ.ลานสายตา', 'Visual Field', 'Perimetry']
-        }
+        {'id': 'V_Binocular_Far', 'label': '1. การมองด้วย 2 ตา (Binocular vision)', 'keys': ['ป.การรวมภาพ', 'ผ.การรวมภาพ', 'Binocular', 'Binocular Vision']},
+        {'id': 'V_Both_Far', 'label': '2. ความชัดระยะไกล - สองตา (Far vision - Both)', 'keys': ['ป.ความชัดของภาพระยะไกล', 'ผ.ความชัดของภาพระยะไกล', 'Far Both', 'V_Both_Far']},
+        {'id': 'V_R_Far', 'label': '3. ความชัดระยะไกล - ตาขวา (Far vision - Right)', 'keys': ['V_R_Far', 'R_Far', 'Right Far', 'Far Vision Right', 'การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)', 'R-Far']},
+        {'id': 'V_L_Far', 'label': '4. ความชัดระยะไกล - ตาซ้าย (Far vision - Left)', 'keys': ['V_L_Far', 'L_Far', 'Left Far', 'Far Vision Left', 'การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)', 'L-Far']},
+        {'id': 'Stereo', 'label': '5. การมองภาพ 3 มิติ (Stereo depth)', 'keys': ['ป.การกะระยะและมองความชัดลึกของภาพ', 'ผ.การกะระยะและมองความชัดลึกของภาพ', 'Stereo', 'Stereopsis']},
+        {'id': 'Color_Blind', 'label': '6. การจำแนกสี (Color discrimination)', 'keys': ['Color_Blind', 'ColorBlind', 'Ishihara', 'Color', 'ตาบอดสี', 'ป.การจำแนกสี', 'ผ.การจำแนกสี']},
+        {'id': 'Phoria_V_Far', 'label': '7. สมดุลกล้ามเนื้อตาแนวดิ่ง (Far vertical phoria)', 'keys': ['ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง', 'Far Vertical Phoria', 'Phoria V Far']},
+        {'id': 'Phoria_H_Far', 'label': '8. สมดุลกล้ามเนื้อตาแนวนอน (Far lateral phoria)', 'keys': ['ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน', 'Far Lateral Phoria', 'Phoria H Far']},
+        {'id': 'V_Both_Near', 'label': '9. ความชัดระยะใกล้ - สองตา (Near vision - Both)', 'keys': ['ป.ความชัดของภาพระยะใกล้', 'ผ.ความชัดของภาพระยะใกล้', 'Near Both', 'V_Both_Near']},
+        {'id': 'V_R_Near', 'label': '10. ความชัดระยะใกล้ - ตาขวา (Near vision - Right)', 'keys': ['V_R_Near', 'R_Near', 'Right Near', 'Near Vision Right', 'การมองภาพระยะใกล้ด้วยตาขวา (Near vision – Right)', 'R-Near']},
+        {'id': 'V_L_Near', 'label': '11. ความชัดระยะใกล้ - ตาซ้าย (Near vision - Left)', 'keys': ['V_L_Near', 'L_Near', 'Left Near', 'Near Vision Left', 'การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision – Left)', 'L-Near']},
+        {'id': 'Phoria_H_Near', 'label': '12. สมดุลกล้ามเนื้อตาแนวนอน-ใกล้ (Near lateral phoria)', 'keys': ['ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'Near Lateral Phoria', 'Phoria H Near']},
+        {'id': 'Visual_Field', 'label': '13. ลานสายตา (Visual field)', 'keys': ['ป.ลานสายตา', 'ผ.ลานสายตา', 'Visual Field', 'Perimetry']}
     ]
     
     def check_vision(val, test_type):
-        # ถ้าค่าเป็นว่าง ให้คืนค่าเป็นขีด "-" พร้อม style สีเทาๆ
         if is_empty(val): return "-", "vision-not-tested"
         val_str = str(val).strip().lower()
         
-        # 1. กลุ่มคำว่า "ปกติ" (Normal)
-        normal_keywords = [
-            'normal', 'ปกติ', 'pass', 'ผ่าน', 'within normal', 'no', 'none', 
-            'ortho', 'orthophoria', 'clear', 'ok', 'good', 'binocular', '6/6', '20/20'
-        ]
-        
-        # 2. กลุ่มคำว่า "ต่ำกว่าเกณฑ์" (Below Standard / Mild Issue)
+        normal_keywords = ['normal', 'ปกติ', 'pass', 'ผ่าน', 'within normal', 'no', 'none', 'ortho', 'orthophoria', 'clear', 'ok', 'good', 'binocular', '6/6', '20/20']
         warning_keywords = ['mild', 'slight', 'เล็กน้อย', 'trace', 'low', 'ต่ำ', 'below', 'drop']
-
-        # 3. กลุ่มคำว่า "ผิดปกติ" (Abnormal)
         abnormal_keywords = ['abnormal', 'ผิดปกติ', 'fail', 'ไม่ผ่าน', 'detect', 'found', 'พบ', 'deficiency', 'color blind', 'blind', 'eso', 'exo', 'hyper', 'hypo']
 
-        # Logic การตรวจสอบ
-        if val_str in normal_keywords: 
-            return "ปกติ", "vision-normal"
-        
-        # ตรวจสอบว่ามี Keyword ผิดปกติหรือไม่
+        if val_str in normal_keywords: return "ปกติ", "vision-normal"
         if any(kw in val_str for kw in abnormal_keywords):
-            # ถ้ามีความรุนแรงน้อย ให้เป็นต่ำกว่าเกณฑ์
-            if any(kw in val_str for kw in warning_keywords):
-                return "ต่ำกว่าเกณฑ์", "vision-warning"
+            if any(kw in val_str for kw in warning_keywords): return "ต่ำกว่าเกณฑ์", "vision-warning"
             return "ผิดปกติ", "vision-abnormal"
-            
-        # ตรวจสอบกลุ่มต่ำกว่าเกณฑ์โดยตรง (กรณีไม่มีคำว่าผิดปกติ แต่มีคำว่าต่ำ)
-        if any(kw in val_str for kw in warning_keywords):
-             return "ต่ำกว่าเกณฑ์", "vision-warning"
-
-        # กรณีเป็นตัวเลข (Visual Acuity เช่น 20/20, 20/40)
-        # ถ้าเป็นรูปแบบ ตัวเลข/ตัวเลข ให้แสดงค่าตามจริง (ถือว่าสั้นและเข้าใจได้)
-        if re.match(r'^\d+/\d+$', val_str):
-            return str(val), "vision-normal"
-            
-        # กรณีอื่นๆ ที่ไม่เข้าพวก ถ้าข้อความยาวเกินไป ให้เดาว่าเป็นคำอธิบายความผิดปกติ -> ย่อเหลือ "ผิดปกติ"
-        if len(val_str) > 20:
-            return "ผิดปกติ", "vision-abnormal"
-        
-        # ถ้าสั้นๆ และไม่รู้คืออะไร ให้แสดงตามนั้น
+        if any(kw in val_str for kw in warning_keywords): return "ต่ำกว่าเกณฑ์", "vision-warning"
+        if re.match(r'^\d+/\d+$', val_str): return str(val), "vision-normal"
+        if len(val_str) > 20: return "ผิดปกติ", "vision-abnormal"
         return str(val), "vision-normal"
 
-    # สร้าง HTML Rows
     html_rows = ""
-    any_data_found = False # ตัวแปรเช็คว่ามีข้อมูลบ้างไหม (ถ้าไม่มีเลยสักช่อง จะไม่แสดงตาราง)
+    any_data_found = False
     
-    # วนลูปสร้างแถวให้ครบทุกรายการตาม config
     for item in vision_config:
         val = None
-        # วนหาค่าจาก keys ที่เป็นไปได้
         for key in item['keys']:
             if not is_empty(person_data.get(key)):
                 val = person_data.get(key)
-                any_data_found = True # เจอข้อมูลจริง
+                any_data_found = True
                 break
-        
-        # ส่งค่าไปประมวลผล (ถ้า val เป็น None จะได้กลับมาเป็น "-")
         res_text, res_class = check_vision(val, item['id'])
         html_rows += f"<tr><td>{item['label']}</td><td class='result-cell' style='text-align:center;'><span class='vision-result {res_class}'>{res_text}</span></td></tr>"
     
-    # เพิ่มส่วนสรุปและคำแนะนำแพทย์ (ถ้ามี)
     doctor_advice = person_data.get('แนะนำABN EYE', '')
     summary_advice = person_data.get('สรุปเหมาะสมกับงาน', '')
     footer_html = ""
     
     if not is_empty(summary_advice) or not is_empty(doctor_advice):
-        footer_html = "<div class='card-container' style='margin-top: 10px; background-color: #fff3e0; border-color: #ffcc80;'>"
-        if not is_empty(summary_advice):
-            footer_html += f"<b>สรุปความเหมาะสมกับงาน:</b> {summary_advice}<br>"
-        if not is_empty(doctor_advice):
-            footer_html += f"<b>คำแนะนำแพทย์:</b> {doctor_advice}"
+        footer_html = "<div class='card-container' style='margin-top: 10px; background-color: var(--warning-bg); border-color: rgba(255, 152, 0, 0.3);'>"
+        if not is_empty(summary_advice): footer_html += f"<b>สรุปความเหมาะสมกับงาน:</b> {summary_advice}<br>"
+        if not is_empty(doctor_advice): footer_html += f"<b>คำแนะนำแพทย์:</b> {doctor_advice}"
         footer_html += "</div>"
 
     html_content = clean_html_string(f"""
     <div class='card-container'>
         <div class='table-title'>ผลการตรวจสมรรถภาพการมองเห็น (Vision Test)</div>
         <table class='vision-table'>
-            <thead>
-                <tr>
-                    <th>รายการทดสอบ</th>
-                    <th style='text-align: center; width: 150px;'>ผลการตรวจ</th>
-                </tr>
-            </thead>
+            <thead><tr><th>รายการทดสอบ</th><th style='text-align: center; width: 150px;'>ผลการตรวจ</th></tr></thead>
             <tbody>{html_rows}</tbody>
         </table>
     </div>
     {footer_html}
     """)
     
-    # แสดงผลตารางถ้ามีข้อมูลอย่างน้อย 1 รายการ
-    if any_data_found:
-        st.markdown(html_content, unsafe_allow_html=True)
-    else:
-        st.info("ไม่พบข้อมูลการตรวจสายตา")
+    if any_data_found: st.markdown(html_content, unsafe_allow_html=True)
+    else: st.info("ไม่พบข้อมูลการตรวจสายตา")
 
 def display_performance_report_hearing(person_data, all_person_history_df):
     results = interpret_audiogram(person_data, all_person_history_df)
-    
-    # แก้ไข: เพิ่ม function ดึงข้อมูลหูที่ครอบคลุมหลายรูปแบบ (R250, R_250, R_250Hz, etc.)
     freqs = [250, 500, 1000, 2000, 3000, 4000, 6000, 8000]
     
     def get_hearing_val(side, freq):
-        # สร้าง candidate keys ที่เป็นไปได้ทั้งหมด
         suffixes = [str(freq)]
-        if freq >= 1000: suffixes.append(f"{freq//1000}k") # 1k, 2k
-        
+        if freq >= 1000: suffixes.append(f"{freq//1000}k")
         candidates = []
         for s in suffixes:
-            candidates.append(f"{side}{s}")      # R250
-            candidates.append(f"{side}_{s}")     # R_250
-            candidates.append(f"{side}_{s}Hz")   # R_250Hz
-            candidates.append(f"{side}{s}Hz")    # R250Hz
-            
+            candidates.extend([f"{side}{s}", f"{side}_{s}", f"{side}_{s}Hz", f"{side}{s}Hz"])
         for k in candidates:
             val = person_data.get(k)
             if not is_empty(val): return val
         return "-"
 
-    # ดึงค่าตาม Map
     r_vals = [get_hearing_val('R', f) for f in freqs]
     l_vals = [get_hearing_val('L', f) for f in freqs]
     
-    # New Table Layout
     table_html = clean_html_string(f"""
     <div class='card-container'>
         <div class='table-title'>ตารางระดับการได้ยิน (dB)</div>
         <div class='table-responsive'>
             <table class='lab-table'>
-                <thead>
-                    <tr><th>ความถี่ (Hz)</th>{"".join([f"<th>{f}</th>" for f in freqs])}</tr>
-                </thead>
+                <thead><tr><th>ความถี่ (Hz)</th>{"".join([f"<th>{f}</th>" for f in freqs])}</tr></thead>
                 <tbody>
                     <tr><td><b>หูขวา (Right)</b></td>{"".join([f"<td style='text-align:center;'>{v}</td>" for v in r_vals])}</tr>
                     <tr><td><b>หูซ้าย (Left)</b></td>{"".join([f"<td style='text-align:center;'>{v}</td>" for v in l_vals])}</tr>
@@ -912,36 +792,24 @@ def display_performance_report_hearing(person_data, all_person_history_df):
     st.markdown(table_html, unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
-    with col1: 
-        st.markdown(f"<div class='card-container'><b>สรุปผลหูขวา:</b><br>{results['summary']['right']}</div>", unsafe_allow_html=True)
-    with col2: 
-        st.markdown(f"<div class='card-container'><b>สรุปผลหูซ้าย:</b><br>{results['summary']['left']}</div>", unsafe_allow_html=True)
+    with col1: st.markdown(f"<div class='card-container'><b>สรุปผลหูขวา:</b><br>{results['summary']['right']}</div>", unsafe_allow_html=True)
+    with col2: st.markdown(f"<div class='card-container'><b>สรุปผลหูซ้าย:</b><br>{results['summary']['left']}</div>", unsafe_allow_html=True)
     
-    if results['advice']:
-        st.warning(f"คำแนะนำ: {results['advice']}")
+    if results['advice']: st.warning(f"คำแนะนำ: {results['advice']}")
 
 def display_performance_report_lung(person_data):
     summary, advice, raw_data = interpret_lung_capacity(person_data)
-    
     lung_items = [
         ("FVC (ความจุรอดชีวิต)", raw_data['FVC predic'], raw_data['FVC'], raw_data['FVC %']),
         ("FEV1 (ปริมาตรหายใจออกใน 1 วินาทีแรก)", raw_data['FEV1 predic'], raw_data['FEV1'], raw_data['FEV1 %']),
         ("FEV1/FVC Ratio", "-", raw_data['FEV1/FVC %'], "-")
     ]
     
-    # แก้ไข: ใช้ clean_html_string
     html_content = clean_html_string("""
     <div class='card-container'>
     <div class='table-title'>ข้อมูลสมรรถภาพปอด</div>
     <table class='lab-table'>
-        <thead>
-            <tr>
-                <th style='width: 40%;'>รายการ (Parameter)</th>
-                <th>ค่ามาตรฐาน (Predicted)</th>
-                <th>ค่าที่วัดได้ (Actual)</th>
-                <th>ร้อยละ (% Predicted)</th>
-            </tr>
-        </thead>
+        <thead><tr><th style='width: 40%;'>รายการ (Parameter)</th><th>ค่ามาตรฐาน (Predicted)</th><th>ค่าที่วัดได้ (Actual)</th><th>ร้อยละ (% Predicted)</th></tr></thead>
         <tbody>
     """)
     for label, pred, act, per in lung_items:
@@ -989,7 +857,6 @@ def display_main_report(person_data, all_person_history_df):
         col_ua_left, col_ua_right = st.columns(2)
         with col_ua_left:
             render_urine_section(person, sex, selected_year)
-            st.markdown("<h5 class='section-subtitle'>ผลตรวจอุจจาระ (Stool Examination)</h5>", unsafe_allow_html=True)
             st.markdown(render_stool_html_table(interpret_stool_exam(person.get("Stool exam", "")), interpret_stool_cs(person.get("Stool C/S", ""))), unsafe_allow_html=True)
 
         with col_ua_right:
@@ -999,9 +866,9 @@ def display_main_report(person_data, all_person_history_df):
             hep_a_value = person.get("Hepatitis A")
             hep_a_display_text = "ไม่ได้ตรวจ" if is_empty(hep_a_value) else safe_text(hep_a_value)
 
-            # แก้ไข: ใช้ clean_html_string เพื่อลบ Indentation
             st.markdown(clean_html_string(f"""
-            <div class="table-container">
+            <div class="card-container">
+                <div class="table-title">ผลตรวจพิเศษ</div>
                 <table class="info-detail-table">
                     <tbody>
                         <tr><th>ผลเอกซเรย์ (Chest X-ray)</th><td>{interpret_cxr(person.get(cxr_col, ''))}</td></tr>
@@ -1012,12 +879,9 @@ def display_main_report(person_data, all_person_history_df):
             </div>
             """), unsafe_allow_html=True)
 
-            # --- Logic to get correct Hepatitis B columns based on year ---
             hbsag_col = "HbsAg"
             hbsab_col = "HbsAb"
             hbcab_col = "HBcAB"
-            
-            # 1. Determine columns based on history
             current_thai_year = datetime.now().year + 543
             if selected_year != current_thai_year:
                 suffix = str(selected_year)[-2:]
@@ -1025,14 +889,10 @@ def display_main_report(person_data, all_person_history_df):
                 if f"HbsAb{suffix}" in person: hbsab_col = f"HbsAb{suffix}"
                 if f"HBcAB{suffix}" in person: hbcab_col = f"HBcAB{suffix}"
 
-            # 2. Determine Header Suffix (Display Year)
-            # Priority: "ปีตรวจHEP" > selected_year
             hep_year_rec = str(person.get("ปีตรวจHEP", "")).strip()
             header_suffix = ""
-            if not is_empty(hep_year_rec):
-                 header_suffix = f" (ตรวจเมื่อ: {hep_year_rec})"
-            elif selected_year and selected_year != current_thai_year:
-                 header_suffix = f" (พ.ศ. {selected_year})"
+            if not is_empty(hep_year_rec): header_suffix = f" (ตรวจเมื่อ: {hep_year_rec})"
+            elif selected_year and selected_year != current_thai_year: header_suffix = f" (พ.ศ. {selected_year})"
 
             st.markdown(f"<h5 class='section-subtitle'>ผลการตรวจไวรัสตับอักเสบบี (Viral hepatitis B){header_suffix}</h5>", unsafe_allow_html=True)
 
@@ -1040,9 +900,8 @@ def display_main_report(person_data, all_person_history_df):
             hbsab = safe_text(person.get(hbsab_col))
             hbcab = safe_text(person.get(hbcab_col))
             
-            # แก้ไข: ใช้ clean_html_string เพื่อลบ Indentation
             st.markdown(clean_html_string(f"""
-            <div class="table-container">
+            <div class="card-container">
                 <table class='lab-table'>
                     <thead><tr><th style='text-align: center;'>HBsAg</th><th style='text-align: center;'>HBsAb</th><th style='text-align: center;'>HBcAb</th></tr></thead>
                     <tbody><tr><td style='text-align: center;'>{hbsag}</td><td style='text-align: center;'>{hbsab}</td><td style='text-align: center;'>{hbcab}</td></tr></tbody>
@@ -1053,14 +912,10 @@ def display_main_report(person_data, all_person_history_df):
             if not (is_empty(hbsag) and is_empty(hbsab) and is_empty(hbcab)):
                 advice, status = hepatitis_b_advice(hbsag, hbsab, hbcab)
                 status_class = ""
-                if status == 'immune':
-                    status_class = 'immune-box'
-                elif status == 'no_immune':
-                    status_class = 'no-immune-box'
-                else:
-                    status_class = 'warning-box'
+                if status == 'immune': status_class = 'immune-box'
+                elif status == 'no_immune': status_class = 'no-immune-box'
+                else: status_class = 'warning-box'
                 
-                # แก้ไข: ใช้ clean_html_string เพื่อลบ Indentation
                 st.markdown(clean_html_string(f"""
                 <div class='custom-advice-box {status_class}'>
                     {advice}
