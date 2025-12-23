@@ -126,39 +126,60 @@ def display_print_center_page(df):
     st.title("🖨️ ศูนย์จัดการพิมพ์รายงาน (Print Center)")
     st.markdown("---")
     
-    # --- Custom CSS for Print Button ---
+    # --- Custom CSS for Print Button (Luxurious Green Style) ---
     st.markdown("""
     <style>
-        /* Action Button Styling */
+        /* Action Button Styling - Luxurious Green */
         div[data-testid="stButton"] > button[kind="primary"] {
-            background: linear-gradient(135deg, #00796B 0%, #004D40 100%) !important;
-            color: white !important;
+            background: linear-gradient(90deg, #00C853 0%, #00796B 100%) !important;
+            color: #ffffff !important;
             border: none !important;
-            padding: 0.8rem 2rem !important;
-            font-size: 1.2rem !important;
-            font-weight: 600 !important;
-            border-radius: 50px !important; /* Pill shape */
-            box-shadow: 0 4px 15px rgba(0, 121, 107, 0.3) !important;
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
-            letter-spacing: 0.5px !important;
+            padding: 12px 32px !important;
+            font-size: 20px !important;
+            font-weight: 700 !important;
+            border-radius: 50px !important;
+            box-shadow: 0 10px 25px rgba(0, 121, 107, 0.5), inset 0 2px 2px rgba(255, 255, 255, 0.4) !important;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+            letter-spacing: 1px !important;
+            text-transform: uppercase !important;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
         }
         
         div[data-testid="stButton"] > button[kind="primary"]:hover {
-            transform: translateY(-2px) !important;
-            box-shadow: 0 8px 20px rgba(0, 121, 107, 0.4) !important;
-            filter: brightness(1.1) !important;
+            background: linear-gradient(90deg, #00E676 0%, #009688 100%) !important;
+            transform: translateY(-4px) !important;
+            box-shadow: 0 15px 35px rgba(0, 121, 107, 0.6), inset 0 2px 2px rgba(255, 255, 255, 0.5) !important;
         }
         
         div[data-testid="stButton"] > button[kind="primary"]:active {
-            transform: translateY(1px) !important;
-            box-shadow: 0 2px 5px rgba(0, 121, 107, 0.4) !important;
+            transform: translateY(2px) !important;
+            box-shadow: 0 5px 15px rgba(0, 121, 107, 0.4) !important;
         }
 
         div[data-testid="stButton"] > button[kind="primary"]:disabled {
-            background: #e0e0e0 !important;
-            color: #9e9e9e !important;
+            background: #bdbdbd !important;
+            color: #757575 !important;
             box-shadow: none !important;
             cursor: not-allowed !important;
+            transform: none !important;
+        }
+        
+        /* Shine Effect */
+        div[data-testid="stButton"] > button[kind="primary"]::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: 0.5s;
+        }
+        
+        div[data-testid="stButton"] > button[kind="primary"]:hover::after {
+            left: 100%;
         }
     </style>
     """, unsafe_allow_html=True)
