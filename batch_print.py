@@ -204,7 +204,7 @@ def display_print_center_page(df):
     st.title("🖨️ ศูนย์จัดการพิมพ์รายงาน (Print Center)")
     st.markdown("---")
     
-    # --- CSS for UI Enhancements ---
+    # --- CSS for UI Enhancements (Theme Aware) ---
     st.markdown("""
     <style>
         div[data-testid="stButton"] > button[kind="primary"] {
@@ -229,14 +229,21 @@ def display_print_center_page(df):
              background-color: #ff4b4b;
              color: white;
         }
-        /* Table Header Style */
+        /* Table Header Style - Adaptive to Theme */
         .custom-table-header {
-            background-color: #f0f2f6;
+            background-color: var(--secondary-background-color); /* ใช้สีตาม Theme */
             padding: 12px 0;
             border-radius: 5px;
             font-weight: bold;
-            color: #31333F;
+            color: var(--text-color); /* ใช้สีตัวอักษรตาม Theme */
             margin-bottom: 5px;
+            border: 1px solid rgba(128, 128, 128, 0.2); /* เพิ่มขอบจางๆ */
+        }
+        .row-separator {
+            margin: 0px 0px 5px 0px; 
+            border: 0; 
+            border-top: 1px solid var(--text-color); 
+            opacity: 0.1; /* เส้นจางๆ ตามสี Text ของ Theme */
         }
     </style>
     """, unsafe_allow_html=True)
@@ -385,7 +392,7 @@ def display_print_center_page(df):
         # [Delete, Select, Status, HN, Name, Dept, Date]
         col_ratios = [0.6, 0.6, 1.3, 1.2, 2.5, 1.5, 1.2]
 
-        # Header Row (Styled with Gray Background)
+        # Header Row (Styled with Theme Variables)
         st.markdown('<div class="custom-table-header">', unsafe_allow_html=True)
         h1, h2, h3, h4, h5, h6, h7 = st.columns(col_ratios, vertical_alignment="center")
         with h1: st.markdown("<div style='text-align:center;'>ลบ</div>", unsafe_allow_html=True)
@@ -431,8 +438,8 @@ def display_print_center_page(df):
             with c6: st.write(row['หน่วยงาน'])
             with c7: st.write(str(row['วันที่ตรวจ']).split(' ')[0]) # Show only date
             
-            # Add thin separator line
-            st.markdown("<hr style='margin: 0px 0px 5px 0px; border: 0; border-top: 1px solid #f0f0f0;'>", unsafe_allow_html=True)
+            # Add thin separator line (Theme Aware)
+            st.markdown("<hr class='row-separator'>", unsafe_allow_html=True)
 
         # Footer Actions
         col_summary, col_clear_btn = st.columns([4, 1])
@@ -444,8 +451,7 @@ def display_print_center_page(df):
     
     count_selected = len(selected_to_print_hns)
     
-    # --- Print Button ---
-    st.markdown("")
+    # --- Print Button (Removed extra spaces) ---
     col_l, col_c, col_r = st.columns([1, 2, 1])
     with col_c:
         if st.button(f"สั่งพิมพ์รายงาน ({count_selected} ท่าน)", type="primary", use_container_width=True, disabled=(count_selected == 0)):
