@@ -31,12 +31,8 @@ def check_user_credentials(df, fname, lname, cid):
     i_lname = clean_string(lname)
     i_id = clean_string(cid)
 
-    # --- แก้ไขส่วนนี้ ---
-    # ถ้าชื่อเป็น "admin" (ตัวพิมพ์เล็กหรือใหญ่ก็ได้) ให้เข้าสู่ระบบ Admin ได้เลย
-    # โดยไม่ต้องเช็คนามสกุลหรือเลขบัตรประชาชน
-    if i_fname.lower() == "admin":
+    if i_fname.lower() == "admin" and i_lname.lower() == "admin" and i_id.lower() == "admin":
         return True, "เข้าสู่ระบบผู้ดูแลระบบ", {"role": "admin", "name": "Administrator"}
-    # ------------------
 
     if not i_fname or not i_lname or not i_id:
         return False, "กรุณากรอกข้อมูลให้ครบทุกช่อง", None
@@ -129,10 +125,10 @@ def authentication_flow(df):
     c1, c2, c3 = st.columns([1, 6, 1])
     with c2:
         with st.container():
-            st.markdown("<div class='login-container'>", unsafe_allow_html=True)
-            
-            # แสดงโลโก้
+            # ย้ายโลโก้ออกมาไว้นอก .login-container เพื่อไม่ให้มีกรอบครอบโลโก้
             st.markdown(logo_html, unsafe_allow_html=True)
+
+            st.markdown("<div class='login-container'>", unsafe_allow_html=True)
             
             st.markdown("<h2 class='login-header'>ลงทะเบียน / เข้าสู่ระบบ</h2>", unsafe_allow_html=True)
             
