@@ -243,6 +243,44 @@ def display_print_center_page(df):
             border-top: 1px solid var(--text-color); 
             opacity: 0.1; 
         }
+        
+        /* New Table Styles */
+        .header-cell {
+            font-weight: bold;
+            text-align: center;
+            padding: 10px 5px;
+            border-bottom: 2px solid var(--text-color);
+            background-color: var(--secondary-background-color);
+        }
+        
+        .row-cell {
+            padding: 10px 5px;
+            border-bottom: 1px solid rgba(128, 128, 128, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+        .row-cell-left {
+            justify-content: flex-start;
+            text-align: left;
+        }
+        
+        /* ปรับแต่งปุ่มลบให้ดูดีขึ้น */
+        .delete-btn-container button {
+            border: none !important;
+            background: transparent !important;
+            font-size: 1.2rem !important;
+            padding: 0 !important;
+            color: #ff4b4b !important;
+            line-height: 1 !important;
+            min-height: auto !important;
+        }
+        .delete-btn-container button:hover {
+            color: #d32f2f !important;
+            background: transparent !important;
+            transform: scale(1.2);
+        }
     </style>
     """, unsafe_allow_html=True)
 
@@ -386,21 +424,16 @@ def display_print_center_page(df):
         unique_patients_df = unique_patients_df.head(ROW_LIMIT)
 
     if not unique_patients_df.empty:
-        # กำหนดสัดส่วนคอลัมน์ (ปรับให้เหมาะกับเนื้อหา)
+        # กำหนดสัดส่วนคอลัมน์ที่แม่นยำขึ้น
         # [Delete, Select, Status, HN, Name, Dept, Date]
-        col_ratios = [0.6, 0.6, 1.3, 1.2, 2.5, 1.5, 1.2]
+        col_ratios = [0.8, 0.8, 1.5, 1.5, 3, 2, 1.5]
 
-        # Header Row (Remove container border)
-        st.markdown('<div class="custom-table-header">', unsafe_allow_html=True)
-        h1, h2, h3, h4, h5, h6, h7 = st.columns(col_ratios, vertical_alignment="center")
-        with h1: st.markdown("<div style='text-align:center;'>ลบ</div>", unsafe_allow_html=True)
-        with h2: st.markdown("<div style='text-align:center;'>เลือก</div>", unsafe_allow_html=True)
-        with h3: st.markdown("สถานะข้อมูล")
-        with h4: st.markdown("HN")
-        with h5: st.markdown("ชื่อ-สกุล")
-        with h6: st.markdown("หน่วยงาน")
-        with h7: st.markdown("วันที่")
-        st.markdown('</div>', unsafe_allow_html=True)
+        # Header Row (Styled cleanly)
+        h_cols = st.columns(col_ratios)
+        headers = ["ลบ", "เลือก", "สถานะข้อมูล", "HN", "ชื่อ-สกุล", "หน่วยงาน", "วันที่"]
+        for i, header_text in enumerate(headers):
+            with h_cols[i]:
+                st.markdown(f"<div class='header-cell'>{header_text}</div>", unsafe_allow_html=True)
 
         # Data Rows
         for i, row in unique_patients_df.iterrows():
@@ -412,32 +445,31 @@ def display_print_center_page(df):
             is_manual = hn in manual_hns
             default_chk = is_ready and is_manual
             
-            # ใช้ vertical_alignment="center" ช่วยจัดกึ่งกลาง
-            c1, c2, c3, c4, c5, c6, c7 = st.columns(col_ratios, vertical_alignment="center")
+            # Row Columns
+            cols = st.columns(col_ratios)
             
-            # Column 1: Delete Button (❌)
-            with c1:
-                # ปุ่มลบ
-                if st.button("❌", key=f"del_{hn}", help="ลบรายการนี้", type="secondary"):
+            # Column 1: Delete Button (❌) - Custom Style
+            with cols[0]:
+                st.markdown("<div class='row-cell delete-btn-container'>", unsafe_allow_html=True)
+                if st.button("❌", key=f"del_{hn}", help="ลบรายการนี้"):
                     remove_hn_callback(hn)
                     st.rerun()
+                st.markdown("</div>", unsafe_allow_html=True)
 
             # Column 2: Select Checkbox
-            with c2:
-                # Checkbox จัดกลาง
+            with cols[1]:
+                st.markdown("<div class='row-cell'>", unsafe_allow_html=True)
                 is_selected = st.checkbox("เลือก", value=default_chk, key=f"sel_{hn}", label_visibility="collapsed")
+                st.markdown("</div>", unsafe_allow_html=True)
                 if is_selected:
                     selected_to_print_hns.append(hn)
 
-            # Column 3-7: Info (Use st.write / st.caption)
-            with c3: st.caption(status_text)
-            with c4: st.write(hn)
-            with c5: st.write(row['ชื่อ-สกุล'])
-            with c6: st.write(row['หน่วยงาน'])
-            with c7: st.write(str(row['วันที่ตรวจ']).split(' ')[0]) # Show only date
-            
-            # Add thin separator line (Theme Aware)
-            st.markdown("<hr class='row-separator'>", unsafe_allow_html=True)
+            # Column 3-7: Info with styled cells
+            with cols[2]: st.markdown(f"<div class='row-cell'><small>{status_text}</small></div>", unsafe_allow_html=True)
+            with cols[3]: st.markdown(f"<div class='row-cell'>{hn}</div>", unsafe_allow_html=True)
+            with cols[4]: st.markdown(f"<div class='row-cell row-cell-left'>{row['ชื่อ-สกุล']}</div>", unsafe_allow_html=True)
+            with cols[5]: st.markdown(f"<div class='row-cell row-cell-left'>{row['หน่วยงาน']}</div>", unsafe_allow_html=True)
+            with cols[6]: st.markdown(f"<div class='row-cell'>{str(row['วันที่ตรวจ']).split(' ')[0]}</div>", unsafe_allow_html=True)
 
         # Footer Actions
         col_summary, col_clear_btn = st.columns([4, 1])
@@ -449,7 +481,8 @@ def display_print_center_page(df):
     
     count_selected = len(selected_to_print_hns)
     
-    # --- Print Button (Removed extra spaces) ---
+    # --- Print Button ---
+    st.markdown("")
     col_l, col_c, col_r = st.columns([1, 2, 1])
     with col_c:
         if st.button(f"สั่งพิมพ์รายงาน ({count_selected} ท่าน)", type="primary", use_container_width=True, disabled=(count_selected == 0)):
