@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import os
 import base64
+import textwrap
 
 # --- Helper Functions ---
 def clean_string(val):
@@ -60,7 +61,8 @@ def check_user_credentials(df, fname, lname, cid):
 def authentication_flow(df):
     """หน้า Login แบบ Responsive และ Theme-Aware พร้อมโลโก้"""
     
-    st.markdown("""
+    # ใช้ textwrap.dedent เพื่อลบ indentation ป้องกันการแสดงผลเป็น Code Block
+    st.markdown(textwrap.dedent("""
     <style>
         .login-container {
             background-color: var(--secondary-background-color);
@@ -103,7 +105,7 @@ def authentication_flow(df):
             object-fit: contain;
         }
     </style>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
     # เตรียม HTML สำหรับโลโก้
     logo_path = "image_0809c0.png"
@@ -167,7 +169,8 @@ def authentication_flow(df):
 
 def pdpa_consent_page():
     """หน้ายอมรับ PDPA แบบ Theme-Aware"""
-    st.markdown("""
+    # ใช้ textwrap.dedent เพื่อลบ indentation ป้องกันการแสดงผลเป็น Code Block
+    st.markdown(textwrap.dedent("""
     <div style='background-color: var(--secondary-background-color); padding: 2rem; border-radius: 10px; margin-top: 1rem; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid rgba(128,128,128,0.2);'>
         <h3 style='text-align: center; color: var(--text-color);'>คำประกาศเกี่ยวกับความเป็นส่วนตัว (Privacy Notice)</h3>
         <hr style='border-color: rgba(128,128,128,0.2);'>
@@ -190,7 +193,7 @@ def pdpa_consent_page():
             <p>โดยการคลิกปุ่ม <strong>"ยอมรับ"</strong> ด้านล่างนี้ ท่านรับทราบและยินยอมให้ระบบเก็บรวบรวม ใช้ และเปิดเผยข้อมูลส่วนบุคคลของท่านตามวัตถุประสงค์ที่ระบุไว้ในคำประกาศนี้</p>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
     
     st.write("")
     # เปลี่ยนข้อความ Checkbox ให้สอดคล้อง
