@@ -99,9 +99,11 @@ def authentication_flow(df):
             margin-bottom: 20px;
             width: 100%;
         }
-        .logo-img {
-            max-width: 80px; /* ลดขนาดรูปลงจาก 100px เป็น 80px */
-            height: auto;
+        /* กำหนดขนาดรูปภาพผ่าน CSS class ด้วย !important เพื่อความชัวร์ */
+        .logo-img-custom {
+            width: 60px !important;
+            max-width: 60px !important;
+            height: auto !important;
             object-fit: contain;
         }
     </style>
@@ -114,24 +116,24 @@ def authentication_flow(df):
     # พยายามโหลดรูปจากไฟล์ก่อน
     img_b64 = get_image_base64(logo_path)
     
-    # Inline CSS สำหรับรูปภาพ (ใช้ควบคู่กับ Class เพื่อความชัวร์)
-    img_style = "width: 80px; max-width: 80px; height: auto;"
+    # กำหนดสไตล์แบบ Inline และ Attribute โดยตรง
+    img_attrs = 'width="60" class="logo-img-custom"'
 
     if img_b64:
         # ถ้าเจอไฟล์ แปลงเป็น base64
         logo_src = f"data:image/png;base64,{img_b64}"
-        logo_html = f"<div class='logo-container'><img src='{logo_src}' style='{img_style}' class='logo-img'></div>"
+        logo_html = f"<div class='logo-container'><img src='{logo_src}' {img_attrs}></div>"
     else:
         # ถ้าไม่เจอไฟล์ ให้ใช้ URL รูปที่คุณส่งมา
         fallback_url = "https://i.postimg.cc/MGxD3yWn/fce5f6c4-b813-48cc-bf40-393032a7eb6d.png" 
-        logo_html = f"<div class='logo-container'><img src='{fallback_url}' style='{img_style}' class='logo-img'></div>"
+        logo_html = f"<div class='logo-container'><img src='{fallback_url}' {img_attrs}></div>"
 
     c1, c2, c3 = st.columns([1, 6, 1])
     with c2:
         with st.container():
             st.markdown("<div class='login-container'>", unsafe_allow_html=True)
             
-            # แสดงโลโก้ (จะแสดงแน่นอนเพราะมี fallback)
+            # แสดงโลโก้
             st.markdown(logo_html, unsafe_allow_html=True)
             
             st.markdown("<h2 class='login-header'>ลงทะเบียน / เข้าสู่ระบบ</h2>", unsafe_allow_html=True)
