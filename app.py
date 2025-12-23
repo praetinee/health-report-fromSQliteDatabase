@@ -115,7 +115,7 @@ def main_app(df):
     # --- Inject Custom CSS สำหรับปุ่ม Sidebar โดยเฉพาะ ---
     st.markdown("""
     <style>
-        /* Styling เฉพาะปุ่ม Primary ใน Sidebar */
+        /* Styling เฉพาะปุ่ม Primary (พิมพ์รายงาน) ใน Sidebar - สีเขียวด้าน */
         section[data-testid="stSidebar"] div[data-testid="stButton"] > button[kind="primary"] {
             background-color: #1B5E20 !important; /* Dark Green Matte */
             color: #ffffff !important;
@@ -141,6 +141,36 @@ def main_app(df):
         
         section[data-testid="stSidebar"] div[data-testid="stButton"] > button[kind="primary"]:active {
             background-color: #1B5E20 !important;
+            transform: translateY(1px) !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+        }
+
+        /* Styling เฉพาะปุ่ม Secondary (ออกจากระบบ) ใน Sidebar - สีแดงด้าน */
+        section[data-testid="stSidebar"] div[data-testid="stButton"] > button[kind="secondary"] {
+            background-color: #c62828 !important; /* Matte Dark Red */
+            color: #ffffff !important;
+            border: none !important;
+            padding: 10px 20px !important;
+            font-size: 16px !important;
+            font-weight: 600 !important;
+            border-radius: 8px !important;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2) !important;
+            transition: all 0.2s ease-in-out !important;
+            letter-spacing: 0.5px !important;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        
+        section[data-testid="stSidebar"] div[data-testid="stButton"] > button[kind="secondary"]:hover {
+            background-color: #d32f2f !important; /* Slightly lighter Red */
+            color: #ffffff !important;
+            transform: translateY(-1px) !important;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3) !important;
+        }
+        
+        section[data-testid="stSidebar"] div[data-testid="stButton"] > button[kind="secondary"]:active {
+            background-color: #b71c1c !important; /* Darker Red */
+            color: #ffffff !important;
             transform: translateY(1px) !important;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
         }
@@ -222,7 +252,8 @@ def main_app(df):
             if st.button("พิมพ์รายงานสมรรถภาพ", type="primary", use_container_width=True): st.session_state.print_performance_trigger = True
         
         st.markdown("---")
-        if st.button("ออกจากระบบ (Logout)"):
+        # ปุ่ม Logout ใช้ type="secondary" (default) ซึ่งเราแก้ CSS ให้เป็นสีแดงด้าน
+        if st.button("ออกจากระบบ"):
             st.session_state.clear()
             st.rerun()
 
