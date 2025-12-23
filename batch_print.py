@@ -238,23 +238,26 @@ def display_print_center_page(df):
         .status-blue { background-color: #e3f2fd; color: #0d47a1; }
         .status-gray { background-color: #f5f5f5; color: #616161; }
 
-        /* ปรับปุ่มลบให้ดูดี */
+        /* ปรับปุ่มลบให้ดูดี (Gray/Neutral Theme) */
         button[kind="secondary"] {
-            border: 1px solid #ffcdd2 !important;
-            color: #c62828 !important;
+            border: 1px solid #e0e0e0 !important; /* ขอบสีเทาอ่อน */
+            color: #757575 !important; /* ไอคอนสีเทาเข้ม */
             background-color: transparent !important;
             padding: 0px !important;
             font-size: 0.8rem !important;
             min-height: 32px !important;
             height: 32px !important;
-            width: 100% !important; /* เต็มความกว้างคอลัมน์ */
+            width: 100% !important;
             display: flex !important;
-            justify-content: center !important; /* จัดกึ่งกลางแนวนอน */
-            align-items: center !important; /* จัดกึ่งกลางแนวตั้ง */
+            justify-content: center !important;
+            align-items: center !important;
+            transition: all 0.2s ease !important;
         }
         button[kind="secondary"]:hover {
-            background-color: #ffebee !important;
-            border-color: #c62828 !important;
+            background-color: #f5f5f5 !important; /* พื้นหลังเทาอ่อนเมื่อชี้ */
+            border-color: #bdbdbd !important; /* ขอบเข้มขึ้นเล็กน้อย */
+            color: #424242 !important; /* ไอคอนเข้มขึ้น */
+            transform: scale(1.05); /* ขยายเล็กน้อย */
         }
         
         /* เพิ่ม Flex container ให้ปุ่มลบอยู่กลางคอลัมน์ */
