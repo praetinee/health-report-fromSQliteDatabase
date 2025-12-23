@@ -192,9 +192,9 @@ def get_status_text(val, m_type):
     if m_type == 'BMI':
         if val < 18.5: return "น้ำหนักน้อย"
         if 18.5 <= val < 23: return "สมส่วน"
-        if 23 <= val < 25: return "ท้วม"
-        if 25 <= val < 30: return "อ้วน"
-        return "อ้วนมาก"
+        if 23 <= val < 25: return "เริ่มเกินเกณฑ์" # ปรับคำให้สุภาพขึ้น
+        if 25 <= val < 30: return "น้ำหนักเกิน" # ปรับคำให้สุภาพขึ้น
+        return "น้ำหนักเกินมาก" # ปรับคำให้สุภาพขึ้น
     
     if m_type == 'BP': # SBP
         if val < 120: return "ปกติ"
