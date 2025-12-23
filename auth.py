@@ -61,8 +61,8 @@ def check_user_credentials(df, fname, lname, cid):
 def authentication_flow(df):
     """หน้า Login แบบ Responsive และ Theme-Aware พร้อมโลโก้"""
     
-    # ใช้ textwrap.dedent เพื่อลบ indentation ป้องกันการแสดงผลเป็น Code Block
-    st.markdown(textwrap.dedent("""
+    # CSS Style สำหรับหน้า Login
+    login_style = """
     <style>
         .login-container {
             background-color: var(--secondary-background-color);
@@ -99,7 +99,6 @@ def authentication_flow(df):
             margin-bottom: 20px;
             width: 100%;
         }
-        /* กำหนดขนาดรูปภาพผ่าน CSS class ด้วย !important เพื่อความชัวร์ */
         .logo-img-custom {
             width: 60px !important;
             max-width: 60px !important;
@@ -107,7 +106,8 @@ def authentication_flow(df):
             object-fit: contain;
         }
     </style>
-    """), unsafe_allow_html=True)
+    """
+    st.markdown(login_style, unsafe_allow_html=True)
 
     # เตรียม HTML สำหรับโลโก้
     logo_path = "image_0809c0.png"
@@ -171,31 +171,32 @@ def authentication_flow(df):
 
 def pdpa_consent_page():
     """หน้ายอมรับ PDPA แบบ Theme-Aware"""
-    # ใช้ textwrap.dedent เพื่อลบ indentation ป้องกันการแสดงผลเป็น Code Block
-    st.markdown(textwrap.dedent("""
-    <div style='background-color: var(--secondary-background-color); padding: 2rem; border-radius: 10px; margin-top: 1rem; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid rgba(128,128,128,0.2);'>
-        <h3 style='text-align: center; color: var(--text-color);'>คำประกาศเกี่ยวกับความเป็นส่วนตัว (Privacy Notice)</h3>
-        <hr style='border-color: rgba(128,128,128,0.2);'>
-        <div style='height: 300px; overflow-y: auto; background-color: var(--background-color); padding: 20px; border-radius: 5px; font-size: 14px; border: 1px solid rgba(128,128,128,0.1); color: var(--text-color); line-height: 1.6;'>
-            <p><strong>ระบบรายงานผลตรวจสุขภาพ</strong> ให้ความสำคัญกับการคุ้มครองข้อมูลส่วนบุคคลของท่าน เพื่อให้ท่านมั่นใจได้ว่าข้อมูลส่วนบุคคลของท่านที่เราได้รับจะถูกนำไปใช้ตรงตามความต้องการของท่านและถูกต้องตามกฎหมายคุ้มครองข้อมูลส่วนบุคคล</p>
-            
-            <p><strong>วัตถุประสงค์ในการเก็บรวบรวม ใช้ หรือเปิดเผยข้อมูลส่วนบุคคล</strong></p>
-            <ul style="margin-top: 0;">
-                <li>เพื่อใช้ในการระบุและยืนยันตัวตนของท่านก่อนเข้าใช้งานระบบรายงานผลตรวจสุขภาพ</li>
-                <li>เพื่อแสดงผลการตรวจสุขภาพและข้อมูลที่เกี่ยวข้องซึ่งเป็นข้อมูลส่วนบุคคลที่มีความอ่อนไหว</li>
-                <li>เพื่อการวิเคราะห์ข้อมูลในภาพรวมสำหรับการพัฒนาคุณภาพบริการ (โดยไม่ระบุตัวตน)</li>
-            </ul>
+    # ใช้ตัวแปรเก็บ HTML และใช้ .strip() เพื่อให้แน่ใจว่าไม่มีช่องว่างนำหน้าบรรทัด
+    pdpa_html_content = """
+<div style='background-color: var(--secondary-background-color); padding: 2rem; border-radius: 10px; margin-top: 1rem; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid rgba(128,128,128,0.2);'>
+    <h3 style='text-align: center; color: var(--text-color);'>คำประกาศเกี่ยวกับความเป็นส่วนตัว (Privacy Notice)</h3>
+    <hr style='border-color: rgba(128,128,128,0.2);'>
+    <div style='height: 300px; overflow-y: auto; background-color: var(--background-color); padding: 20px; border-radius: 5px; font-size: 14px; border: 1px solid rgba(128,128,128,0.1); color: var(--text-color); line-height: 1.6;'>
+        <p><strong>ระบบรายงานผลตรวจสุขภาพ</strong> ให้ความสำคัญกับการคุ้มครองข้อมูลส่วนบุคคลของท่าน เพื่อให้ท่านมั่นใจได้ว่าข้อมูลส่วนบุคคลของท่านที่เราได้รับจะถูกนำไปใช้ตรงตามความต้องการของท่านและถูกต้องตามกฎหมายคุ้มครองข้อมูลส่วนบุคคล</p>
+        
+        <p><strong>วัตถุประสงค์ในการเก็บรวบรวม ใช้ หรือเปิดเผยข้อมูลส่วนบุคคล</strong></p>
+        <ul style="margin-top: 0;">
+            <li>เพื่อใช้ในการระบุและยืนยันตัวตนของท่านก่อนเข้าใช้งานระบบรายงานผลตรวจสุขภาพ</li>
+            <li>เพื่อแสดงผลการตรวจสุขภาพและข้อมูลที่เกี่ยวข้องซึ่งเป็นข้อมูลส่วนบุคคลที่มีความอ่อนไหว</li>
+            <li>เพื่อการวิเคราะห์ข้อมูลในภาพรวมสำหรับการพัฒนาคุณภาพบริการ (โดยไม่ระบุตัวตน)</li>
+        </ul>
 
-            <p><strong>การรักษาความปลอดภัยของข้อมูล</strong></p>
-            <p>ระบบมีมาตรการรักษาความปลอดภัยของข้อมูลส่วนบุคคลของท่านอย่างเข้มงวด เพื่อป้องกันการเข้าถึง การใช้ หรือการเปิดเผยข้อมูลโดยไม่ได้รับอนุญาต</p>
+        <p><strong>การรักษาความปลอดภัยของข้อมูล</strong></p>
+        <p>ระบบมีมาตรการรักษาความปลอดภัยของข้อมูลส่วนบุคคลของท่านอย่างเข้มงวด เพื่อป้องกันการเข้าถึง การใช้ หรือการเปิดเผยข้อมูลโดยไม่ได้รับอนุญาต</p>
 
-            <p><strong>การเปิดเผยข้อมูลส่วนบุคคล</strong></p>
-            <p>ระบบจะไม่เปิดเผยข้อมูลส่วนบุคคลของท่านแก่บุคคลภายนอก เว้นแต่จะได้รับความยินยอมจากท่าน หรือเป็นไปตามที่กฎหมายกำหนด</p>
-            
-            <p>โดยการคลิกปุ่ม <strong>"ยอมรับ"</strong> ด้านล่างนี้ ท่านรับทราบและยินยอมให้ระบบเก็บรวบรวม ใช้ และเปิดเผยข้อมูลส่วนบุคคลของท่านตามวัตถุประสงค์ที่ระบุไว้ในคำประกาศนี้</p>
-        </div>
+        <p><strong>การเปิดเผยข้อมูลส่วนบุคคล</strong></p>
+        <p>ระบบจะไม่เปิดเผยข้อมูลส่วนบุคคลของท่านแก่บุคคลภายนอก เว้นแต่จะได้รับความยินยอมจากท่าน หรือเป็นไปตามที่กฎหมายกำหนด</p>
+        
+        <p>โดยการคลิกปุ่ม <strong>"ยอมรับ"</strong> ด้านล่างนี้ ท่านรับทราบและยินยอมให้ระบบเก็บรวบรวม ใช้ และเปิดเผยข้อมูลส่วนบุคคลของท่านตามวัตถุประสงค์ที่ระบุไว้ในคำประกาศนี้</p>
     </div>
-    """), unsafe_allow_html=True)
+</div>
+"""
+    st.markdown(pdpa_html_content.strip(), unsafe_allow_html=True)
     
     st.write("")
     # เปลี่ยนข้อความ Checkbox ให้สอดคล้อง
