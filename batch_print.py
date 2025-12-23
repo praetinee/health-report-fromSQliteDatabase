@@ -145,6 +145,58 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
     """
     return full_html, skipped_count
 
+# --- Callback Function (New) ---
+def add_patient_to_list_callback(df):
+    """
+    Callback function สำหรับปุ่มเพิ่มรายการ เพื่อป้องกัน StreamlitAPIException
+    """
+    # ดึงค่าจาก Session State โดยตรง
+    name = st.session_state.get("bp_name_search")
+    hn = st.session_state.get("bp_hn_search")
+    cid = st.session_state.get("bp_cid_search")
+    
+    target_hn = None
+    found_msg = ""
+    
+    # 1. เช็คจากชื่อ
+    if name and name != "(ไม่ระบุ)":
+        matched = df[df['ชื่อ-สกุล'] == name]
+        if not matched.empty:
+            target_hn = matched.iloc[0]['HN']
+            found_msg = f"เพิ่มคุณ {name} เรียบร้อย"
+            
+    # 2. เช็คจาก HN
+    elif hn:
+        matched = df[df['HN'].astype(str) == hn.strip()]
+        if not matched.empty:
+            target_hn = matched.iloc[0]['HN']
+            name_found = matched.iloc[0]['ชื่อ-สกุล']
+            found_msg = f"เพิ่ม HN {hn} ({name_found}) เรียบร้อย"
+            
+    # 3. เช็คจากเลขบัตร
+    elif cid:
+        matched = df[df['เลขบัตรประชาชน'].astype(str) == cid.strip()]
+        if not matched.empty:
+            target_hn = matched.iloc[0]['HN']
+            name_found = matched.iloc[0]['ชื่อ-สกุล']
+            found_msg = f"เพิ่มเลขบัตร {cid} ({name_found}) เรียบร้อย"
+            
+    if target_hn:
+        # Initialize set if not exists
+        if 'bp_manual_hns' not in st.session_state:
+            st.session_state.bp_manual_hns = set()
+            
+        st.session_state.bp_manual_hns.add(target_hn)
+        # เก็บข้อความแจ้งเตือนไว้แสดงผลหลัง Rerun
+        st.session_state.bp_action_msg = {"type": "success", "text": found_msg}
+        
+        # Reset inputs (ทำได้ใน Callback อย่างปลอดภัย)
+        st.session_state.bp_name_search = "(ไม่ระบุ)"
+        st.session_state.bp_hn_search = ""
+        st.session_state.bp_cid_search = ""
+    else:
+        st.session_state.bp_action_msg = {"type": "error", "text": "❌ ไม่พบข้อมูล หรือไม่ได้ระบุเงื่อนไขการค้นหา"}
+
 def display_print_center_page(df):
     """
     แสดงหน้าจอ 'ศูนย์จัดการพิมพ์รายงาน' (Print Center)
@@ -192,64 +244,38 @@ def display_print_center_page(df):
     # --- 1. ส่วนคัดกรองข้อมูล (Filter Section) ---
     st.subheader("1. คัดกรองและเพิ่มผู้ป่วยที่ต้องการพิมพ์")
     
+    # แสดงข้อความแจ้งเตือนจากการกระทำใน Callback (ถ้ามี)
+    if 'bp_action_msg' in st.session_state:
+        msg = st.session_state.bp_action_msg
+        if msg['type'] == 'success':
+            st.success(msg['text'])
+        else:
+            st.error(msg['text'])
+        del st.session_state.bp_action_msg
+    
     # Row 1: ค้นหาด้วยข้อมูลบุคคล
     c1, c2, c3 = st.columns([2, 1.5, 1.5])
     with c1:
         # เตรียมรายชื่อสำหรับ Autocomplete
         all_names = sorted(df['ชื่อ-สกุล'].dropna().unique().tolist())
-        search_name = st.selectbox(
+        st.selectbox(
             "1. ชื่อ-สกุล (ค้นหา)", 
             options=["(ไม่ระบุ)"] + all_names,
             index=0,
             key="bp_name_search"
         )
     with c2:
-        search_hn = st.text_input("2. HN", key="bp_hn_search", placeholder="พิมพ์ค้นหา HN")
+        st.text_input("2. HN", key="bp_hn_search", placeholder="พิมพ์ค้นหา HN")
     with c3:
-        search_cid = st.text_input("3. เลขบัตรประชาชน", key="bp_cid_search", placeholder="พิมพ์ค้นหาเลขบัตรฯ")
+        st.text_input("3. เลขบัตรประชาชน", key="bp_cid_search", placeholder="พิมพ์ค้นหาเลขบัตรฯ")
 
-    # Row 1.5: ปุ่มเพิ่มรายการ (Plus Button Logic)
+    # Row 1.5: ปุ่มเพิ่มรายการ (Plus Button Logic) - ใช้ Callback
     col_add_btn, col_clear_list, _ = st.columns([2, 2, 4])
     with col_add_btn:
-        if st.button("➕ เพิ่มลงรายการ", use_container_width=True, help="กดเพื่อเพิ่มคนที่ค้นหาลงในลิสต์ด้านล่าง"):
-            # Logic การหาคนที่จะเพิ่ม
-            target_hn = None
-            found_msg = ""
-            
-            # 1. เช็คจากชื่อก่อน (แม่นยำสุดเพราะเลือกจาก list)
-            if search_name and search_name != "(ไม่ระบุ)":
-                matched = df[df['ชื่อ-สกุล'] == search_name]
-                if not matched.empty:
-                    target_hn = matched.iloc[0]['HN']
-                    found_msg = f"เพิ่มคุณ {search_name} เรียบร้อย"
-            
-            # 2. ถ้าไม่มีชื่อ เช็คจาก HN
-            elif search_hn:
-                # ต้องหาแบบ Exact match หรือเจอคนเดียวเท่านั้นถึงจะกล้าเพิ่มอัตโนมัติ
-                matched = df[df['HN'].astype(str) == search_hn.strip()]
-                if not matched.empty:
-                    target_hn = matched.iloc[0]['HN']
-                    name_found = matched.iloc[0]['ชื่อ-สกุล']
-                    found_msg = f"เพิ่ม HN {search_hn} ({name_found}) เรียบร้อย"
-            
-            # 3. เช็คจากเลขบัตร
-            elif search_cid:
-                matched = df[df['เลขบัตรประชาชน'].astype(str) == search_cid.strip()]
-                if not matched.empty:
-                    target_hn = matched.iloc[0]['HN']
-                    name_found = matched.iloc[0]['ชื่อ-สกุล']
-                    found_msg = f"เพิ่มเลขบัตร {search_cid} ({name_found}) เรียบร้อย"
-            
-            if target_hn:
-                st.session_state.bp_manual_hns.add(target_hn)
-                st.success(found_msg)
-                # Reset inputs (Optional: ถ้าต้องการให้พิมพ์คนต่อไปง่ายๆ)
-                st.session_state.bp_name_search = "(ไม่ระบุ)"
-                st.session_state.bp_hn_search = ""
-                st.session_state.bp_cid_search = ""
-                st.rerun()
-            else:
-                st.error("❌ ไม่พบข้อมูล หรือไม่ได้ระบุเงื่อนไขการค้นหา")
+        st.button("➕ เพิ่มลงรายการ", use_container_width=True, 
+                  help="กดเพื่อเพิ่มคนที่ค้นหาลงในลิสต์ด้านล่าง",
+                  on_click=add_patient_to_list_callback,
+                  args=(df,))
 
     with col_clear_list:
         if not not st.session_state.bp_manual_hns: # Show only if list not empty
@@ -320,6 +346,12 @@ def display_print_center_page(df):
     # A. ข้อมูลจาก Filter ปกติ
     filtered_df = df.copy()
     filter_active = False
+    
+    # Note: ในขั้นตอนนี้เราใช้ค่าจาก Session State โดยตรงสำหรับการกรองอัตโนมัติ 
+    # (ซึ่งถ้ากดปุ่ม Add ไปแล้ว ค่าจะถูกเคลียร์ ทำให้การกรองอัตโนมัติหายไปเหลือแต่ Manual List ซึ่งถูกต้องตาม UX)
+    search_name = st.session_state.bp_name_search
+    search_hn = st.session_state.bp_hn_search
+    search_cid = st.session_state.bp_cid_search
     
     # Apply standard filters
     if search_name and search_name != "(ไม่ระบุ)": 
