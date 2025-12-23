@@ -256,7 +256,7 @@ def pdpa_consent_page():
     st.markdown(f"""
     <div class="pdpa-card">
         <div class="pdpa-header">
-            🔒 คำประกาศเกี่ยวกับความเป็นส่วนตัว<br>
+            คำประกาศเกี่ยวกับความเป็นส่วนตัว<br>
             <span style="font-size: 16px; font-weight: normal; opacity: 0.7;">(Privacy Notice)</span>
         </div>
         <div class="pdpa-content-box">
