@@ -168,6 +168,12 @@ def display_print_center_page(df):
         div[data-testid="stButton"] > button[kind="primary"]:hover {
             background-color: #2E7D32 !important;
         }
+        .add-btn-hint {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: -10px;
+            margin-bottom: 10px;
+        }
     </style>
     """, unsafe_allow_html=True)
 
@@ -179,16 +185,18 @@ def display_print_center_page(df):
     if 'bp_name_search' not in st.session_state: st.session_state.bp_name_search = None
     if 'bp_hn_search' not in st.session_state: st.session_state.bp_hn_search = ""
     if 'bp_cid_search' not in st.session_state: st.session_state.bp_cid_search = ""
+    
+    # --- State สำหรับเก็บรายการที่กดบวก (Manual Queue) ---
+    if 'bp_manual_hns' not in st.session_state: st.session_state.bp_manual_hns = set()
 
     # --- 1. ส่วนคัดกรองข้อมูล (Filter Section) ---
-    st.subheader("1. คัดกรองผู้ป่วยที่ต้องการพิมพ์")
+    st.subheader("1. คัดกรองและเพิ่มผู้ป่วยที่ต้องการพิมพ์")
     
     # Row 1: ค้นหาด้วยข้อมูลบุคคล
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3 = st.columns([2, 1.5, 1.5])
     with c1:
         # เตรียมรายชื่อสำหรับ Autocomplete
         all_names = sorted(df['ชื่อ-สกุล'].dropna().unique().tolist())
-        # ใช้ Selectbox ให้ค้นหาและเลือกได้
         search_name = st.selectbox(
             "1. ชื่อ-สกุล (ค้นหา)", 
             options=["(ไม่ระบุ)"] + all_names,
@@ -200,7 +208,59 @@ def display_print_center_page(df):
     with c3:
         search_cid = st.text_input("3. เลขบัตรประชาชน", key="bp_cid_search", placeholder="พิมพ์ค้นหาเลขบัตรฯ")
 
-    # Row 2: ค้นหาด้วยกลุ่มข้อมูล และประเภทรายงาน
+    # Row 1.5: ปุ่มเพิ่มรายการ (Plus Button Logic)
+    col_add_btn, col_clear_list, _ = st.columns([2, 2, 4])
+    with col_add_btn:
+        if st.button("➕ เพิ่มลงรายการ", use_container_width=True, help="กดเพื่อเพิ่มคนที่ค้นหาลงในลิสต์ด้านล่าง"):
+            # Logic การหาคนที่จะเพิ่ม
+            target_hn = None
+            found_msg = ""
+            
+            # 1. เช็คจากชื่อก่อน (แม่นยำสุดเพราะเลือกจาก list)
+            if search_name and search_name != "(ไม่ระบุ)":
+                matched = df[df['ชื่อ-สกุล'] == search_name]
+                if not matched.empty:
+                    target_hn = matched.iloc[0]['HN']
+                    found_msg = f"เพิ่มคุณ {search_name} เรียบร้อย"
+            
+            # 2. ถ้าไม่มีชื่อ เช็คจาก HN
+            elif search_hn:
+                # ต้องหาแบบ Exact match หรือเจอคนเดียวเท่านั้นถึงจะกล้าเพิ่มอัตโนมัติ
+                matched = df[df['HN'].astype(str) == search_hn.strip()]
+                if not matched.empty:
+                    target_hn = matched.iloc[0]['HN']
+                    name_found = matched.iloc[0]['ชื่อ-สกุล']
+                    found_msg = f"เพิ่ม HN {search_hn} ({name_found}) เรียบร้อย"
+            
+            # 3. เช็คจากเลขบัตร
+            elif search_cid:
+                matched = df[df['เลขบัตรประชาชน'].astype(str) == search_cid.strip()]
+                if not matched.empty:
+                    target_hn = matched.iloc[0]['HN']
+                    name_found = matched.iloc[0]['ชื่อ-สกุล']
+                    found_msg = f"เพิ่มเลขบัตร {search_cid} ({name_found}) เรียบร้อย"
+            
+            if target_hn:
+                st.session_state.bp_manual_hns.add(target_hn)
+                st.success(found_msg)
+                # Reset inputs (Optional: ถ้าต้องการให้พิมพ์คนต่อไปง่ายๆ)
+                st.session_state.bp_name_search = "(ไม่ระบุ)"
+                st.session_state.bp_hn_search = ""
+                st.session_state.bp_cid_search = ""
+                st.rerun()
+            else:
+                st.error("❌ ไม่พบข้อมูล หรือไม่ได้ระบุเงื่อนไขการค้นหา")
+
+    with col_clear_list:
+        if not not st.session_state.bp_manual_hns: # Show only if list not empty
+            if st.button("🗑️ ล้างรายการที่เลือกทั้งหมด", type="secondary"):
+                st.session_state.bp_manual_hns = set()
+                st.rerun()
+
+    st.markdown("---")
+
+    # Row 2: ค้นหาด้วยกลุ่มข้อมูล (Bulk Filter) และประเภทรายงาน
+    st.write("หรือเลือกจากกลุ่มหน่วยงาน (Bulk Selection)")
     c4, c5, c6 = st.columns(3)
     
     with c4:
@@ -254,50 +314,72 @@ def display_print_center_page(df):
 
     # --- 2. เลือกรายชื่อผู้ป่วย (Data Selection) ---
     st.subheader("2. เลือกรายชื่อผู้ป่วย")
-
-    # Filter Dataframe Logic
+    
+    # Logic: รวมข้อมูลจาก Filter ปกติ + ข้อมูลที่กดบวกมา (Manual Queue)
+    
+    # A. ข้อมูลจาก Filter ปกติ
     filtered_df = df.copy()
+    filter_active = False
     
-    # 1. Name Filter
-    if search_name and search_name != "(ไม่ระบุ)":
+    # Apply standard filters
+    if search_name and search_name != "(ไม่ระบุ)": 
         filtered_df = filtered_df[filtered_df['ชื่อ-สกุล'] == search_name]
-    
-    # 2. HN Filter (Partial Match)
-    if search_hn:
+        filter_active = True
+    if search_hn: 
         filtered_df = filtered_df[filtered_df['HN'].astype(str).str.contains(search_hn, na=False)]
-        
-    # 3. CID Filter (Partial Match)
-    if search_cid:
+        filter_active = True
+    if search_cid: 
         filtered_df = filtered_df[filtered_df['เลขบัตรประชาชน'].astype(str).str.contains(search_cid, na=False)]
-
-    # 4. Dept Filter
-    if selected_depts:
+        filter_active = True
+    if selected_depts: 
         filtered_df = filtered_df[filtered_df['หน่วยงาน'].astype(str).str.strip().isin(selected_depts)]
-        
-    # 5. Date Filter
-    if selected_date != "(ทั้งหมด)":
+        filter_active = True
+    if selected_date != "(ทั้งหมด)": 
         filtered_df = filtered_df[filtered_df['วันที่ตรวจ'].astype(str) == selected_date]
+        filter_active = True
+
+    # B. ข้อมูลจาก Manual Queue (กดบวก)
+    manual_hns = list(st.session_state.bp_manual_hns)
+    manual_df = df[df['HN'].isin(manual_hns)].copy()
+    
+    # C. รวม A และ B
+    if not filter_active and not manual_hns:
+        # ถ้าไม่ได้กรองอะไรและไม่ได้กดบวกใครมาเลย -> แสดงว่างๆ หรือแสดงทั้งหมด (ในที่นี้แสดงว่างดีกว่าเพื่อไม่ให้รก)
+        # แต่เดิมแสดงทั้งหมด งั้นแสดงทั้งหมดถ้าระบบโหลดไม่หนัก
+        display_pool = filtered_df 
+    else:
+        # รวมกันและตัดตัวซ้ำ
+        display_pool = pd.concat([manual_df, filtered_df]).drop_duplicates(subset=['HN'])
 
     # Process for Display
-    filtered_df = filtered_df.sort_values(by=['Year'], ascending=False)
-    unique_patients_df = filtered_df.drop_duplicates(subset=['HN'])
+    display_pool = display_pool.sort_values(by=['Year'], ascending=False)
+    unique_patients_df = display_pool.drop_duplicates(subset=['HN'])
     
     display_df = unique_patients_df[['HN', 'ชื่อ-สกุล', 'หน่วยงาน', 'วันที่ตรวจ']].copy()
     
-    # Smart Status Logic
+    # Smart Status & Default Selection Logic
     status_list = []
-    ready_list = []
+    ready_list = [] # สำหรับเก็บว่าข้อมูลพร้อมไหม
+    default_select_list = [] # สำหรับติ๊กถูกอัตโนมัติ
     
     for _, row in display_df.iterrows():
         full_data_row = unique_patients_df.loc[unique_patients_df['HN'] == row['HN']].iloc[0].to_dict()
         is_ready, status_text = check_data_readiness(full_data_row, report_type)
         status_list.append(status_text)
         ready_list.append(is_ready)
+        
+        # Logic การติ๊กถูก:
+        # 1. ถ้าคนนี้อยู่ใน Manual Queue (กดบวกมา) -> ติ๊กถูกเสมอ (ถ้าข้อมูลพร้อม)
+        # 2. ถ้าไม่ได้กดบวกมา แต่ผ่าน Filter -> อาจจะไม่ติ๊ก Default หรือติ๊กก็ได้ (เอาตามเดิมคือ False)
+        if row['HN'] in manual_hns:
+            default_select_list.append(is_ready) # ติ๊กถ้าพร้อม
+        else:
+            default_select_list.append(False) # Default ไม่ติ๊ก
     
     display_df['สถานะ'] = status_list
-    display_df['เลือก'] = ready_list 
+    display_df['เลือก'] = default_select_list 
 
-    # Sorting
+    # Sorting: เอาคนที่เลือก (กดบวกมา) ขึ้นก่อน
     display_df = display_df.sort_values(by=['เลือก', 'ชื่อ-สกุล'], ascending=[False, True])
     
     # Reorder columns
@@ -322,13 +404,18 @@ def display_print_center_page(df):
             },
             hide_index=True,
             use_container_width=True,
-            height=400 
+            height=400,
+            key="data_editor_print" # ใส่ key เพื่อความเสถียร
         )
         
         selected_hns = edited_df[edited_df['เลือก'] == True]['HN'].tolist()
         count_selected = len(selected_hns)
-        count_ready = sum(ready_list)
-        st.caption(f"พบผู้ป่วย {len(display_df)} คน | พร้อมพิมพ์ ✅ {count_ready} คน | เลือกพิมพ์ {count_selected} คน")
+        
+        # แสดงสรุปรายการที่เลือก
+        if manual_hns:
+            st.info(f"📌 มีรายการในลิสต์ที่กดเพิ่มไว้ {len(manual_hns)} คน")
+            
+        st.caption(f"กำลังจะพิมพ์ {count_selected} คน จากรายการที่แสดงทั้งหมด {len(display_df)} คน")
 
     # --- 3. ดำเนินการสั่งพิมพ์ (Action) ---
     st.markdown("---")
@@ -343,6 +430,10 @@ def display_print_center_page(df):
                 if html_content:
                     st.session_state.batch_print_html = html_content
                     st.session_state.batch_print_ready = True
+                    # เมื่อสั่งพิมพ์แล้ว อาจจะอยากเคลียร์ลิสต์ที่กดบวกมาหรือไม่? 
+                    # ปกติอาจจะเก็บไว้ก่อนเผื่อพิมพ์พลาด แต่ถ้าอยากเคลียร์ก็ทำได้ตรงนี้
+                    # st.session_state.bp_manual_hns = set() 
+                    
                     if skipped > 0:
                         st.warning(f"สร้างรายงานสำเร็จ! (ข้าม {skipped} คน เนื่องจากไม่มีข้อมูล)")
                     else:
