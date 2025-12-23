@@ -220,18 +220,6 @@ def display_print_center_page(df):
             margin-top: 10px;
         }
         
-        .queue-header-row {
-            display: flex;
-            align-items: center;
-            background-color: #f1f3f4;
-            color: #555;
-            font-weight: 600;
-            padding: 10px 15px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            font-size: 0.9rem;
-        }
-
         .queue-card {
             background-color: white;
             border: 1px solid #eee;
@@ -369,21 +357,21 @@ def display_print_center_page(df):
     st.markdown("---")
     
     # Bulk Filter
-    with st.expander("📂 เพิ่มจากกลุ่มหน่วยงาน (Bulk Selection)", expanded=False):
-        c4, c5 = st.columns(2)
-        with c4:
-            all_depts = sorted(df['หน่วยงาน'].dropna().astype(str).str.strip().unique())
-            selected_depts = st.multiselect("กรองตามหน่วยงาน", options=all_depts, placeholder="เลือกหน่วยงาน...", key="bp_dept_filter")
-        with c5:
-            temp_df = df.copy()
-            if selected_depts:
-                temp_df = temp_df[temp_df['หน่วยงาน'].astype(str).str.strip().isin(selected_depts)]
-            available_dates = sorted(temp_df['วันที่ตรวจ'].dropna().astype(str).unique(), reverse=True)
-            date_options = ["(ทั้งหมด)"] + list(available_dates)
-            
-            idx = 0
-            if st.session_state.bp_date_filter in date_options: idx = date_options.index(st.session_state.bp_date_filter)
-            selected_date = st.selectbox("กรองตามวันที่ตรวจ", options=date_options, index=idx, key="bp_date_filter")
+    st.markdown("#### 📂 เพิ่มจากกลุ่มหน่วยงาน (Bulk Selection)")
+    c4, c5 = st.columns(2)
+    with c4:
+        all_depts = sorted(df['หน่วยงาน'].dropna().astype(str).str.strip().unique())
+        selected_depts = st.multiselect("กรองตามหน่วยงาน", options=all_depts, placeholder="เลือกหน่วยงาน...", key="bp_dept_filter")
+    with c5:
+        temp_df = df.copy()
+        if selected_depts:
+            temp_df = temp_df[temp_df['หน่วยงาน'].astype(str).str.strip().isin(selected_depts)]
+        available_dates = sorted(temp_df['วันที่ตรวจ'].dropna().astype(str).unique(), reverse=True)
+        date_options = ["(ทั้งหมด)"] + list(available_dates)
+        
+        idx = 0
+        if st.session_state.bp_date_filter in date_options: idx = date_options.index(st.session_state.bp_date_filter)
+        selected_date = st.selectbox("กรองตามวันที่ตรวจ", options=date_options, index=idx, key="bp_date_filter")
 
     # --- 3. รายชื่อที่เลือก (รอสั่งพิมพ์) - NEW DESIGN ---
     st.subheader("3. รายชื่อที่เลือก (รอสั่งพิมพ์)")
@@ -432,18 +420,11 @@ def display_print_center_page(df):
         # --- Queue Container ---
         st.markdown('<div class="queue-container">', unsafe_allow_html=True)
         
-        # Header Row
-        h_ratios = [0.5, 3, 2, 1.5, 0.5]
-        h_cols = st.columns(h_ratios)
-        h_cols[0].markdown("<div style='text-align:center; font-weight:bold; color:#777;'>เลือก</div>", unsafe_allow_html=True)
-        h_cols[1].markdown("<div style='text-align:left; font-weight:bold; color:#777;'>ชื่อ-สกุล / HN</div>", unsafe_allow_html=True)
-        h_cols[2].markdown("<div style='text-align:left; font-weight:bold; color:#777;'>หน่วยงาน / วันที่</div>", unsafe_allow_html=True)
-        h_cols[3].markdown("<div style='text-align:center; font-weight:bold; color:#777;'>สถานะข้อมูล</div>", unsafe_allow_html=True)
-        h_cols[4].markdown("<div style='text-align:center; font-weight:bold; color:#777;'>ลบ</div>", unsafe_allow_html=True)
-        
-        st.markdown("<hr style='margin: 5px 0 15px 0; border-top: 1px solid #ddd;'>", unsafe_allow_html=True)
+        # NOTE: ส่วนหัวตาราง (Header Row) ถูกลบออกตามคำขอ
 
         # Loop Rows
+        h_ratios = [0.5, 3, 2, 1.5, 0.5] # Define ratios for columns inside the card
+        
         for i, row in unique_patients_df.iterrows():
             hn = row['HN']
             full_data = row.to_dict()
