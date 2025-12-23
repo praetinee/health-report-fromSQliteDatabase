@@ -229,21 +229,19 @@ def display_print_center_page(df):
              background-color: #ff4b4b;
              color: white;
         }
-        /* Table Header Style - Adaptive to Theme */
+        /* Table Header Style - Clean and Minimal */
         .custom-table-header {
-            background-color: var(--secondary-background-color); /* ใช้สีตาม Theme */
-            padding: 12px 0;
-            border-radius: 5px;
             font-weight: bold;
-            color: var(--text-color); /* ใช้สีตัวอักษรตาม Theme */
+            color: var(--text-color);
             margin-bottom: 5px;
-            border: 1px solid rgba(128, 128, 128, 0.2); /* เพิ่มขอบจางๆ */
+            padding: 10px 0;
+            border-bottom: 2px solid var(--text-color); /* ขีดเส้นใต้ชัดเจนแทนกรอบ */
         }
         .row-separator {
             margin: 0px 0px 5px 0px; 
             border: 0; 
             border-top: 1px solid var(--text-color); 
-            opacity: 0.1; /* เส้นจางๆ ตามสี Text ของ Theme */
+            opacity: 0.1; 
         }
     </style>
     """, unsafe_allow_html=True)
@@ -392,7 +390,7 @@ def display_print_center_page(df):
         # [Delete, Select, Status, HN, Name, Dept, Date]
         col_ratios = [0.6, 0.6, 1.3, 1.2, 2.5, 1.5, 1.2]
 
-        # Header Row (Styled with Theme Variables)
+        # Header Row (Remove container border)
         st.markdown('<div class="custom-table-header">', unsafe_allow_html=True)
         h1, h2, h3, h4, h5, h6, h7 = st.columns(col_ratios, vertical_alignment="center")
         with h1: st.markdown("<div style='text-align:center;'>ลบ</div>", unsafe_allow_html=True)
