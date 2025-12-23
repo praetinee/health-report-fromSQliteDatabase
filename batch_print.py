@@ -4,11 +4,18 @@ import html
 import json
 from datetime import datetime
 
-# --- Import ฟังก์ชันที่ถูกแยกส่วนมาจากไฟล์พิมพ์ ---
-from print_report import render_printable_report_body, get_main_report_css
-from print_performance_report import render_performance_report_body, get_performance_report_css
-# นำเข้าฟังก์ชันเช็คข้อมูลจากไฟล์อื่นเพื่อนำมาใช้ตรวจสอบสถานะ
-from print_performance_report import has_vision_data, has_hearing_data, has_lung_data
+# --- Import ฟังก์ชันสำหรับการสร้างรายงาน (Report Generation) ---
+from print_report import (
+    render_printable_report_body,
+    get_main_report_css
+)
+from print_performance_report import (
+    render_performance_report_body,
+    get_performance_report_css,
+    has_vision_data,
+    has_hearing_data,
+    has_lung_data
+)
 
 # --- Helper Functions ---
 def is_empty(val):
