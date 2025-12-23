@@ -279,7 +279,7 @@ def display_visualization_tab(person_data, history_df):
             * **พื้นที่กราฟเต็มวง** หมายถึง ผลตรวจอยู่ในเกณฑ์ดีเยี่ยมตามมาตรฐาน
             * **ส่วนที่เว้าแหว่ง** หมายถึง ด้านที่มีความเสี่ยงหรือควรได้รับการดูแลเพิ่มเติม
 
-            <small>*(เกณฑ์การประเมินอ้างอิงตามมาตรฐานสากล อาทิ ADA, NCEP ATP III, KDIGO และ ACR)*</small>
+            <small>*(เกณฑ์การประเมินอ้างอิงตามค่ามาตรฐานทางการแพทย์ทั่วไป)*</small>
             """, unsafe_allow_html=True)
         with c2: plot_health_radar(person_data)
 
