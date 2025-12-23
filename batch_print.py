@@ -190,14 +190,14 @@ def add_patient_to_list_callback(df):
         # เก็บข้อความแจ้งเตือนไว้แสดงผลหลัง Rerun
         st.session_state.bp_action_msg = {"type": "success", "text": found_msg}
         
-        # Reset inputs (ทำได้ใน Callback อย่างปลอดภัย)
+        # Reset inputs: ทำให้ช่องกรอกว่างพร้อมพิมพ์ใหม่
         st.session_state.bp_name_search = "(ไม่ระบุ)"
         st.session_state.bp_hn_search = ""
         st.session_state.bp_cid_search = ""
         
-        # *** เพิ่มการ Reset Filters อื่นๆ ด้วย เพื่อให้ตารางแสดงเฉพาะคนที่เลือกเท่านั้น ***
-        st.session_state.bp_dept_filter = []
-        st.session_state.bp_date_filter = "(ทั้งหมด)"
+        # เคลียร์ตัวกรองหน่วยงานด้วย เพื่อให้เห็นเฉพาะคนที่เลือกชัดๆ (ถ้าต้องการ)
+        # st.session_state.bp_dept_filter = []
+        # st.session_state.bp_date_filter = "(ทั้งหมด)"
         
     else:
         st.session_state.bp_action_msg = {"type": "error", "text": "❌ ไม่พบข้อมูล หรือไม่ได้ระบุเงื่อนไขการค้นหา"}
@@ -246,8 +246,32 @@ def display_print_center_page(df):
     # --- State สำหรับเก็บรายการที่กดบวก (Manual Queue) ---
     if 'bp_manual_hns' not in st.session_state: st.session_state.bp_manual_hns = set()
 
-    # --- 1. ส่วนคัดกรองข้อมูล (Filter Section) ---
-    st.subheader("1. คัดกรองและเพิ่มผู้ป่วยที่ต้องการพิมพ์")
+    # --- 1. เลือกประเภทรายงาน (Moved to Top) ---
+    st.subheader("1. เลือกประเภทรายงาน")
+    
+    # 3 Options
+    report_type_options = [
+        "รายงานสุขภาพ (Health Report)", 
+        "รายงานสมรรถภาพ (Performance Report)",
+        "ทั้งรายงานสุขภาพและสมรรถภาพ"
+    ]
+    
+    type_idx = 0
+    if st.session_state.bp_report_type in report_type_options:
+        type_idx = report_type_options.index(st.session_state.bp_report_type)
+        
+    report_type = st.selectbox(
+        "เลือกรูปแบบรายงานที่จะพิมพ์", 
+        options=report_type_options,
+        index=type_idx,
+        key="bp_report_type",
+        label_visibility="collapsed"
+    )
+
+    st.markdown("---")
+
+    # --- 2. ค้นหาและเพิ่มผู้ป่วย (Search & Add) ---
+    st.subheader("2. ค้นหาและเพิ่มรายชื่อ (พิมพ์ค้นหาทีละคน)")
     
     # แสดงข้อความแจ้งเตือนจากการกระทำใน Callback (ถ้ามี)
     if 'bp_action_msg' in st.session_state:
@@ -264,40 +288,34 @@ def display_print_center_page(df):
         # เตรียมรายชื่อสำหรับ Autocomplete
         all_names = sorted(df['ชื่อ-สกุล'].dropna().unique().tolist())
         st.selectbox(
-            "1. ชื่อ-สกุล (ค้นหา)", 
+            "ค้นหาด้วยชื่อ-สกุล", 
             options=["(ไม่ระบุ)"] + all_names,
             index=0,
             key="bp_name_search"
         )
     with c2:
-        st.text_input("2. HN", key="bp_hn_search", placeholder="พิมพ์ค้นหา HN")
+        st.text_input("ค้นหาด้วย HN", key="bp_hn_search", placeholder="พิมพ์ HN")
     with c3:
-        st.text_input("3. เลขบัตรประชาชน", key="bp_cid_search", placeholder="พิมพ์ค้นหาเลขบัตรฯ")
+        st.text_input("ค้นหาด้วยเลขบัตรฯ", key="bp_cid_search", placeholder="พิมพ์เลขบัตร")
 
     # Row 1.5: ปุ่มเพิ่มรายการ (Plus Button Logic) - ใช้ Callback
-    col_add_btn, col_clear_list, _ = st.columns([2, 2, 4])
+    col_add_btn, _, _ = st.columns([2, 2, 4])
     with col_add_btn:
         st.button("➕ เพิ่มลงรายการ", use_container_width=True, 
                   help="กดเพื่อเพิ่มคนที่ค้นหาลงในลิสต์ด้านล่าง",
                   on_click=add_patient_to_list_callback,
                   args=(df,))
-
-    with col_clear_list:
-        if not not st.session_state.bp_manual_hns: # Show only if list not empty
-            if st.button("🗑️ ล้างรายการที่เลือกทั้งหมด", type="secondary"):
-                st.session_state.bp_manual_hns = set()
-                st.rerun()
-
+    
     st.markdown("---")
-
-    # Row 2: ค้นหาด้วยกลุ่มข้อมูล (Bulk Filter) และประเภทรายงาน
-    st.write("หรือเลือกจากกลุ่มหน่วยงาน (Bulk Selection)")
-    c4, c5, c6 = st.columns(3)
+    
+    # Row 2: ค้นหาด้วยกลุ่มข้อมูล (Bulk Filter)
+    st.write("หรือเลือกเพิ่มจากกลุ่มหน่วยงาน (Bulk Selection)")
+    c4, c5 = st.columns(2)
     
     with c4:
         all_depts = sorted(df['หน่วยงาน'].dropna().astype(str).str.strip().unique())
         selected_depts = st.multiselect(
-            "4. หน่วยงาน", 
+            "กรองตามหน่วยงาน", 
             options=all_depts,
             placeholder="เลือกหน่วยงาน...",
             key="bp_dept_filter" 
@@ -318,76 +336,43 @@ def display_print_center_page(df):
             idx = date_options.index(st.session_state.bp_date_filter)
 
         selected_date = st.selectbox(
-            "5. วันที่ตรวจ", 
+            "กรองตามวันที่ตรวจ", 
             options=date_options,
             index=idx,
             key="bp_date_filter"
         )
 
-    with c6:
-        # 3 Options
-        report_type_options = [
-            "รายงานสุขภาพ (Health Report)", 
-            "รายงานสมรรถภาพ (Performance Report)",
-            "ทั้งรายงานสุขภาพและสมรรถภาพ"
-        ]
-        
-        type_idx = 0
-        if st.session_state.bp_report_type in report_type_options:
-            type_idx = report_type_options.index(st.session_state.bp_report_type)
-            
-        report_type = st.selectbox(
-            "6. เลือกประเภทรายงาน", 
-            options=report_type_options,
-            index=type_idx,
-            key="bp_report_type"
-        )
+    # --- 3. ตรวจสอบรายชื่อและสั่งพิมพ์ (Display & Action) ---
+    st.subheader("3. รายชื่อที่เลือก (รอสั่งพิมพ์)")
+    
+    # Logic: 
+    # - แสดงคนที่อยู่ใน Manual Queue (bp_manual_hns) เสมอ
+    # - แสดงคนที่ผ่าน Filter (Dept/Date) 
+    # - **ไม่นำ** search inputs (name/hn/cid) มากรองตาราง (เพราะใช้สำหรับปุ่ม Add เท่านั้น)
+    
+    filtered_df = pd.DataFrame(columns=df.columns) # เริ่มต้นว่าง
+    filter_active = False # เช็คว่ามีการใช้ Bulk Filter ไหม
 
-    # --- 2. เลือกรายชื่อผู้ป่วย (Data Selection) ---
-    st.subheader("2. เลือกรายชื่อผู้ป่วย")
-    
-    # Logic: รวมข้อมูลจาก Filter ปกติ + ข้อมูลที่กดบวกมา (Manual Queue)
-    
-    # A. ข้อมูลจาก Filter ปกติ
-    filtered_df = df.copy()
-    filter_active = False
-    
-    # Note: ในขั้นตอนนี้เราใช้ค่าจาก Session State โดยตรงสำหรับการกรองอัตโนมัติ 
-    # (ซึ่งถ้ากดปุ่ม Add ไปแล้ว ค่าจะถูกเคลียร์ ทำให้การกรองอัตโนมัติหายไปเหลือแต่ Manual List ซึ่งถูกต้องตาม UX)
-    search_name = st.session_state.bp_name_search
-    search_hn = st.session_state.bp_hn_search
-    search_cid = st.session_state.bp_cid_search
-    
-    # Apply standard filters
-    if search_name and search_name != "(ไม่ระบุ)": 
-        filtered_df = filtered_df[filtered_df['ชื่อ-สกุล'] == search_name]
-        filter_active = True
-    if search_hn: 
-        filtered_df = filtered_df[filtered_df['HN'].astype(str).str.contains(search_hn, na=False)]
-        filter_active = True
-    if search_cid: 
-        filtered_df = filtered_df[filtered_df['เลขบัตรประชาชน'].astype(str).str.contains(search_cid, na=False)]
-        filter_active = True
-    if selected_depts: 
-        filtered_df = filtered_df[filtered_df['หน่วยงาน'].astype(str).str.strip().isin(selected_depts)]
-        filter_active = True
-    if selected_date != "(ทั้งหมด)": 
-        filtered_df = filtered_df[filtered_df['วันที่ตรวจ'].astype(str) == selected_date]
+    # Apply Bulk Filters ONLY (Dept, Date)
+    if selected_depts or (selected_date != "(ทั้งหมด)"):
+        filtered_df = df.copy()
+        if selected_depts: 
+            filtered_df = filtered_df[filtered_df['หน่วยงาน'].astype(str).str.strip().isin(selected_depts)]
+        if selected_date != "(ทั้งหมด)": 
+            filtered_df = filtered_df[filtered_df['วันที่ตรวจ'].astype(str) == selected_date]
         filter_active = True
 
-    # B. ข้อมูลจาก Manual Queue (กดบวก)
+    # Prepare Display Pool
     manual_hns = list(st.session_state.bp_manual_hns)
     manual_df = df[df['HN'].isin(manual_hns)].copy()
     
-    # C. รวม A และ B (Logic แก้ไขใหม่)
+    # รวมข้อมูล: Manual List + Bulk Filter Results
     if filter_active:
-        # กรณีมีการค้นหา: แสดง รายการที่เลือกไว้ + ผลการค้นหา
         display_pool = pd.concat([manual_df, filtered_df]).drop_duplicates(subset=['HN'])
     elif manual_hns:
-        # กรณีไม่ได้ค้นหา (หรือเคลียร์ช่องค้นหาแล้ว): แสดงเฉพาะรายการที่เลือกไว้เท่านั้น
         display_pool = manual_df
     else:
-        # กรณีเริ่มต้น (ไม่มีการค้นหา และยังไม่ได้เลือกใคร): แสดงตารางว่าง
+        # ถ้าไม่มี Manual List และไม่ได้ใช้ Bulk Filter -> ตารางว่าง
         display_pool = pd.DataFrame(columns=df.columns)
 
     # Process for Display
@@ -409,7 +394,7 @@ def display_print_center_page(df):
         
         # Logic การติ๊กถูก:
         # 1. ถ้าคนนี้อยู่ใน Manual Queue (กดบวกมา) -> ติ๊กถูกเสมอ (ถ้าข้อมูลพร้อม)
-        # 2. ถ้าไม่ได้กดบวกมา แต่ผ่าน Filter -> อาจจะไม่ติ๊ก Default หรือติ๊กก็ได้ (เอาตามเดิมคือ False)
+        # 2. ถ้ามาจาก Bulk Filter -> ไม่ติ๊ก Default (ให้เลือกเอง)
         if row['HN'] in manual_hns:
             default_select_list.append(is_ready) # ติ๊กถ้าพร้อม
         else:
@@ -425,13 +410,20 @@ def display_print_center_page(df):
     cols = ['เลือก', 'สถานะ', 'HN', 'ชื่อ-สกุล', 'หน่วยงาน', 'วันที่ตรวจ']
     display_df = display_df[cols]
 
+    # --- Tool bar for List ---
+    col_tools_L, col_tools_R = st.columns([6, 2])
+    with col_tools_R:
+        if manual_hns:
+            if st.button("🗑️ ล้างรายการทั้งหมด", type="secondary", use_container_width=True):
+                st.session_state.bp_manual_hns = set()
+                st.rerun()
+
     # Display Table
     if display_df.empty:
-        if filter_active or manual_hns:
-            st.info("ไม่พบข้อมูลตามเงื่อนไขที่เลือก")
+        if filter_active:
+            st.info("ไม่พบข้อมูลตามเงื่อนไขหน่วยงาน/วันที่")
         else:
-            st.info("กรุณาค้นหาหรือเพิ่มรายชื่อเพื่อเริ่มใช้งาน")
-            
+            st.info("ตารางว่าง... กรุณาค้นหาและกดปุ่ม ➕ เพื่อเพิ่มรายชื่อ")
         selected_hns = []
         count_selected = 0
     else:
@@ -448,42 +440,30 @@ def display_print_center_page(df):
             hide_index=True,
             use_container_width=True,
             height=400,
-            key="data_editor_print" # ใส่ key เพื่อความเสถียร
+            key="data_editor_print" 
         )
         
         selected_hns = edited_df[edited_df['เลือก'] == True]['HN'].tolist()
         count_selected = len(selected_hns)
-        
-        # แสดงสรุปรายการที่เลือก
-        if manual_hns:
-            st.info(f"📌 มีรายการในลิสต์ที่กดเพิ่มไว้ {len(manual_hns)} คน")
-            
-        st.caption(f"กำลังจะพิมพ์ {count_selected} คน จากรายการที่แสดงทั้งหมด {len(display_df)} คน")
+        st.caption(f"กำลังเลือก {count_selected} คน")
 
-    # --- 3. ดำเนินการสั่งพิมพ์ (Action) ---
+    # --- Print Button ---
     st.markdown("---")
-    st.subheader("3. ดำเนินการสั่งพิมพ์")
-    
     col_l, col_c, col_r = st.columns([1, 2, 1])
     with col_c:
         if st.button(f"สั่งพิมพ์รายงาน ({count_selected} ท่าน)", type="primary", use_container_width=True, disabled=(count_selected == 0)):
             if count_selected > 0:
                 html_content, skipped = generate_batch_html(df, selected_hns, report_type)
-                
                 if html_content:
                     st.session_state.batch_print_html = html_content
                     st.session_state.batch_print_ready = True
-                    # เมื่อสั่งพิมพ์แล้ว อาจจะอยากเคลียร์ลิสต์ที่กดบวกมาหรือไม่? 
-                    # ปกติอาจจะเก็บไว้ก่อนเผื่อพิมพ์พลาด แต่ถ้าอยากเคลียร์ก็ทำได้ตรงนี้
-                    # st.session_state.bp_manual_hns = set() 
-                    
                     if skipped > 0:
                         st.warning(f"สร้างรายงานสำเร็จ! (ข้าม {skipped} คน เนื่องจากไม่มีข้อมูล)")
                     else:
                         st.success("สร้างรายงานสำเร็จครบถ้วน!")
                     st.rerun()
                 else:
-                    st.error("ไม่สามารถสร้างรายงานได้ (อาจไม่มีข้อมูลในรายชื่อที่เลือก)")
+                    st.error("ไม่สามารถสร้างรายงานได้")
 
     # --- Hidden Print Trigger ---
     if st.session_state.get("batch_print_ready", False):
