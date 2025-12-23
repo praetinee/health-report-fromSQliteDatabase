@@ -417,6 +417,10 @@ def render_vision_details_table(person_data):
     if any_data_found: st.markdown(html_content, unsafe_allow_html=True)
     else: st.info("ไม่พบข้อมูลการตรวจสายตา")
 
+def display_performance_report_vision(person_data):
+    """Wrapper function to match calling convention"""
+    render_vision_details_table(person_data)
+
 def display_performance_report_hearing(person_data, all_person_history_df):
     # ย้าย import มาไว้ในฟังก์ชันเพื่อแก้ Circular Import
     from performance_tests import interpret_audiogram
@@ -472,6 +476,51 @@ def display_performance_report(person_data, report_type, all_person_history_df=N
         render_section_header("ผลตรวจการได้ยิน (Audiometry)")
         display_performance_report_hearing(person_data, all_person_history_df)
 
+def render_urine_section(person_data, sex, year):
+    # Config for Urine Tests
+    urine_config = [
+        ("สี (Colour)", "Color", "Yellow"),
+        ("น้ำตาล (Sugar)", "sugar", "Negative"),
+        ("โปรตีน (Albumin)", "Alb", "Negative"),
+        ("กรด-ด่าง (pH)", "pH", "5.0 - 8.0"),
+        ("ความถ่วงจำเพาะ (Sp.gr)", "Spgr", "1.003 - 1.030"),
+        ("เม็ดเลือดแดง (RBC)", "RBC1", "0 - 2"),
+        ("เม็ดเลือดขาว (WBC)", "WBC1", "0 - 5"),
+        ("เซลล์เยื่อบุผิว (Epit)", "SQ-epi", "0 - 10"),
+        ("อื่นๆ", "ORTER", "-")
+    ]
+    
+    rows = []
+    for label, col, norm in urine_config:
+        val = person_data.get(col)
+        # Check abnormality
+        is_abn = is_urine_abnormal(label, val, norm)
+        
+        # Format for table: (Text, Is_Abnormal)
+        label_tuple = (label, is_abn)
+        val_tuple = (safe_value(val), is_abn)
+        norm_tuple = (norm, is_abn)
+        
+        rows.append([label_tuple, val_tuple, norm_tuple])
+    
+    # Render table
+    st.markdown(render_lab_table_html("ผลการตรวจปัสสาวะ (Urinalysis)", ["รายการ", "ผลตรวจ", "ค่าปกติ"], rows), unsafe_allow_html=True)
+
+def render_stool_html_table(exam_result, cs_result):
+    html = f"""
+    <div class="card-container">
+        <div class='table-title'>ผลการตรวจอุจจาระ (Stool Examination)</div>
+        <table class="lab-table">
+            <thead><tr><th>รายการ</th><th>ผลตรวจ</th></tr></thead>
+            <tbody>
+                <tr><td>Stool Examination</td><td>{exam_result}</td></tr>
+                <tr><td>Stool Culture</td><td>{cs_result}</td></tr>
+            </tbody>
+        </table>
+    </div>
+    """
+    return clean_html_string(html)
+
 def display_main_report(person_data, all_person_history_df):
     person = person_data
     sex = str(person.get("เพศ", "")).strip()
@@ -496,7 +545,8 @@ def display_main_report(person_data, all_person_history_df):
         col_ua_left, col_ua_right = st.columns(2)
         with col_ua_left:
             render_urine_section(person, sex, selected_year)
-            st.markdown("<h5 class='section-subtitle'>ผลตรวจอุจจาระ (Stool Examination)</h5>", unsafe_allow_html=True)
+            # st.markdown("<h5 class='section-subtitle'>ผลตรวจอุจจาระ (Stool Examination)</h5>", unsafe_allow_html=True)
+            # Use new function
             st.markdown(render_stool_html_table(interpret_stool_exam(person.get("Stool exam", "")), interpret_stool_cs(person.get("Stool C/S", ""))), unsafe_allow_html=True)
 
         with col_ua_right:
