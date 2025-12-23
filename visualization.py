@@ -192,9 +192,9 @@ def get_status_text(val, m_type):
     if m_type == 'BMI':
         if val < 18.5: return "น้ำหนักน้อย"
         if 18.5 <= val < 23: return "สมส่วน"
-        if 23 <= val < 25: return "เริ่มเกินเกณฑ์" # ปรับคำให้สุภาพขึ้น
-        if 25 <= val < 30: return "น้ำหนักเกิน" # ปรับคำให้สุภาพขึ้น
-        return "น้ำหนักเกินมาก" # ปรับคำให้สุภาพขึ้น
+        if 23 <= val < 25: return "เริ่มเกินเกณฑ์" 
+        if 25 <= val < 30: return "น้ำหนักเกิน"
+        return "น้ำหนักเกินมาก"
     
     if m_type == 'BP': # SBP
         if val < 120: return "ปกติ"
@@ -203,27 +203,27 @@ def get_status_text(val, m_type):
         
     if m_type == 'FBS':
         if val < 100: return "ปกติ"
-        if val < 126: return "เสี่ยง"
-        return "สูง"
+        if val < 126: return "เริ่มสูง"
+        return "เสี่ยงเบาหวาน"
         
     if m_type == 'LDL':
         if val < 100: return "ดีมาก"
         if val < 130: return "ปกติ"
         if val < 160: return "เริ่มสูง"
-        return "สูง"
+        return "เสี่ยงไขมันอุดตัน"
         
     if m_type == 'GFR':
         if val >= 90: return "ดีมาก"
         if val >= 60: return "ปกติ"
-        return "เสื่อม"
+        return "เสี่ยงไตเสื่อม"
         
     if m_type == 'Liver': # SGPT
         if val <= 40: return "ปกติ"
-        return "สูง"
+        return "เสี่ยงตับอักเสบ"
         
     if m_type == 'Uric':
         if val <= 7.0: return "ปกติ"
-        return "สูง"
+        return "เสี่ยงโรคเกาต์"
         
     return ""
 
@@ -239,7 +239,7 @@ def plot_health_radar(person_data):
         {'type': 'FBS', 'val': get_float(person_data, 'FBS'), 'label': 'น้ำตาล', 'fmt': '{:.0f}'},
         {'type': 'LDL', 'val': get_float(person_data, 'LDL'), 'label': 'ไขมันเลว', 'fmt': '{:.0f}'},
         {'type': 'GFR', 'val': get_float(person_data, 'GFR'), 'label': 'ไต', 'fmt': '{:.0f}'},
-        {'type': 'Liver', 'val': get_float(person_data, 'SGPT'), 'label': 'ตับ', 'fmt': '{:.0f}'},
+        {'type': 'Liver', 'val': get_float(person_data, 'SGPT'), 'label': 'เอนไซม์ตับ', 'fmt': '{:.0f}'},
         {'type': 'Uric', 'val': get_float(person_data, 'Uric Acid'), 'label': 'กรดยูริก', 'fmt': '{:.1f}'}
     ]
     
