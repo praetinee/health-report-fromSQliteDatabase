@@ -799,21 +799,45 @@ def display_performance_report_hearing(person_data, all_person_history_df):
 
 def display_performance_report_lung(person_data):
     summary, advice, raw_data = interpret_lung_capacity(person_data)
+    
+    # 1. Info Cards (คำอธิบายศัพท์เทคนิค)
+    st.markdown(clean_html_string("""
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px;">
+        <div class="card-container" style="margin: 0; border-left: 4px solid #2196F3;">
+            <div style="font-weight: bold; color: var(--main-text-color); margin-bottom: 5px;">🫁 FVC (ความจุปอด)</div>
+            <div style="font-size: 0.85rem; opacity: 0.8;">ปริมาตรอากาศทั้งหมดที่เป่าออกมาได้เต็มที่ (บอกขนาดปอด)</div>
+        </div>
+        <div class="card-container" style="margin: 0; border-left: 4px solid #00BCD4;">
+            <div style="font-weight: bold; color: var(--main-text-color); margin-bottom: 5px;">💨 FEV1 (ปริมาตรลมเป่าเร็ว)</div>
+            <div style="font-size: 0.85rem; opacity: 0.8;">ปริมาตรอากาศที่เป่าออกได้ในวินาทีแรก (บอกความโล่งของหลอดลม)</div>
+        </div>
+    </div>
+    """), unsafe_allow_html=True)
+
     lung_items = [
-        ("FVC (ความจุรอดชีวิต)", raw_data['FVC predic'], raw_data['FVC'], raw_data['FVC %']),
-        ("FEV1 (ปริมาตรหายใจออกใน 1 วินาทีแรก)", raw_data['FEV1 predic'], raw_data['FEV1'], raw_data['FEV1 %']),
-        ("FEV1/FVC Ratio", "-", raw_data['FEV1/FVC %'], "-")
+        ("FVC (ความจุปอด)", raw_data['FVC predic'], raw_data['FVC'], raw_data['FVC %']),
+        ("FEV1 (ปริมาตรลมเป่าเร็ว)", raw_data['FEV1 predic'], raw_data['FEV1'], raw_data['FEV1 %']),
+        ("FEV1/FVC Ratio (สัดส่วน)", "-", raw_data['FEV1/FVC %'], "-")
     ]
     
+    # Helper func เพื่อสร้างแถบสี
+    def make_bar(val):
+        try:
+            v = float(str(val).replace('%','').strip())
+            color = "var(--success-text)" if v >= 80 else "var(--warning-text)" if v >= 60 else "var(--danger-text)"
+            return f"<div style='background:rgba(128,128,128,0.2);height:6px;border-radius:3px;width:100px;display:inline-block;vertical-align:middle;margin-right:8px;'><div style='width:{min(v,100)}%;background:{color};height:100%;border-radius:3px;'></div></div> {v}%"
+        except: return str(val)
+
     html_content = clean_html_string("""
     <div class='card-container'>
-    <div class='table-title'>ข้อมูลสมรรถภาพปอด</div>
+    <div class='table-title'>ผลการตรวจสมรรถภาพปอด (Spirometry)</div>
     <table class='lab-table'>
-        <thead><tr><th style='width: 40%;'>รายการ (Parameter)</th><th>ค่ามาตรฐาน (Predicted)</th><th>ค่าที่วัดได้ (Actual)</th><th>ร้อยละ (% Predicted)</th></tr></thead>
+        <thead><tr><th style='width: 30%;'>รายการ</th><th style='text-align: center;'>ค่ามาตรฐาน</th><th style='text-align: center;'>ค่าที่วัดได้</th><th style='width: 35%;'>ผลเทียบมาตรฐาน (%)</th></tr></thead>
         <tbody>
     """)
     for label, pred, act, per in lung_items:
-        html_content += f"<tr><td>{label}</td><td style='text-align:center;'>{pred}</td><td style='text-align:center;'>{act}</td><td style='text-align:center;'>{per}</td></tr>"
+        display_per = make_bar(per) if per != "-" else "-"
+        html_content += f"<tr><td>{label}</td><td style='text-align:center;'>{pred}</td><td style='text-align:center;'>{act}</td><td>{display_per}</td></tr>"
     html_content += "</tbody></table></div>"
     
     st.markdown(html_content, unsafe_allow_html=True)
@@ -857,6 +881,7 @@ def display_main_report(person_data, all_person_history_df):
         col_ua_left, col_ua_right = st.columns(2)
         with col_ua_left:
             render_urine_section(person, sex, selected_year)
+            st.markdown("<h5 class='section-subtitle'>ผลตรวจอุจจาระ (Stool Examination)</h5>", unsafe_allow_html=True)
             st.markdown(render_stool_html_table(interpret_stool_exam(person.get("Stool exam", "")), interpret_stool_cs(person.get("Stool C/S", ""))), unsafe_allow_html=True)
 
         with col_ua_right:
@@ -867,8 +892,7 @@ def display_main_report(person_data, all_person_history_df):
             hep_a_display_text = "ไม่ได้ตรวจ" if is_empty(hep_a_value) else safe_text(hep_a_value)
 
             st.markdown(clean_html_string(f"""
-            <div class="card-container">
-                <div class="table-title">ผลตรวจพิเศษ</div>
+            <div class="table-container">
                 <table class="info-detail-table">
                     <tbody>
                         <tr><th>ผลเอกซเรย์ (Chest X-ray)</th><td>{interpret_cxr(person.get(cxr_col, ''))}</td></tr>
@@ -879,9 +903,12 @@ def display_main_report(person_data, all_person_history_df):
             </div>
             """), unsafe_allow_html=True)
 
+            # --- Logic to get correct Hepatitis B columns based on year ---
             hbsag_col = "HbsAg"
             hbsab_col = "HbsAb"
             hbcab_col = "HBcAB"
+            
+            # 1. Determine columns based on history
             current_thai_year = datetime.now().year + 543
             if selected_year != current_thai_year:
                 suffix = str(selected_year)[-2:]
@@ -889,10 +916,14 @@ def display_main_report(person_data, all_person_history_df):
                 if f"HbsAb{suffix}" in person: hbsab_col = f"HbsAb{suffix}"
                 if f"HBcAB{suffix}" in person: hbcab_col = f"HBcAB{suffix}"
 
+            # 2. Determine Header Suffix (Display Year)
+            # Priority: "ปีตรวจHEP" > selected_year
             hep_year_rec = str(person.get("ปีตรวจHEP", "")).strip()
             header_suffix = ""
-            if not is_empty(hep_year_rec): header_suffix = f" (ตรวจเมื่อ: {hep_year_rec})"
-            elif selected_year and selected_year != current_thai_year: header_suffix = f" (พ.ศ. {selected_year})"
+            if not is_empty(hep_year_rec):
+                 header_suffix = f" (ตรวจเมื่อ: {hep_year_rec})"
+            elif selected_year and selected_year != current_thai_year:
+                 header_suffix = f" (พ.ศ. {selected_year})"
 
             st.markdown(f"<h5 class='section-subtitle'>ผลการตรวจไวรัสตับอักเสบบี (Viral hepatitis B){header_suffix}</h5>", unsafe_allow_html=True)
 
@@ -900,8 +931,9 @@ def display_main_report(person_data, all_person_history_df):
             hbsab = safe_text(person.get(hbsab_col))
             hbcab = safe_text(person.get(hbcab_col))
             
+            # แก้ไข: ใช้ clean_html_string เพื่อลบ Indentation
             st.markdown(clean_html_string(f"""
-            <div class="card-container">
+            <div class="table-container">
                 <table class='lab-table'>
                     <thead><tr><th style='text-align: center;'>HBsAg</th><th style='text-align: center;'>HBsAb</th><th style='text-align: center;'>HBcAb</th></tr></thead>
                     <tbody><tr><td style='text-align: center;'>{hbsag}</td><td style='text-align: center;'>{hbsab}</td><td style='text-align: center;'>{hbcab}</td></tr></tbody>
@@ -912,10 +944,14 @@ def display_main_report(person_data, all_person_history_df):
             if not (is_empty(hbsag) and is_empty(hbsab) and is_empty(hbcab)):
                 advice, status = hepatitis_b_advice(hbsag, hbsab, hbcab)
                 status_class = ""
-                if status == 'immune': status_class = 'immune-box'
-                elif status == 'no_immune': status_class = 'no-immune-box'
-                else: status_class = 'warning-box'
+                if status == 'immune':
+                    status_class = 'immune-box'
+                elif status == 'no_immune':
+                    status_class = 'no-immune-box'
+                else:
+                    status_class = 'warning-box'
                 
+                # แก้ไข: ใช้ clean_html_string เพื่อลบ Indentation
                 st.markdown(clean_html_string(f"""
                 <div class='custom-advice-box {status_class}'>
                     {advice}
