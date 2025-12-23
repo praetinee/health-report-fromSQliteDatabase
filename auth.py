@@ -117,9 +117,8 @@ def authentication_flow(df):
         logo_src = f"data:image/png;base64,{img_b64}"
         logo_html = f"<div class='logo-container'><img src='{logo_src}' class='logo-img'></div>"
     else:
-        # ถ้าไม่เจอไฟล์ ให้ใช้ URL รูป placeholder หรือ URL รูป รพ. (ถ้ามี)
-        # ตัวอย่างนี้ใช้ icon โรงพยาบาลฟรีเป็นตัวอย่าง
-        fallback_url = "https://cdn-icons-png.flaticon.com/512/3063/3063176.png" 
+        # ถ้าไม่เจอไฟล์ ให้ใช้ URL รูปที่คุณส่งมา
+        fallback_url = "https://i.postimg.cc/MGxD3yWn/fce5f6c4-b813-48cc-bf40-393032a7eb6d.png" 
         logo_html = f"<div class='logo-container'><img src='{fallback_url}' class='logo-img'></div>"
 
     c1, c2, c3 = st.columns([1, 6, 1])
