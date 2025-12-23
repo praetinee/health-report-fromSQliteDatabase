@@ -90,17 +90,13 @@ def authentication_flow(df):
         .stButton>button:hover {
             filter: brightness(1.1);
         }
+        /* ลบคลาส .logo-img ใน CSS ออกเพื่อลดความสับสน แล้วไปคุมที่ Inline Style แทน */
         .logo-container {
             display: flex;
             justify-content: center;
             align-items: center;
             margin-bottom: 20px;
             width: 100%;
-        }
-        .logo-img {
-            max-width: 80px; /* ลดขนาดรูปลงจาก 100px เป็น 80px */
-            height: auto;
-            object-fit: contain;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -109,24 +105,28 @@ def authentication_flow(df):
     logo_path = "image_0809c0.png"
     logo_html = ""
     
+    # กำหนดขนาดรูปภาพที่นี่ (Inline Style) เพื่อความชัวร์ที่สุด
+    # ปรับเป็น 100px (ขนาดกลางๆ ไม่ใหญ่ไม่เล็กเกินไป)
+    img_style = "width: 100px; max-width: 100px; height: auto;" 
+    
     # พยายามโหลดรูปจากไฟล์ก่อน
     img_b64 = get_image_base64(logo_path)
     
     if img_b64:
         # ถ้าเจอไฟล์ แปลงเป็น base64
         logo_src = f"data:image/png;base64,{img_b64}"
-        logo_html = f"<div class='logo-container'><img src='{logo_src}' class='logo-img'></div>"
+        logo_html = f"<div class='logo-container'><img src='{logo_src}' style='{img_style}'></div>"
     else:
         # ถ้าไม่เจอไฟล์ ให้ใช้ URL รูปที่คุณส่งมา
         fallback_url = "https://i.postimg.cc/MGxD3yWn/fce5f6c4-b813-48cc-bf40-393032a7eb6d.png" 
-        logo_html = f"<div class='logo-container'><img src='{fallback_url}' class='logo-img'></div>"
+        logo_html = f"<div class='logo-container'><img src='{fallback_url}' style='{img_style}'></div>"
 
     c1, c2, c3 = st.columns([1, 6, 1])
     with c2:
         with st.container():
             st.markdown("<div class='login-container'>", unsafe_allow_html=True)
             
-            # แสดงโลโก้ (จะแสดงแน่นอนเพราะมี fallback)
+            # แสดงโลโก้
             st.markdown(logo_html, unsafe_allow_html=True)
             
             st.markdown("<h2 class='login-header'>ลงทะเบียน / เข้าสู่ระบบ</h2>", unsafe_allow_html=True)
