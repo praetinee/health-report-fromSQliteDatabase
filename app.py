@@ -289,14 +289,68 @@ def main_app(df):
             st.warning("ไม่พบข้อมูลการตรวจสำหรับหมวดหมู่ที่กำหนด แต่พบประวัติการมาตรวจ")
             display_main_report(p_data, all_hist) # บังคับโชว์
 
-        # Print Components (Hidden)
+        # --- Print Components (Hidden) - FIXED: Use Iframe Injection instead of window.open ---
         if st.session_state.get('print_trigger', False):
             h = generate_printable_report(p_data, all_hist)
-            st.components.v1.html(f"<script>var w=window.open();w.document.write({json.dumps(h)});w.print();w.close();</script>", height=0)
+            escaped_html = json.dumps(h)
+            iframe_id = f"print-main-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
+            
+            # Script to write to hidden iframe and print
+            print_script = f"""
+            <iframe id="{iframe_id}" style="display:none;"></iframe>
+            <script>
+                (function() {{
+                    const iframe = document.getElementById('{iframe_id}');
+                    if (!iframe) return;
+                    const doc = iframe.contentWindow.document;
+                    doc.open();
+                    doc.write({escaped_html});
+                    doc.close();
+                    iframe.onload = function() {{
+                        setTimeout(function() {{
+                            try {{ 
+                                iframe.contentWindow.focus(); 
+                                iframe.contentWindow.print(); 
+                            }} catch (e) {{ 
+                                console.error("Print error:", e); 
+                            }}
+                        }}, 500);
+                    }};
+                }})();
+            </script>
+            """
+            st.components.v1.html(print_script, height=0, width=0)
             st.session_state.print_trigger = False
+            
         if st.session_state.get('print_performance_trigger', False):
             h = generate_performance_report_html(p_data, all_hist)
-            st.components.v1.html(f"<script>var w=window.open();w.document.write({json.dumps(h)});w.print();w.close();</script>", height=0)
+            escaped_html = json.dumps(h)
+            iframe_id = f"print-perf-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
+            
+            print_script = f"""
+            <iframe id="{iframe_id}" style="display:none;"></iframe>
+            <script>
+                (function() {{
+                    const iframe = document.getElementById('{iframe_id}');
+                    if (!iframe) return;
+                    const doc = iframe.contentWindow.document;
+                    doc.open();
+                    doc.write({escaped_html});
+                    doc.close();
+                    iframe.onload = function() {{
+                        setTimeout(function() {{
+                            try {{ 
+                                iframe.contentWindow.focus(); 
+                                iframe.contentWindow.print(); 
+                            }} catch (e) {{ 
+                                console.error("Print error:", e); 
+                            }}
+                        }}, 500);
+                    }};
+                }})();
+            </script>
+            """
+            st.components.v1.html(print_script, height=0, width=0)
             st.session_state.print_performance_trigger = False
             
     else:
