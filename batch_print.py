@@ -4,11 +4,11 @@ import html
 import json
 from datetime import datetime
 
-# --- Import ฟังก์ชันสำหรับการสร้างรายงาน ---
-# 1. Compact Report (New Module)
-from print_report_compact import generate_compact_report
-
-# 2. Performance Report (Existing)
+# --- Import ฟังก์ชันสำหรับการสร้างรายงาน (Report Generation) ---
+from print_report import (
+    render_printable_report_body,
+    get_main_report_css
+)
 from print_performance_report import (
     render_performance_report_body,
     get_performance_report_css,
@@ -75,15 +75,14 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
     report_bodies = []
     page_break_div = "<div style='page-break-after: always;'></div>"
     
-    # CSS for Performance Report (Compact Report has its own CSS embedded)
+    css_main = get_main_report_css()
     css_perf = get_performance_report_css()
+    full_css = f"{css_main}\n{css_perf}" 
 
     progress_bar = st.progress(0)
     total_patients = len(selected_hns)
     skipped_count = 0
     
-    final_html_parts = []
-
     for i, hn in enumerate(selected_hns):
         try:
             progress_bar.progress((i + 1) / total_patients, text=f"กำลังสร้างรายงานคนที่ {i+1}/{total_patients} (HN: {hn})")
@@ -96,51 +95,24 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
             latest_year_series = person_history_df.sort_values(by='Year', ascending=False).iloc[0]
             person_data = latest_year_series.to_dict()
 
-            patient_html_sections = []
+            patient_bodies = []
             
-            # --- 1. Compact Health Report (Always Full Page) ---
-            if report_type in ["รายงานสุขภาพ (Health Report)", "ทั้งรายงานสุขภาพและสมรรถภาพ"]:
-                if has_basic_health_data(person_data):
-                    # Generate FULL HTML document for this person's health report
-                    # We extract BODY content only if we are merging with performance
-                    compact_full = generate_compact_report(person_data, person_history_df)
-                    
-                    if report_type == "รายงานสุขภาพ (Health Report)":
-                        # If health report only, add the full HTML
-                        # BUT batch print expects a single HTML file. 
-                        # We need to extract body mostly. 
-                        # To make it simple: We will stack the OUTER HTML structure later.
-                        # For Compact report, it has inline CSS. Let's extract the <div class="container">...</div>
-                        
-                        start_idx = compact_full.find('<div class="container">')
-                        end_idx = compact_full.find('</body>')
-                        body_content = compact_full[start_idx:end_idx]
-                        patient_html_sections.append(body_content)
-                    else:
-                        # Merged mode
-                        start_idx = compact_full.find('<div class="container">')
-                        end_idx = compact_full.find('</body>')
-                        body_content = compact_full[start_idx:end_idx]
-                        patient_html_sections.append(body_content)
+            need_main = report_type in ["รายงานสุขภาพ (Health Report)", "ทั้งรายงานสุขภาพและสมรรถภาพ"]
+            if need_main and has_basic_health_data(person_data):
+                patient_bodies.append(render_printable_report_body(person_data, person_history_df))
+            
+            need_perf = report_type in ["รายงานสมรรถภาพ (Performance Report)", "ทั้งรายงานสุขภาพและสมรรถภาพ"]
+            has_vis = has_vision_data(person_data)
+            has_hear = has_hearing_data(person_data)
+            has_lung = has_lung_data(person_data)
+            if need_perf and (has_vis or has_hear or has_lung):
+                patient_bodies.append(render_performance_report_body(person_data, person_history_df))
 
-            # --- 2. Performance Report ---
-            if report_type in ["รายงานสมรรถภาพ (Performance Report)", "ทั้งรายงานสุขภาพและสมรรถภาพ"]:
-                has_vis = has_vision_data(person_data)
-                has_hear = has_hearing_data(person_data)
-                has_lung = has_lung_data(person_data)
-                
-                if has_vis or has_hear or has_lung:
-                    # Performance Report body
-                    perf_body = render_performance_report_body(person_data, person_history_df)
-                    patient_html_sections.append(perf_body)
-
-            if not patient_html_sections:
+            if not patient_bodies:
                 skipped_count += 1
                 continue
             
-            # Combine sections for this patient with page breaks if needed
-            # Note: Compact report is designed to be 1 page. Performance report usually takes another page.
-            combined_patient_html = page_break_div.join(patient_html_sections)
+            combined_patient_html = page_break_div.join(patient_bodies)
             report_bodies.append(combined_patient_html)
 
         except Exception as e:
@@ -154,21 +126,13 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
 
     all_bodies = page_break_div.join(report_bodies)
     
-    # We need to combine CSS.
-    # Compact CSS is inside generate_compact_report, let's pull it out manually for the head
-    # Or cleaner: update print_report_compact to have get_compact_css() public. (Done above)
-    from print_report_compact import get_compact_css
-    
-    css_compact = get_compact_css()
-    
     full_html = f"""
     <!DOCTYPE html>
     <html lang="th">
     <head>
         <meta charset="UTF-8">
         <title>รายงานผลการตรวจสุขภาพ (Batch Print)</title>
-        {css_compact}
-        {css_perf}
+        {full_css}
     </head>
     <body>
         {all_bodies}
