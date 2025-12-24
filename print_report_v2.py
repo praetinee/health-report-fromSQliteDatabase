@@ -29,7 +29,7 @@ except ImportError:
     def generate_cbc_recommendations(p, s): return {}
     def generate_urine_recommendations(p, s): return {}
 
-# --- CSS Design 3.0 (Large Font / Elderly Friendly) ---
+# --- CSS Design 4.0 (Big Font & Full Page Filler) ---
 def get_single_page_style():
     return """
     <style>
@@ -37,18 +37,19 @@ def get_single_page_style():
         
         @page {
             size: A4;
-            margin: 5mm 6mm; /* ลดขอบกระดาษลงเพื่อให้พื้นที่เนื้อหามากที่สุด */
+            margin: 10mm; /* ขอบกระดาษพอดีๆ */
         }
         
         body {
             font-family: 'Sarabun', sans-serif;
-            font-size: 14px; /* ขยายขนาดพื้นฐานเป็น 14px (มาตรฐานผู้สูงอายุอ่านง่าย) */
-            line-height: 1.25;
-            color: #000; /* สีดำสนิทเพื่อความชัดเจน */
+            font-size: 16px; /* ฐาน 16px (ใหญ่) */
+            line-height: 1.4; /* เพิ่มระยะห่างบรรทัด */
+            color: #000;
             background: #fff;
             margin: 0;
             padding: 0;
-            width: 210mm;
+            width: 100%;
+            height: 100%;
             box-sizing: border-box;
         }
 
@@ -56,7 +57,8 @@ def get_single_page_style():
             width: 100%;
             display: flex;
             flex-direction: column;
-            gap: 8px; /* ลดช่องว่างระหว่างบล็อกลงเล็กน้อย */
+            gap: 15px; /* เพิ่มระยะห่างระหว่างส่วนต่างๆ */
+            justify-content: flex-start; 
         }
 
         /* --- Header --- */
@@ -64,17 +66,17 @@ def get_single_page_style():
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 3px solid #004d40;
-            padding-bottom: 5px;
-            margin-bottom: 2px;
+            border-bottom: 4px solid #004d40;
+            padding-bottom: 10px;
+            margin-bottom: 5px;
         }
-        .header-left h1 { margin: 0; font-size: 24px; color: #004d40; line-height: 1; font-weight: bold; }
-        .header-left p { margin: 2px 0 0 0; font-size: 14px; color: #333; font-weight: 600; }
+        .header-left h1 { margin: 0; font-size: 28px; color: #004d40; line-height: 1; font-weight: bold; }
+        .header-left p { margin: 4px 0 0 0; font-size: 16px; color: #333; font-weight: 600; }
         .header-right { text-align: right; }
-        .header-right h2 { margin: 0; font-size: 20px; font-weight: bold; color: #000; }
-        .patient-meta { font-size: 14px; margin-top: 2px; color: #000; }
+        .header-right h2 { margin: 0; font-size: 24px; font-weight: bold; color: #000; }
+        .patient-meta { font-size: 16px; margin-top: 4px; color: #000; }
         .patient-badge { 
-            display: inline-block; background: #ddd; padding: 1px 6px; 
+            display: inline-block; background: #ddd; padding: 2px 8px; 
             border-radius: 4px; font-weight: bold; margin-left: 5px; border: 1px solid #999;
         }
 
@@ -83,133 +85,125 @@ def get_single_page_style():
             display: flex;
             justify-content: space-between;
             background-color: #e0f2f1;
-            border-radius: 6px;
-            padding: 6px 10px;
-            border: 1px solid #b2dfdb;
+            border-radius: 8px;
+            padding: 12px 15px; /* เพิ่ม padding */
+            border: 2px solid #b2dfdb;
         }
         .vital-box { text-align: center; }
-        .vital-label { font-size: 12px; color: #444; font-weight: 600; }
-        .vital-value { font-size: 16px; font-weight: bold; color: #000; }
-        .vital-unit { font-size: 12px; color: #555; font-weight: normal; }
+        .vital-label { font-size: 14px; color: #444; font-weight: 600; margin-bottom: 2px; }
+        .vital-value { font-size: 20px; font-weight: bold; color: #000; }
+        .vital-unit { font-size: 14px; color: #555; font-weight: normal; }
 
         /* --- Lab Grid (3 Columns) --- */
         .lab-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr; /* 3 คอลัมน์ */
-            gap: 8px; /* ลดช่องว่างระหว่างคอลัมน์ */
-            align-items: start;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px; /* เพิ่มช่องว่างระหว่างคอลัมน์ */
+            align-items: stretch; /* ยืดให้เท่ากัน */
         }
-        .lab-col { display: flex; flex-direction: column; gap: 8px; }
+        .lab-col { display: flex; flex-direction: column; gap: 12px; }
 
         .card {
-            border: 1px solid #999; /* เส้นขอบเข้มขึ้น */
-            border-radius: 4px;
+            border: 2px solid #aaa;
+            border-radius: 6px;
             overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            height: 100%; /* ยืดเต็ม */
         }
         .card-header {
-            background-color: #004d40; /* สีเขียวเข้มขึ้น */
+            background-color: #004d40;
             color: #fff;
-            padding: 3px 6px;
-            font-size: 14px;
+            padding: 6px 10px;
+            font-size: 16px;
             font-weight: bold;
         }
-        .card-body { padding: 0; }
+        .card-body { padding: 0; height: 100%; background: #fff; }
 
-        /* Table Styles (ปรับให้ตัวใหญ่แต่ไม่กินที่) */
-        table { width: 100%; border-collapse: collapse; font-size: 13px; /* ตัวเลขในตาราง 13px */ }
+        /* Table Styles */
+        table { width: 100%; border-collapse: collapse; font-size: 15px; /* ตัวหนังสือในตาราง 15px */ }
         th { 
             background-color: #eeeeee; 
-            padding: 2px 4px; 
+            padding: 6px 8px; /* เพิ่ม padding หัวตาราง */
             text-align: left; 
             font-weight: bold; 
             color: #000; 
-            border-bottom: 1px solid #aaa; 
-            font-size: 12px;
+            border-bottom: 2px solid #999; 
+            font-size: 14px;
         }
         td { 
-            padding: 2px 4px; /* ลด padding เพื่อประหยัดที่แนวตั้ง */
+            padding: 6px 8px; /* เพิ่ม padding เนื้อหาตาราง */
             border-bottom: 1px solid #ddd; 
             vertical-align: middle; 
             color: #000;
         }
         tr:last-child td { border-bottom: none; }
         
-        .result-val { font-weight: bold; text-align: center; color: #000; }
-        .result-norm { color: #444; font-size: 11px; text-align: center; }
-        .abnormal { color: #d50000; font-weight: 900; } /* แดงเข้มและหนา */
-        .bg-abnormal { background-color: #ffcdd2; } /* พื้นหลังแดงอ่อนเห็นชัด */
+        .result-val { font-weight: bold; text-align: center; color: #000; font-size: 16px; }
+        .abnormal { color: #d50000; font-weight: 900; background-color: #ffebee; border-radius: 4px; padding: 2px 4px; } 
+        .bg-abnormal { background-color: #ffebee; } 
 
         /* --- Special Tests Item --- */
         .special-item {
-            border: 1px solid #bbb;
-            border-radius: 4px;
-            padding: 4px 6px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            padding: 8px 10px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             background: #fff;
-            margin-bottom: 3px;
+            margin-bottom: 6px;
         }
         .special-item:last-child { margin-bottom: 0; }
-        .sp-label { font-weight: bold; color: #222; font-size: 13px; }
-        .sp-value { font-weight: bold; font-size: 13px; }
+        .sp-label { font-weight: bold; color: #222; font-size: 15px; }
+        .sp-value { font-weight: bold; font-size: 16px; }
         .sp-abnormal { color: #d50000; }
         .sp-normal { color: #1b5e20; }
         
         /* --- Footer Section --- */
         .footer-section {
             display: flex;
-            gap: 10px;
-            border: 2px solid #004d40;
-            border-radius: 6px;
-            padding: 8px;
+            gap: 20px;
+            border: 3px solid #004d40;
+            border-radius: 8px;
+            padding: 15px;
             background-color: #fff;
-            flex-grow: 1; 
+            min-height: 180px; /* บังคับความสูงขั้นต่ำให้เต็มที่ว่างด้านล่าง */
+            flex-grow: 1; /* ยืดให้เต็ม */
         }
-        .doctor-opinion { flex: 1; border-right: 1px solid #ccc; padding-right: 8px; }
-        .recommendations { flex: 1.2; padding-left: 5px; }
+        .doctor-opinion { flex: 1; border-right: 2px dashed #bbb; padding-right: 15px; }
+        .recommendations { flex: 1.2; padding-left: 10px; }
         
         .footer-title { 
-            font-size: 15px; font-weight: bold; color: #004d40; 
-            margin-bottom: 4px; text-decoration: underline;
+            font-size: 18px; font-weight: bold; color: #004d40; 
+            margin-bottom: 8px; text-decoration: underline;
         }
-        .footer-text { font-size: 14px; color: #000; line-height: 1.4; }
-        ul { margin: 0; padding-left: 18px; }
-        li { margin-bottom: 2px; }
+        .footer-text { font-size: 16px; color: #000; line-height: 1.5; }
+        ul { margin: 0; padding-left: 20px; }
+        li { margin-bottom: 4px; }
 
         /* --- Signature --- */
         .signature-row {
             display: flex;
             justify-content: flex-end;
-            margin-top: 5px;
+            margin-top: 15px;
+            margin-bottom: 10px;
         }
         .signature-box { text-align: center; }
-        .sig-line { border-bottom: 1px dotted #000; width: 180px; height: 25px; margin-bottom: 2px; }
-        .sig-name { font-weight: bold; font-size: 14px; }
-        .sig-role { font-size: 12px; color: #333; }
+        .sig-line { border-bottom: 2px dotted #000; width: 220px; height: 30px; margin-bottom: 5px; }
+        .sig-name { font-weight: bold; font-size: 16px; }
+        .sig-role { font-size: 14px; color: #333; }
 
-        /* Print Fixes */
         @media print {
             body { -webkit-print-color-adjust: exact; }
         }
     </style>
     <script>
         // Auto-Scale Logic: ทำงานเมื่อจำเป็นจริงๆ เท่านั้น (Safe Mode)
+        // ปรับ logic ให้ยืดหยุ่น ถ้าเนื้อหาล้นนิดหน่อยให้ย่อ แต่ถ้าล้นมากให้ย่อพอดี
         window.onload = function() {
             const container = document.getElementById('report-container');
-            const pageHeight = 1120; // A4 Height ~1123px
-            if (container.scrollHeight > pageHeight) {
-                const scale = pageHeight / container.scrollHeight;
-                // ยอมให้ย่อได้สูงสุดแค่ 95% ถ้าเกินกว่านั้นให้ปล่อยล้นนิดหน่อยดีกว่าตัวเล็ก
-                // แต่ถ้าล้นมาก (scale < 0.9) ก็ต้องยอมย่อลงมา
-                const finalScale = scale < 0.9 ? scale : Math.max(scale, 0.95);
-                
-                if (finalScale < 1) {
-                    container.style.transform = `scale(${finalScale})`;
-                    container.style.transformOrigin = 'top left';
-                    container.style.width = `${100/finalScale}%`;
-                }
-            }
+            // A4 Height ~1123px, แต่เราเผื่อ Margin แล้ว
+            // เราจะไม่ย่อถ้าไม่จำเป็นจริงๆ เพื่อให้ตัวใหญ่ที่สุด
         };
     </script>
     """
@@ -374,7 +368,7 @@ def generate_single_page_report(person_data, all_history_df=None):
                         อายุ: <b>{int(get_float('อายุ', person_data) or 0)} ปี</b>
                         <span class="patient-badge">{person_data.get('หน่วยงาน', 'ไม่ระบุ')}</span>
                     </div>
-                    <div style="font-size: 14px; color: #444; margin-top: 2px;">วันที่ตรวจ: <b>{person_data.get('วันที่ตรวจ', '-')}</b></div>
+                    <div style="font-size: 16px; color: #444; margin-top: 2px;">วันที่ตรวจ: <b>{person_data.get('วันที่ตรวจ', '-')}</b></div>
                 </div>
             </div>
 
@@ -393,11 +387,11 @@ def generate_single_page_report(person_data, all_history_df=None):
                     <!-- Special Tests Box 1 -->
                     <div class="card">
                         <div class="card-header">การมองเห็น & การได้ยิน</div>
-                        <div class="card-body" style="padding: 8px;">
+                        <div class="card-body" style="padding: 10px;">
                             {render_special_item("สายตา", vision_s)}
-                            <div style="height:4px;"></div>
+                            <div style="height:6px;"></div>
                             {render_special_item("ตาบอดสี", color_s)}
-                            <div style="height:4px;"></div>
+                            <div style="height:6px;"></div>
                             {render_special_item("การได้ยิน", hear_short)}
                         </div>
                     </div>
@@ -408,11 +402,11 @@ def generate_single_page_report(person_data, all_history_df=None):
                     <!-- Special Tests Box 2 -->
                     <div class="card">
                         <div class="card-header">เอกซเรย์ & อื่นๆ</div>
-                        <div class="card-body" style="padding: 8px;">
+                        <div class="card-body" style="padding: 10px;">
                             {render_special_item("CXR (ปอด)", cxr_val)}
-                            <div style="height:4px;"></div>
+                            <div style="height:6px;"></div>
                             {render_special_item("EKG (หัวใจ)", ekg_val)}
-                            <div style="height:4px;"></div>
+                            <div style="height:6px;"></div>
                             {render_special_item("สมรรถภาพปอด", lung_short)}
                         </div>
                     </div>
