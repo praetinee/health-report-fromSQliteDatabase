@@ -29,26 +29,26 @@ except ImportError:
     def generate_cbc_recommendations(p, s): return {}
     def generate_urine_recommendations(p, s): return {}
 
-# --- CSS Design 2.0 (Dashboard Style) ---
+# --- CSS Design 3.0 (Large Font / Elderly Friendly) ---
 def get_single_page_style():
     return """
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap');
         
         @page {
             size: A4;
-            margin: 8mm 8mm; /* ขอบกระดาษพอประมาณ ไม่ชิดเกินไป */
+            margin: 5mm 6mm; /* ลดขอบกระดาษลงเพื่อให้พื้นที่เนื้อหามากที่สุด */
         }
         
         body {
             font-family: 'Sarabun', sans-serif;
-            font-size: 12px; /* ขยายขนาดตัวอักษรพื้นฐาน */
-            line-height: 1.3;
-            color: #222;
+            font-size: 14px; /* ขยายขนาดพื้นฐานเป็น 14px (มาตรฐานผู้สูงอายุอ่านง่าย) */
+            line-height: 1.25;
+            color: #000; /* สีดำสนิทเพื่อความชัดเจน */
             background: #fff;
             margin: 0;
             padding: 0;
-            width: 210mm; /* A4 Width */
+            width: 210mm;
             box-sizing: border-box;
         }
 
@@ -56,7 +56,7 @@ def get_single_page_style():
             width: 100%;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px; /* ลดช่องว่างระหว่างบล็อกลงเล็กน้อย */
         }
 
         /* --- Header --- */
@@ -64,138 +64,151 @@ def get_single_page_style():
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 3px solid #00695c;
-            padding-bottom: 8px;
-            margin-bottom: 5px;
+            border-bottom: 3px solid #004d40;
+            padding-bottom: 5px;
+            margin-bottom: 2px;
         }
-        .header-left h1 { margin: 0; font-size: 20px; color: #00695c; line-height: 1.1; }
-        .header-left p { margin: 2px 0 0 0; font-size: 12px; color: #555; }
+        .header-left h1 { margin: 0; font-size: 24px; color: #004d40; line-height: 1; font-weight: bold; }
+        .header-left p { margin: 2px 0 0 0; font-size: 14px; color: #333; font-weight: 600; }
         .header-right { text-align: right; }
-        .header-right h2 { margin: 0; font-size: 18px; font-weight: bold; }
-        .patient-meta { font-size: 12px; margin-top: 2px; }
+        .header-right h2 { margin: 0; font-size: 20px; font-weight: bold; color: #000; }
+        .patient-meta { font-size: 14px; margin-top: 2px; color: #000; }
         .patient-badge { 
-            display: inline-block; background: #eee; padding: 2px 6px; 
-            border-radius: 4px; font-weight: bold; margin-left: 5px;
+            display: inline-block; background: #ddd; padding: 1px 6px; 
+            border-radius: 4px; font-weight: bold; margin-left: 5px; border: 1px solid #999;
         }
 
-        /* --- Vitals --- */
+        /* --- Vitals (แถบสัญญาณชีพ) --- */
         .vitals-bar {
             display: flex;
             justify-content: space-between;
-            background-color: #f4f8f7;
+            background-color: #e0f2f1;
             border-radius: 6px;
-            padding: 8px 15px;
-            border: 1px solid #daece8;
+            padding: 6px 10px;
+            border: 1px solid #b2dfdb;
         }
         .vital-box { text-align: center; }
-        .vital-label { font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
-        .vital-value { font-size: 14px; font-weight: bold; color: #004d40; }
-        .vital-unit { font-size: 10px; color: #888; font-weight: normal; }
+        .vital-label { font-size: 12px; color: #444; font-weight: 600; }
+        .vital-value { font-size: 16px; font-weight: bold; color: #000; }
+        .vital-unit { font-size: 12px; color: #555; font-weight: normal; }
 
         /* --- Lab Grid (3 Columns) --- */
         .lab-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr; /* แบ่ง 3 ส่วนเท่ากัน */
-            gap: 12px;
+            grid-template-columns: 1fr 1fr 1fr; /* 3 คอลัมน์ */
+            gap: 8px; /* ลดช่องว่างระหว่างคอลัมน์ */
             align-items: start;
         }
         .lab-col { display: flex; flex-direction: column; gap: 8px; }
 
         .card {
-            border: 1px solid #ccc;
-            border-radius: 6px;
+            border: 1px solid #999; /* เส้นขอบเข้มขึ้น */
+            border-radius: 4px;
             overflow: hidden;
         }
         .card-header {
-            background-color: #00695c;
+            background-color: #004d40; /* สีเขียวเข้มขึ้น */
             color: #fff;
-            padding: 4px 8px;
-            font-size: 12px;
+            padding: 3px 6px;
+            font-size: 14px;
             font-weight: bold;
         }
         .card-body { padding: 0; }
 
-        /* Table Styles */
-        table { width: 100%; border-collapse: collapse; font-size: 11px; }
-        th { background-color: #e0f2f1; padding: 3px 5px; text-align: left; font-weight: 600; color: #004d40; border-bottom: 1px solid #b2dfdb; }
-        td { padding: 3px 5px; border-bottom: 1px solid #eee; vertical-align: middle; }
+        /* Table Styles (ปรับให้ตัวใหญ่แต่ไม่กินที่) */
+        table { width: 100%; border-collapse: collapse; font-size: 13px; /* ตัวเลขในตาราง 13px */ }
+        th { 
+            background-color: #eeeeee; 
+            padding: 2px 4px; 
+            text-align: left; 
+            font-weight: bold; 
+            color: #000; 
+            border-bottom: 1px solid #aaa; 
+            font-size: 12px;
+        }
+        td { 
+            padding: 2px 4px; /* ลด padding เพื่อประหยัดที่แนวตั้ง */
+            border-bottom: 1px solid #ddd; 
+            vertical-align: middle; 
+            color: #000;
+        }
         tr:last-child td { border-bottom: none; }
         
-        .result-val { font-weight: bold; text-align: center; }
-        .result-norm { color: #666; font-size: 10px; text-align: center; }
-        .abnormal { color: #d32f2f; }
-        .bg-abnormal { background-color: #ffebee; }
+        .result-val { font-weight: bold; text-align: center; color: #000; }
+        .result-norm { color: #444; font-size: 11px; text-align: center; }
+        .abnormal { color: #d50000; font-weight: 900; } /* แดงเข้มและหนา */
+        .bg-abnormal { background-color: #ffcdd2; } /* พื้นหลังแดงอ่อนเห็นชัด */
 
-        /* --- Special Tests Grid (2x3) --- */
-        .special-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
+        /* --- Special Tests Item --- */
         .special-item {
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 6px 10px;
+            border: 1px solid #bbb;
+            border-radius: 4px;
+            padding: 4px 6px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             background: #fff;
+            margin-bottom: 3px;
         }
-        .sp-label { font-weight: bold; color: #333; font-size: 11px; }
-        .sp-value { font-weight: bold; font-size: 12px; }
-        .sp-abnormal { color: #d32f2f; }
-        .sp-normal { color: #2e7d32; }
+        .special-item:last-child { margin-bottom: 0; }
+        .sp-label { font-weight: bold; color: #222; font-size: 13px; }
+        .sp-value { font-weight: bold; font-size: 13px; }
+        .sp-abnormal { color: #d50000; }
+        .sp-normal { color: #1b5e20; }
         
-        /* --- Conclusion Area --- */
+        /* --- Footer Section --- */
         .footer-section {
             display: flex;
-            gap: 15px;
-            border: 1px solid #ccc;
+            gap: 10px;
+            border: 2px solid #004d40;
             border-radius: 6px;
-            padding: 10px;
-            background-color: #fafafa;
-            flex-grow: 1; /* ยืดเต็มพื้นที่ที่เหลือ */
+            padding: 8px;
+            background-color: #fff;
+            flex-grow: 1; 
         }
-        .doctor-opinion { flex: 1; border-right: 1px dashed #ccc; padding-right: 10px; }
+        .doctor-opinion { flex: 1; border-right: 1px solid #ccc; padding-right: 8px; }
         .recommendations { flex: 1.2; padding-left: 5px; }
         
         .footer-title { 
-            font-size: 13px; font-weight: bold; color: #00695c; 
-            margin-bottom: 5px; text-decoration: underline; text-decoration-color: #80cbc4;
+            font-size: 15px; font-weight: bold; color: #004d40; 
+            margin-bottom: 4px; text-decoration: underline;
         }
-        .footer-text { font-size: 12px; }
-        ul { margin: 0; padding-left: 20px; }
+        .footer-text { font-size: 14px; color: #000; line-height: 1.4; }
+        ul { margin: 0; padding-left: 18px; }
         li { margin-bottom: 2px; }
 
         /* --- Signature --- */
         .signature-row {
             display: flex;
             justify-content: flex-end;
-            margin-top: 10px;
+            margin-top: 5px;
         }
         .signature-box { text-align: center; }
-        .sig-line { border-bottom: 1px dotted #999; width: 200px; height: 30px; margin-bottom: 5px; }
-        .sig-name { font-weight: bold; font-size: 12px; }
-        .sig-role { font-size: 11px; color: #555; }
+        .sig-line { border-bottom: 1px dotted #000; width: 180px; height: 25px; margin-bottom: 2px; }
+        .sig-name { font-weight: bold; font-size: 14px; }
+        .sig-role { font-size: 12px; color: #333; }
 
-        /* Print Scale Fix */
+        /* Print Fixes */
         @media print {
             body { -webkit-print-color-adjust: exact; }
         }
     </style>
     <script>
-        // Auto-Scale Logic: ย่อลงเล็กน้อยถ้าเนื้อหาล้น A4 จริงๆ
+        // Auto-Scale Logic: ทำงานเมื่อจำเป็นจริงๆ เท่านั้น (Safe Mode)
         window.onload = function() {
             const container = document.getElementById('report-container');
-            const pageHeight = 1122; // A4 Height @ 96dpi (approx)
-            // เช็คความสูงเนื้อหา
+            const pageHeight = 1120; // A4 Height ~1123px
             if (container.scrollHeight > pageHeight) {
                 const scale = pageHeight / container.scrollHeight;
-                // ย่อไม่ต่ำกว่า 90% (เพราะเราจัด Layout ดีแล้ว ไม่ควรล้นมาก)
-                const finalScale = Math.max(scale, 0.90); 
-                container.style.transform = `scale(${finalScale})`;
-                container.style.transformOrigin = 'top left';
-                container.style.width = `${100/finalScale}%`;
+                // ยอมให้ย่อได้สูงสุดแค่ 95% ถ้าเกินกว่านั้นให้ปล่อยล้นนิดหน่อยดีกว่าตัวเล็ก
+                // แต่ถ้าล้นมาก (scale < 0.9) ก็ต้องยอมย่อลงมา
+                const finalScale = scale < 0.9 ? scale : Math.max(scale, 0.95);
+                
+                if (finalScale < 1) {
+                    container.style.transform = `scale(${finalScale})`;
+                    container.style.transformOrigin = 'top left';
+                    container.style.width = `${100/finalScale}%`;
+                }
             }
         };
     </script>
@@ -215,12 +228,12 @@ def render_vitals(person):
     
     return f"""
     <div class="vitals-bar">
-        <div class="vital-box"><div class="vital-label">น้ำหนัก (Weight)</div><div class="vital-value">{get_v('น้ำหนัก', 'kg')}</div></div>
-        <div class="vital-box"><div class="vital-label">ส่วนสูง (Height)</div><div class="vital-value">{get_v('ส่วนสูง', 'cm')}</div></div>
-        <div class="vital-box"><div class="vital-label">ดัชนีมวลกาย (BMI)</div><div class="vital-value">{bmi:.1f} <span class="vital-unit">kg/m²</span></div></div>
-        <div class="vital-box"><div class="vital-label">รอบเอว (Waist)</div><div class="vital-value">{person.get('รอบเอว', '-') or '-'} <span class="vital-unit">cm</span></div></div>
-        <div class="vital-box"><div class="vital-label">ความดัน (BP)</div><div class="vital-value">{bp} <span class="vital-unit">mmHg</span></div></div>
-        <div class="vital-box"><div class="vital-label">ชีพจร (Pulse)</div><div class="vital-value">{get_v('pulse', 'bpm')}</div></div>
+        <div class="vital-box"><div class="vital-label">น้ำหนัก</div><div class="vital-value">{get_v('น้ำหนัก')}</div></div>
+        <div class="vital-box"><div class="vital-label">ส่วนสูง</div><div class="vital-value">{get_v('ส่วนสูง')}</div></div>
+        <div class="vital-box"><div class="vital-label">BMI</div><div class="vital-value">{bmi:.1f}</div></div>
+        <div class="vital-box"><div class="vital-label">รอบเอว</div><div class="vital-value">{person.get('รอบเอว', '-') or '-'}</div></div>
+        <div class="vital-box"><div class="vital-label">ความดัน (BP)</div><div class="vital-value">{bp}</div></div>
+        <div class="vital-box"><div class="vital-label">ชีพจร</div><div class="vital-value">{get_v('pulse')}</div></div>
     </div>
     """
 
@@ -241,7 +254,6 @@ def render_table(title, headers, rows):
         for i, (text, is_abn) in enumerate(row):
             td_class = "abnormal" if is_abn else ""
             align = 'center' if i > 0 else 'left'
-            # คอลัมน์แรก (ชื่อรายการ) ชิดซ้าย, ผลตรวจกึ่งกลาง
             html += f"<td style='text-align:{align};' class='{td_class}'>{text}</td>"
         html += "</tr>"
     html += "</tbody></table></div></div>"
@@ -249,7 +261,6 @@ def render_table(title, headers, rows):
 
 def render_special_item(label, value, is_abn=False):
     val_class = "sp-abnormal" if is_abn else "sp-normal"
-    # ถ้าค่าเป็น "ปกติ" ให้สีเขียว ถ้าอย่างอื่นสีแดง
     if "ปกติ" in str(value) or "Normal" in str(value) or "ไม่พบ" in str(value):
         val_class = "sp-normal"
     elif value == "-" or value == "":
@@ -269,18 +280,17 @@ def generate_single_page_report(person_data, all_history_df=None):
     sex = person_data.get("เพศ", "ชาย")
     year = person_data.get("Year", datetime.now().year + 543)
     
-    # 1. CBC Data
+    # 1. CBC
     hb_low, hct_low = (12, 36) if sex == "หญิง" else (13, 39)
     cbc_data = [
-        ("Hb", "Hb(%)", "ช>13,ญ>12", hb_low, None),
-        ("Hct", "HCT", "ช>39,ญ>36", hct_low, None),
-        ("WBC", "WBC", "4k-10k", 4000, 10000),
-        ("Plt", "Plt", "150k-500k", 150000, 500000)
+        ("Hb", "Hb(%)", ">13,>12", hb_low, None), # ย่อชื่อค่าปกติ
+        ("Hct", "HCT", ">39,>36", hct_low, None),
+        ("WBC", "WBC", "4-10k", 4000, 10000),
+        ("Plt", "Plt", "1.5-5แสน", 150000, 500000) # ย่อหน่วย
     ]
-    # Format: [ (Name, False), (Value, IsAbn), (Norm, False) ]
     cbc_rows = [[(l, False), flag(get_float(k, person_data), low, high), (n, False)] for l, k, n, low, high in cbc_data]
 
-    # 2. Chemistry Data (แยกกลุ่มเพื่อความสวยงาม)
+    # 2. Chemistry
     chem_sugar_lipid = [
         ("FBS", "FBS", "74-106", 74, 106),
         ("Chol", "CHOL", "<200", None, 200),
@@ -292,7 +302,7 @@ def generate_single_page_report(person_data, all_history_df=None):
 
     chem_organ = [
         ("Uric", "Uric Acid", "<7.2", None, 7.2),
-        ("Cr", "Cr", "0.5-1.17", 0.5, 1.17),
+        ("Cr", "Cr", "0.5-1.2", 0.5, 1.17),
         ("GFR", "GFR", ">60", 60, None, True),
         ("SGOT", "SGOT", "<37", None, 37),
         ("SGPT", "SGPT", "<41", None, 41)
@@ -309,13 +319,16 @@ def generate_single_page_report(person_data, all_history_df=None):
     urine_rows = [[(l, False), (v, is_urine_abnormal(l, v, n)), (n, False)] for l, v, n in urine_items]
     
     stool_exam = interpret_stool_exam(person_data.get("Stool exam", ""))
-    # ย่อผล stool เพื่อประหยัดที่
     stool_short = "ปกติ" if "ปกติ" in stool_exam else ("ผิดปกติ" if "พบ" in stool_exam else "-")
     urine_rows.append([("Stool", False), (stool_short, stool_short=="ผิดปกติ"), ("Normal", False)])
 
-    # 4. Special Tests Data
+    # 4. Special Tests
     cxr_val, _ = interpret_cxr(person_data.get(f"CXR{str(year)[-2:]}", person_data.get("CXR")))
+    # ตัดคำว่า "กรุณาพบแพทย์..." ออกถ้ามี เพื่อประหยัดที่ในกล่องเล็ก (ไปโชว์ในคำแนะนำแพทย์แทน)
+    cxr_val = cxr_val.split('⚠️')[0].strip()
+    
     ekg_val, _ = interpret_ekg(person_data.get(f"EKG{str(year)[-2:]}", person_data.get("EKG")))
+    ekg_val = ekg_val.split('⚠️')[0].strip()
     
     vision_s, color_s, _ = interpret_vision(person_data.get('สรุปเหมาะสมกับงาน', ''), person_data.get('Color_Blind', ''))
     
@@ -324,11 +337,17 @@ def generate_single_page_report(person_data, all_history_df=None):
     
     lung_s, _, lung_raw = interpret_lung_capacity(person_data)
     lung_short = lung_s.replace("สมรรถภาพปอด", "").strip()
+    if "ปกติ" not in lung_short and "ไม่ได้" not in lung_short:
+        lung_short = "ผิดปกติ" # ย่อถ้าชื่อโรคยาวไป
 
-    # --- Recommendations Logic ---
+    # --- Recommendations ---
     cbc_rec = generate_cbc_recommendations(person_data, sex)
     urine_rec = generate_urine_recommendations(person_data, sex)
     doc_op = generate_doctor_opinion(person_data, sex, cbc_rec, urine_rec)
+    
+    # ถ้าความเห็นแพทย์ยาวเกินไป ให้ตัด
+    if len(doc_op) > 300: doc_op = doc_op[:300] + "..."
+
     rec_list = generate_fixed_recommendations(person_data)
     rec_html = "<ul>" + "".join([f"<li>{r}</li>" for r in rec_list]) + "</ul>" if rec_list else "<ul><li>ดูแลสุขภาพตามปกติ พักผ่อนให้เพียงพอ</li></ul>"
 
@@ -337,7 +356,7 @@ def generate_single_page_report(person_data, all_history_df=None):
     <html lang="th">
     <head>
         <meta charset="UTF-8">
-        <title>รายงานผลสุขภาพ (Dashboard) - {person_data.get('ชื่อ-สกุล')}</title>
+        <title>รายงานผลสุขภาพ (Large Font) - {person_data.get('ชื่อ-สกุล')}</title>
         {get_single_page_style()}
     </head>
     <body>
@@ -346,7 +365,7 @@ def generate_single_page_report(person_data, all_history_df=None):
             <div class="header">
                 <div class="header-left">
                     <h1>รายงานผลการตรวจสุขภาพ</h1>
-                    <p>คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย</p>
+                    <p>คลินิกตรวจสุขภาพ โรงพยาบาลสันทราย</p>
                 </div>
                 <div class="header-right">
                     <h2>{person_data.get('ชื่อ-สกุล', '-')}</h2>
@@ -355,7 +374,7 @@ def generate_single_page_report(person_data, all_history_df=None):
                         อายุ: <b>{int(get_float('อายุ', person_data) or 0)} ปี</b>
                         <span class="patient-badge">{person_data.get('หน่วยงาน', 'ไม่ระบุ')}</span>
                     </div>
-                    <div style="font-size: 11px; color: #777; margin-top: 2px;">วันที่ตรวจ: {person_data.get('วันที่ตรวจ', '-')}</div>
+                    <div style="font-size: 14px; color: #444; margin-top: 2px;">วันที่ตรวจ: <b>{person_data.get('วันที่ตรวจ', '-')}</b></div>
                 </div>
             </div>
 
@@ -374,7 +393,7 @@ def generate_single_page_report(person_data, all_history_df=None):
                     <!-- Special Tests Box 1 -->
                     <div class="card">
                         <div class="card-header">การมองเห็น & การได้ยิน</div>
-                        <div class="card-body" style="padding: 5px;">
+                        <div class="card-body" style="padding: 8px;">
                             {render_special_item("สายตา", vision_s)}
                             <div style="height:4px;"></div>
                             {render_special_item("ตาบอดสี", color_s)}
@@ -389,7 +408,7 @@ def generate_single_page_report(person_data, all_history_df=None):
                     <!-- Special Tests Box 2 -->
                     <div class="card">
                         <div class="card-header">เอกซเรย์ & อื่นๆ</div>
-                        <div class="card-body" style="padding: 5px;">
+                        <div class="card-body" style="padding: 8px;">
                             {render_special_item("CXR (ปอด)", cxr_val)}
                             <div style="height:4px;"></div>
                             {render_special_item("EKG (หัวใจ)", ekg_val)}
