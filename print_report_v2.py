@@ -29,7 +29,7 @@ except ImportError:
     def generate_cbc_recommendations(p, s): return {}
     def generate_urine_recommendations(p, s): return {}
 
-# --- CSS Design 6.0 (Smart Auto-Fit) ---
+# --- CSS Design 7.0 (Uniform Font Size 14px) ---
 def get_single_page_style():
     return """
     <style>
@@ -42,7 +42,7 @@ def get_single_page_style():
         
         body {
             font-family: 'Sarabun', sans-serif;
-            font-size: 14px; /* ขนาดตั้งต้น (ค่อนข้างใหญ่) */
+            font-size: 14px; /* ขนาดมาตรฐาน 14px */
             line-height: 1.3;
             color: #000;
             background: #fff;
@@ -94,7 +94,7 @@ def get_single_page_style():
             border: 1px solid #b2dfdb;
         }
         .vital-box { text-align: center; }
-        .vital-label { font-size: 12px; color: #555; font-weight: 600; margin-bottom: 2px; }
+        .vital-label { font-size: 12px; color: #555; font-weight: 600; margin-bottom: 2px; } /* Label เล็กกว่านิดหน่อยเพื่อให้ค่าเด่น */
         .vital-value { font-size: 16px; font-weight: bold; color: #000; }
         .vital-unit { font-size: 12px; color: #666; font-weight: normal; }
 
@@ -116,13 +116,13 @@ def get_single_page_style():
             background-color: #004d40;
             color: #fff;
             padding: 4px 8px;
-            font-size: 14px;
+            font-size: 14px; /* เท่าเนื้อหา */
             font-weight: bold;
         }
         .card-body { padding: 0; background: #fff; }
 
         /* Table */
-        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; } /* ปรับเป็น 14px เท่า Body */
         th { 
             background-color: #eee; 
             padding: 4px 6px; 
@@ -155,8 +155,8 @@ def get_single_page_style():
             margin-bottom: 4px;
         }
         .special-item:last-child { margin-bottom: 0; }
-        .sp-label { font-weight: bold; color: #333; font-size: 13px; }
-        .sp-value { font-weight: bold; font-size: 13px; }
+        .sp-label { font-weight: bold; color: #333; font-size: 14px; } /* ปรับเป็น 14px */
+        .sp-value { font-weight: bold; font-size: 14px; } /* ปรับเป็น 14px */
         .sp-abnormal { color: #d32f2f; }
         .sp-normal { color: #1b5e20; }
         
@@ -177,7 +177,7 @@ def get_single_page_style():
             font-size: 15px; font-weight: bold; color: #004d40; 
             margin-bottom: 6px; text-decoration: underline;
         }
-        .footer-text { font-size: 13px; color: #000; line-height: 1.4; }
+        .footer-text { font-size: 14px; color: #000; line-height: 1.4; } /* ปรับเป็น 14px */
         ul { margin: 0; padding-left: 20px; }
         li { margin-bottom: 3px; }
 
@@ -369,7 +369,7 @@ def generate_single_page_report(person_data, all_history_df=None):
     <html lang="th">
     <head>
         <meta charset="UTF-8">
-        <title>รายงานผลสุขภาพ (Auto-Fit) - {person_data.get('ชื่อ-สกุล')}</title>
+        <title>รายงานผลสุขภาพ (Auto-Fit Uniform) - {person_data.get('ชื่อ-สกุล')}</title>
         {get_single_page_style()}
     </head>
     <body>
