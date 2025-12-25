@@ -47,6 +47,7 @@ def clean_html_string(html_str):
 
 def inject_custom_css():
     # แก้ไข: ใช้ CSS Variable ของ Streamlit เพื่อรองรับ Theme
+    # ปรับปรุง: ลบ [class*="st-"] ออกจาก Selector เพื่อป้องกัน Icon Font แตก (กลายเป็นข้อความยาวๆ)
     css_content = clean_html_string("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
@@ -65,9 +66,12 @@ def inject_custom_css():
             --success-bg: rgba(76, 175, 80, 0.1);
             --header-bg: rgba(128, 128, 128, 0.05);
         }
-        html, body, [class*="st-"], h1, h2, h3, h4, h5, h6, p, div, span, th, td {
+        
+        /* Apply Font เฉพาะ Text Elements ทั่วไป */
+        html, body, h1, h2, h3, h4, h5, h6, p, div, span, th, td, li, a, button, input, label, textarea, select {
             font-family: 'Sarabun', sans-serif !important;
         }
+
         .section-header-styled {
             font-size: 1.25rem; font-weight: 600; color: var(--primary);
             border-left: 5px solid var(--primary); padding-left: 15px; margin-top: 30px; margin-bottom: 20px;
