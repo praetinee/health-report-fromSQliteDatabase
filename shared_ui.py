@@ -46,7 +46,7 @@ def clean_html_string(html_str):
     return "\n".join([line.strip() for line in html_str.split('\n') if line.strip()])
 
 def inject_custom_css():
-    # แก้ไขครั้งที่ 3: ใช้ระบบ Fallback Font และยกเว้นปุ่ม Header ของ Streamlit อย่างชัดเจน
+    # แก้ไข: ใช้ CSS Variable ของ Streamlit เพื่อรองรับ Theme
     css_content = clean_html_string("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
@@ -64,43 +64,10 @@ def inject_custom_css():
             --warning-bg: rgba(255, 152, 0, 0.1);
             --success-bg: rgba(76, 175, 80, 0.1);
             --header-bg: rgba(128, 128, 128, 0.05);
-            
-            /* Fallback Font Stack: ถ้าหา Sarabun ไม่เจอ หรือไม่มี Glyphs ให้ใช้ตัวถัดไป */
-            --font-stack: 'Sarabun', 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
         }
-        
-        /* 1. ใช้ Font Stack กับ Container หลัก */
-        .stApp {
-            font-family: var(--font-stack);
+        html, body, [class*="st-"], h1, h2, h3, h4, h5, h6, p, div, span, th, td {
+            font-family: 'Sarabun', sans-serif !important;
         }
-        
-        /* 2. บังคับฟอนต์กับ Text Elements (แต่เพิ่ม fallback ต่อท้าย) */
-        h1, h2, h3, h4, h5, h6, p, li, label, input, textarea, select, .stTooltipHoverTarget, .stMarkdown {
-            font-family: var(--font-stack) !important;
-        }
-        
-        /* 3. ปุ่มกดทั่วไปของ App ให้ใช้ Sarabun */
-        .stButton > button {
-            font-family: var(--font-stack) !important;
-        }
-
-        /* 4. CRITICAL FIX: ยกเว้นปุ่ม Header (เช่น ปุ่มย่อ/ขยาย Sidebar) ให้ใช้ฟอนต์เดิมของระบบ */
-        /* Streamlit ใช้ button[kind="header"] หรืออยู่ในคลาสเฉพาะ */
-        header button, 
-        [data-testid="stSidebarCollapsedControl"] button, 
-        [data-testid="stSidebarExpandedControl"] button,
-        button[kind="header"] {
-            font-family: "Source Sans Pro", sans-serif !important; /* ฟอนต์เดิมของ Streamlit */
-        }
-        
-        /* 5. ป้องกันไอคอน Material Icons ไม่ให้โดนทับ */
-        .material-icons, .material-symbols-rounded, [class*="material-icons"] {
-             font-family: 'Material Icons' !important;
-        }
-        
-        /* Styles อื่นๆ เหมือนเดิม */
-        th, td { font-family: var(--font-stack) !important; }
-
         .section-header-styled {
             font-size: 1.25rem; font-weight: 600; color: var(--primary);
             border-left: 5px solid var(--primary); padding-left: 15px; margin-top: 30px; margin-bottom: 20px;
@@ -562,26 +529,7 @@ def display_main_report(person_data, all_person_history_df):
     cbc_config = [("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None), ("ฮีมาโตคริต (Hct)", "HCT", "ชาย > 39%, หญิง > 36%", hct_low, None), ("เม็ดเลือดขาว (wbc)", "WBC (cumm)", "4,000 - 10,000 /cu.mm", 4000, 10000), ("นิวโทรฟิล (Neutrophil)", "Ne (%)", "43 - 70%", 43, 70), ("ลิมโฟไซต์ (Lymphocyte)", "Ly (%)", "20 - 44%", 20, 44), ("โมโนไซต์ (Monocyte)", "M", "3 - 9%", 3, 9), ("อีโอซิโนฟิล (Eosinophil)", "Eo", "0 - 9%", 0, 9), ("เบโซฟิล (Basophil)", "BA", "0 - 3%", 0, 3), ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150,000 - 500,000 /cu.mm", 150000, 500000)]
     cbc_rows = [([(label, is_abn), (result, is_abn), (norm, is_abn)]) for label, col, norm, low, high in cbc_config for val in [get_float(col, person)] for result, is_abn in [flag(val, low, high)]]
 
-    # --- Reordered Blood Chemistry Config (Sugar -> Lipid -> Uric -> Liver -> Kidney) ---
-    blood_config = [
-        # 1. Sugar
-        ("น้ำตาลในเลือด (FBS)", "FBS", "74 - 106 mg/dl", 74, 106),
-        # 2. Lipid (Chol, TGL, HDL, LDL)
-        ("คลอเรสเตอรอล (CHOL)", "CHOL", "150 - 200 mg/dl", 150, 200),
-        ("ไตรกลีเซอไรด์ (TGL)", "TGL", "35 - 150 mg/dl", 35, 150),
-        ("ไขมันดี (HDL)", "HDL", "> 40 mg/dl", 40, None, True),
-        ("ไขมันเลว (LDL)", "LDL", "0 - 160 mg/dl", 0, 160),
-        # 3. Uric
-        ("กรดยูริก (Uric Acid)", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2),
-        # 4. Liver (SGOT, SGPT, ALP)
-        ("การทำงานของเอนไซม์ตับ (SGOT)", "SGOT", "< 37 U/L", None, 37),
-        ("การทำงานของเอนไซม์ตับ (SGPT)", "SGPT", "< 41 U/L", None, 41),
-        ("การทำงานของเอนไซม์ตับ (ALK)", "ALP", "30 - 120 U/L", 30, 120),
-        # 5. Kidney (BUN, Cr, GFR)
-        ("การทำงานของไต (BUN)", "BUN", "7.9 - 20 mg/dl", 7.9, 20),
-        ("การทำงานของไต (Cr)", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17),
-        ("ประสิทธิภาพการกรองของไต (GFR)", "GFR", "> 60 mL/min", 60, None, True)
-    ]
+    blood_config = [("น้ำตาลในเลือด (FBS)", "FBS", "74 - 106 mg/dl", 74, 106), ("กรดยูริก (Uric Acid)", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2), ("การทำงานของเอนไซม์ตับ (ALK)", "ALP", "30 - 120 U/L", 30, 120), ("การทำงานของเอนไซม์ตับ (SGOT)", "SGOT", "< 37 U/L", None, 37), ("การทำงานของเอนไซม์ตับ (SGPT)", "SGPT", "< 41 U/L", None, 41), ("คลอเรสเตอรอล (CHOL)", "CHOL", "150 - 200 mg/dl", 150, 200), ("ไตรกลีเซอไรด์ (TGL)", "TGL", "35 - 150 mg/dl", 35, 150), ("ไขมันดี (HDL)", "HDL", "> 40 mg/dl", 40, None, True), ("ไขมันเลว (LDL)", "LDL", "0 - 160 mg/dl", 0, 160), ("การทำงานของไต (BUN)", "BUN", "7.9 - 20 mg/dl", 7.9, 20), ("การทำงานของไต (Cr)", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17), ("ประสิทธิภาพการกรองของไต (GFR)", "GFR", "> 60 mL/min", 60, None, True)]
     blood_rows = [([(label, is_abn), (result, is_abn), (norm, is_abn)]) for label, col, norm, low, high, *opt in blood_config for higher in [opt[0] if opt else False] for val in [get_float(col, person)] for result, is_abn in [flag(val, low, high, higher)]]
 
     with st.container(border=True):
