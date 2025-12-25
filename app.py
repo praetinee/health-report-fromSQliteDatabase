@@ -115,72 +115,69 @@ def main_app(df):
     # --- Inject Custom CSS สำหรับปุ่ม Sidebar โดยเฉพาะ ---
     st.markdown("""
     <style>
-        /* --- Sidebar Toggle Button Customization (Overlay Mask Method) --- */
+        /* --- Sidebar Toggle Button Customization (Ultimate Fix) --- */
         
-        /* 1. จัดการปุ่มแม่ (Container) ให้แข็งโป๊ก ห้ามยืด ห้ามหด */
-        button[data-testid="stSidebarCollapseButton"],
-        button[data-testid="stSidebarExpandButton"] {
+        /* 1. จัดการตัวปุ่มแม่: บังคับขนาด และซ่อนเนื้อหา Text เดิมทั้งหมดด้วย font-size: 0 */
+        [data-testid="stSidebarCollapseButton"],
+        [data-testid="stSidebarExpandButton"] {
             width: 40px !important;
             height: 40px !important;
-            min-width: 40px !important;
-            max-width: 40px !important;
             padding: 0 !important;
-            overflow: hidden !important; /* ตัดส่วนเกินทิ้งทันที (แก้ปัญหา text ยาว) */
-            position: relative !important; /* เป็นฐานให้ตัวลูก */
             border: 1px solid rgba(0,0,0,0.1) !important;
             border-radius: 8px !important;
-            background-color: transparent !important; /* พื้นหลังแม่ใส */
-        }
-
-        /* 2. สร้างหน้ากาก (Mask) ทับปุ่มเดิมให้มิด */
-        /* เราใช้ ::after สร้างแผ่นสี่เหลี่ยมสีขาวทึบ แปะทับทุกอย่างที่อยู่ในปุ่มเดิม */
-        button[data-testid="stSidebarCollapseButton"]::after,
-        button[data-testid="stSidebarExpandButton"]::after {
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
+            background-color: white !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
             
-            /* Background สีขาวทึบ บัง icon/text เดิมให้มิด */
-            background-color: #ffffff !important; 
+            /* Key fix: ซ่อน text เดิมทั้งหมด */
+            color: transparent !important;
+            font-size: 0 !important;
             
-            /* จัดข้อความกึ่งกลาง */
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            
-            /* Typography */
-            color: #555555 !important;
-            font-family: monospace, "Courier New", Courier, sans-serif !important;
-            font-size: 20px !important;
-            font-weight: 900 !important;
-            line-height: 1 !important;
-            
-            z-index: 999 !important; /* ลอยทับทุกอย่าง */
             transition: all 0.2s ease !important;
         }
 
-        /* 3. กำหนดสัญลักษณ์ */
-        button[data-testid="stSidebarCollapseButton"]::after {
-            content: "<<" !important;
-        }
-
-        button[data-testid="stSidebarExpandButton"]::after {
-            content: ">>" !important;
-        }
-
-        /* 4. Hover Effects (เปลี่ยนสีหน้ากาก) */
-        button[data-testid="stSidebarCollapseButton"]:hover::after,
-        button[data-testid="stSidebarExpandButton"]:hover::after {
-            background-color: #f0f2f6 !important;
-            color: #00B900 !important;
-        }
-        
-        /* 5. เก็บงาน: ซ่อน SVG เดิมด้วย (เผื่อหน้ากากโหลดไม่ทัน) */
-        button[data-testid="stSidebarCollapseButton"] svg,
-        button[data-testid="stSidebarExpandButton"] svg {
+        /* 2. ซ่อนรูป SVG เดิมให้หายไปเลย */
+        [data-testid="stSidebarCollapseButton"] svg,
+        [data-testid="stSidebarExpandButton"] svg,
+        [data-testid="stSidebarCollapseButton"] img,
+        [data-testid="stSidebarExpandButton"] img {
             display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+        }
+
+        /* 3. สร้างป้ายใหม่ด้วย ::after - ใช้ monospace เพื่อความชัวร์ของสัญลักษณ์ */
+        [data-testid="stSidebarCollapseButton"]::after {
+            content: "<<" !important;
+            color: #555 !important;
+            font-size: 20px !important; /* คืนค่าขนาดตัวอักษรให้มองเห็น */
+            font-family: monospace, sans-serif !important; 
+            font-weight: bold !important;
+            line-height: 1 !important;
+        }
+
+        [data-testid="stSidebarExpandButton"]::after {
+            content: ">>" !important;
+            color: #555 !important;
+            font-size: 20px !important;
+            font-family: monospace, sans-serif !important;
+            font-weight: bold !important;
+            line-height: 1 !important;
+        }
+
+        /* 4. Hover Effects */
+        [data-testid="stSidebarCollapseButton"]:hover,
+        [data-testid="stSidebarExpandButton"]:hover {
+            background-color: #f8f9fa !important;
+            border-color: #00B900 !important;
+            transform: scale(1.05) !important;
+        }
+
+        [data-testid="stSidebarCollapseButton"]:hover::after,
+        [data-testid="stSidebarExpandButton"]:hover::after {
+            color: #00B900 !important;
         }
         /* --- End Sidebar Customization --- */
 
