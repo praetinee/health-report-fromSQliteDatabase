@@ -115,7 +115,7 @@ def main_app(df):
     # --- Inject Custom CSS สำหรับปุ่ม Sidebar โดยเฉพาะ ---
     st.markdown("""
     <style>
-        /* --- Sidebar Toggle Button Customization (Improved) --- */
+        /* --- Sidebar Toggle Button Customization (Improved V2) --- */
         
         /* 1. ซ่อนรูปภาพ SVG และ Child Elements ทั้งหมดภายในปุ่ม เพื่อไม่ให้ข้อความ Alt Text หรือ Icon เดิมซ้อนทับ */
         button[data-testid="stSidebarCollapseButton"] > *, 
@@ -140,29 +140,32 @@ def main_app(df):
             overflow: hidden !important; /* ป้องกันข้อความยาวๆ ล้นออกมา */
         }
 
-        /* 3. สร้าง Content ใหม่ด้วย ::after พร้อม Fallback Font */
+        /* 3. สร้าง Content ใหม่ด้วย ::after พร้อม Fallback Font ที่ปลอดภัยที่สุด */
         
         /* ปุ่ม Collapse (ตอน Sidebar เปิดอยู่) -> แสดง << */
         button[data-testid="stSidebarCollapseButton"]::after {
             content: "<<" !important;
-            /* ใช้ Font Stack ที่รองรับสัญลักษณ์ชัวร์ๆ (Monospace จะแสดง << ได้สวยเหมือน Code) */
-            font-family: "Courier New", Courier, "Segoe UI Symbol", monospace !important; 
-            font-size: 20px !important;
-            font-weight: 900 !important;
-            color: #555555 !important;
-            line-height: 1 !important;
-            margin-top: -2px !important; 
-        }
-
-        /* ปุ่ม Expand (ตอน Sidebar ปิดอยู่) -> แสดง >> */
-        button[data-testid="stSidebarExpandButton"]::after {
-            content: ">>" !important;
-            font-family: "Courier New", Courier, "Segoe UI Symbol", monospace !important;
+            /* เปลี่ยนมาใช้ Arial/Helvetica ซึ่งเป็น System Font มาตรฐาน รับรองแสดงผลได้ทุกเครื่อง */
+            font-family: "Arial", "Helvetica", sans-serif !important; 
             font-size: 20px !important;
             font-weight: 900 !important;
             color: #555555 !important;
             line-height: 1 !important;
             margin-top: -2px !important;
+            white-space: nowrap !important;
+        }
+
+        /* ปุ่ม Expand (ตอน Sidebar ปิดอยู่) -> แสดง >> */
+        button[data-testid="stSidebarExpandButton"]::after {
+            content: ">>" !important;
+            /* เปลี่ยนมาใช้ Arial/Helvetica ซึ่งเป็น System Font มาตรฐาน รับรองแสดงผลได้ทุกเครื่อง */
+            font-family: "Arial", "Helvetica", sans-serif !important;
+            font-size: 20px !important;
+            font-weight: 900 !important;
+            color: #555555 !important;
+            line-height: 1 !important;
+            margin-top: -2px !important;
+            white-space: nowrap !important;
         }
 
         /* 4. Effect ตอนเอาเมาส์ชี้ (Hover) */
