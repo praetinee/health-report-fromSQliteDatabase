@@ -33,16 +33,19 @@ def get_gsheet_client():
     creds = None
     
     # 1. ลองอ่านจาก Streamlit Secrets (สำหรับ Cloud)
+    # ค้นหาหัวข้อ [gcp_service_account] ใน Secrets
     if "gcp_service_account" in st.secrets:
         try:
             # แปลง Secrets object ให้เป็น Dictionary
             creds_dict = dict(st.secrets["gcp_service_account"])
+            
+            # สร้าง Credentials จาก Dictionary
             creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
         except Exception as e:
             st.error(f"❌ อ่าน Secrets ไม่สำเร็จ: {e}")
             return None
 
-    # 2. ถ้าไม่มี Secrets ให้ลองอ่านจากไฟล์ (สำหรับ Local)
+    # 2. ถ้าไม่มี Secrets ให้ลองอ่านจากไฟล์ (สำหรับ Local Test)
     elif os.path.exists(SERVICE_ACCOUNT_FILE):
         try:
             creds = ServiceAccountCredentials.from_json_keyfile_name(SERVICE_ACCOUNT_FILE, scope)
@@ -51,7 +54,8 @@ def get_gsheet_client():
             return None
     
     else:
-        st.error("❌ ไม่พบ Credentials! (กรุณาตั้งค่า st.secrets หรือวางไฟล์ json)")
+        # ถ้าหาไม่เจอทั้งคู่
+        st.error("❌ ไม่พบ Credentials! (กรุณาตั้งค่า st.secrets บน Cloud หรือวางไฟล์ json ใน Local)")
         return None
 
     try:
