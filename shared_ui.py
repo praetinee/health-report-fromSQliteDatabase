@@ -46,8 +46,7 @@ def clean_html_string(html_str):
     return "\n".join([line.strip() for line in html_str.split('\n') if line.strip()])
 
 def inject_custom_css():
-    # แก้ไข: ใช้ CSS Variable ของ Streamlit เพื่อรองรับ Theme
-    # ปรับปรุง: ลบ [class*="st-"] ออกจาก Selector เพื่อป้องกัน Icon Font แตก (กลายเป็นข้อความยาวๆ)
+    # แก้ไขครั้งที่ 3: ใช้ระบบ Fallback Font และยกเว้นปุ่ม Header ของ Streamlit อย่างชัดเจน
     css_content = clean_html_string("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
@@ -65,12 +64,42 @@ def inject_custom_css():
             --warning-bg: rgba(255, 152, 0, 0.1);
             --success-bg: rgba(76, 175, 80, 0.1);
             --header-bg: rgba(128, 128, 128, 0.05);
+            
+            /* Fallback Font Stack: ถ้าหา Sarabun ไม่เจอ หรือไม่มี Glyphs ให้ใช้ตัวถัดไป */
+            --font-stack: 'Sarabun', 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
         }
         
-        /* Apply Font เฉพาะ Text Elements ทั่วไป */
-        html, body, h1, h2, h3, h4, h5, h6, p, div, span, th, td, li, a, button, input, label, textarea, select {
-            font-family: 'Sarabun', sans-serif !important;
+        /* 1. ใช้ Font Stack กับ Container หลัก */
+        .stApp {
+            font-family: var(--font-stack);
         }
+        
+        /* 2. บังคับฟอนต์กับ Text Elements (แต่เพิ่ม fallback ต่อท้าย) */
+        h1, h2, h3, h4, h5, h6, p, li, label, input, textarea, select, .stTooltipHoverTarget, .stMarkdown {
+            font-family: var(--font-stack) !important;
+        }
+        
+        /* 3. ปุ่มกดทั่วไปของ App ให้ใช้ Sarabun */
+        .stButton > button {
+            font-family: var(--font-stack) !important;
+        }
+
+        /* 4. CRITICAL FIX: ยกเว้นปุ่ม Header (เช่น ปุ่มย่อ/ขยาย Sidebar) ให้ใช้ฟอนต์เดิมของระบบ */
+        /* Streamlit ใช้ button[kind="header"] หรืออยู่ในคลาสเฉพาะ */
+        header button, 
+        [data-testid="stSidebarCollapsedControl"] button, 
+        [data-testid="stSidebarExpandedControl"] button,
+        button[kind="header"] {
+            font-family: "Source Sans Pro", sans-serif !important; /* ฟอนต์เดิมของ Streamlit */
+        }
+        
+        /* 5. ป้องกันไอคอน Material Icons ไม่ให้โดนทับ */
+        .material-icons, .material-symbols-rounded, [class*="material-icons"] {
+             font-family: 'Material Icons' !important;
+        }
+        
+        /* Styles อื่นๆ เหมือนเดิม */
+        th, td { font-family: var(--font-stack) !important; }
 
         .section-header-styled {
             font-size: 1.25rem; font-weight: 600; color: var(--primary);
