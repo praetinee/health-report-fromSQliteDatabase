@@ -29,7 +29,7 @@ except ImportError:
     def generate_cbc_recommendations(p, s): return {}
     def generate_urine_recommendations(p, s): return {}
 
-# --- CSS Design 9.0 (Dark Green Matte Header) ---
+# --- CSS Design 9.1 (Force Dark Green Matte Header & Thick Border) ---
 def get_single_page_style():
     return """
     <style>
@@ -42,27 +42,26 @@ def get_single_page_style():
         
         body {
             font-family: 'Sarabun', sans-serif;
-            font-size: 14px; /* ขนาดมาตรฐาน 14px */
+            font-size: 14px;
             line-height: 1.35;
-            color: #333; /* สีดำเทาเข้ม ดูนุ่มนวลกว่าดำสนิท */
+            color: #333;
             background: #fff;
             margin: 0;
-            padding: 10mm; /* Margin จริงของเอกสาร */
+            padding: 10mm;
             width: 210mm;
-            height: 296mm; /* ความสูง A4 */
+            height: 296mm;
             box-sizing: border-box;
-            overflow: hidden; /* ห้าม Scroll */
+            overflow: hidden;
             display: flex;
             flex-direction: column;
         }
 
-        /* Container หลักที่จะถูกย่อขยาย */
         .content-wrapper {
             width: 100%;
             display: flex;
             flex-direction: column;
             gap: 12px;
-            transform-origin: top center; /* จุดศูนย์กลางการย่ออยู่ตรงกลางบน */
+            transform-origin: top center;
         }
 
         /* --- Header --- */
@@ -70,37 +69,36 @@ def get_single_page_style():
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
-            border-bottom: 3px solid #004d40; /* เส้นใต้เข้มขึ้น */
+            border-bottom: 4px solid #004d40 !important; /* เส้นใต้เข้มหนา */
             padding-bottom: 10px;
             margin-bottom: 5px;
         }
-        .header-left h1 { margin: 0; font-size: 26px; color: #004d40; line-height: 1.1; font-weight: 700; letter-spacing: 0.5px; }
+        .header-left h1 { margin: 0; font-size: 26px; color: #004d40 !important; line-height: 1.1; font-weight: 700; }
         .header-left p { margin: 4px 0 0 0; font-size: 15px; color: #555; font-weight: 500; }
         .header-right { text-align: right; }
         .header-right h2 { margin: 0; font-size: 20px; font-weight: 700; color: #000; }
         .patient-meta { font-size: 14px; margin-top: 5px; color: #444; }
         .patient-badge { 
-            display: inline-block; background: #f5f5f5; padding: 2px 8px; 
-            border-radius: 4px; font-weight: 600; margin-left: 5px; border: 1px solid #ddd;
-            color: #333;
+            display: inline-block; background: #f0f0f0; padding: 2px 8px; 
+            border-radius: 4px; font-weight: 600; margin-left: 5px; border: 1px solid #ccc;
         }
 
         /* --- Vitals --- */
         .vitals-bar {
             display: flex;
             justify-content: space-between;
-            background-color: #fff; /* พื้นหลังขาว */
+            background-color: #fff;
             border-radius: 8px;
             padding: 10px 15px;
-            border: 1px solid #dcdcdc;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* เงาบางๆ */
+            border: 2px solid #004d40 !important; /* กรอบสัญญาณชีพสีเขียวเข้ม */
+            box-shadow: none; /* เอาเงาออกให้ดู Matte (ด้าน) */
         }
         .vital-box { text-align: center; position: relative; width: 16%; }
         .vital-box:not(:last-child)::after {
-            content: ''; position: absolute; right: 0; top: 10%; height: 80%; width: 1px; background: #eee;
+            content: ''; position: absolute; right: 0; top: 10%; height: 80%; width: 1px; background: #ddd;
         }
-        .vital-label { font-size: 12px; color: #666; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
-        .vital-value { font-size: 18px; font-weight: 700; color: #004d40; }
+        .vital-label { font-size: 12px; color: #555; font-weight: 600; text-transform: uppercase; margin-bottom: 3px; }
+        .vital-value { font-size: 18px; font-weight: 700; color: #004d40 !important; }
         .vital-unit { font-size: 12px; color: #888; font-weight: 400; margin-left: 2px; }
 
         /* --- Lab Grid --- */
@@ -110,40 +108,39 @@ def get_single_page_style():
             gap: 15px;
             align-items: start;
         }
-        .lab-col { display: flex; flex-direction: column; gap: 10px; }
+        .lab-col { display: flex; flex-direction: column; gap: 12px; }
 
         .card {
-            border: 1px solid #004d40; /* เปลี่ยนสีขอบเป็นสีเดียวกับ header เพื่อความเนียน */
+            border: 2px solid #004d40 !important; /* บังคับขอบหนา 2px สีเขียวเข้ม */
             border-radius: 6px;
             overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* เงาบางๆ */
+            box-shadow: none; /* เอาเงาออก */
             background: #fff;
         }
         .card-header {
-            background-color: #004d40; /* สีเขียวเข้มด้าน (Matte Dark Green) */
-            color: #fff;
-            padding: 8px 10px; /* เพิ่ม padding ให้ดูโปร่งขึ้นนิดนึง */
+            background-color: #004d40 !important; /* บังคับพื้นหลังสีเขียวเข้มด้าน */
+            color: #fff !important; /* ตัวหนังสือสีขาว */
+            padding: 8px 10px;
             font-size: 14px; 
-            font-weight: 700; /* ตัวหนา */
-            letter-spacing: 0.5px; /* ระยะห่างตัวอักษร */
-            text-transform: uppercase; /* ตัวพิมพ์ใหญ่ (ภาษาอังกฤษ) เพื่อความทางการ */
+            font-weight: 700;
+            text-transform: uppercase;
         }
         .card-body { padding: 0; background: #fff; }
 
         /* Table */
         table { width: 100%; border-collapse: collapse; font-size: 14px; }
         th { 
-            background-color: #f0f2f2; 
+            background-color: #e0f2f1; /* สีพื้นหลังหัวตารางเขียวอ่อนๆ จางๆ */
             padding: 6px 8px; 
             text-align: left; 
-            font-weight: 600; 
-            color: #333; 
-            border-bottom: 2px solid #ddd; 
+            font-weight: 700; 
+            color: #004d40 !important; /* หัวตารางสีเขียวเข้ม */
+            border-bottom: 2px solid #004d40 !important; 
             font-size: 13px;
         }
         td { 
             padding: 6px 8px; 
-            border-bottom: 1px solid #f0f0f0; 
+            border-bottom: 1px solid #eee; 
             vertical-align: middle; 
             color: #222;
         }
@@ -151,11 +148,8 @@ def get_single_page_style():
         tr:nth-child(even) { background-color: #fafafa; } 
         
         .result-val { font-weight: 600; text-align: center; }
-        .abnormal { 
-            color: #c62828; 
-            font-weight: 700; 
-        } 
-        .bg-abnormal { background-color: #fff5f5 !important; } 
+        .abnormal { color: #d32f2f !important; font-weight: 800; } 
+        .bg-abnormal { background-color: #ffebee !important; } 
 
         /* --- Special Item --- */
         .special-item {
@@ -169,33 +163,30 @@ def get_single_page_style():
         .special-item:last-child { border-bottom: none; }
         .sp-label { font-weight: 600; color: #444; font-size: 14px; }
         .sp-value { font-weight: 600; font-size: 14px; text-align: right;}
-        .sp-abnormal { color: #c62828; }
+        .sp-abnormal { color: #d32f2f; }
         .sp-normal { color: #2e7d32; }
         
         /* --- Footer --- */
         .footer-section {
             display: flex;
             gap: 20px;
-            border: 1px solid #004d40; /* เปลี่ยนขอบเป็นสีเขียวเข้ม */
-            border-top: 4px solid #004d40; /* เส้นบนหนาเน้นความสำคัญ */
+            border: 2px solid #004d40 !important; /* ขอบหนาสีเขียวเข้ม */
             border-radius: 6px;
             padding: 15px;
             background-color: #fff;
             flex-grow: 1; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
         .doctor-opinion { flex: 1; border-right: 1px solid #eee; padding-right: 15px; }
         .recommendations { flex: 1.2; padding-left: 5px; }
         
         .footer-title { 
-            font-size: 15px; font-weight: 700; color: #004d40; 
-            margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;
+            font-size: 15px; font-weight: 700; color: #004d40 !important; 
+            margin-bottom: 8px; text-transform: uppercase;
             display: flex; align-items: center; gap: 5px;
-            border-bottom: 1px solid #eee; /* เพิ่มเส้นใต้หัวข้อ */
+            border-bottom: 1px solid #eee;
             padding-bottom: 5px;
         }
-        /* icon หน้าหัวข้อ */
-        .footer-title::before { content: '■'; color: #004d40; font-size: 12px; line-height: 0; } /* เปลี่ยน bullet เป็นสี่เหลี่ยม */
+        .footer-title::before { content: '■'; color: #004d40; font-size: 12px; line-height: 0; }
         
         .footer-text { font-size: 14px; color: #333; line-height: 1.5; margin-top: 5px; } 
         ul { margin: 0; padding-left: 20px; }
@@ -220,30 +211,15 @@ def get_single_page_style():
     
     <script>
         window.onload = function() {
-            // ฟังก์ชัน Auto-Fit อัจฉริยะ (Smart Auto-Fit)
             var content = document.getElementById('content');
-            
-            // ความสูงที่ใช้ได้จริง (A4 Height - Margins)
-            // A4 = 296mm ~ 1122px (at 96dpi)
-            // Padding บนล่างรวม 20mm ~ 75px
-            // เหลือพื้นที่จริงประมาณ 1045px
             var availableHeight = 1045; 
             var contentHeight = content.scrollHeight;
 
             if (contentHeight > availableHeight) {
-                // คำนวณ % การย่อ
                 var scale = availableHeight / contentHeight;
-                // เผื่อไว้นิดหน่อยกันพลาด (0.99)
                 scale = scale * 0.99; 
-                
-                // ใช้ CSS Transform ย่อเนื้อหา
                 content.style.transform = "scale(" + scale + ")";
-                
-                // ปรับความกว้างชดเชย เพราะพอ Scale ลง ความกว้างจะหดตาม
-                // ต้องขยายความกว้างกล่องให้เต็มพื้นที่หลังย่อ
                 content.style.width = (100 / scale) + "%";
-                
-                // จัดตำแหน่งให้สวยงาม
                 content.style.transformOrigin = "top left"; 
             }
         };
@@ -388,7 +364,7 @@ def generate_single_page_report(person_data, all_history_df=None):
     <html lang="th">
     <head>
         <meta charset="UTF-8">
-        <title>รายงานผลสุขภาพ (Formal & Elegant) - {person_data.get('ชื่อ-สกุล')}</title>
+        <title>รายงานผลสุขภาพ (Matte Green 2.0) - {person_data.get('ชื่อ-สกุล')}</title>
         {get_single_page_style()}
     </head>
     <body>
