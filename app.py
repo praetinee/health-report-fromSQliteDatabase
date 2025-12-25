@@ -1,7 +1,7 @@
 import streamlit as st
 import sqlite3
 import pandas as pd
-from print_report import show_report
+# ลบ import print_report ออกจากตรงนี้ เพื่อป้องกัน Circular Import
 from google_sheets import check_is_registered, save_registered_user
 from line_register import get_line_id_from_csv
 
@@ -15,7 +15,7 @@ def get_connection():
 # --- ส่วนหลักของโปรแกรม ---
 def main():
     # 1. รับ UserID จาก URL (Query Parameters)
-    # ลิ้งค์ต้องเป็นรูปแบบ: [https://your-app.streamlit.app/?userid=U12345xxxx](https://your-app.streamlit.app/?userid=U12345xxxx)
+    # ลิ้งค์ต้องเป็นรูปแบบ: https://your-app.streamlit.app/?userid=U12345xxxx
     query_params = st.query_params
     line_user_id = query_params.get("userid", None)
 
@@ -43,6 +43,9 @@ def main():
         conn.close()
 
         if not df.empty:
+            # ย้าย import มาไว้ตรงนี้ (Lazy Import) เพื่อแก้ปัญหา Circular Import
+            # จะทำการ import ก็ต่อเมื่อจำเป็นต้องใช้ฟังก์ชันนี้จริงๆ เท่านั้น
+            from print_report import show_report 
             show_report(df.iloc[0]) # แสดงผลรายงานด้วยฟังก์ชันเดิมที่มีอยู่
         else:
             st.error("❌ ไม่พบข้อมูลผลตรวจสุขภาพในระบบ (ติดต่อเจ้าหน้าที่)")
