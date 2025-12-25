@@ -115,69 +115,67 @@ def main_app(df):
     # --- Inject Custom CSS สำหรับปุ่ม Sidebar โดยเฉพาะ ---
     st.markdown("""
     <style>
-        /* --- Sidebar Toggle Button Customization (Improved V2) --- */
+        /* --- Sidebar Toggle Button Customization (Robust Version V3) --- */
         
-        /* 1. ซ่อนรูปภาพ SVG และ Child Elements ทั้งหมดภายในปุ่ม เพื่อไม่ให้ข้อความ Alt Text หรือ Icon เดิมซ้อนทับ */
-        button[data-testid="stSidebarCollapseButton"] > *, 
-        button[data-testid="stSidebarExpandButton"] > * {
-            display: none !important;
-        }
-
-        /* 2. กำหนดสไตล์พื้นฐานให้ปุ่มดูเป็นระเบียบ (สี่เหลี่ยมมนๆ) */
-        button[data-testid="stSidebarCollapseButton"],
-        button[data-testid="stSidebarExpandButton"] {
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            width: 40px !important;
-            height: 40px !important;
+        /* 1. กำหนดสไตล์ที่ปุ่มโดยตรง */
+        [data-testid="stSidebarCollapseButton"],
+        [data-testid="stSidebarExpandButton"] {
             border: 1px solid rgba(0,0,0,0.1) !important;
             border-radius: 8px !important;
             background-color: #ffffff !important;
+            width: 40px !important;
+            height: 40px !important;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
-            padding: 0 !important;
             transition: all 0.2s ease !important;
-            overflow: hidden !important; /* ป้องกันข้อความยาวๆ ล้นออกมา */
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
         }
 
-        /* 3. สร้าง Content ใหม่ด้วย ::after พร้อม Fallback Font ที่ปลอดภัยที่สุด */
-        
-        /* ปุ่ม Collapse (ตอน Sidebar เปิดอยู่) -> แสดง << */
-        button[data-testid="stSidebarCollapseButton"]::after {
+        /* 2. ซ่อนรูป SVG ข้างในให้หมด (ระบุเจาะจงไปเลย) */
+        [data-testid="stSidebarCollapseButton"] svg,
+        [data-testid="stSidebarExpandButton"] svg,
+        [data-testid="stSidebarCollapseButton"] img,
+        [data-testid="stSidebarExpandButton"] img {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+            opacity: 0 !important;
+        }
+
+        /* 3. สร้างป้ายใหม่ด้วย ::after โดยใช้ฟอนต์ Arial/Helvetica ที่มีทุกเครื่อง */
+        [data-testid="stSidebarCollapseButton"]::after {
             content: "<<" !important;
-            /* เปลี่ยนมาใช้ Arial/Helvetica ซึ่งเป็น System Font มาตรฐาน รับรองแสดงผลได้ทุกเครื่อง */
-            font-family: "Arial", "Helvetica", sans-serif !important; 
+            font-family: Arial, Helvetica, sans-serif !important;
             font-size: 20px !important;
             font-weight: 900 !important;
             color: #555555 !important;
             line-height: 1 !important;
+            display: block !important;
             margin-top: -2px !important;
-            white-space: nowrap !important;
         }
 
-        /* ปุ่ม Expand (ตอน Sidebar ปิดอยู่) -> แสดง >> */
-        button[data-testid="stSidebarExpandButton"]::after {
+        [data-testid="stSidebarExpandButton"]::after {
             content: ">>" !important;
-            /* เปลี่ยนมาใช้ Arial/Helvetica ซึ่งเป็น System Font มาตรฐาน รับรองแสดงผลได้ทุกเครื่อง */
-            font-family: "Arial", "Helvetica", sans-serif !important;
+            font-family: Arial, Helvetica, sans-serif !important;
             font-size: 20px !important;
             font-weight: 900 !important;
             color: #555555 !important;
             line-height: 1 !important;
+            display: block !important;
             margin-top: -2px !important;
-            white-space: nowrap !important;
         }
 
-        /* 4. Effect ตอนเอาเมาส์ชี้ (Hover) */
-        button[data-testid="stSidebarCollapseButton"]:hover,
-        button[data-testid="stSidebarExpandButton"]:hover {
+        /* 4. Hover Effects */
+        [data-testid="stSidebarCollapseButton"]:hover,
+        [data-testid="stSidebarExpandButton"]:hover {
             background-color: #f0f2f6 !important;
-            border-color: #00B900 !important; /* สีเขียวตอนชี้ */
+            border-color: #00B900 !important;
             transform: scale(1.05) !important;
         }
         
-        button[data-testid="stSidebarCollapseButton"]:hover::after,
-        button[data-testid="stSidebarExpandButton"]:hover::after {
+        [data-testid="stSidebarCollapseButton"]:hover::after,
+        [data-testid="stSidebarExpandButton"]:hover::after {
             color: #00B900 !important;
         }
         /* --- End Sidebar Customization --- */
