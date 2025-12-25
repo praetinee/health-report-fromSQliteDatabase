@@ -28,16 +28,14 @@ except ImportError:
     def has_lung_data(row): return False
     def has_visualization_data(df): return False
 
-# --- Import ฟังก์ชันอื่นๆ ---
 try:
     from performance_tests import interpret_audiogram, interpret_lung_capacity, interpret_cxr, generate_comprehensive_recommendations
 except ImportError:
     pass 
 
-# --- (แก้ไข) Import Module ใหม่สำหรับการพิมพ์หน้าเดียว ---
+# --- CHANGED: Use v2 exclusively ---
 try:
     from print_report_v2 import generate_single_page_report
-    # เรายังเก็บ print_performance_report ไว้เผื่อลูกค้าอยากพิมพ์แยก
     from print_performance_report import generate_performance_report_html 
 except ImportError:
     def generate_single_page_report(*args): return "<h1>Error loading print module v2</h1>"
@@ -69,7 +67,6 @@ except Exception as e:
     def display_main_report(p, a): st.error("Main Report Function Missing in shared_ui")
     def display_performance_report(p, r, a=None): st.error("Performance Report Function Missing")
 
-# --- Import LINE Manager Function ---
 try:
     from line_register import render_admin_line_manager
 except ImportError:
@@ -160,16 +157,15 @@ def display_admin_panel(df):
                     if years:
                         if st.session_state.admin_selected_year not in years: st.session_state.admin_selected_year = years[0]
                         
-                        # Layout แถวเดียวสำหรับ เลือกปี และ ปุ่มพิมพ์
                         rc1, rc2, rc3 = st.columns([2, 1, 1])
                         with rc1:
                             sel_year = st.selectbox("เลือกปี พ.ศ.", years, index=years.index(st.session_state.admin_selected_year), format_func=lambda y: f"พ.ศ. {y}")
                         with rc2:
-                            st.write("") # Spacer
+                            st.write("")
                             if st.button("🖨️ พิมพ์หน้านี้ (Single Page)", use_container_width=True, type="primary"):
                                 st.session_state.admin_print_trigger = True
                         with rc3:
-                            st.write("") # Spacer
+                            st.write("")
                             if st.button("🖨️ พิมพ์ผลสมรรถภาพ", use_container_width=True):
                                 st.session_state.admin_print_performance_trigger = True
 
@@ -217,11 +213,8 @@ def display_admin_panel(df):
                         else:
                             st.warning("ไม่พบข้อมูลการตรวจในปีนี้")
 
-                    # --- Print Trigger (ใช้โมดูลใหม่ v2) ---
                     if st.session_state.admin_print_trigger:
-                        # เรียกใช้ generate_single_page_report จากไฟล์ใหม่
                         h = generate_single_page_report(st.session_state.admin_person_row, history)
-                        # ใช้ Script เดิมในการสั่งพิมพ์ (เสถียรสุดใน Streamlit)
                         st.components.v1.html(f"<script>var w=window.open();w.document.write({json.dumps(h)});w.print();w.close();</script>", height=0)
                         st.session_state.admin_print_trigger = False
                     
