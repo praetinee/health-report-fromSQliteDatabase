@@ -1,6 +1,5 @@
 import pandas as pd
 import html
-import json
 from datetime import datetime
 import numpy as np
 
@@ -11,12 +10,16 @@ try:
         interpret_cxr, interpret_ekg, interpret_urine, 
         interpret_stool, interpret_hepatitis, interpret_vision
     )
-    # Import functions that were previously in print_report but are needed here
-    # We will redefine them here if needed or assume they are in utils/performance_tests
-    # For now, let's include the helper functions directly or ensure they are available.
 except ImportError:
-    pass
+    # Fallback functions กรณี import ไม่ได้
+    def interpret_cxr(v): return (v if v else "-"), False
+    def interpret_ekg(v): return (v if v else "-"), False
+    def interpret_vision(*args): return "-","-","-"
+    def interpret_audiogram(*args): return {"summary": {"right": "-", "left": "-"}}
+    def interpret_lung_capacity(*args): return "-", "-", "-"
+    def interpret_urine(k, v): return False # Dummy
 
+# --- Helper Functions ---
 def is_empty(val):
     return pd.isna(val) or str(val).strip().lower() in ["", "-", "none", "nan", "null"]
 
@@ -27,489 +30,403 @@ def get_float(col, person_data):
         return float(str(val).replace(",", "").strip())
     except: return None
 
-def flag(val, low=None, high=None, higher_is_better=False):
+def get_str(col, person_data, default="-"):
+    val = person_data.get(col, default)
+    if is_empty(val): return default
+    return str(val).strip()
+
+def flag_value(val, low=None, high=None, higher_is_better=False):
+    """
+    ตรวจสอบค่าผิดปกติ
+    Returns: (formatted_value, is_abnormal)
+    """
     try:
-        val = float(str(val).replace(",", "").strip())
-    except: return "-", False
-    formatted_val = f"{int(val):,}" if val == int(val) else f"{val:,.1f}"
+        if is_empty(val): return "-", False
+        num_val = float(str(val).replace(",", "").strip())
+    except:
+        return str(val), False
+
+    # Format
+    if num_val == int(num_val):
+        fmt_val = f"{int(num_val):,}"
+    else:
+        fmt_val = f"{num_val:,.1f}"
+
     is_abnormal = False
     if higher_is_better:
-        if low is not None and val < low: is_abnormal = True
+        if low is not None and num_val < low: is_abnormal = True
     else:
-        if low is not None and val < low: is_abnormal = True
-        if high is not None and val > high: is_abnormal = True
-    return formatted_val, is_abnormal
+        if low is not None and num_val < low: is_abnormal = True
+        if high is not None and num_val > high: is_abnormal = True
+        
+    return fmt_val, is_abnormal
 
-def is_urine_abnormal(test_name, value, normal_range):
-    # Simplified logic matching previous implementation
-    val = str(value or "").strip().lower()
-    if val in ["", "-", "none", "nan", "null"]: return False
-    if test_name == "กรด-ด่าง (pH)":
-        try: return not (5.0 <= float(val) <= 8.0)
-        except: return True
-    if test_name == "ความถ่วงจำเพาะ (Sp.gr)":
-        try: return not (1.003 <= float(val) <= 1.030)
-        except: return True
-    if "negative" in normal_range.lower() and val != "negative": return True
+def check_urine_abnormal(test_name, value, normal_text="Bg"):
+    """ตรวจสอบความผิดปกติของปัสสาวะ"""
+    val_str = str(value).lower().strip()
+    if val_str in ["-", "", "nan", "none"]: return False
+    
+    if test_name == "pH":
+        try: return not (4.6 <= float(value) <= 8.0)
+        except: return False
+    if test_name == "Sp.gr":
+        try: return not (1.005 <= float(value) <= 1.030)
+        except: return False
+        
+    # เช็คคำว่า Negative หรือ Normal
+    if "neg" in normal_text.lower():
+        if "neg" not in val_str and "nl" not in val_str and "normal" not in val_str: return True
     return False
 
-# --- Recommendation Generators (Simplified for v2) ---
-def generate_fixed_recommendations(person_data):
-    recs = []
-    # Add basic logic here based on values
-    fbs = get_float("FBS", person_data)
-    if fbs and fbs > 100: recs.append("ควบคุมอาหารหวาน แป้ง และน้ำตาล")
-    chol = get_float("CHOL", person_data)
-    if chol and chol > 200: recs.append("ควบคุมอาหารไขมันสูง ของทอด กะทิ")
-    bp_s = get_float("SBP", person_data)
-    if bp_s and bp_s > 140: recs.append("ควบคุมอาหารเค็ม และวัดความดันสม่ำเสมอ")
-    return recs
-
-def generate_cbc_recommendations(person_data, sex):
-    # Placeholder for CBC specific logic
-    return {}
-
-def generate_urine_recommendations(person_data, sex):
-    # Placeholder for Urine specific logic
-    return {}
-
-def generate_doctor_opinion(person_data, sex, cbc_rec, urine_rec):
-    # Generate a summary opinion
-    issues = []
-    bmi = 0
-    w = get_float("น้ำหนัก", person_data)
-    h = get_float("ส่วนสูง", person_data)
-    if w and h: bmi = w / ((h/100)**2)
-    
-    if bmi > 25: issues.append("น้ำหนักเกิน")
-    if get_float("SBP", person_data) and get_float("SBP", person_data) > 140: issues.append("ความดันโลหิตสูง")
-    if get_float("FBS", person_data) and get_float("FBS", person_data) > 100: issues.append("น้ำตาลในเลือดสูง")
-    
-    if not issues: return "สุขภาพโดยรวมอยู่ในเกณฑ์ปกติ"
-    return "พบปัญหาสุขภาพ: " + ", ".join(issues) + " ควรติดตามผลและปฏิบัติตามคำแนะนำ"
-
-# --- CSS Design: Professional Medical Report (High Contrast) ---
+# --- CSS Design ---
 def get_single_page_style():
     return """
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
         
-        @page {
-            size: A4;
-            margin: 0; 
-        }
+        @page { size: A4; margin: 0; }
         
         body {
             font-family: 'Sarabun', sans-serif;
-            font-size: 12px;
-            line-height: 1.3;
+            font-size: 11px;
             color: #000;
             background: #fff;
             margin: 0;
-            padding: 10mm;
+            padding: 15mm;
             width: 210mm;
-            height: 296mm;
+            min-height: 296mm;
             box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
-        .report-container {
-            width: 100%;
-            height: 100%;
+        .report-page {
             display: flex;
             flex-direction: column;
-            page-break-after: always; /* สำคัญสำหรับ Batch Print */
+            height: 100%;
+            page-break-after: always;
         }
         
-        .report-container:last-child {
-            page-break-after: auto;
-        }
+        /* Header */
+        .header-row { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 10px; }
+        .h-title h1 { margin: 0; font-size: 22px; font-weight: bold; color: #1a237e; }
+        .h-title p { margin: 2px 0 0 0; font-size: 12px; font-weight: normal; }
+        .h-info { text-align: right; font-size: 12px; }
+        .h-info b { font-size: 14px; }
 
-        /* --- Header --- */
-        .header-section {
+        /* Vitals Bar */
+        .vitals-bar {
             display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            border-bottom: 3px solid #004d40;
-            padding-bottom: 10px;
-            margin-bottom: 15px;
-        }
-        .header-left h1 {
-            margin: 0;
-            font-size: 24px;
-            color: #004d40;
-            font-weight: 700;
-        }
-        .header-left p {
-            margin: 2px 0 0 0;
-            font-size: 14px;
-            color: #333;
-            font-weight: 500;
-        }
-        .header-right { text-align: right; }
-        .patient-name {
-            font-size: 20px;
-            font-weight: 700;
-            color: #000;
-            margin: 0;
-        }
-        .patient-info-row {
-            font-size: 13px;
-            margin-top: 4px;
-            color: #333;
-        }
-        .info-pill {
-            display: inline-block;
-            background: #eee;
-            border: 1px solid #ccc;
-            padding: 1px 6px;
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
             border-radius: 4px;
-            font-weight: 600;
-            margin-left: 5px;
+            padding: 8px;
+            margin-bottom: 15px;
+            justify-content: space-around;
         }
+        .v-item { text-align: center; }
+        .v-lbl { font-size: 10px; color: #666; text-transform: uppercase; font-weight: bold; }
+        .v-val { font-size: 14px; font-weight: bold; color: #000; }
+        .v-unit { font-size: 10px; color: #444; }
 
-        /* --- Vitals Grid --- */
-        .vitals-grid {
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 10px;
-            background-color: #f1f8e9;
-            border: 1px solid #8bc34a;
+        /* Content Layout */
+        .content-cols { display: flex; gap: 15px; }
+        .col-1, .col-2 { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+
+        /* Tables */
+        .res-box { border: 1px solid #999; border-radius: 4px; overflow: hidden; }
+        .res-head {
+            background-color: #e0e0e0;
+            padding: 5px 8px;
+            font-weight: bold;
+            font-size: 12px;
+            border-bottom: 1px solid #999;
+            display: flex; justify-content: space-between;
+        }
+        table.res-tbl { width: 100%; border-collapse: collapse; font-size: 11px; }
+        table.res-tbl th { background-color: #f0f0f0; padding: 4px; text-align: left; border-bottom: 1px solid #ccc; font-weight: 600; font-size: 10px; color: #444; }
+        table.res-tbl td { padding: 3px 5px; border-bottom: 1px solid #eee; vertical-align: middle; }
+        table.res-tbl tr:last-child td { border-bottom: none; }
+        
+        .val-norm { color: #2e7d32; }
+        .val-abn { color: #d32f2f; font-weight: bold; }
+        .val-plain { color: #000; }
+        .t-right { text-align: right; }
+        .t-center { text-align: center; }
+
+        /* Footer / Opinion */
+        .footer-sec {
+            margin-top: auto;
+            border: 2px solid #333;
             border-radius: 6px;
             padding: 10px;
-            margin-bottom: 15px;
-        }
-        .vital-box {
-            text-align: center;
-            border-right: 1px solid #c5e1a5;
-        }
-        .vital-box:last-child { border-right: none; }
-        .vital-title { font-size: 10px; font-weight: 700; color: #558b2f; text-transform: uppercase; }
-        .vital-data { font-size: 16px; font-weight: 700; color: #000; margin-top: 2px; }
-        .vital-u { font-size: 10px; font-weight: 400; color: #555; }
-
-        /* --- Layout Grid --- */
-        .main-content {
+            background-color: #fafafa;
             display: flex;
             gap: 15px;
-            flex-grow: 1;
         }
-        .col-left { width: 50%; display: flex; flex-direction: column; gap: 15px; }
-        .col-right { width: 50%; display: flex; flex-direction: column; gap: 15px; }
+        .f-col { flex: 1; }
+        .f-title { font-weight: bold; font-size: 13px; text-decoration: underline; margin-bottom: 5px; color: #1a237e; }
+        .f-text { font-size: 12px; line-height: 1.4; }
+        .f-text ul { margin: 0; padding-left: 20px; }
 
-        /* --- Table Styling --- */
-        .result-group {
-            border: 1px solid #000;
-            border-radius: 0;
-            overflow: hidden;
-        }
-        .group-head {
-            background-color: #004d40;
-            color: #fff;
-            padding: 6px 10px;
-            font-size: 13px;
-            font-weight: 700;
-            text-transform: uppercase;
-            border-bottom: 1px solid #000;
-        }
-        .res-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 11px;
-        }
-        .res-table th {
-            background-color: #cfd8dc;
-            color: #000;
-            font-weight: 700;
-            text-align: left;
-            padding: 4px 8px;
-            border-bottom: 1px solid #999;
-        }
-        .res-table td {
-            padding: 3px 8px;
-            border-bottom: 1px solid #ddd;
-            vertical-align: middle;
-            color: #000;
-        }
-        .res-table tr:nth-child(even) { background-color: #f5f5f5; }
-        .res-table tr:last-child td { border-bottom: none; }
+        .sig-row { margin-top: 20px; text-align: right; padding-right: 20px; }
+        .sig-line { display: inline-block; text-align: center; }
+        .sig-img { height: 40px; }
+        .sig-txt { border-top: 1px solid #000; padding-top: 5px; font-size: 12px; font-weight: bold; margin-top: 5px; }
 
-        .v-norm { color: #2e7d32; }
-        .v-abn { color: #d50000; font-weight: 800; }
-        .v-plain { color: #000; }
-
-        /* --- Footer --- */
-        .footer-wrap {
-            margin-top: auto;
-            border: 1px solid #000;
-            display: flex;
-            height: 120px;
-        }
-        .f-block {
-            flex: 1;
-            padding: 8px;
-            border-right: 1px solid #000;
-            display: flex;
-            flex-direction: column;
-        }
-        .f-block:last-child { border-right: none; flex: 1.2; }
-        .f-head {
-            font-size: 12px; font-weight: 700; text-decoration: underline; margin-bottom: 5px; color: #000;
-        }
-        .f-body {
-            font-size: 11px; line-height: 1.3; overflow: hidden;
-        }
-        .f-body ul { margin: 0; padding-left: 15px; }
-
-        /* --- Signature --- */
-        .signature-section {
-            display: flex;
-            justify-content: flex-end;
-            margin-top: 10px;
-        }
-        .sig-block {
-            text-align: center;
-            width: 220px;
-        }
-        .sig-line {
-            border-bottom: 1px solid #000;
-            height: 30px;
-            margin-bottom: 5px;
-        }
-        .sig-name { font-weight: 700; font-size: 13px; }
-        .sig-pos { font-size: 12px; color: #444; }
-
-        @media print {
-             body { -webkit-print-color-adjust: exact; }
-        }
     </style>
     """
 
-def render_vitals_grid(person):
-    def g(k, u=""):
-        v = get_float(k, person)
-        return f"{v} <span class='vital-u'>{u}</span>" if v else "-"
-    
-    sbp, dbp = get_float("SBP", person), get_float("DBP", person)
-    bp = f"{int(sbp)}/{int(dbp)}" if sbp and dbp else "-"
-    
-    w, h = get_float("น้ำหนัก", person), get_float("ส่วนสูง", person)
-    bmi = w / ((h/100)**2) if w and h else 0
-    
-    return f"""
-    <div class="vitals-grid">
-        <div class="vital-box"><div class="vital-title">Weight</div><div class="vital-data">{g('น้ำหนัก', 'kg')}</div></div>
-        <div class="vital-box"><div class="vital-title">Height</div><div class="vital-data">{g('ส่วนสูง', 'cm')}</div></div>
-        <div class="vital-box"><div class="vital-title">BMI</div><div class="vital-data">{bmi:.1f} <span class="vital-u">kg/m²</span></div></div>
-        <div class="vital-box"><div class="vital-title">Waist</div><div class="vital-data">{person.get('รอบเอว', '-') or '-'} <span class="vital-u">cm</span></div></div>
-        <div class="vital-box"><div class="vital-title">BP</div><div class="vital-data">{bp} <span class="vital-u">mmHg</span></div></div>
-        <div class="vital-box"><div class="vital-title">Pulse</div><div class="vital-data">{g('pulse', 'bpm')}</div></div>
-    </div>
-    """
-
-def render_table_group(title, headers, rows):
-    html = f"""
-    <div class="result-group">
-        <div class="group-head">{title}</div>
-        <table class="res-table">
-            <thead>
-                <tr>
-                    <th style="width: 45%;">{headers[0]}</th>
-                    <th style="width: 30%; text-align: center;">{headers[1]}</th>
-                    <th style="width: 25%; text-align: center;">{headers[2]}</th>
-                </tr>
-            </thead>
-            <tbody>
-    """
-    for row in rows:
-        label_t, val_t, norm_t = row
-        label = label_t[0]
-        val = val_t[0]
-        is_abn = val_t[1]
-        norm = norm_t[0]
-        
-        css = "v-abn" if is_abn else "v-plain"
+def render_table_rows(items):
+    html = ""
+    for label, val_tuple, norm in items:
+        val_str, is_abn = val_tuple
+        css_class = "val-abn" if is_abn else "val-norm"
+        if val_str in ["-", ""]: css_class = "val-plain"
         
         html += f"""
         <tr>
             <td>{label}</td>
-            <td style="text-align: center;" class="{css}">{val}</td>
-            <td style="text-align: center;">{norm}</td>
+            <td class="t-center {css_class}">{val_str}</td>
+            <td class="t-center" style="color:#666;">{norm}</td>
         </tr>
         """
-    html += "</tbody></table></div>"
-    return html
-
-def render_special_group(title, items):
-    html = f"""
-    <div class="result-group">
-        <div class="group-head">{title}</div>
-        <table class="res-table">
-    """
-    for label, val, is_abn in items:
-        css = "v-abn" if is_abn else "v-norm"
-        if val in ["-", "N/A", "ไม่ได้ตรวจ"]: css = "v-plain"
-        
-        html += f"""
-        <tr>
-            <td style="width: 40%; font-weight: 600;">{label}</td>
-            <td style="width: 60%; text-align: right;" class="{css}">{val}</td>
-        </tr>
-        """
-    html += "</table></div>"
     return html
 
 def render_report_body(person_data, all_history_df=None):
-    """
-    สร้างเฉพาะเนื้อหา HTML (Body) สำหรับรายงาน 1 หน้า
-    เพื่อให้สามารถนำไปต่อกันในการพิมพ์แบบ Batch ได้
-    """
-    # --- Data Prep ---
+    # --- เตรียมข้อมูล ---
     sex = person_data.get("เพศ", "ชาย")
-    year = person_data.get("Year", datetime.now().year + 543)
     
     # 1. CBC
-    hb_low, hct_low = (12, 36) if sex == "หญิง" else (13, 39)
-    cbc_rows = [
-        [("Hemoglobin",0), flag(get_float("Hb(%)", person_data), hb_low, None), (f">{hb_low}",0)],
-        [("Hematocrit",0), flag(get_float("HCT", person_data), hct_low, None), (f">{hct_low}",0)],
-        [("WBC Count",0), flag(get_float("WBC (cumm)", person_data), 4000, 10000), ("4k-10k",0)],
-        [("Platelet",0), flag(get_float("Plt (/mm)", person_data), 150000, 500000), ("1.5-5แสน",0)],
-        [("Neutrophil %",0), flag(get_float("Ne (%)", person_data), 43, 70), ("43-70",0)],
-        [("Lymphocyte %",0), flag(get_float("Ly (%)", person_data), 20, 44), ("20-44",0)],
+    hb_L, hb_H = (12, 16) if sex == "หญิง" else (13, 18)
+    hct_L, hct_H = (36, 48) if sex == "หญิง" else (40, 54)
+    
+    cbc_data = [
+        ("Hemoglobin", flag_value(person_data.get("Hb(%)"), hb_L, hb_H), f"{hb_L}-{hb_H}"),
+        ("Hematocrit", flag_value(person_data.get("HCT"), hct_L, hct_H), f"{hct_L}-{hct_H}"),
+        ("WBC Count", flag_value(person_data.get("WBC (cumm)"), 4000, 11000), "4,000-11,000"),
+        ("Platelet", flag_value(person_data.get("Plt (/mm)"), 140000, 450000), "140,000-450,000"),
+        ("Neutrophil", flag_value(person_data.get("Ne (%)"), 40, 75), "40-75 %"),
+        ("Lymphocyte", flag_value(person_data.get("Ly (%)"), 20, 50), "20-50 %"),
+        ("Eosinophil", flag_value(person_data.get("Eo (%)"), 0, 6), "0-6 %"),
+        ("Monocyte", flag_value(person_data.get("Mo (%)"), 2, 10), "2-10 %"),
+        ("Basophil", flag_value(person_data.get("Ba (%)"), 0, 1), "0-1 %"),
     ]
 
-    # 2. Urine/Stool
-    urine_items = [
-        ("Urine Sugar", "sugar", "Neg"),
-        ("Urine Protein", "Alb", "Neg"),
+    # 2. Metabolic / Chemistry
+    meta_data = [
+        ("FBS (Sugar)", flag_value(person_data.get("FBS"), 70, 100), "70-100"),
+        ("Cholesterol", flag_value(person_data.get("CHOL"), 0, 200), "< 200"),
+        ("Triglyceride", flag_value(person_data.get("TGL"), 0, 150), "< 150"),
+        ("HDL-C", flag_value(person_data.get("HDL"), 40, None, True), "> 40"),
+        ("LDL-C", flag_value(person_data.get("LDL"), 0, 130), "< 130"),
+    ]
+
+    # 3. Kidney & Liver
+    kl_data = [
+        ("Uric Acid", flag_value(person_data.get("Uric Acid"), 2.5, 7.5), "2.5-7.5"),
+        ("Creatinine", flag_value(person_data.get("Cr"), 0.5, 1.2), "0.5-1.2"),
+        ("eGFR", flag_value(person_data.get("GFR"), 90, None, True), "> 90"),
+        ("SGOT (AST)", flag_value(person_data.get("SGOT"), 0, 40), "0-40"),
+        ("SGPT (ALT)", flag_value(person_data.get("SGPT"), 0, 41), "0-41"),
+        ("Alk Phos", flag_value(person_data.get("ALP"), 30, 120), "30-120"),
+    ]
+
+    # 4. Urinalysis
+    ua_raw = [
+        ("Color", "Color", "Yellow"),
+        ("Appearance", "Appearance", "Clear"),
+        ("pH", "pH", "4.6-8.0"),
+        ("Sp.Gr", "Sp.gr", "1.005-1.030"),
+        ("Protein (Alb)", "Urine Alb", "Negative"),
+        ("Sugar", "Urine Sugar", "Negative"),
         ("RBC", "RBC1", "0-2"),
-        ("WBC", "WBC1", "0-5")
+        ("WBC", "WBC1", "0-5"),
+        ("Epithelial", "Epith", "Negative"),
     ]
-    u_rows = [[(l,0), (person_data.get(k,"-"), is_urine_abnormal(l, person_data.get(k), n)), (n,0)] for l,k,n in urine_items]
-    
-    stool_val = str(person_data.get("Stool exam", ""))
-    stool_s = "Normal" if "ปกติ" in stool_val else ("Abnormal" if "พบ" in stool_val else "-")
-    u_rows.append([("Stool Exam",0), (stool_s, stool_s=="Abnormal"), ("Normal",0)])
+    ua_data = []
+    for lbl, key, norm in ua_raw:
+        val = get_str(key, person_data)
+        is_abn = check_urine_abnormal(lbl, val, norm)
+        ua_data.append((lbl, (val, is_abn), norm))
 
-    # 3. Metabolic
-    meta_rows = [
-        [("FBS (Sugar)",0), flag(get_float("FBS", person_data), 74, 106), ("74-106",0)],
-        [("Cholesterol",0), flag(get_float("CHOL", person_data), None, 200), ("<200",0)],
-        [("Triglyceride",0), flag(get_float("TGL", person_data), None, 150), ("<150",0)],
-        [("HDL (Good)",0), flag(get_float("HDL", person_data), 40, None, True), (">40",0)],
-        [("LDL (Bad)",0), flag(get_float("LDL", person_data), None, 130), ("<130",0)],
-    ]
+    # 5. Special Tests Interpretation
+    try:
+        yr = person_data.get("Year", datetime.now().year+543)
+        yr_short = str(yr)[-2:]
+        cxr_res, cxr_abn = interpret_cxr(person_data.get(f"CXR{yr_short}", person_data.get("CXR")))
+        ekg_res, ekg_abn = interpret_ekg(person_data.get(f"EKG{yr_short}", person_data.get("EKG")))
+        
+        vis_res, col_res, _ = interpret_vision(person_data.get("สรุปเหมาะสมกับงาน"), person_data.get("Color_Blind"))
+        vis_abn = "ผิดปกติ" in vis_res
+        col_abn = "ผิดปกติ" in col_res
+        
+        hear_res = interpret_audiogram(person_data, all_history_df)
+        hear_txt = f"R: {hear_res['summary']['right']}, L: {hear_res['summary']['left']}"
+        hear_abn = "ผิดปกติ" in hear_txt
 
-    # 4. Organ
-    organ_rows = [
-        [("Uric Acid",0), flag(get_float("Uric Acid", person_data), None, 7.2), ("<7.2",0)],
-        [("Creatinine",0), flag(get_float("Cr", person_data), 0.5, 1.17), ("0.5-1.2",0)],
-        [("eGFR",0), flag(get_float("GFR", person_data), 60, None, True), (">60",0)],
-        [("SGOT",0), flag(get_float("SGOT", person_data), None, 37), ("<37",0)],
-        [("SGPT",0), flag(get_float("SGPT", person_data), None, 41), ("<41",0)],
-    ]
+        lung_txt, _, lung_res_val = interpret_lung_capacity(person_data)
+        lung_txt = lung_txt.replace("สมรรถภาพปอด","").strip()
+        lung_abn = "ผิดปกติ" in lung_txt
+    except:
+        cxr_res, cxr_abn = "-", False
+        ekg_res, ekg_abn = "-", False
+        vis_res, vis_abn = "-", False
+        col_res, col_abn = "-", False
+        hear_txt, hear_abn = "-", False
+        lung_txt, lung_abn = "-", False
 
-    # 5. Special
-    try:
-        cxr = interpret_cxr(person_data.get(f"CXR{str(year)[-2:]}", person_data.get("CXR")))[0]
-    except: cxr = "-"
-    
-    try:
-        ekg = interpret_ekg(person_data.get(f"EKG{str(year)[-2:]}", person_data.get("EKG")))[0]
-    except: ekg = "-"
-    
-    try:
-        vis, col, _ = interpret_vision(person_data.get('สรุปเหมาะสมกับงาน',''), person_data.get('Color_Blind',''))
-    except: vis, col = "-", "-"
-    
-    try:
-        hear = f"R:{interpret_audiogram(person_data, all_history_df)['summary']['right']}"
-    except: hear = "-"
-    
-    try:
-        lung, _, _ = interpret_lung_capacity(person_data)
-        lung = lung.replace("สมรรถภาพปอด","").strip() or "-"
-    except: lung = "-"
-
-    sp_items = [
-        ("Chest X-Ray", cxr, "ผิดปกติ" in cxr),
-        ("EKG", ekg, "ผิดปกติ" in ekg),
-        ("Vision", vis, "ผิดปกติ" in vis),
-        ("Color Blind", col, "ผิดปกติ" in col),
-        ("Hearing", hear, "ผิดปกติ" in hear),
-        ("Lung Function", lung, "ผิดปกติ" in lung),
+    sp_data = [
+        ("Chest X-Ray", (cxr_res, cxr_abn), "Normal"),
+        ("EKG", (ekg_res, ekg_abn), "Normal"),
+        ("Vision Acuity", (vis_res, vis_abn), "Normal"),
+        ("Color Blindness", (col_res, col_abn), "Normal"),
+        ("Audiogram", (hear_txt, hear_abn), "Normal"),
+        ("Lung Function", (lung_txt, lung_abn), "Normal"),
     ]
 
-    # Recommendations
-    rec_list = generate_fixed_recommendations(person_data)
-    rec_html = "<ul>" + "".join([f"<li>{r}</li>" for r in rec_list]) + "</ul>" if rec_list else "<ul><li>ดูแลสุขภาพตามปกติ</li></ul>"
+    # --- Recommendations Logic (Simplified but comprehensive) ---
+    rec_list = []
     
-    cbc_rec = generate_cbc_recommendations(person_data, sex)
-    urine_rec = generate_urine_recommendations(person_data, sex)
-    op = generate_doctor_opinion(person_data, sex, cbc_rec, urine_rec)
-    if is_empty(op) or op == "-": op = "สุขภาพโดยรวมปกติ"
+    # Sugar
+    if flag_value(person_data.get("FBS"), 70, 100)[1]:
+        rec_list.append("ควบคุมอาหารประเภทแป้ง น้ำตาล และของหวาน ผลไม้รสหวาน")
+    
+    # Fat
+    chol = get_float("CHOL", person_data) or 0
+    tgl = get_float("TGL", person_data) or 0
+    ldl = get_float("LDL", person_data) or 0
+    if chol > 200 or tgl > 150 or ldl > 130:
+        rec_list.append("ควบคุมอาหารไขมันสูง หลีกเลี่ยงของทอด กะทิ เนื้อสัตว์ติดมัน")
+        rec_list.append("ออกกำลังกายสม่ำเสมอ อย่างน้อย 30 นาที/วัน")
 
+    # BP
+    sbp = get_float("SBP", person_data) or 0
+    if sbp > 140:
+        rec_list.append("ควรวัดความดันโลหิตซ้ำ และควบคุมอาหารรสเค็ม")
+
+    # Uric
+    uric = get_float("Uric Acid", person_data) or 0
+    if uric > 7.5:
+        rec_list.append("งดเครื่องในสัตว์ ยอดผัก และเครื่องดื่มแอลกอฮอล์")
+        
+    # Liver
+    sgot = get_float("SGOT", person_data) or 0
+    sgpt = get_float("SGPT", person_data) or 0
+    if sgot > 40 or sgpt > 41:
+        rec_list.append("งดเครื่องดื่มแอลกอฮอล์ และควรตรวจติดตามค่าตับ")
+
+    if not rec_list:
+        rec_list.append("สุขภาพโดยรวมอยู่ในเกณฑ์ดี ควรตรวจสุขภาพประจำปีอย่างต่อเนื่อง")
+        rec_list.append("รับประทานอาหารครบ 5 หมู่ และออกกำลังกายสม่ำเสมอ")
+
+    rec_html = "".join([f"<li>{r}</li>" for r in rec_list])
+
+    # Doctor Opinion
+    problems = []
+    bmi = 0
+    w, h = get_float("น้ำหนัก", person_data), get_float("ส่วนสูง", person_data)
+    if w and h:
+        bmi = w / ((h/100)**2)
+        if bmi > 25: problems.append("ภาวะน้ำหนักเกิน (Overweight)")
+    
+    if flag_value(person_data.get("FBS"), 70, 100)[1]: problems.append("ระดับน้ำตาลในเลือดสูง (High Blood Sugar)")
+    if sbp > 140: problems.append("ความดันโลหิตสูง (Hypertension)")
+    if chol > 200 or ldl > 130: problems.append("ไขมันในเลือดสูง (Dyslipidemia)")
+    if cxr_abn: problems.append(f"X-Ray: {cxr_res}")
+    
+    doc_op = "สุขภาพปกติ (Normal)"
+    if problems:
+        doc_op = "พบความผิดปกติ (Abnormal Findings):<br>" + "<br>".join([f"- {p}" for p in problems])
+
+    # --- HTML Assembly ---
     return f"""
-        <div class="report-container">
-            <div class="header-section">
-                <div class="header-left">
-                    <h1>MEDICAL REPORT</h1>
-                    <p>รายงานผลการตรวจสุขภาพประจำปี {year}</p>
+    <div class="report-page">
+        <div class="header-row">
+            <div class="h-title">
+                <h1>MEDICAL CHECK-UP REPORT</h1>
+                <p>รายงานผลการตรวจสุขภาพประจำปี {person_data.get('Year', '-')}</p>
+            </div>
+            <div class="h-info">
+                Name: <b>{person_data.get('ชื่อ-สกุล')}</b><br>
+                HN: {person_data.get('HN')} | Age: {get_str('อายุ', person_data)} | Sex: {sex}<br>
+                Dept: {person_data.get('หน่วยงาน', '-')}<br>
+                Date: {get_str('วันที่ตรวจ', person_data)}
+            </div>
+        </div>
+
+        <div class="vitals-bar">
+            <div class="v-item"><div class="v-lbl">Weight</div><div class="v-val">{get_str('น้ำหนัก', person_data)}</div><div class="v-unit">kg</div></div>
+            <div class="v-item"><div class="v-lbl">Height</div><div class="v-val">{get_str('ส่วนสูง', person_data)}</div><div class="v-unit">cm</div></div>
+            <div class="v-item"><div class="v-lbl">BMI</div><div class="v-val">{bmi:.1f}</div><div class="v-unit">kg/m²</div></div>
+            <div class="v-item"><div class="v-lbl">BP</div><div class="v-val">{get_str('SBP', person_data)}/{get_str('DBP', person_data)}</div><div class="v-unit">mmHg</div></div>
+            <div class="v-item"><div class="v-lbl">Pulse</div><div class="v-val">{get_str('Pulse', person_data)}</div><div class="v-unit">bpm</div></div>
+            <div class="v-item"><div class="v-lbl">Waist</div><div class="v-val">{get_str('รอบเอว', person_data)}</div><div class="v-unit">cm</div></div>
+        </div>
+
+        <div class="content-cols">
+            <div class="col-1">
+                <div class="res-box">
+                    <div class="res-head">HEMATOLOGY</div>
+                    <table class="res-tbl">
+                        <tr><th width="40%">Test Name</th><th width="30%" class="t-center">Result</th><th width="30%" class="t-center">Normal Range</th></tr>
+                        {render_table_rows(cbc_data)}
+                    </table>
                 </div>
-                <div class="header-right">
-                    <div class="patient-name">{person_data.get('ชื่อ-สกุล', '-')}</div>
-                    <div class="patient-info-row">
-                        HN: <b>{person_data.get('HN', '-')}</b> 
-                        <span class="info-pill">{int(get_float('อายุ', person_data) or 0)} ปี</span>
-                        <span class="info-pill">{person_data.get('หน่วยงาน', '-')}</span>
-                    </div>
+                
+                <div class="res-box">
+                    <div class="res-head">URINALYSIS</div>
+                    <table class="res-tbl">
+                        <tr><th width="40%">Test Name</th><th width="30%" class="t-center">Result</th><th width="30%" class="t-center">Normal Range</th></tr>
+                        {render_table_rows(ua_data)}
+                    </table>
+                </div>
+                
+                <div class="res-box">
+                    <div class="res-head">SPECIAL EXAMINATIONS</div>
+                    <table class="res-tbl">
+                        <tr><th width="40%">Test Name</th><th width="60%" class="t-center">Result</th></tr>
+                        {render_table_rows([(l,v,"") for l,v,n in sp_data])}
+                    </table>
                 </div>
             </div>
 
-            {render_vitals_grid(person_data)}
-
-            <div class="main-content">
-                <div class="col-left">
-                    {render_table_group("HEMATOLOGY", ["TEST", "RESULT", "NORMAL"], cbc_rows)}
-                    {render_table_group("URINALYSIS & STOOL", ["TEST", "RESULT", "NORMAL"], u_rows)}
-                    {render_special_group("SPECIAL TESTS", sp_items)}
+            <div class="col-2">
+                <div class="res-box">
+                    <div class="res-head">BLOOD CHEMISTRY</div>
+                    <table class="res-tbl">
+                        <tr><th width="40%">Test Name</th><th width="30%" class="t-center">Result</th><th width="30%" class="t-center">Normal Range</th></tr>
+                        {render_table_rows(meta_data)}
+                        {render_table_rows(kl_data)}
+                    </table>
                 </div>
-                <div class="col-right">
-                    {render_table_group("METABOLIC PROFILE", ["TEST", "RESULT", "NORMAL"], meta_rows)}
-                    {render_table_group("KIDNEY & LIVER", ["TEST", "RESULT", "NORMAL"], organ_rows)}
-                    
-                    <div class="footer-wrap" style="height: auto; flex-grow: 1; flex-direction: column; border: none;">
-                         <div class="f-block" style="border: 1px solid #000; border-bottom: none; flex: 1;">
-                            <div class="f-head">DOCTOR'S OPINION</div>
-                            <div class="f-body">{op}</div>
-                        </div>
-                        <div class="f-block" style="border: 1px solid #000; flex: 1;">
-                            <div class="f-head">RECOMMENDATIONS</div>
-                            <div class="f-body">{rec_html}</div>
-                        </div>
+
+                <div class="footer-sec">
+                    <div class="f-col">
+                        <div class="f-title">DOCTOR'S OPINION</div>
+                        <div class="f-text">{doc_op}</div>
+                    </div>
+                    <div class="f-col">
+                        <div class="f-title">RECOMMENDATIONS</div>
+                        <div class="f-text"><ul>{rec_html}</ul></div>
                     </div>
                 </div>
-            </div>
 
-            <div class="signature-section">
-                <div class="sig-block">
-                    <div class="sig-line"></div>
-                    <div class="sig-name">นายแพทย์นพรัตน์ รัชฎาพร</div>
-                    <div class="sig-pos">แพทย์อาชีวเวชศาสตร์ (ว.26674)</div>
+                <div class="sig-row">
+                    <div class="sig-line">
+                        <div class="sig-txt">
+                            ( นายแพทย์นพรัตน์ รัชฎาพร )<br>
+                            แพทย์ผู้ตรวจ (License No. 26674)
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+    </div>
     """
 
 def generate_single_page_report(person_data, all_history_df=None):
-    """
-    สร้างรายงานหน้าเดียวฉบับสมบูรณ์ (รวม HTML Head + CSS + Body)
-    สำหรับพิมพ์ทีละคน (Single Print)
-    """
+    """ฟังก์ชันหลักที่ Admin Panel เรียกใช้"""
     style = get_single_page_style()
     body = render_report_body(person_data, all_history_df)
     
