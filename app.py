@@ -115,6 +115,51 @@ def main_app(df):
     # --- Inject Custom CSS สำหรับปุ่ม Sidebar โดยเฉพาะ ---
     st.markdown("""
     <style>
+        /* --- START: Fix Sidebar Toggle Button (<< / >>) --- */
+        /* ซ่อน Elements ภายในปุ่มเดิม (เช่น SVG หรือ Text ยาวๆ ที่ผิดปกติ) */
+        button[data-testid="stSidebarCollapseButton"] > *,
+        button[data-testid="stSidebarExpandButton"] > * {
+            display: none !important; 
+        }
+
+        /* Sidebar Open -> Show << (Collapse) */
+        button[data-testid="stSidebarCollapseButton"]::after {
+            content: "<<" !important;
+            font-family: 'Courier New', Courier, monospace, sans-serif !important; /* Fallback font เพื่อให้แสดงสัญลักษณ์ได้ชัวร์ */
+            font-size: 1.5rem !important;
+            font-weight: bold !important;
+            color: #666 !important;
+            line-height: 1;
+        }
+
+        /* Sidebar Closed -> Show >> (Expand) */
+        button[data-testid="stSidebarExpandButton"]::after {
+            content: ">>" !important;
+            font-family: 'Courier New', Courier, monospace, sans-serif !important; /* Fallback font */
+            font-size: 1.5rem !important;
+            font-weight: bold !important;
+            color: #666 !important;
+            line-height: 1;
+        }
+        
+        /* Hover effects */
+        button[data-testid="stSidebarCollapseButton"]:hover::after,
+        button[data-testid="stSidebarExpandButton"]:hover::after {
+            color: #333 !important;
+            transform: scale(1.1);
+        }
+        
+        /* ปรับแต่ง Container ของปุ่มให้ดูสะอาดตา */
+        button[data-testid="stSidebarCollapseButton"], 
+        button[data-testid="stSidebarExpandButton"] {
+            border: none !important;
+            background-color: transparent !important;
+            box-shadow: none !important;
+            width: auto !important;
+            padding: 0 8px !important;
+        }
+        /* --- END: Fix Sidebar Toggle Button --- */
+
         /* Styling เฉพาะปุ่ม Primary (พิมพ์รายงาน) ใน Sidebar - สีเขียวด้าน */
         section[data-testid="stSidebar"] div[data-testid="stButton"] > button[kind="primary"] {
             background-color: #1B5E20 !important; /* Dark Green Matte */
