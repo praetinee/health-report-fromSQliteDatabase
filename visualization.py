@@ -234,14 +234,15 @@ def plot_health_radar(person_data):
         w, h = get_float(person_data, 'น้ำหนัก'), get_float(person_data, 'ส่วนสูง')
         if w and h: bmi = w / ((h/100)**2)
     
+    # ปรับลำดับการแสดงผลตามความต้องการ (น้ำตาล -> ไขมัน -> ยูริค -> ตับ -> ไต -> อื่นๆ)
     metrics = [
-        {'type': 'BMI', 'val': bmi, 'label': 'ดัชนีมวลกาย', 'fmt': '{:.1f}'},
-        {'type': 'BP', 'val': get_float(person_data, 'SBP'), 'label': 'ความดัน', 'fmt': '{:.0f}'},
         {'type': 'FBS', 'val': get_float(person_data, 'FBS'), 'label': 'น้ำตาล', 'fmt': '{:.0f}'},
         {'type': 'LDL', 'val': get_float(person_data, 'LDL'), 'label': 'ไขมันเลว', 'fmt': '{:.0f}'},
-        {'type': 'GFR', 'val': get_float(person_data, 'GFR'), 'label': 'ไต', 'fmt': '{:.0f}'},
+        {'type': 'Uric', 'val': get_float(person_data, 'Uric Acid'), 'label': 'กรดยูริก', 'fmt': '{:.1f}'},
         {'type': 'Liver', 'val': get_float(person_data, 'SGPT'), 'label': 'เอนไซม์ตับ', 'fmt': '{:.0f}'},
-        {'type': 'Uric', 'val': get_float(person_data, 'Uric Acid'), 'label': 'กรดยูริก', 'fmt': '{:.1f}'}
+        {'type': 'GFR', 'val': get_float(person_data, 'GFR'), 'label': 'ไต', 'fmt': '{:.0f}'},
+        {'type': 'BMI', 'val': bmi, 'label': 'ดัชนีมวลกาย', 'fmt': '{:.1f}'},
+        {'type': 'BP', 'val': get_float(person_data, 'SBP'), 'label': 'ความดัน', 'fmt': '{:.0f}'}
     ]
     
     scores, categories, display_vals = [], [], []
