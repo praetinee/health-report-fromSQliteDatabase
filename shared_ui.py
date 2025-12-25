@@ -46,7 +46,7 @@ def clean_html_string(html_str):
     return "\n".join([line.strip() for line in html_str.split('\n') if line.strip()])
 
 def inject_custom_css():
-    # แก้ไข: เพิ่ม Fallback Font (Segoe UI Emoji, Apple Color Emoji) เพื่อแก้ปัญหาสัญลักษณ์เป็นสี่เหลี่ยม
+    # แก้ไข: ใช้ Universal Selector (*) เพื่อบังคับฟอนต์ทุกจุด แก้ปัญหาสี่เหลี่ยมดื้อ
     css_content = clean_html_string("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
@@ -66,11 +66,17 @@ def inject_custom_css():
             --header-bg: rgba(128, 128, 128, 0.05);
         }
         
-        /* Updated Font Family Stack: ใส่ Emoji Fonts ต่อท้าย Sarabun */
-        html, body, [class*="st-"], [class*="css"], h1, h2, h3, h4, h5, h6, p, div, span, th, td {
-            font-family: 'Sarabun', 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif !important;
+        /* NUCLEAR OPTION: บังคับทุก Elements ให้ใช้ฟอนต์นี้ */
+        * {
+            font-family: 'Sarabun', 'Tahoma', 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif !important;
         }
 
+        /* ยกเว้นพวก Code Blocks ให้ยังเป็นตัวพิมพ์ดีดอยู่ */
+        code, pre, .stCodeBlock, .stCodeBlock * {
+            font-family: 'Source Code Pro', monospace !important;
+        }
+
+        /* ปรับแต่ง CSS อื่นๆ */
         .section-header-styled {
             font-size: 1.25rem; font-weight: 600; color: var(--primary);
             border-left: 5px solid var(--primary); padding-left: 15px; margin-top: 30px; margin-bottom: 20px;
