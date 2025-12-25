@@ -11,7 +11,7 @@ CSV_FILE_NAME = "LINE User id for Database - UserID.csv"
 # จุดที่คุณต้องแก้ไขคือตรงนี้ครับ! 👇
 # เอาเลข LIFF ID ที่ได้จากเว็บ LINE Developers มาใส่แทนคำว่า YOUR_LIFF_ID_HERE
 # ---------------------------------------------------------------------
-LIFF_ID = "YOUR_LIFF_ID_HERE" 
+LIFF_ID = "2008725340-YHOiWxtj" 
 
 # --- CSV Management Functions ---
 def get_user_dataframe():
