@@ -115,70 +115,67 @@ def main_app(df):
     # --- Inject Custom CSS สำหรับปุ่ม Sidebar โดยเฉพาะ ---
     st.markdown("""
     <style>
-        /* --- Sidebar Toggle Button Customization (Robust Version V3) --- */
+        /* --- Sidebar Toggle Button Customization (Visibility Trick) --- */
         
-        /* 1. กำหนดสไตล์ที่ปุ่มโดยตรง */
-        [data-testid="stSidebarCollapseButton"],
-        [data-testid="stSidebarExpandButton"] {
-            border: 1px solid rgba(0,0,0,0.1) !important;
-            border-radius: 8px !important;
-            background-color: #ffffff !important;
+        /* 1. ซ่อนทุกอย่างในปุ่มเดิมด้วย visibility: hidden */
+        /* วิธีนี้จะทำให้ Layout ยังอยู่ แต่เนื้อหาเดิม (รูปลูกศร, ข้อความ Tooltip) หายไปมองไม่เห็น */
+        button[data-testid="stSidebarCollapseButton"],
+        button[data-testid="stSidebarExpandButton"] {
+            visibility: hidden !important; 
             width: 40px !important;
             height: 40px !important;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
-            transition: all 0.2s ease !important;
+            position: relative !important; /* เพื่อให้ลูกตำแหน่งอิงกับตัวมัน */
+            border: none !important; /* ลบขอบเดิมที่อาจจะติด hidden ไป */
+        }
+
+        /* 2. สร้าง Content ใหม่และสั่ง visibility: visible เพื่อให้กลับมามองเห็นได้ */
+        button[data-testid="stSidebarCollapseButton"]::after,
+        button[data-testid="stSidebarExpandButton"]::after {
+            visibility: visible !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
+            
+            /* แต่งหน้าตาปุ่มใหม่ตรงนี้ */
+            background-color: #ffffff !important;
+            border: 1px solid rgba(0,0,0,0.1) !important;
+            border-radius: 8px !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+            
+            /* Typography: ใช้ monospace เพื่อให้ << และ >> แสดงผลสวยและชัวร์ */
+            font-family: monospace, sans-serif !important; 
+            font-size: 18px !important;
+            font-weight: bold !important;
+            color: #555555 !important;
+            line-height: 1 !important;
+            transition: all 0.2s ease !important;
         }
 
-        /* 2. ซ่อนรูป SVG ข้างในให้หมด (ระบุเจาะจงไปเลย) */
-        [data-testid="stSidebarCollapseButton"] svg,
-        [data-testid="stSidebarExpandButton"] svg,
-        [data-testid="stSidebarCollapseButton"] img,
-        [data-testid="stSidebarExpandButton"] img {
-            display: none !important;
-            width: 0 !important;
-            height: 0 !important;
-            opacity: 0 !important;
-        }
-
-        /* 3. สร้างป้ายใหม่ด้วย ::after โดยใช้ฟอนต์ Arial/Helvetica ที่มีทุกเครื่อง */
-        [data-testid="stSidebarCollapseButton"]::after {
+        /* 3. กำหนดตัวอักษร Fallback ที่ปลอดภัยที่สุด */
+        button[data-testid="stSidebarCollapseButton"]::after {
             content: "<<" !important;
-            font-family: Arial, Helvetica, sans-serif !important;
-            font-size: 20px !important;
-            font-weight: 900 !important;
-            color: #555555 !important;
-            line-height: 1 !important;
-            display: block !important;
-            margin-top: -2px !important;
         }
 
-        [data-testid="stSidebarExpandButton"]::after {
+        button[data-testid="stSidebarExpandButton"]::after {
             content: ">>" !important;
-            font-family: Arial, Helvetica, sans-serif !important;
-            font-size: 20px !important;
-            font-weight: 900 !important;
-            color: #555555 !important;
-            line-height: 1 !important;
-            display: block !important;
-            margin-top: -2px !important;
         }
 
-        /* 4. Hover Effects */
-        [data-testid="stSidebarCollapseButton"]:hover,
-        [data-testid="stSidebarExpandButton"]:hover {
+        /* 4. Hover Effects (ต้องสั่งผ่าน ::after เพราะตัวแม่ hidden อยู่) */
+        button[data-testid="stSidebarCollapseButton"]:hover::after,
+        button[data-testid="stSidebarExpandButton"]:hover::after {
             background-color: #f0f2f6 !important;
+            color: #00B900 !important;
             border-color: #00B900 !important;
             transform: scale(1.05) !important;
         }
-        
-        [data-testid="stSidebarCollapseButton"]:hover::after,
-        [data-testid="stSidebarExpandButton"]:hover::after {
-            color: #00B900 !important;
-        }
         /* --- End Sidebar Customization --- */
+
 
         /* Styling เฉพาะปุ่ม Primary (พิมพ์รายงาน) ใน Sidebar - สีเขียวด้าน */
         section[data-testid="stSidebar"] div[data-testid="stButton"] > button[kind="primary"] {
