@@ -1,69 +1,75 @@
 import streamlit as st
 import pandas as pd
 import streamlit.components.v1 as components
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 import os
 
-# --- Constants ---
-# ชื่อไฟล์ CSV ที่จะใช้เก็บข้อมูล
-CSV_FILE_NAME = "LINE User id for Database - UserID.csv"
+# --- Configuration ---
+# ชื่อไฟล์ Credentials (ต้องวางไว้ที่ root ของโปรเจค)
+SERVICE_ACCOUNT_FILE = "service_account.json" 
 
-# ---------------------------------------------------------------------
-# จุดที่คุณต้องแก้ไขคือตรงนี้ครับ! 👇
-# เอาเลข LIFF ID ที่ได้จากเว็บ LINE Developers มาใส่แทนคำว่า YOUR_LIFF_ID_HERE
-# ---------------------------------------------------------------------
+# ชื่อ Google Sheet ที่จะใช้เก็บข้อมูล User
+# *** ต้องสร้างไฟล์ชื่อนี้ใน Google Drive และ Share ให้ Service Account Email เป็น Editor ***
+SHEET_NAME = "HealthReport_Users"
+
+# LIFF ID
 LIFF_ID = "YOUR_LIFF_ID_HERE" 
 
-# --- CSV Management Functions ---
-def get_user_dataframe():
-    """อ่านข้อมูลจากไฟล์ CSV ถ้าไม่มีไฟล์ให้สร้างใหม่"""
-    if not os.path.exists(CSV_FILE_NAME):
-        # สร้าง DataFrame ว่างพร้อม Header
-        df = pd.DataFrame(columns=["ชื่อ", "นามสกุล", "LINE User ID"])
-        df.to_csv(CSV_FILE_NAME, index=False, encoding='utf-8-sig') # ใช้ utf-8-sig เพื่อรองรับภาษาไทยใน Excel
-        return df
+# --- Google Sheets Connection ---
+def get_gsheet_client():
+    """สร้าง Connection ไปยัง Google Sheets"""
+    scope = [
+        "https://spreadsheets.google.com/feeds",
+        "https://www.googleapis.com/auth/drive"
+    ]
     try:
-        df = pd.read_csv(CSV_FILE_NAME)
-        # ตรวจสอบว่ามี Column ครบไหม ถ้าไม่ครบให้สร้างใหม่ (กัน Error)
-        required_cols = ["ชื่อ", "นามสกุล", "LINE User ID"]
-        if not all(col in df.columns for col in required_cols):
-             st.warning("ไฟล์ CSV มีโครงสร้างไม่ถูกต้อง กำลังสร้างใหม่...")
-             df = pd.DataFrame(columns=required_cols)
-             df.to_csv(CSV_FILE_NAME, index=False, encoding='utf-8-sig')
-        return df
+        creds = ServiceAccountCredentials.from_json_keyfile_name(SERVICE_ACCOUNT_FILE, scope)
+        client = gspread.authorize(creds)
+        return client
     except Exception as e:
-        st.error(f"❌ ไม่สามารถอ่านไฟล์ CSV ได้: {e}")
-        return pd.DataFrame(columns=["ชื่อ", "นามสกุล", "LINE User ID"])
+        st.error(f"❌ ไม่สามารถเชื่อมต่อ Google API ได้: {e}")
+        return None
 
-def save_new_user_to_csv(fname, lname, line_user_id):
-    """บันทึกผู้ใช้ใหม่ลง CSV (ต่อท้าย)"""
+def get_user_worksheet():
+    """ดึง Worksheet แรกจาก Google Sheet"""
+    client = get_gsheet_client()
+    if not client: return None
+    
     try:
-        df = get_user_dataframe()
-        
-        # ตรวจสอบซ้ำอีกครั้งว่ามี ID นี้หรือยัง
-        if line_user_id in df["LINE User ID"].astype(str).values:
-             return True, "ผู้ใช้นี้มีอยู่ในระบบแล้ว"
-
-        # สร้าง DataFrame แถวใหม่
-        new_row = pd.DataFrame([{
-            "ชื่อ": fname,
-            "นามสกุล": lname,
-            "LINE User ID": line_user_id
-        }])
-        
-        # บันทึกต่อท้าย (Append mode 'a') หรือเขียนทับทั้งไฟล์
-        # เพื่อความง่ายและปลอดภัย ใช้ concat แล้ว save ทับทั้งไฟล์
-        updated_df = pd.concat([df, new_row], ignore_index=True)
-        updated_df.to_csv(CSV_FILE_NAME, index=False, encoding='utf-8-sig')
-        
-        return True, "บันทึกข้อมูลสำเร็จ"
+        sheet = client.open(SHEET_NAME).sheet1
+        # ตรวจสอบว่ามี Header ไหม ถ้าไม่มีให้สร้าง
+        if not sheet.row_values(1):
+            sheet.append_row(["ชื่อ", "นามสกุล", "LINE User ID", "วันที่ลงทะเบียน"])
+        return sheet
+    except gspread.exceptions.SpreadsheetNotFound:
+        st.error(f"❌ ไม่พบไฟล์ Google Sheet ชื่อ '{SHEET_NAME}' กรุณาสร้างและแชร์ให้ Service Account")
+        return None
     except Exception as e:
-        return False, f"บันทึกข้อมูลล้มเหลว: {e}"
+        st.error(f"❌ เกิดข้อผิดพลาดในการเปิด Sheet: {e}")
+        return None
+
+# --- User Management Functions ---
 
 def check_if_user_registered(line_user_id):
-    """ตรวจสอบว่า LINE ID นี้มีใน CSV แล้วหรือยัง"""
+    """
+    ตรวจสอบว่า LINE ID นี้มีใน Google Sheet แล้วหรือยัง
+    Returns: (is_registered: bool, user_info: dict)
+    """
+    sheet = get_user_worksheet()
+    if not sheet: return False, None
+    
     try:
-        df = get_user_dataframe()
-        # แปลงเป็น string เพื่อความชัวร์ในการเปรียบเทียบ
+        # ดึงข้อมูลทั้งหมดมาเช็ค (ถ้าข้อมูลเยอะมากในอนาคตอาจต้องปรับ Logic การค้นหา)
+        records = sheet.get_all_records()
+        
+        # แปลงเป็น DataFrame เพื่อค้นหาง่ายๆ
+        df = pd.DataFrame(records)
+        
+        # แปลงเป็น string เพื่อความชัวร์
+        if "LINE User ID" not in df.columns:
+            return False, None
+            
         match = df[df["LINE User ID"].astype(str) == str(line_user_id)]
         
         if not match.empty:
@@ -71,15 +77,35 @@ def check_if_user_registered(line_user_id):
             user_info = {
                 "first_name": str(row["ชื่อ"]), 
                 "last_name": str(row["นามสกุล"]), 
-                "line_id": line_user_id
+                "line_id": str(line_user_id)
             }
             return True, user_info
         return False, None
+        
     except Exception as e: 
-        st.error(f"Error checking user: {e}")
+        # st.error(f"Error checking user in Sheet: {e}")
         return False, None
 
-# --- Helper Functions ---
+def save_new_user_to_gsheet(fname, lname, line_user_id):
+    """บันทึกผู้ใช้ใหม่ลง Google Sheet"""
+    sheet = get_user_worksheet()
+    if not sheet: return False, "ไม่สามารถเชื่อมต่อฐานข้อมูลได้"
+    
+    try:
+        # ตรวจสอบซ้ำว่ามี ID นี้หรือยัง (ป้องกันการกดรัว)
+        # (ข้ามขั้นตอนนี้ก็ได้ถ้ามั่นใจว่าเช็คมาก่อนแล้ว เพื่อความเร็ว)
+        
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        # บันทึกต่อท้าย
+        sheet.append_row([fname, lname, str(line_user_id), timestamp])
+        
+        return True, "บันทึกข้อมูลสำเร็จ"
+    except Exception as e:
+        return False, f"บันทึกข้อมูลล้มเหลว: {e}"
+
+# --- Helper Functions (Logic เดิม) ---
 def clean_string(val): return str(val).strip() if not pd.isna(val) else ""
 
 def normalize_db_name_field(full_name_str):
@@ -88,23 +114,39 @@ def normalize_db_name_field(full_name_str):
     return (parts[0], "") if len(parts) == 1 else ("", "")
 
 def check_registration_logic(df, input_fname, input_lname, input_id):
+    """
+    ตรวจสอบข้อมูลที่กรอก เทียบกับ DataFrame (SQLite)
+    """
     i_fname = clean_string(input_fname)
     i_lname = clean_string(input_lname)
     i_id = clean_string(input_id)
-    if not i_fname or not i_lname or not i_id: return False, "กรอกไม่ครบ", None
-    if len(i_id) != 13: return False, "เลขบัตรต้อง 13 หลัก", None
     
-    # แปลงคอลัมน์เลขบัตรประชาชนให้เป็น string และลบช่องว่างก่อนเปรียบเทียบ
-    # สำคัญ: ต้องแน่ใจว่า df มาจาก load_sqlite_data ที่ clean แล้ว
+    if not i_fname or not i_lname or not i_id: 
+        return False, "กรุณากรอกข้อมูลให้ครบถ้วน", None
+    
+    # ตรวจสอบรูปแบบเลขบัตรเบื้องต้น
+    if len(i_id) != 13 or not i_id.isdigit(): 
+        return False, "เลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก", None
+    
+    # กรองหาจากเลขบัตรก่อน (Unique Key)
+    # ต้องแน่ใจว่า df['เลขบัตรประชาชน'] เป็น string
     user_match = df[df['เลขบัตรประชาชน'].astype(str).str.strip() == i_id]
     
-    if user_match.empty: return False, "ไม่พบเลขบัตร", None
+    if user_match.empty: 
+        return False, "ไม่พบเลขบัตรประชาชนนี้ในระบบฐานข้อมูล", None
+    
+    # ถ้าพบเลขบัตร ให้เช็คชื่อ-นามสกุล
     for _, row in user_match.iterrows():
         db_f, db_l = normalize_db_name_field(row['ชื่อ-สกุล'])
-        # เทียบแบบ ignore case และ space
-        if db_f == i_fname and db_l.replace(" ", "") == i_lname.replace(" ", ""):
-            return True, "สำเร็จ", row.to_dict()
-    return False, "ชื่อนามสกุลไม่ตรง", None
+        
+        # เปรียบเทียบแบบตัดช่องว่างและตัวพิมพ์ (เผื่อไว้)
+        match_fname = db_f.replace(" ", "") == i_fname.replace(" ", "")
+        match_lname = db_l.replace(" ", "") == i_lname.replace(" ", "")
+        
+        if match_fname and match_lname:
+            return True, "ข้อมูลถูกต้อง", row.to_dict()
+            
+    return False, "ชื่อหรือนามสกุลไม่ตรงกับฐานข้อมูล (แต่เลขบัตรถูกต้อง)", None
 
 # --- LIFF Script ---
 def liff_initializer_component():
@@ -134,55 +176,94 @@ def liff_initializer_component():
         }}
         main();
     </script>
-    <div style="text-align:center; padding:20px;">
-        <p>กำลังเชื่อมต่อกับ LINE... กรุณารอสักครู่</p>
+    <div style="text-align:center; padding:20px; color: #666;">
+        <p>กำลังเชื่อมต่อกับ LINE... <br>กรุณารอสักครู่</p>
     </div>
     """
     components.html(js_code, height=100)
 
-# --- Admin Manager (CSV Version) ---
+# --- Admin Manager (Google Sheet Version) ---
 def render_admin_line_manager():
-    st.subheader("📱 จัดการผู้ใช้งาน LINE (CSV Database)")
+    st.subheader("📱 จัดการผู้ใช้งาน LINE (Google Sheets)")
+    sheet = get_user_worksheet()
+    
+    if not sheet:
+        st.error("ไม่สามารถโหลดข้อมูลจาก Google Sheet ได้")
+        return
+
     try:
-        df = get_user_dataframe()
+        records = sheet.get_all_records()
+        df = pd.DataFrame(records)
+        
         if df.empty:
-            st.info("ยังไม่มีข้อมูลผู้ลงทะเบียน")
+            st.info("ยังไม่มีข้อมูลผู้ลงทะเบียนใน Sheet")
         else:
             st.dataframe(df, use_container_width=True)
+            st.success(f"เชื่อมต่อกับ Google Sheet: {SHEET_NAME} สำเร็จ")
             
-            # ปุ่ม Download CSV
-            csv = df.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
-            st.download_button(
-                label="📥 ดาวน์โหลดไฟล์ CSV",
-                data=csv,
-                file_name=CSV_FILE_NAME,
-                mime='text/csv',
-            )
-            
-            st.info("💡 ข้อมูลถูกบันทึกอยู่ในไฟล์ CSV บน Server")
             if st.button("รีเฟรชข้อมูล"): st.rerun()
+            
+            st.info(f"💡 คุณสามารถแก้ไขข้อมูลได้โดยตรงที่ Google Drive ไฟล์: {SHEET_NAME}")
     except Exception as e:
         st.error(f"เกิดข้อผิดพลาดในการดึงข้อมูล: {e}")
 
-# --- Main Render Function ---
+# --- Main Render Function (Registration Page) ---
 def render_registration_page(df):
-    st.markdown("""<style>.reg-container{padding:2rem;border-radius:15px;box-shadow:0 4px 15px rgba(0,0,0,0.1);max-width:500px;margin:auto;}.reg-header{color:#00B900;text-align:center;font-weight:bold;margin-bottom:1.5rem;}.stButton>button{background-color:#00B900!important;color:white!important;border-radius:50px;height:50px;font-size:18px;}</style>""", unsafe_allow_html=True)
+    st.markdown("""
+        <style>
+        .reg-container {
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            max-width: 500px;
+            margin: auto;
+            background-color: white;
+        }
+        .reg-header {
+            color: #00B900;
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 1.5rem;
+        }
+        .stButton>button {
+            background-color: #00B900 !important;
+            color: white !important;
+            border-radius: 50px;
+            height: 50px;
+            font-size: 18px;
+            border: none;
+        }
+        .stButton>button:hover {
+            filter: brightness(1.1);
+        }
+        </style>
+    """, unsafe_allow_html=True)
     
+    # 1. รับ UserID จาก URL หรือ LIFF
     qp_userid = st.query_params.get("userid", None)
-    if qp_userid: st.session_state["line_user_id"] = qp_userid
+    if qp_userid: 
+        st.session_state["line_user_id"] = qp_userid
     
+    # 2. ถ้ายังไม่มี UserID ให้เรียก LIFF Login
     if "line_user_id" not in st.session_state:
-        if st.checkbox("Dev Mode: Mock UserID"):
-            st.session_state["line_user_id"] = "U_MOCK_TEST_12345"
+        if st.checkbox("Dev Mode: Mock UserID (สำหรับทดสอบในคอม)"):
+            st.session_state["line_user_id"] = "U_TEST_MOCK_123456789"
             st.rerun()
         liff_initializer_component()
         return
 
     line_user_id = st.session_state["line_user_id"]
+    
+    # 3. ตรวจสอบว่าเคยลงทะเบียนหรือยัง (Check Google Sheet)
     is_registered, user_info = check_if_user_registered(line_user_id)
     
     if is_registered:
+        # ถ้าเคยลงทะเบียนแล้ว ให้ Auto Login
+        
+        # ค้นหาข้อมูลสุขภาพใน SQLite ตามชื่อที่ได้จาก Google Sheet
+        # (ใช้ str.contains เพื่อความยืดหยุ่น หรือจะใช้ logic เดิมก็ได้)
         found_rows = df[df['ชื่อ-สกุล'].str.contains(user_info['first_name'], na=False)]
+        
         matched_user = None
         for _, row in found_rows.iterrows():
             db_f, db_l = normalize_db_name_field(row['ชื่อ-สกุล'])
@@ -194,41 +275,64 @@ def render_registration_page(df):
              if not st.session_state.get('authenticated'):
                 st.session_state.update({
                     'authenticated': True,
-                    'pdpa_accepted': True,
+                    'pdpa_accepted': True, # ถือว่ายอมรับแล้วตอนลงทะเบียนครั้งแรก
                     'user_hn': matched_user['HN'],
                     'user_name': matched_user['ชื่อ-สกุล'],
                     'is_line_login': True
                 })
                 st.rerun()
-             return
+             return # ปล่อยให้ app.py จัดการต่อ
         else:
-             st.error("พบการลงทะเบียน แต่ไม่พบข้อมูลสุขภาพในระบบ")
+             st.error(f"พบการลงทะเบียน LINE ID นี้ในระบบ แต่ไม่พบข้อมูลสุขภาพของ คุณ{user_info['first_name']} ในฐานข้อมูลปีปัจจุบัน")
+             if st.button("ลงทะเบียนใหม่ (กรณีเปลี่ยนชื่อ/สกุล)"):
+                 # อาจจะต้องมี logic ลบ user เก่า หรือ update แต่เบื้องต้นให้ติดต่อ admin
+                 st.info("กรุณาติดต่อเจ้าหน้าที่เพื่อแก้ไขข้อมูล")
              return
 
+    # 4. ถ้าลงทะเบียนสำเร็จแล้วใน session นี้ ให้แสดงปุ่มเข้าใช้งาน
     if st.session_state.get('line_register_success', False):
-        st.success("✅ ลงทะเบียนเรียบร้อยแล้ว!")
-        if st.button("เข้าดูผลตรวจสุขภาพ", type="primary", use_container_width=True): st.rerun()
+        st.success("✅ ลงทะเบียนเชื่อมต่อบัญชีเรียบร้อยแล้ว!")
+        if st.button("เข้าดูผลตรวจสุขภาพ", type="primary", use_container_width=True): 
+            st.rerun()
         return
 
+    # 5. แสดงฟอร์มลงทะเบียน (ถ้ายังไม่เคยลงทะเบียน)
     with st.container():
-        st.markdown("<h2 class='reg-header'>ลงทะเบียนเชื่อมต่อบัญชี</h2>", unsafe_allow_html=True)
+        st.markdown("<div class='reg-container'>", unsafe_allow_html=True)
+        st.markdown("<h2 class='reg-header'>ลงทะเบียนดูผลตรวจสุขภาพ</h2>", unsafe_allow_html=True)
+        
+        st.info("กรุณากรอกข้อมูลให้ตรงกับบัตรประชาชนเพื่อยืนยันตัวตน")
+        
         with st.expander("📄 ข้อตกลงและเงื่อนไข (PDPA)", expanded=False):
-            st.markdown("1. ยินยอมให้เก็บข้อมูลชื่อ-นามสกุล/เลขบัตร\n2. แสดงผลเฉพาะเจ้าของข้อมูล")
+            st.markdown("""
+            1. ข้าพเจ้ายินยอมให้ระบบเก็บรวบรวม ชื่อ-นามสกุล และ LINE User ID เพื่อใช้ในการยืนยันตัวตนในการเข้าใช้งานครั้งถัดไป
+            2. ข้อมูลสุขภาพจะถูกแสดงเฉพาะเจ้าของข้อมูลที่ยืนยันตัวตนถูกต้องเท่านั้น
+            3. ระบบจะไม่เปิดเผยข้อมูลส่วนบุคคลแก่บุคคลภายนอก
+            """)
+        
         pdpa_check = st.checkbox("ข้าพเจ้ายอมรับข้อตกลงและเงื่อนไข (PDPA)")
+        
         st.markdown("---")
+        
         with st.form("line_reg_form"):
             c1, c2 = st.columns(2)
-            with c1: f = st.text_input("ชื่อ")
+            with c1: f = st.text_input("ชื่อ (ไม่ต้องมีคำนำหน้า)")
             with c2: l = st.text_input("นามสกุล")
             i = st.text_input("เลขบัตรประชาชน (13 หลัก)", max_chars=13)
-            sub = st.form_submit_button("ยืนยันตัวตน", use_container_width=True)
+            
+            sub = st.form_submit_button("ยืนยันตัวตนและผูกบัญชี LINE", use_container_width=True)
 
         if sub:
-            if not pdpa_check: st.warning("กรุณายอมรับ PDPA")
+            if not pdpa_check: 
+                st.warning("⚠️ กรุณากดยอมรับเงื่อนไข PDPA ก่อนลงทะเบียน")
             else:
+                # 1. ตรวจสอบข้อมูลกับ SQLite
                 suc, msg, row = check_registration_logic(df, f, l, i)
+                
                 if suc:
-                    save_suc, save_msg = save_new_user_to_csv(clean_string(f), clean_string(l), line_user_id)
+                    # 2. ถ้าข้อมูลถูกต้อง ให้บันทึกลง Google Sheet
+                    save_suc, save_msg = save_new_user_to_gsheet(clean_string(f), clean_string(l), line_user_id)
+                    
                     if save_suc:
                         st.session_state.update({
                             'line_register_success': True,
@@ -238,5 +342,9 @@ def render_registration_page(df):
                             'user_name': row['ชื่อ-สกุล']
                         })
                         st.rerun()
-                    else: st.error(save_msg)
-                else: st.error(msg)
+                    else: 
+                        st.error(f"❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล: {save_msg}")
+                else: 
+                    st.error(f"❌ {msg}")
+        
+        st.markdown("</div>", unsafe_allow_html=True)
