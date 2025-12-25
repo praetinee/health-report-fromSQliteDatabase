@@ -119,7 +119,6 @@ def main_app(df):
     st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
     inject_custom_css()
 
-    # CSS สำหรับปุ่ม Sidebar
     st.markdown("""
     <style>
         section[data-testid="stSidebar"] div[data-testid="stButton"] > button[kind="primary"] {
@@ -250,19 +249,21 @@ q_userid = st.query_params.get("userid", "")
 if q_userid:
     st.session_state["line_user_id"] = q_userid
 
+# --- แก้ไขจุดสำคัญ (Trigger LIFF) ---
+# ถ้ายังไม่มี UserID ในระบบ ให้เรียก LIFF Script ทันที
+# (ลบเงื่อนไข page == register ออกแล้ว)
+if "line_user_id" not in st.session_state:
+    liff_initializer_component()
+
 # ถ้ามี Line UserID แต่ยังไม่ Auth ให้เข้า Flow ของ render_registration_page (ซึ่งจัดการ auto-login ด้วย)
 if st.session_state.get("line_user_id") and not st.session_state['authenticated']:
     # ใช้ render_registration_page เป็นตัวจัดการหลักสำหรับ LINE Flow
     render_registration_page(df)
     
     # ถ้า render_registration_page ทำงานสำเร็จ มันจะ set authenticated = True และ rerun
-    # ถ้ายังไม่สำเร็จ (ต้องกรอกฟอร์ม) มันจะแสดงฟอร์ม
+    # ถ้ายังไม่สำเร็จ (ต้องกรอกฟอร์ม) มันจะแสดงฟอร์ม และหยุดการทำงานส่วนล่าง
     if not st.session_state['authenticated']:
         st.stop() # หยุดการทำงานของ main_app ไว้ก่อน รอ user กรอกฟอร์ม
-
-# LIFF Initializer (กรณีเปิดครั้งแรกไม่มี params)
-if (st.query_params.get("page") == "register" or q_userid) and "line_user_id" not in st.session_state:
-    liff_initializer_component()
 
 # 4. Normal Web Routing Decision
 
