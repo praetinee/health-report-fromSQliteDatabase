@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 import numpy as np
 
-# --- Import Logic การแปลผล (คงเดิม) ---
+# --- Import Logic การแปลผล ---
 try:
     from performance_tests import (
         interpret_audiogram, interpret_lung_capacity, 
@@ -29,7 +29,7 @@ except ImportError:
     def generate_cbc_recommendations(p, s): return {}
     def generate_urine_recommendations(p, s): return {}
 
-# --- CSS Design: Modern Professional Medical Report ---
+# --- CSS Design: Professional Medical Report (High Contrast) ---
 def get_single_page_style():
     return """
     <style>
@@ -42,17 +42,19 @@ def get_single_page_style():
         
         body {
             font-family: 'Sarabun', sans-serif;
-            font-size: 13px; /* ปรับขนาดฟอนต์ให้พอดีหน้า */
+            font-size: 12px;
             line-height: 1.3;
-            color: #2c3e50;
+            color: #000; /* เปลี่ยนเป็นสีดำสนิทเพื่อความคมชัด */
             background: #fff;
             margin: 0;
-            padding: 10mm; /* ขอบกระดาษ */
+            padding: 10mm;
             width: 210mm;
-            height: 297mm; /* ความสูง A4 */
+            height: 296mm;
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
+            -webkit-print-color-adjust: exact; /* บังคับพิมพ์สีพื้นหลัง */
+            print-color-adjust: exact;
         }
 
         .report-container {
@@ -62,267 +64,193 @@ def get_single_page_style():
             flex-direction: column;
         }
 
-        /* --- Header --- */
+        /* --- Header: Clean & Bold --- */
         .header-section {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid #00695c; /* Medical Teal */
-            padding-bottom: 12px;
-            margin-bottom: 12px;
+            align-items: flex-end;
+            border-bottom: 3px solid #004d40; /* เส้นเขียวเข้มหนา */
+            padding-bottom: 10px;
+            margin-bottom: 15px;
         }
         .header-left h1 {
             margin: 0;
-            font-size: 22px;
-            color: #00695c;
+            font-size: 24px;
+            color: #004d40;
             font-weight: 700;
-            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         .header-left p {
             margin: 2px 0 0 0;
             font-size: 14px;
-            color: #546e7a;
+            color: #333;
+            font-weight: 500;
         }
-        .header-right {
-            text-align: right;
-        }
-        .header-right .patient-name {
-            font-size: 18px;
+        .header-right { text-align: right; }
+        .patient-name {
+            font-size: 20px;
             font-weight: 700;
             color: #000;
             margin: 0;
         }
-        .header-right .patient-meta {
+        .patient-info-row {
             font-size: 13px;
-            color: #444;
             margin-top: 4px;
+            color: #333;
         }
-        .meta-box {
+        .info-pill {
             display: inline-block;
-            background: #e0f2f1;
-            color: #00695c;
-            padding: 2px 6px;
+            background: #eee;
+            border: 1px solid #ccc;
+            padding: 1px 6px;
             border-radius: 4px;
             font-weight: 600;
             margin-left: 5px;
         }
 
-        /* --- Vitals Section --- */
-        .vitals-section {
-            display: flex;
-            background-color: #f8f9fa;
-            border: 1px solid #e0e0e0;
+        /* --- Vitals Grid --- */
+        .vitals-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 10px;
+            background-color: #f1f8e9; /* พื้นหลังเขียวอ่อน */
+            border: 1px solid #8bc34a;
             border-radius: 6px;
-            padding: 8px 0;
+            padding: 10px;
             margin-bottom: 15px;
         }
-        .vital-item {
-            flex: 1;
+        .vital-box {
             text-align: center;
-            border-right: 1px solid #e0e0e0;
+            border-right: 1px solid #c5e1a5;
         }
-        .vital-item:last-child { border-right: none; }
-        .vital-label {
-            font-size: 11px;
-            color: #78909c;
-            text-transform: uppercase;
-            font-weight: 600;
-            margin-bottom: 2px;
-        }
-        .vital-value {
-            font-size: 16px;
-            font-weight: 700;
-            color: #004d40;
-        }
-        .vital-unit {
-            font-size: 11px;
-            font-weight: 400;
-            color: #90a4ae;
-            margin-left: 2px;
-        }
+        .vital-box:last-child { border-right: none; }
+        .vital-title { font-size: 10px; font-weight: 700; color: #558b2f; text-transform: uppercase; }
+        .vital-data { font-size: 16px; font-weight: 700; color: #000; margin-top: 2px; }
+        .vital-u { font-size: 10px; font-weight: 400; color: #555; }
 
-        /* --- Main Content Grid (2 Columns) --- */
-        .content-grid {
+        /* --- Layout Grid --- */
+        .main-content {
             display: flex;
-            gap: 20px;
-            flex-grow: 1; /* ขยายให้เต็มพื้นที่ที่เหลือ */
+            gap: 15px;
+            flex-grow: 1;
         }
-        .column-left { flex: 1; display: flex; flex-direction: column; gap: 15px; }
-        .column-right { flex: 1; display: flex; flex-direction: column; gap: 15px; }
+        .col-left { width: 50%; display: flex; flex-direction: column; gap: 15px; }
+        .col-right { width: 50%; display: flex; flex-direction: column; gap: 15px; }
 
-        /* --- Table Styling --- */
-        .table-card {
-            border: 1px solid #cfd8dc;
-            border-radius: 4px;
+        /* --- Table Styling (High Contrast) --- */
+        .result-group {
+            border: 1px solid #000; /* เส้นขอบดำบาง */
+            border-radius: 0;
             overflow: hidden;
-            background: #fff;
         }
-        .table-header {
-            background-color: #00695c;
+        .group-head {
+            background-color: #004d40;
             color: #fff;
             padding: 6px 10px;
             font-size: 13px;
             font-weight: 700;
             text-transform: uppercase;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            border-bottom: 1px solid #000;
         }
-        .data-table {
+        .res-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 12px;
+            font-size: 11px;
         }
-        .data-table th {
-            background-color: #f5f5f5;
-            color: #555;
-            font-weight: 600;
-            text-align: left;
-            padding: 5px 8px;
-            border-bottom: 1px solid #eee;
-        }
-        .data-table td {
-            padding: 4px 8px;
-            border-bottom: 1px solid #f0f0f0;
-            vertical-align: middle;
-        }
-        .data-table tr:last-child td { border-bottom: none; }
-        .data-table tr:nth-child(even) { background-color: #fafafa; } /* Zebra Striping */
-
-        /* --- Status Colors --- */
-        .val-normal { color: #2e7d32; } /* Green */
-        .val-abnormal { color: #c62828; font-weight: 700; } /* Red Bold */
-        .val-text { color: #333; }
-
-        /* --- Special Tests List --- */
-        .special-list {
-            list-style: none;
-            margin: 0;
-            padding: 0;
-        }
-        .special-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 6px 10px;
-            border-bottom: 1px solid #f0f0f0;
-            font-size: 12px;
-        }
-        .special-item:last-child { border-bottom: none; }
-        .sp-label { font-weight: 600; color: #455a64; }
-        .sp-value { font-weight: 500; text-align: right; }
-
-        /* --- Footer Section --- */
-        .footer-section {
-            margin-top: auto; /* ดันลงล่างสุด */
-            border-top: 2px solid #00695c;
-            padding-top: 15px;
-            display: flex;
-            gap: 20px;
-        }
-        .footer-box {
-            flex: 1;
-            background-color: #fbfbfb;
-            border: 1px solid #e0e0e0;
-            border-radius: 4px;
-            padding: 10px;
-            position: relative;
-        }
-        .footer-title {
-            font-size: 12px;
+        .res-table th {
+            background-color: #cfd8dc; /* เทาเข้มขึ้น */
+            color: #000;
             font-weight: 700;
-            color: #00695c;
-            text-transform: uppercase;
-            margin-bottom: 5px;
-            border-bottom: 1px dashed #ccc;
-            padding-bottom: 3px;
+            text-align: left;
+            padding: 4px 8px;
+            border-bottom: 1px solid #999;
         }
-        .footer-content {
-            font-size: 12px;
-            color: #333;
-            line-height: 1.4;
+        .res-table td {
+            padding: 3px 8px;
+            border-bottom: 1px solid #ddd;
+            vertical-align: middle;
+            color: #000;
         }
-        .footer-content ul { margin: 0; padding-left: 18px; }
+        /* Zebra Striping */
+        .res-table tr:nth-child(even) { background-color: #f5f5f5; }
+        .res-table tr:last-child td { border-bottom: none; }
+
+        /* Values Coloring */
+        .v-norm { color: #2e7d32; }
+        .v-abn { color: #d50000; font-weight: 800; } /* แดงเข้มและตัวหนา */
+        .v-plain { color: #000; }
+
+        /* --- Footer (Fixed Height for consistence) --- */
+        .footer-wrap {
+            margin-top: auto;
+            border: 1px solid #000;
+            display: flex;
+            height: 120px;
+        }
+        .f-block {
+            flex: 1;
+            padding: 8px;
+            border-right: 1px solid #000;
+            display: flex;
+            flex-direction: column;
+        }
+        .f-block:last-child { border-right: none; flex: 1.2; }
+        .f-head {
+            font-size: 12px; font-weight: 700; text-decoration: underline; margin-bottom: 5px; color: #000;
+        }
+        .f-body {
+            font-size: 11px; line-height: 1.3; overflow: hidden;
+        }
+        .f-body ul { margin: 0; padding-left: 15px; }
 
         /* --- Signature --- */
-        .signature-area {
-            width: 200px;
-            text-align: center;
-            margin-left: auto; /* ชิดขวา */
+        .signature-section {
+            display: flex;
+            justify-content: flex-end;
             margin-top: 10px;
         }
+        .sig-block {
+            text-align: center;
+            width: 220px;
+        }
         .sig-line {
-            border-bottom: 1px dotted #999;
-            margin-bottom: 5px;
+            border-bottom: 1px solid #000;
             height: 30px;
+            margin-bottom: 5px;
         }
-        .sig-text { font-size: 12px; color: #555; }
-        .sig-bold { font-weight: 700; color: #000; font-size: 13px; }
+        .sig-name { font-weight: 700; font-size: 13px; }
+        .sig-pos { font-size: 12px; color: #444; }
 
-        @media print {
-            body { -webkit-print-color-adjust: exact; padding: 0; margin: 0; }
-            .report-container { width: 100%; height: 100%; padding: 10mm; box-sizing: border-box; }
-        }
     </style>
-    
-    <script>
-        // Auto-scale to fit A4 if content overflows slightly
-        window.onload = function() {
-            var content = document.querySelector('.report-container');
-            if (content.scrollHeight > 1123) { // A4 height in px at 96dpi approx
-                var scale = 1123 / content.scrollHeight;
-                // content.style.transform = "scale(" + (scale * 0.98) + ")";
-                // content.style.transformOrigin = "top center";
-            }
-        };
-    </script>
     """
 
-def render_vitals(person):
-    def get_v(key, unit=""):
-        val = get_float(key, person)
-        return f"{val} <span class='vital-unit'>{unit}</span>" if val else "-"
+def render_vitals_grid(person):
+    def g(k, u=""):
+        v = get_float(k, person)
+        return f"{v} <span class='vital-u'>{u}</span>" if v else "-"
     
     sbp, dbp = get_float("SBP", person), get_float("DBP", person)
     bp = f"{int(sbp)}/{int(dbp)}" if sbp and dbp else "-"
     
-    w = get_float("น้ำหนัก", person)
-    h = get_float("ส่วนสูง", person)
+    w, h = get_float("น้ำหนัก", person), get_float("ส่วนสูง", person)
     bmi = w / ((h/100)**2) if w and h else 0
     
     return f"""
-    <div class="vitals-section">
-        <div class="vital-item">
-            <div class="vital-label">น้ำหนัก (Weight)</div>
-            <div class="vital-value">{get_v('น้ำหนัก', 'kg')}</div>
-        </div>
-        <div class="vital-item">
-            <div class="vital-label">ส่วนสูง (Height)</div>
-            <div class="vital-value">{get_v('ส่วนสูง', 'cm')}</div>
-        </div>
-        <div class="vital-item">
-            <div class="vital-label">ดัชนีมวลกาย (BMI)</div>
-            <div class="vital-value">{bmi:.1f} <span class="vital-unit">kg/m²</span></div>
-        </div>
-        <div class="vital-item">
-            <div class="vital-label">รอบเอว (Waist)</div>
-            <div class="vital-value">{person.get('รอบเอว', '-') or '-'} <span class="vital-unit">cm</span></div>
-        </div>
-        <div class="vital-item">
-            <div class="vital-label">ความดันโลหิต (BP)</div>
-            <div class="vital-value">{bp} <span class="vital-unit">mmHg</span></div>
-        </div>
-        <div class="vital-item">
-            <div class="vital-label">ชีพจร (Pulse)</div>
-            <div class="vital-value">{get_v('pulse', 'bpm')}</div>
-        </div>
+    <div class="vitals-grid">
+        <div class="vital-box"><div class="vital-title">Weight</div><div class="vital-data">{g('น้ำหนัก', 'kg')}</div></div>
+        <div class="vital-box"><div class="vital-title">Height</div><div class="vital-data">{g('ส่วนสูง', 'cm')}</div></div>
+        <div class="vital-box"><div class="vital-title">BMI</div><div class="vital-data">{bmi:.1f} <span class="vital-u">kg/m²</span></div></div>
+        <div class="vital-box"><div class="vital-title">Waist</div><div class="vital-data">{person.get('รอบเอว', '-') or '-'} <span class="vital-u">cm</span></div></div>
+        <div class="vital-box"><div class="vital-title">BP</div><div class="vital-data">{bp} <span class="vital-u">mmHg</span></div></div>
+        <div class="vital-box"><div class="vital-title">Pulse</div><div class="vital-data">{g('pulse', 'bpm')}</div></div>
     </div>
     """
 
-def render_data_table(title, headers, rows):
+def render_table_group(title, headers, rows):
     html = f"""
-    <div class="table-card">
-        <div class="table-header">{title}</div>
-        <table class="data-table">
+    <div class="result-group">
+        <div class="group-head">{title}</div>
+        <table class="res-table">
             <thead>
                 <tr>
                     <th style="width: 45%;">{headers[0]}</th>
@@ -333,209 +261,172 @@ def render_data_table(title, headers, rows):
             <tbody>
     """
     for row in rows:
-        label_tuple, val_tuple, norm_tuple = row
+        label_t, val_t, norm_t = row
+        label = label_t[0]
+        val = val_t[0]
+        is_abn = val_t[1]
+        norm = norm_t[0]
         
-        # label_tuple = (Text, unused_bool)
-        # val_tuple = (ValueText, IsAbnormal)
-        # norm_tuple = (NormalRange, unused_bool)
-
-        label = label_tuple[0]
-        val_text = val_tuple[0]
-        is_abn = val_tuple[1]
-        norm = norm_tuple[0]
-
-        val_class = "val-abnormal" if is_abn else "val-text"
+        css = "v-abn" if is_abn else "v-plain"
         
         html += f"""
         <tr>
             <td>{label}</td>
-            <td style="text-align: center;" class="{val_class}">{val_text}</td>
-            <td style="text-align: center; color: #777;">{norm}</td>
+            <td style="text-align: center;" class="{css}">{val}</td>
+            <td style="text-align: center;">{norm}</td>
         </tr>
         """
     html += "</tbody></table></div>"
     return html
 
-def render_special_card(title, items):
+def render_special_group(title, items):
     html = f"""
-    <div class="table-card">
-        <div class="table-header">{title}</div>
-        <div class="special-list">
+    <div class="result-group">
+        <div class="group-head">{title}</div>
+        <table class="res-table">
     """
     for label, val, is_abn in items:
-        val_class = "val-abnormal" if is_abn else "val-normal"
-        if val in ["-", "", "ไม่ได้ตรวจ", "N/A"]: val_class = "val-text"
+        css = "v-abn" if is_abn else "v-norm"
+        if val in ["-", "N/A", "ไม่ได้ตรวจ"]: css = "v-plain"
         
         html += f"""
-        <div class="special-item">
-            <span class="sp-label">{label}</span>
-            <span class="sp-value {val_class}">{val}</span>
-        </div>
+        <tr>
+            <td style="width: 40%; font-weight: 600;">{label}</td>
+            <td style="width: 60%; text-align: right;" class="{css}">{val}</td>
+        </tr>
         """
-    html += "</div></div>"
+    html += "</table></div>"
     return html
 
 def generate_single_page_report(person_data, all_history_df=None):
-    # --- Prepare Data ---
+    # --- Data Prep ---
     sex = person_data.get("เพศ", "ชาย")
     year = person_data.get("Year", datetime.now().year + 543)
     
     # 1. CBC
     hb_low, hct_low = (12, 36) if sex == "หญิง" else (13, 39)
-    cbc_def = [
-        ("Hemoglobin", "Hb(%)", ">13,>12", hb_low, None),
-        ("Hematocrit", "HCT", ">39,>36", hct_low, None),
-        ("WBC Count", "WBC (cumm)", "4k-10k", 4000, 10000),
-        ("Platelet", "Plt (/mm)", "1.5-5แสน", 150000, 500000),
-        ("Neutrophil", "Ne (%)", "43-70", 43, 70),
-        ("Lymphocyte", "Ly (%)", "20-44", 20, 44)
+    cbc_rows = [
+        [("Hemoglobin",0), flag(get_float("Hb(%)", person_data), hb_low, None), (f">{hb_low}",0)],
+        [("Hematocrit",0), flag(get_float("HCT", person_data), hct_low, None), (f">{hct_low}",0)],
+        [("WBC Count",0), flag(get_float("WBC (cumm)", person_data), 4000, 10000), ("4k-10k",0)],
+        [("Platelet",0), flag(get_float("Plt (/mm)", person_data), 150000, 500000), ("1.5-5แสน",0)],
+        [("Neutrophil %",0), flag(get_float("Ne (%)", person_data), 43, 70), ("43-70",0)],
+        [("Lymphocyte %",0), flag(get_float("Ly (%)", person_data), 20, 44), ("20-44",0)],
     ]
-    # Format: [(Label, False), (Value, IsAbn), (Norm, False)]
-    cbc_rows = [[(l, False), flag(get_float(k, person_data), low, high), (n, False)] for l, k, n, low, high in cbc_def]
 
-    # 2. Urine
+    # 2. Urine/Stool
     urine_items = [
-        ("Sugar", person_data.get("sugar", "-"), "Neg"),
-        ("Protein", person_data.get("Alb", "-"), "Neg"),
-        ("RBC", person_data.get("RBC1", "-"), "0-2"),
-        ("WBC", person_data.get("WBC1", "-"), "0-5")
+        ("Urine Sugar", "sugar", "Neg"),
+        ("Urine Protein", "Alb", "Neg"),
+        ("RBC", "RBC1", "0-2"),
+        ("WBC", "WBC1", "0-5")
     ]
-    urine_rows = [[(l, False), (v, is_urine_abnormal(l, v, n)), (n, False)] for l, v, n in urine_items]
+    u_rows = [[(l,0), (person_data.get(k,"-"), is_urine_abnormal(l, person_data.get(k), n)), (n,0)] for l,k,n in urine_items]
     
-    # 3. Stool
-    stool_exam = interpret_stool_exam(person_data.get("Stool exam", ""))
-    stool_short = "ปกติ" if "ปกติ" in stool_exam else ("ผิดปกติ" if "พบ" in stool_exam else "-")
-    is_stool_abn = stool_short == "ผิดปกติ"
-    urine_rows.append([("Stool Exam", False), (stool_short, is_stool_abn), ("Normal", False)])
+    stool_val = interpret_stool_exam(person_data.get("Stool exam", ""))
+    stool_s = "Normal" if "ปกติ" in stool_val else ("Abnormal" if "พบ" in stool_val else "-")
+    u_rows.append([("Stool Exam",0), (stool_s, stool_s=="Abnormal"), ("Normal",0)])
 
-    # 4. Metabolic (Sugar/Lipid)
-    metabolic_def = [
-        ("FBS (Sugar)", "FBS", "74-106", 74, 106),
-        ("Cholesterol", "CHOL", "<200", None, 200),
-        ("Triglyceride", "TGL", "<150", None, 150),
-        ("HDL (Good)", "HDL", ">40", 40, None, True),
-        ("LDL (Bad)", "LDL", "<130", None, 130)
-    ]
-    meta_rows = [[(l, False), flag(get_float(k, person_data), low, high, hib if 'hib' in locals() else False), (n, False)] for l, k, n, low, high, *hib in metabolic_def]
-
-    # 5. Kidney & Liver
-    organ_def = [
-        ("Uric Acid", "Uric Acid", "<7.2", None, 7.2),
-        ("Creatinine", "Cr", "0.5-1.2", 0.5, 1.17),
-        ("eGFR", "GFR", ">60", 60, None, True),
-        ("SGOT (Liver)", "SGOT", "<37", None, 37),
-        ("SGPT (Liver)", "SGPT", "<41", None, 41)
-    ]
-    organ_rows = [[(l, False), flag(get_float(k, person_data), low, high, hib if 'hib' in locals() else False), (n, False)] for l, k, n, low, high, *hib in organ_def]
-
-    # 6. Special Tests Data
-    cxr_val, _ = interpret_cxr(person_data.get(f"CXR{str(year)[-2:]}", person_data.get("CXR")))
-    cxr_val = cxr_val.split('⚠️')[0].strip()
-    is_cxr_abn = "ผิดปกติ" in cxr_val or "Abnormal" in cxr_val
-
-    ekg_val, _ = interpret_ekg(person_data.get(f"EKG{str(year)[-2:]}", person_data.get("EKG")))
-    ekg_val = ekg_val.split('⚠️')[0].strip()
-    is_ekg_abn = "ผิดปกติ" in ekg_val or "Abnormal" in ekg_val
-
-    vision_s, color_s, _ = interpret_vision(person_data.get('สรุปเหมาะสมกับงาน', ''), person_data.get('Color_Blind', ''))
-    is_vis_abn = "ผิดปกติ" in vision_s
-    is_col_abn = "ผิดปกติ" in color_s
-
-    hear_res = interpret_audiogram(person_data, all_history_df)
-    hear_short = f"R:{hear_res['summary']['right']} L:{hear_res['summary']['left']}"
-    is_hear_abn = "ผิดปกติ" in hear_short or "เสื่อม" in hear_short
-
-    lung_s, _, _ = interpret_lung_capacity(person_data)
-    lung_short = lung_s.replace("สมรรถภาพปอด", "").strip()
-    if not lung_short: lung_short = "-"
-    is_lung_abn = "ผิดปกติ" in lung_short
-
-    special_items = [
-        ("Chest X-Ray", cxr_val, is_cxr_abn),
-        ("EKG (Heart)", ekg_val, is_ekg_abn),
-        ("Vision", vision_s, is_vis_abn),
-        ("Color Blind", color_s, is_col_abn),
-        ("Hearing", hear_short, is_hear_abn),
-        ("Lung Func.", lung_short, is_lung_abn)
+    # 3. Metabolic
+    meta_rows = [
+        [("FBS (Sugar)",0), flag(get_float("FBS", person_data), 74, 106), ("74-106",0)],
+        [("Cholesterol",0), flag(get_float("CHOL", person_data), None, 200), ("<200",0)],
+        [("Triglyceride",0), flag(get_float("TGL", person_data), None, 150), ("<150",0)],
+        [("HDL (Good)",0), flag(get_float("HDL", person_data), 40, None, True), (">40",0)],
+        [("LDL (Bad)",0), flag(get_float("LDL", person_data), None, 130), ("<130",0)],
     ]
 
-    # --- Recommendations Logic ---
+    # 4. Organ
+    organ_rows = [
+        [("Uric Acid",0), flag(get_float("Uric Acid", person_data), None, 7.2), ("<7.2",0)],
+        [("Creatinine",0), flag(get_float("Cr", person_data), 0.5, 1.17), ("0.5-1.2",0)],
+        [("eGFR",0), flag(get_float("GFR", person_data), 60, None, True), (">60",0)],
+        [("SGOT",0), flag(get_float("SGOT", person_data), None, 37), ("<37",0)],
+        [("SGPT",0), flag(get_float("SGPT", person_data), None, 41), ("<41",0)],
+    ]
+
+    # 5. Special
+    cxr = interpret_cxr(person_data.get(f"CXR{str(year)[-2:]}", person_data.get("CXR"))).split('⚠️')[0].strip()
+    ekg = interpret_ekg(person_data.get(f"EKG{str(year)[-2:]}", person_data.get("EKG"))).split('⚠️')[0].strip()
+    vis, col, _ = interpret_vision(person_data.get('สรุปเหมาะสมกับงาน',''), person_data.get('Color_Blind',''))
+    hear = f"R:{interpret_audiogram(person_data, all_history_df)['summary']['right']}"
+    lung, _, _ = interpret_lung_capacity(person_data)
+    lung = lung.replace("สมรรถภาพปอด","").strip() or "-"
+
+    sp_items = [
+        ("Chest X-Ray", cxr, "ผิดปกติ" in cxr),
+        ("EKG", ekg, "ผิดปกติ" in ekg),
+        ("Vision", vis, "ผิดปกติ" in vis),
+        ("Color Blind", col, "ผิดปกติ" in col),
+        ("Hearing", hear, "ผิดปกติ" in hear),
+        ("Lung Function", lung, "ผิดปกติ" in lung),
+    ]
+
+    # Recommendations
+    rec_list = generate_fixed_recommendations(person_data)
+    rec_html = "<ul>" + "".join([f"<li>{r}</li>" for r in rec_list]) + "</ul>" if rec_list else "<ul><li>ดูแลสุขภาพตามปกติ</li></ul>"
+    
     cbc_rec = generate_cbc_recommendations(person_data, sex)
     urine_rec = generate_urine_recommendations(person_data, sex)
-    doc_op = generate_doctor_opinion(person_data, sex, cbc_rec, urine_rec)
-    if is_empty(doc_op) or doc_op == "-": doc_op = "สุขภาพโดยรวมแข็งแรงสมบูรณ์ดี"
+    op = generate_doctor_opinion(person_data, sex, cbc_rec, urine_rec)
+    if is_empty(op) or op == "-": op = "สุขภาพโดยรวมปกติ"
 
-    rec_list = generate_fixed_recommendations(person_data)
-    rec_html = ""
-    if rec_list:
-        rec_html = "<ul>" + "".join([f"<li>{r}</li>" for r in rec_list]) + "</ul>"
-    else:
-        rec_html = "<ul><li>ควรออกกำลังกายสม่ำเสมอ พักผ่อนให้เพียงพอ และทานอาหารที่มีประโยชน์</li></ul>"
-
-    # --- HTML Assembly ---
     return f"""
     <!DOCTYPE html>
     <html lang="th">
     <head>
         <meta charset="UTF-8">
-        <title>Medical Health Report - {person_data.get('ชื่อ-สกุล')}</title>
+        <title>Health Report {person_data.get('HN')}</title>
         {get_single_page_style()}
     </head>
     <body>
         <div class="report-container">
-            <!-- Header -->
             <div class="header-section">
                 <div class="header-left">
-                    <h1>Medical Health Report</h1>
+                    <h1>MEDICAL REPORT</h1>
                     <p>รายงานผลการตรวจสุขภาพประจำปี {year}</p>
                 </div>
                 <div class="header-right">
                     <div class="patient-name">{person_data.get('ชื่อ-สกุล', '-')}</div>
-                    <div class="patient-meta">
+                    <div class="patient-info-row">
                         HN: <b>{person_data.get('HN', '-')}</b> 
-                        <span class="meta-box">{int(get_float('อายุ', person_data) or 0)} ปี</span>
-                        <span class="meta-box">{person_data.get('หน่วยงาน', 'General')}</span>
+                        <span class="info-pill">{int(get_float('อายุ', person_data) or 0)} ปี</span>
+                        <span class="info-pill">{person_data.get('หน่วยงาน', '-')}</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Vitals -->
-            {render_vitals(person_data)}
+            {render_vitals_grid(person_data)}
 
-            <!-- Main Content Grid -->
-            <div class="content-grid">
-                <!-- Left Column -->
-                <div class="column-left">
-                    {render_data_table("HEMATOLOGY (ความสมบูรณ์เลือด)", ["Test Name", "Result", "Normal"], cbc_rows)}
-                    {render_data_table("URINALYSIS & STOOL", ["Test Name", "Result", "Normal"], urine_rows)}
+            <div class="main-content">
+                <div class="col-left">
+                    {render_table_group("HEMATOLOGY", ["TEST", "RESULT", "NORMAL"], cbc_rows)}
+                    {render_table_group("URINALYSIS & STOOL", ["TEST", "RESULT", "NORMAL"], u_rows)}
+                    {render_special_group("SPECIAL TESTS", sp_items)}
                 </div>
-
-                <!-- Right Column -->
-                <div class="column-right">
-                    {render_data_table("METABOLIC PROFILE (น้ำตาล/ไขมัน)", ["Test Name", "Result", "Normal"], meta_rows)}
-                    {render_data_table("KIDNEY & LIVER FUNCTION", ["Test Name", "Result", "Normal"], organ_rows)}
-                    {render_special_card("SPECIAL EXAMINATIONS (การตรวจพิเศษ)", special_items)}
-                </div>
-            </div>
-
-            <!-- Footer -->
-            <div class="footer-section">
-                <div class="footer-box" style="flex: 1.2;">
-                    <div class="footer-title">DOCTOR'S OPINION (ความเห็นแพทย์)</div>
-                    <div class="footer-content">{doc_op}</div>
-                </div>
-                <div class="footer-box" style="flex: 1.5;">
-                    <div class="footer-title">RECOMMENDATIONS (คำแนะนำ)</div>
-                    <div class="footer-content">{rec_html}</div>
+                <div class="col-right">
+                    {render_table_group("METABOLIC PROFILE", ["TEST", "RESULT", "NORMAL"], meta_rows)}
+                    {render_table_group("KIDNEY & LIVER", ["TEST", "RESULT", "NORMAL"], organ_rows)}
+                    
+                    <div class="footer-wrap" style="height: auto; flex-grow: 1; flex-direction: column; border: none;">
+                         <div class="f-block" style="border: 1px solid #000; border-bottom: none; flex: 1;">
+                            <div class="f-head">DOCTOR'S OPINION</div>
+                            <div class="f-body">{op}</div>
+                        </div>
+                        <div class="f-block" style="border: 1px solid #000; flex: 1;">
+                            <div class="f-head">RECOMMENDATIONS</div>
+                            <div class="f-body">{rec_html}</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Signature -->
-            <div class="signature-area">
-                <div class="sig-line"></div>
-                <div class="sig-bold">นายแพทย์นพรัตน์ รัชฎาพร</div>
-                <div class="sig-text">แพทย์อาชีวเวชศาสตร์ (ว.26674)</div>
-                <div class="sig-text">โรงพยาบาลสันทราย</div>
+            <div class="signature-section">
+                <div class="sig-block">
+                    <div class="sig-line"></div>
+                    <div class="sig-name">นายแพทย์นพรัตน์ รัชฎาพร</div>
+                    <div class="sig-pos">แพทย์อาชีวเวชศาสตร์ (ว.26674)</div>
+                </div>
             </div>
         </div>
     </body>
