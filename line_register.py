@@ -155,6 +155,7 @@ def liff_initializer_component():
     if "line_user_id" in st.session_state or st.query_params.get("userid"):
         return
 
+    # เพิ่ม Alert ใน catch block เพื่อดู Error บนมือถือ
     js_code = f"""
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script>
@@ -174,16 +175,17 @@ def liff_initializer_component():
                     liff.login();
                 }}
             }} catch (err) {{
+                alert("LIFF Error: " + err); // แสดง Alert ถ้ามี Error
                 console.error("LIFF Init failed", err);
             }}
         }}
         main();
     </script>
-    <div style="text-align:center; padding:20px; color: #666;">
-        <p>กำลังเชื่อมต่อกับ LINE... <br>กรุณารอสักครู่</p>
+    <div style="text-align:center; padding:20px; color: #666; background-color: #f0f2f6; border-radius: 10px;">
+        <p>🔄 กำลังเชื่อมต่อกับ LINE... <br>(กรุณารอสักครู่)</p>
     </div>
     """
-    components.html(js_code, height=100)
+    components.html(js_code, height=150)
 
 # --- Admin Manager ---
 def render_admin_line_manager():
@@ -220,6 +222,7 @@ def render_registration_page(df):
         if st.checkbox("Dev Mode: Mock UserID (สำหรับทดสอบ)"):
             st.session_state["line_user_id"] = "U_TEST_MOCK_123456789"
             st.rerun()
+        # เรียก LIFF ถ้ายังไม่มี ID
         liff_initializer_component()
         return
 
