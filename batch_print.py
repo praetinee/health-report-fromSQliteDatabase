@@ -4,11 +4,13 @@ import html
 import json
 from datetime import datetime
 
-# --- Import ฟังก์ชันสำหรับการสร้างรายงาน (Report Generation) ---
-from print_report import (
-    render_printable_report_body,
-    get_main_report_css
+# --- CHANGED: Use v2 exclusively ---
+from print_report_v2 import (
+    render_report_body,
+    get_single_page_style
 )
+
+# Keep performance report imports as they handle the specific sub-reports
 from print_performance_report import (
     render_performance_report_body,
     get_performance_report_css,
@@ -73,9 +75,9 @@ def check_data_readiness(person_data, report_type):
 def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข้อมูลปีล่าสุดของแต่ละคน"):
     """สร้าง HTML สำหรับพิมพ์"""
     report_bodies = []
-    page_break_div = "<div style='page-break-after: always;'></div>"
     
-    css_main = get_main_report_css()
+    # CSS Combined
+    css_main = get_single_page_style() # From v2
     css_perf = get_performance_report_css()
     full_css = f"{css_main}\n{css_perf}" 
 
@@ -97,10 +99,13 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
 
             patient_bodies = []
             
+            # 1. Main Health Report (V2)
             need_main = report_type in ["รายงานสุขภาพ (Health Report)", "ทั้งรายงานสุขภาพและสมรรถภาพ"]
             if need_main and has_basic_health_data(person_data):
-                patient_bodies.append(render_printable_report_body(person_data, person_history_df))
+                # Use v2 render function
+                patient_bodies.append(render_report_body(person_data, person_history_df))
             
+            # 2. Performance Report
             need_perf = report_type in ["รายงานสมรรถภาพ (Performance Report)", "ทั้งรายงานสุขภาพและสมรรถภาพ"]
             has_vis = has_vision_data(person_data)
             has_hear = has_hearing_data(person_data)
@@ -112,7 +117,9 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
                 skipped_count += 1
                 continue
             
-            combined_patient_html = page_break_div.join(patient_bodies)
+            # Join parts for this patient (no page break between health & perf for same person if fit? 
+            # Usually better to separate or let css handle it. V2 body has page-break-after: always)
+            combined_patient_html = "".join(patient_bodies)
             report_bodies.append(combined_patient_html)
 
         except Exception as e:
@@ -124,7 +131,7 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
     if not report_bodies:
         return None, skipped_count
 
-    all_bodies = page_break_div.join(report_bodies)
+    all_bodies = "".join(report_bodies)
     
     full_html = f"""
     <!DOCTYPE html>
