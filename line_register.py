@@ -155,11 +155,11 @@ def liff_initializer_component():
     if "line_user_id" in st.session_state or st.query_params.get("userid"):
         return
 
-    # เพิ่ม Alert ใน catch block เพื่อดู Error บนมือถือ
+    # แก้ไข Script ให้รอ DOM Ready ก่อนทำงาน เพื่อแก้ Error appendChild
     js_code = f"""
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script>
-        async function main() {{
+        async function runLiff() {{
             try {{
                 await liff.init({{ liffId: "{LIFF_ID}" }});
                 if (liff.isLoggedIn()) {{
@@ -175,14 +175,20 @@ def liff_initializer_component():
                     liff.login();
                 }}
             }} catch (err) {{
-                alert("LIFF Error: " + err); // แสดง Alert ถ้ามี Error
+                document.getElementById("status-text").innerText = "Error: " + err;
                 console.error("LIFF Init failed", err);
             }}
         }}
-        main();
+
+        // รอให้หน้าเว็บโหลดเสร็จก่อนค่อยรัน LIFF
+        if (document.readyState === "loading") {{
+            document.addEventListener("DOMContentLoaded", runLiff);
+        }} else {{
+            runLiff();
+        }}
     </script>
     <div style="text-align:center; padding:20px; color: #666; background-color: #f0f2f6; border-radius: 10px;">
-        <p>🔄 กำลังเชื่อมต่อกับ LINE... <br>(กรุณารอสักครู่)</p>
+        <p id="status-text">🔄 กำลังเชื่อมต่อกับ LINE... <br>(กรุณารอสักครู่)</p>
     </div>
     """
     components.html(js_code, height=150)
@@ -222,13 +228,11 @@ def render_registration_page(df):
         if st.checkbox("Dev Mode: Mock UserID (สำหรับทดสอบ)"):
             st.session_state["line_user_id"] = "U_TEST_MOCK_123456789"
             st.rerun()
-        # เรียก LIFF ถ้ายังไม่มี ID
         liff_initializer_component()
         return
 
     line_user_id = st.session_state["line_user_id"]
     
-    # แสดง Debug ID (ถ้าเห็น ID ขึ้น แสดงว่า LIFF ทำงานแล้ว)
     st.caption(f"Connected LINE ID: {line_user_id}")
 
     with st.spinner(f"กำลังเชื่อมต่อข้อมูล..."):
