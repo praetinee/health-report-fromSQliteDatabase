@@ -115,11 +115,11 @@ def main_app(df):
     # --- Inject Custom CSS สำหรับปุ่ม Sidebar โดยเฉพาะ ---
     st.markdown("""
     <style>
-        /* --- Sidebar Toggle Button Customization (Corrected) --- */
+        /* --- Sidebar Toggle Button Customization (Improved) --- */
         
-        /* 1. ซ่อนรูปภาพ SVG ไอคอนเดิมออกไปเลย เพื่อไม่ให้แสดงผลซ้อนหรือเป็นข้อความแปลกๆ */
-        button[data-testid="stSidebarCollapseButton"] svg, 
-        button[data-testid="stSidebarExpandButton"] svg {
+        /* 1. ซ่อนรูปภาพ SVG และ Child Elements ทั้งหมดภายในปุ่ม เพื่อไม่ให้ข้อความ Alt Text หรือ Icon เดิมซ้อนทับ */
+        button[data-testid="stSidebarCollapseButton"] > *, 
+        button[data-testid="stSidebarExpandButton"] > * {
             display: none !important;
         }
 
@@ -137,24 +137,27 @@ def main_app(df):
             box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
             padding: 0 !important;
             transition: all 0.2s ease !important;
+            overflow: hidden !important; /* ป้องกันข้อความยาวๆ ล้นออกมา */
         }
 
-        /* 3. สร้าง Content ใหม่ด้วย ::after เพื่อแสดงสัญลักษณ์ที่ต้องการ */
+        /* 3. สร้าง Content ใหม่ด้วย ::after พร้อม Fallback Font */
+        
         /* ปุ่ม Collapse (ตอน Sidebar เปิดอยู่) -> แสดง << */
         button[data-testid="stSidebarCollapseButton"]::after {
             content: "<<" !important;
-            font-family: monospace !important;
+            /* ใช้ Font Stack ที่รองรับสัญลักษณ์ชัวร์ๆ (Monospace จะแสดง << ได้สวยเหมือน Code) */
+            font-family: "Courier New", Courier, "Segoe UI Symbol", monospace !important; 
             font-size: 20px !important;
             font-weight: 900 !important;
             color: #555555 !important;
             line-height: 1 !important;
-            margin-top: -2px !important; /* ปรับตำแหน่งแกน Y นิดหน่อยให้กลางเป๊ะ */
+            margin-top: -2px !important; 
         }
 
         /* ปุ่ม Expand (ตอน Sidebar ปิดอยู่) -> แสดง >> */
         button[data-testid="stSidebarExpandButton"]::after {
             content: ">>" !important;
-            font-family: monospace !important;
+            font-family: "Courier New", Courier, "Segoe UI Symbol", monospace !important;
             font-size: 20px !important;
             font-weight: 900 !important;
             color: #555555 !important;
