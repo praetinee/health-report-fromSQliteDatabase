@@ -14,14 +14,17 @@ SERVICE_ACCOUNT_FILE = "service_account.json"
 SHEET_NAME = "LINE User id for Database"
 
 # LIFF ID
+# *** อย่าลืมเปลี่ยนตรงนี้เป็น LIFF ID ของคุณที่ได้จาก LINE Developers ***
 LIFF_ID = "YOUR_LIFF_ID_HERE" 
 
 # --- Google Sheets Connection ---
 def get_gsheet_client():
     """สร้าง Connection ไปยัง Google Sheets"""
+    # เพิ่ม Scope 'spreadsheets' เพื่อความชัวร์ในการเขียนข้อมูล
     scope = [
         "https://spreadsheets.google.com/feeds",
-        "https://www.googleapis.com/auth/drive"
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/spreadsheets"
     ]
     try:
         creds = ServiceAccountCredentials.from_json_keyfile_name(SERVICE_ACCOUNT_FILE, scope)
@@ -43,7 +46,7 @@ def get_user_worksheet():
             sheet.append_row(["ชื่อ", "นามสกุล", "LINE User ID"])
         return sheet
     except gspread.exceptions.SpreadsheetNotFound:
-        st.error(f"❌ ไม่พบไฟล์ Google Sheet ชื่อ '{SHEET_NAME}' กรุณาสร้างและแชร์ให้ Service Account")
+        st.error(f"❌ ไม่พบไฟล์ Google Sheet ชื่อ '{SHEET_NAME}' กรุณาสร้างไฟล์และแชร์ให้ Service Account (อีเมลในไฟล์ json)")
         return None
     except Exception as e:
         st.error(f"❌ เกิดข้อผิดพลาดในการเปิด Sheet: {e}")
@@ -91,7 +94,8 @@ def save_new_user_to_gsheet(fname, lname, line_user_id):
     
     try:
         # บันทึกต่อท้าย (ตัดวันที่ออกตามที่แจ้ง)
-        sheet.append_row([fname, lname, str(line_user_id)])
+        # ใช้ str() คลุมทุกตัวเพื่อความชัวร์
+        sheet.append_row([str(fname), str(lname), str(line_user_id)])
         
         return True, "บันทึกข้อมูลสำเร็จ"
     except Exception as e:
@@ -154,9 +158,14 @@ def liff_initializer_component():
                     const profile = await liff.getProfile();
                     const userId = profile.userId;
                     const currentUrl = new URL(window.location.href);
+                    
+                    // ถ้ายังไม่มี userid ใน URL ให้เติมและ Redirect
                     if (!currentUrl.searchParams.has("userid")) {{
                         currentUrl.searchParams.set("userid", userId);
-                        window.location.href = currentUrl.toString();
+                        
+                        // สำคัญ: ใช้ window.top.location.href เพื่อเปลี่ยน URL ของหน้าหลัก (Parent Window)
+                        // แทนที่จะเปลี่ยนแค่ใน iframe ของ Streamlit Component
+                        window.top.location.href = currentUrl.toString();
                     }}
                 }} else {{
                     liff.login();
