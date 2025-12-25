@@ -4,10 +4,11 @@ import streamlit.components.v1 as components
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import os
-import time
+import datetime
+import json
 
 # --- Configuration ---
-# ชื่อไฟล์ Credentials (ต้องวางไว้ที่ root ของโปรเจค)
+# ชื่อไฟล์ Credentials (สำหรับ Local)
 SERVICE_ACCOUNT_FILE = "service_account.json" 
 
 # 1. ชื่อไฟล์บน Google Drive (ต้องตรงเป๊ะ)
@@ -21,19 +22,39 @@ LIFF_ID = "2008725340-YHOiWxtj"
 
 # --- Google Sheets Connection ---
 def get_gsheet_client():
-    """สร้าง Connection ไปยัง Google Sheets"""
+    """สร้าง Connection ไปยัง Google Sheets (รองรับทั้ง Local และ Cloud)"""
     
-    if not os.path.exists(SERVICE_ACCOUNT_FILE):
-        st.error(f"❌ ไม่พบไฟล์ {SERVICE_ACCOUNT_FILE} ในโฟลเดอร์โปรเจค")
-        return None
-
     scope = [
         "https://spreadsheets.google.com/feeds",
         "https://www.googleapis.com/auth/drive",
         "https://www.googleapis.com/auth/spreadsheets"
     ]
+    
+    creds = None
+    
+    # 1. ลองอ่านจาก Streamlit Secrets (สำหรับ Cloud)
+    if "gcp_service_account" in st.secrets:
+        try:
+            # แปลง Secrets object ให้เป็น Dictionary
+            creds_dict = dict(st.secrets["gcp_service_account"])
+            creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+        except Exception as e:
+            st.error(f"❌ อ่าน Secrets ไม่สำเร็จ: {e}")
+            return None
+
+    # 2. ถ้าไม่มี Secrets ให้ลองอ่านจากไฟล์ (สำหรับ Local)
+    elif os.path.exists(SERVICE_ACCOUNT_FILE):
+        try:
+            creds = ServiceAccountCredentials.from_json_keyfile_name(SERVICE_ACCOUNT_FILE, scope)
+        except Exception as e:
+            st.error(f"❌ อ่านไฟล์ JSON ไม่สำเร็จ: {e}")
+            return None
+    
+    else:
+        st.error("❌ ไม่พบ Credentials! (กรุณาตั้งค่า st.secrets หรือวางไฟล์ json)")
+        return None
+
     try:
-        creds = ServiceAccountCredentials.from_json_keyfile_name(SERVICE_ACCOUNT_FILE, scope)
         client = gspread.authorize(creds)
         return client
     except Exception as e:
@@ -53,19 +74,18 @@ def get_user_worksheet():
         try:
             worksheet = sheet_file.worksheet(GOOGLE_SHEET_TABNAME)
         except gspread.WorksheetNotFound:
-            # ถ้าหาแท็บชื่อ UserID ไม่เจอ ให้ลองใช้แท็บแรกสุดแทน พร้อมแจ้งเตือน
             worksheet = sheet_file.sheet1
-            # st.warning(f"⚠️ ไม่พบแท็บชื่อ '{GOOGLE_SHEET_TABNAME}' ระบบจะใช้แท็บแรก '{worksheet.title}' แทน")
+            st.warning(f"⚠️ ไม่พบแท็บชื่อ '{GOOGLE_SHEET_TABNAME}' ระบบจะใช้แท็บแรก '{worksheet.title}' แทน")
 
         # ตรวจสอบ Header
         if not worksheet.row_values(1):
-            worksheet.append_row(["ชื่อ", "นามสกุล", "LINE User ID"])
+            worksheet.append_row(["ชื่อ", "นามสกุล", "LINE User ID", "Timestamp"])
             
         return worksheet
 
     except gspread.exceptions.SpreadsheetNotFound:
         st.error(f"❌ ไม่พบไฟล์ Google Sheet ชื่อ '{GOOGLE_SHEET_FILENAME}' บน Google Drive")
-        st.info(f"💡 กรุณาตรวจสอบว่าชื่อไฟล์บน Drive คือ '{GOOGLE_SHEET_FILENAME}' และได้แชร์ให้ Service Account แล้ว")
+        st.info(f"💡 กรุณาตรวจสอบว่าชื่อไฟล์บน Drive คือ '{GOOGLE_SHEET_FILENAME}' และได้แชร์ให้ Service Account (Editor) แล้ว")
         return None
     except Exception as e:
         st.error(f"❌ เกิดข้อผิดพลาดในการเปิด Sheet: {e}")
@@ -100,7 +120,7 @@ def check_if_user_registered(line_user_id):
         return False, None
         
     except Exception as e: 
-        st.error(f"⚠️ อ่านข้อมูลจาก Sheet ไม่ได้: {e}")
+        # st.error(f"⚠️ อ่านข้อมูลจาก Sheet ไม่ได้: {e}")
         return False, None
 
 def save_new_user_to_gsheet(fname, lname, line_user_id):
@@ -109,7 +129,8 @@ def save_new_user_to_gsheet(fname, lname, line_user_id):
     if not sheet: return False, "ไม่สามารถเชื่อมต่อฐานข้อมูลได้"
     
     try:
-        row_data = [str(fname), str(lname), str(line_user_id)]
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        row_data = [str(fname), str(lname), str(line_user_id), timestamp]
         sheet.append_row(row_data)
         return True, "บันทึกข้อมูลสำเร็จ"
     except Exception as e:
@@ -155,7 +176,6 @@ def liff_initializer_component():
     if "line_user_id" in st.session_state or st.query_params.get("userid"):
         return
 
-    # แก้ไข Script ให้รอ DOM Ready ก่อนทำงาน เพื่อแก้ Error appendChild
     js_code = f"""
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script>
@@ -175,12 +195,11 @@ def liff_initializer_component():
                     liff.login();
                 }}
             }} catch (err) {{
-                document.getElementById("status-text").innerText = "Error: " + err;
+                // document.getElementById("status-text").innerText = "Error: " + err;
                 console.error("LIFF Init failed", err);
             }}
         }}
 
-        // รอให้หน้าเว็บโหลดเสร็จก่อนค่อยรัน LIFF
         if (document.readyState === "loading") {{
             document.addEventListener("DOMContentLoaded", runLiff);
         }} else {{
@@ -225,7 +244,8 @@ def render_registration_page(df):
         st.session_state["line_user_id"] = qp_userid
     
     if "line_user_id" not in st.session_state:
-        if st.checkbox("Dev Mode: Mock UserID (สำหรับทดสอบ)"):
+        # Checkbox for Dev Mode
+        if st.checkbox("Dev Mode: Mock UserID (สำหรับทดสอบในคอม)"):
             st.session_state["line_user_id"] = "U_TEST_MOCK_123456789"
             st.rerun()
         liff_initializer_component()
@@ -233,7 +253,7 @@ def render_registration_page(df):
 
     line_user_id = st.session_state["line_user_id"]
     
-    st.caption(f"Connected LINE ID: {line_user_id}")
+    # st.caption(f"Connected LINE ID: {line_user_id}")
 
     with st.spinner(f"กำลังเชื่อมต่อข้อมูล..."):
         is_registered, user_info = check_if_user_registered(line_user_id)
@@ -304,3 +324,13 @@ def render_registration_page(df):
                 else: 
                     st.error(f"❌ {msg}")
         st.markdown("</div>", unsafe_allow_html=True)
+        
+        # --- Debug Tools ---
+        st.markdown("---")
+        with st.expander("🛠️ เครื่องมือทดสอบระบบ (สำหรับ Admin)"):
+            if st.button("ทดสอบเขียนข้อมูลลง Google Sheet"):
+                test_result, test_msg = save_new_user_to_gsheet("TestName", "TestLastname", "TEST_ID_DEBUG")
+                if test_result:
+                    st.success(f"✅ สำเร็จ! ข้อมูลถูกเขียนลง Sheet แล้ว")
+                else:
+                    st.error(f"❌ ล้มเหลว! Error: {test_msg}")
