@@ -115,49 +115,53 @@ def main_app(df):
     # --- Inject Custom CSS สำหรับปุ่ม Sidebar โดยเฉพาะ ---
     st.markdown("""
     <style>
-        /* --- Sidebar Toggle Button Customization (Visibility Trick) --- */
+        /* --- Sidebar Toggle Button Customization (Overlay Mask Method) --- */
         
-        /* 1. ซ่อนทุกอย่างในปุ่มเดิมด้วย visibility: hidden */
-        /* วิธีนี้จะทำให้ Layout ยังอยู่ แต่เนื้อหาเดิม (รูปลูกศร, ข้อความ Tooltip) หายไปมองไม่เห็น */
+        /* 1. จัดการปุ่มแม่ (Container) ให้แข็งโป๊ก ห้ามยืด ห้ามหด */
         button[data-testid="stSidebarCollapseButton"],
         button[data-testid="stSidebarExpandButton"] {
-            visibility: hidden !important; 
             width: 40px !important;
             height: 40px !important;
-            position: relative !important; /* เพื่อให้ลูกตำแหน่งอิงกับตัวมัน */
-            border: none !important; /* ลบขอบเดิมที่อาจจะติด hidden ไป */
+            min-width: 40px !important;
+            max-width: 40px !important;
+            padding: 0 !important;
+            overflow: hidden !important; /* ตัดส่วนเกินทิ้งทันที (แก้ปัญหา text ยาว) */
+            position: relative !important; /* เป็นฐานให้ตัวลูก */
+            border: 1px solid rgba(0,0,0,0.1) !important;
+            border-radius: 8px !important;
+            background-color: transparent !important; /* พื้นหลังแม่ใส */
         }
 
-        /* 2. สร้าง Content ใหม่และสั่ง visibility: visible เพื่อให้กลับมามองเห็นได้ */
+        /* 2. สร้างหน้ากาก (Mask) ทับปุ่มเดิมให้มิด */
+        /* เราใช้ ::after สร้างแผ่นสี่เหลี่ยมสีขาวทึบ แปะทับทุกอย่างที่อยู่ในปุ่มเดิม */
         button[data-testid="stSidebarCollapseButton"]::after,
         button[data-testid="stSidebarExpandButton"]::after {
-            visibility: visible !important;
             position: absolute !important;
             top: 0 !important;
             left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
             
+            /* Background สีขาวทึบ บัง icon/text เดิมให้มิด */
+            background-color: #ffffff !important; 
+            
+            /* จัดข้อความกึ่งกลาง */
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
             
-            /* แต่งหน้าตาปุ่มใหม่ตรงนี้ */
-            background-color: #ffffff !important;
-            border: 1px solid rgba(0,0,0,0.1) !important;
-            border-radius: 8px !important;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
-            
-            /* Typography: ใช้ monospace เพื่อให้ << และ >> แสดงผลสวยและชัวร์ */
-            font-family: monospace, sans-serif !important; 
-            font-size: 18px !important;
-            font-weight: bold !important;
+            /* Typography */
             color: #555555 !important;
+            font-family: monospace, "Courier New", Courier, sans-serif !important;
+            font-size: 20px !important;
+            font-weight: 900 !important;
             line-height: 1 !important;
+            
+            z-index: 999 !important; /* ลอยทับทุกอย่าง */
             transition: all 0.2s ease !important;
         }
 
-        /* 3. กำหนดตัวอักษร Fallback ที่ปลอดภัยที่สุด */
+        /* 3. กำหนดสัญลักษณ์ */
         button[data-testid="stSidebarCollapseButton"]::after {
             content: "<<" !important;
         }
@@ -166,13 +170,17 @@ def main_app(df):
             content: ">>" !important;
         }
 
-        /* 4. Hover Effects (ต้องสั่งผ่าน ::after เพราะตัวแม่ hidden อยู่) */
+        /* 4. Hover Effects (เปลี่ยนสีหน้ากาก) */
         button[data-testid="stSidebarCollapseButton"]:hover::after,
         button[data-testid="stSidebarExpandButton"]:hover::after {
             background-color: #f0f2f6 !important;
             color: #00B900 !important;
-            border-color: #00B900 !important;
-            transform: scale(1.05) !important;
+        }
+        
+        /* 5. เก็บงาน: ซ่อน SVG เดิมด้วย (เผื่อหน้ากากโหลดไม่ทัน) */
+        button[data-testid="stSidebarCollapseButton"] svg,
+        button[data-testid="stSidebarExpandButton"] svg {
+            display: none !important;
         }
         /* --- End Sidebar Customization --- */
 
