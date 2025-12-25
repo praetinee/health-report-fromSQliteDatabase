@@ -9,3 +9,7 @@ plotly
 streamlit-lottie
 gspread
 google-auth
+matplotlib
+fpdf
+openpyxl
+oauth2client
