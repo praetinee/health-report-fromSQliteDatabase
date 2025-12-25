@@ -29,7 +29,7 @@ except ImportError:
     def generate_cbc_recommendations(p, s): return {}
     def generate_urine_recommendations(p, s): return {}
 
-# --- CSS Design 8.0 (Elegant & Formal) ---
+# --- CSS Design 9.0 (Dark Green Matte Header) ---
 def get_single_page_style():
     return """
     <style>
@@ -70,7 +70,7 @@ def get_single_page_style():
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
-            border-bottom: 2px solid #004d40; /* เส้นใต้เข้ม */
+            border-bottom: 3px solid #004d40; /* เส้นใต้เข้มขึ้น */
             padding-bottom: 10px;
             margin-bottom: 5px;
         }
@@ -113,32 +113,33 @@ def get_single_page_style():
         .lab-col { display: flex; flex-direction: column; gap: 10px; }
 
         .card {
-            border: 1px solid #dcdcdc;
+            border: 1px solid #004d40; /* เปลี่ยนสีขอบเป็นสีเดียวกับ header เพื่อความเนียน */
             border-radius: 6px;
             overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.03); /* เงาบางๆ */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* เงาบางๆ */
             background: #fff;
         }
         .card-header {
-            background-color: #00695c; /* สีเขียวอมฟ้าเข้ม ดูหรู */
+            background-color: #004d40; /* สีเขียวเข้มด้าน (Matte Dark Green) */
             color: #fff;
-            padding: 6px 10px;
+            padding: 8px 10px; /* เพิ่ม padding ให้ดูโปร่งขึ้นนิดนึง */
             font-size: 14px; 
-            font-weight: 600;
-            letter-spacing: 0.3px;
+            font-weight: 700; /* ตัวหนา */
+            letter-spacing: 0.5px; /* ระยะห่างตัวอักษร */
+            text-transform: uppercase; /* ตัวพิมพ์ใหญ่ (ภาษาอังกฤษ) เพื่อความทางการ */
         }
         .card-body { padding: 0; background: #fff; }
 
         /* Table */
         table { width: 100%; border-collapse: collapse; font-size: 14px; }
         th { 
-            background-color: #f7f9f9; 
+            background-color: #f0f2f2; 
             padding: 6px 8px; 
             text-align: left; 
             font-weight: 600; 
-            color: #444; 
-            border-bottom: 2px solid #e0e0e0; /* เส้นใต้หัวตารางหนานิดหน่อย */
-            font-size: 13px; /* หัวตารางเล็กกว่าเนื้อหานิดนึงเพื่อให้เนื้อหาเด่น */
+            color: #333; 
+            border-bottom: 2px solid #ddd; 
+            font-size: 13px;
         }
         td { 
             padding: 6px 8px; 
@@ -147,15 +148,14 @@ def get_single_page_style():
             color: #222;
         }
         tr:last-child td { border-bottom: none; }
-        tr:nth-child(even) { background-color: #fafafa; } /* สีสลับบรรทัดบางๆ */
+        tr:nth-child(even) { background-color: #fafafa; } 
         
         .result-val { font-weight: 600; text-align: center; }
         .abnormal { 
             color: #c62828; 
             font-weight: 700; 
-            /* ลบพื้นหลังออกเพื่อให้ดูสะอาดตา แต่ใช้สีตัวอักษรที่เด่นชัดแทน หรือใช้ไอคอนเตือน */
         } 
-        .bg-abnormal { background-color: #fff8f8 !important; } /* ไฮไลท์ทั้งแถวบางๆ */
+        .bg-abnormal { background-color: #fff5f5 !important; } 
 
         /* --- Special Item --- */
         .special-item {
@@ -176,8 +176,8 @@ def get_single_page_style():
         .footer-section {
             display: flex;
             gap: 20px;
-            border: 1px solid #dcdcdc;
-            border-top: 3px solid #004d40; /* เส้นบนหนาเน้นความสำคัญ */
+            border: 1px solid #004d40; /* เปลี่ยนขอบเป็นสีเขียวเข้ม */
+            border-top: 4px solid #004d40; /* เส้นบนหนาเน้นความสำคัญ */
             border-radius: 6px;
             padding: 15px;
             background-color: #fff;
@@ -191,11 +191,13 @@ def get_single_page_style():
             font-size: 15px; font-weight: 700; color: #004d40; 
             margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;
             display: flex; align-items: center; gap: 5px;
+            border-bottom: 1px solid #eee; /* เพิ่มเส้นใต้หัวข้อ */
+            padding-bottom: 5px;
         }
         /* icon หน้าหัวข้อ */
-        .footer-title::before { content: '•'; color: #004d40; font-size: 20px; line-height: 0; }
+        .footer-title::before { content: '■'; color: #004d40; font-size: 12px; line-height: 0; } /* เปลี่ยน bullet เป็นสี่เหลี่ยม */
         
-        .footer-text { font-size: 14px; color: #333; line-height: 1.5; } 
+        .footer-text { font-size: 14px; color: #333; line-height: 1.5; margin-top: 5px; } 
         ul { margin: 0; padding-left: 20px; }
         li { margin-bottom: 4px; }
 
