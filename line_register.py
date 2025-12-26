@@ -6,6 +6,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 import os
 import datetime
 import json
+import urllib.parse
 
 # --- 1. Configuration ---
 SERVICE_ACCOUNT_FILE = "service_account.json" 
@@ -15,14 +16,9 @@ LIFF_ID = "2008725340-YHOiWxtj"
 
 # --- 2. Google Sheets Connection (ตัวเขียนข้อมูล) ---
 def get_gsheet_client():
-    """
-    สร้าง Connection: นี่คือส่วนที่ทำหน้าที่แทน Google Apps Script
-    มันจะยิง API เข้าไปเขียนข้อมูลโดยตรง
-    """
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/spreadsheets"]
     creds = None
     
-    # 1. ลองอ่านจาก Secrets (สำหรับ Cloud)
     if "gcp_service_account" in st.secrets:
         try:
             creds_dict = dict(st.secrets["gcp_service_account"])
@@ -30,7 +26,6 @@ def get_gsheet_client():
         except Exception as e:
             return None, f"Secrets Error: {str(e)}"
     
-    # 2. ถ้าไม่มี Secrets ลองอ่านไฟล์ (สำหรับ Local)
     elif os.path.exists(SERVICE_ACCOUNT_FILE):
         try:
             creds = ServiceAccountCredentials.from_json_keyfile_name(SERVICE_ACCOUNT_FILE, scope)
@@ -56,7 +51,6 @@ def get_user_worksheet():
         except gspread.WorksheetNotFound:
             worksheet = sheet_file.sheet1
         
-        # เช็คว่ามีหัวตารางไหม ถ้าไม่มีให้สร้าง
         if not worksheet.row_values(1):
             worksheet.append_row(["ชื่อ", "นามสกุล", "LINE User ID", "Timestamp"])
         return worksheet, "OK"
@@ -83,7 +77,6 @@ def save_new_user_to_gsheet(fname, lname, line_user_id):
     if not sheet: return False, msg
     try:
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        # บันทึกข้อมูลลง Sheet (ทำหน้าที่แทน Apps Script)
         sheet.append_row([str(fname), str(lname), str(line_user_id), timestamp])
         return True, "Success"
     except Exception as e: return False, str(e)
@@ -118,22 +111,28 @@ def render_admin_line_manager():
     else:
         st.error(f"ไม่สามารถโหลดข้อมูลได้: {msg}")
 
-# --- 6. MAIN RENDER FUNCTION (หน้านี้คือพระเอก) ---
+# --- 6. MAIN RENDER FUNCTION ---
 def render_registration_page(df):
     
-    # 1. เช็คสถานะ Google Sheet ก่อนเลย (จะได้รู้ว่าเชื่อมได้ไหม)
+    # 1. เช็คสถานะ Google Sheet
     client, msg = get_gsheet_client()
     if not client:
         st.error(f"❌ ระบบเชื่อมต่อ Google Sheets ไม่ได้: {msg}")
         st.warning("Admin: กรุณาตรวจสอบ st.secrets บน Cloud")
         return
 
-    # 2. ดึง User ID จาก URL (ถ้ามี)
+    # 2. ดึง User ID จาก URL
+    # LIFF จะส่งกลับมาในรูปแบบ ?liff.state=... ถ้าใช้ LIFF v2 Login
+    # แต่ถ้าใช้ liff.line.me แบบ Basic มันจะวิ่งไปตาม Endpoint ที่ตั้งใน Developer Console
     qp_userid = st.query_params.get("userid", None)
+    
+    # บางที LIFF อาจส่ง id_token มาแทน (ถ้าตั้งค่า OpenID Connect)
+    # แต่เบื้องต้นเราเช็ค userid แบบธรรมดาก่อน
+    
     if qp_userid: 
         st.session_state["line_user_id"] = qp_userid
 
-    # 3. ถ้ายังไม่มี User ID -> แสดงปุ่ม Login (ไม่ใช้ Auto Redirect แล้ว แก้ปัญหา refused connection)
+    # 3. ถ้ายังไม่มี User ID -> แสดงปุ่ม Login
     if "line_user_id" not in st.session_state:
         st.markdown("---")
         st.markdown("""
@@ -143,29 +142,21 @@ def render_registration_page(df):
         </div>
         """, unsafe_allow_html=True)
         
-        # ปุ่มนี้จะวิ่งไป LINE แล้ววิ่งกลับมาหน้าเดิมพร้อม UserID
-        # วิธีนี้ปลอดภัย 100% ไม่โดน Browser Block
+        # สร้าง Login URL ที่ปลอดภัยขึ้น
+        # ใช้ LIFF URL โดยตรง (https://liff.line.me/{LIFF_ID})
+        # ซึ่งใน LINE Developer Console ต้องตั้ง Endpoint URL ให้ตรงกับหน้าเว็บนี้
         login_url = f"https://liff.line.me/{LIFF_ID}"
-        st.link_button("🟢 เข้าสู่ระบบด้วย LINE (คลิก)", login_url, type="primary", use_container_width=True)
         
-        # ปุ่ม Mock ID สำหรับทดสอบในคอม
-        if st.checkbox("Dev Mode (ทดสอบในคอม)"):
-             if st.button("ใช้ Mock User ID"):
-                 st.session_state["line_user_id"] = "TEST_USER_999"
-                 st.rerun()
+        st.link_button("🟢 เข้าสู่ระบบด้วย LINE (คลิก)", login_url, type="primary", use_container_width=True)
         return
 
-    # 4. ได้ User ID แล้ว -> เช็คว่าเคยลงทะเบียนยัง?
+    # 4. ได้ User ID แล้ว -> ทำงานต่อ
     line_user_id = st.session_state["line_user_id"]
     
-    # Debug: แสดง ID เล็กๆ ให้รู้ว่าระบบจับ ID ได้แล้ว
-    # st.caption(f"Connected ID: {line_user_id}")
-
     with st.spinner("กำลังตรวจสอบข้อมูล..."):
         is_registered, user_info = check_if_user_registered(line_user_id)
 
     if is_registered:
-        # เคยลงทะเบียน -> Login เลย
         found_rows = df[df['ชื่อ-สกุล'].str.contains(user_info['first_name'], na=False)]
         matched_user = None
         for _, row in found_rows.iterrows():
@@ -200,7 +191,6 @@ def render_registration_page(df):
             else:
                 valid, msg, row = check_registration_logic(df, f, l, i)
                 if valid:
-                    # ตรงนี้แหละครับที่ Python จะยิงข้อมูลไป Google Sheet (ไม่ต้องใช้ Apps Script)
                     save_suc, save_msg = save_new_user_to_gsheet(clean_string(f), clean_string(l), line_user_id)
                     if save_suc:
                         st.success("✅ ลงทะเบียนสำเร็จ! กำลังเข้าสู่ระบบ...")
