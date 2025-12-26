@@ -11,10 +11,10 @@ from datetime import datetime
 # --- Import Authentication & Consent ---
 from auth import authentication_flow, pdpa_consent_page
 
-# --- Import LINE Registration Function (Google Sheet Version) ---
+# --- Import LINE Registration Function ---
 try:
     from line_register import (
-        # liff_initializer_component, # เอาออกเพราะเราไม่ใช้แล้วในแบบ Manual
+        # ตัด liff_initializer_component ออก เพราะเราเลิกใช้แบบ Auto แล้ว
         check_if_user_registered, 
         normalize_db_name_field,
         render_registration_page,
@@ -171,7 +171,6 @@ def main_app(df):
         st.markdown(f"**HN:** {user_hn}")
         st.markdown("---")
         
-        # Year Selector
         idx = available_years.index(st.session_state.selected_year)
         def handle_year_change():
             st.session_state.selected_year = st.session_state.year_select
@@ -214,7 +213,6 @@ def main_app(df):
             st.warning("ไม่พบข้อมูลการตรวจสำหรับหมวดหมู่ที่กำหนด แต่พบประวัติการมาตรวจ")
             display_main_report(p_data, all_hist)
 
-        # Print Handling (Hidden Iframe)
         if st.session_state.get('print_trigger', False):
             h = generate_printable_report(p_data, all_hist)
             print_script = f"""<iframe id="p1" style="display:none;"></iframe><script>const i=document.getElementById('p1');i.contentWindow.document.write({json.dumps(h)});i.contentWindow.document.close();setTimeout(()=>{{i.contentWindow.print();}},500);</script>"""
@@ -249,23 +247,22 @@ if q_userid:
     st.session_state["line_user_id"] = q_userid
 
 # --- Update for Manual Login Flow ---
-# ถ้ายังไม่ได้ Login ให้ไปที่หน้าลงทะเบียน (ซึ่งมีปุ่ม Login LINE + ฟอร์มลงทะเบียน)
+# ถ้ายังไม่ได้ Login ให้ไปที่หน้าลงทะเบียน
+# ฟังก์ชันนี้จะจัดการแสดงปุ่ม Login (ถ้าไม่มี ID) หรือแสดงฟอร์ม (ถ้ามี ID) ให้เอง
 if not st.session_state['authenticated']:
-    # ฟังก์ชันนี้จัดการทั้ง 1. ปุ่ม Login (ถ้าไม่มี ID) 2. ฟอร์มลงทะเบียน (ถ้ามี ID แต่ยังไม่ลง) 3. Auto Login (ถ้ามี ID และลงแล้ว)
     render_registration_page(df)
     
-    # ถ้ายังไม่ Authenticated ก็ให้หยุดการทำงานตรงนี้ (แสดง UI ของ render_registration_page)
+    # ถ้าหลังจากรัน render_registration_page แล้วยังไม่ผ่าน ก็หยุด (รอ User กดปุ่ม/กรอกฟอร์ม)
     if not st.session_state['authenticated']:
         st.stop()
 
 # 4. Normal Web Routing Decision
-# เมื่อผ่านด่าน render_registration_page มาแล้ว แปลว่า st.session_state['authenticated'] = True
-
+# ถ้าผ่านด่านมาได้ (authenticated = True) ให้เข้าหน้าหลัก
 if st.session_state['authenticated']:
     if st.session_state.get('is_admin', False):
         display_admin_panel(df)
     else:
         main_app(df)
 else:
-    # Fallback (ไม่น่าจะมาถึงตรงนี้ ถ้า render_registration_page ทำงานถูกต้อง)
+    # เผื่อกรณีตกหล่น
     pass
