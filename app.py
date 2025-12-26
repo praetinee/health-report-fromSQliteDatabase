@@ -14,7 +14,6 @@ from auth import authentication_flow, pdpa_consent_page
 # --- Import LINE Registration Function ---
 try:
     from line_register import (
-        # ตัด liff_initializer_component ออก เพราะเราเลิกใช้แบบ Auto แล้ว
         check_if_user_registered, 
         normalize_db_name_field,
         render_registration_page,
@@ -22,7 +21,7 @@ try:
     )
 except ImportError as e:
     st.error(f"Error importing line_register: {e}")
-    # Fallback dummies
+    # Fallback dummies ป้องกันแอปพังถ้า import ไม่ผ่าน
     def check_if_user_registered(uid): return False, None
     def normalize_db_name_field(s): return s, ""
     def render_registration_page(df): st.error("Registration module error")
@@ -47,7 +46,8 @@ try:
     )
 except Exception as e:
     st.error(f"Error loading utils: {e}")
-    def is_empty(v): return pd.isna(v) or str(v).strip() == ""
+    # Fallback dummies
+    def is_empty(v): return True
     def has_basic_health_data(r): return True
     def has_vision_data(r): return False
     def has_hearing_data(r): return False
@@ -213,6 +213,7 @@ def main_app(df):
             st.warning("ไม่พบข้อมูลการตรวจสำหรับหมวดหมู่ที่กำหนด แต่พบประวัติการมาตรวจ")
             display_main_report(p_data, all_hist)
 
+        # Print Handling (Hidden Iframe)
         if st.session_state.get('print_trigger', False):
             h = generate_printable_report(p_data, all_hist)
             print_script = f"""<iframe id="p1" style="display:none;"></iframe><script>const i=document.getElementById('p1');i.contentWindow.document.write({json.dumps(h)});i.contentWindow.document.close();setTimeout(()=>{{i.contentWindow.print();}},500);</script>"""
@@ -241,28 +242,23 @@ if 'pdpa_accepted' not in st.session_state: st.session_state['pdpa_accepted'] = 
 df = load_sqlite_data()
 if df is None: st.stop()
 
-# 3. Detect LINE UserID & Registration Flow
+# 3. Detect LINE UserID
 q_userid = st.query_params.get("userid", "")
 if q_userid:
     st.session_state["line_user_id"] = q_userid
 
-# --- Update for Manual Login Flow ---
-# ถ้ายังไม่ได้ Login ให้ไปที่หน้าลงทะเบียน
-# ฟังก์ชันนี้จะจัดการแสดงปุ่ม Login (ถ้าไม่มี ID) หรือแสดงฟอร์ม (ถ้ามี ID) ให้เอง
+# --- MANUAL LOGIN LOGIC ---
+# ถ้ายังไม่ Login ให้ไปที่หน้าลงทะเบียน
 if not st.session_state['authenticated']:
     render_registration_page(df)
     
-    # ถ้าหลังจากรัน render_registration_page แล้วยังไม่ผ่าน ก็หยุด (รอ User กดปุ่ม/กรอกฟอร์ม)
+    # ถ้าหลังจากรันหน้าลงทะเบียนแล้วยังไม่ผ่าน (User ยังไม่กรอก หรือรอ Login) ก็หยุดตรงนี้
     if not st.session_state['authenticated']:
         st.stop()
 
 # 4. Normal Web Routing Decision
-# ถ้าผ่านด่านมาได้ (authenticated = True) ให้เข้าหน้าหลัก
 if st.session_state['authenticated']:
     if st.session_state.get('is_admin', False):
         display_admin_panel(df)
     else:
         main_app(df)
-else:
-    # เผื่อกรณีตกหล่น
-    pass
