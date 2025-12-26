@@ -88,6 +88,7 @@ def check_if_user_registered(line_user_id):
         match = df[df["LINE User ID"].astype(str) == str(line_user_id)]
         if not match.empty:
             row = match.iloc[0]
+            # คืนค่า ชื่อ-นามสกุล ที่เคยลงทะเบียนไว้ เพื่อเอาไปค้นใน SQLite ต่อ
             return True, {"first_name": str(row["ชื่อ"]), "last_name": str(row["นามสกุล"]), "line_id": str(line_user_id)}
         return False, None
     except Exception as e: 
@@ -106,24 +107,54 @@ def save_new_user_to_gsheet(fname, lname, line_user_id):
 
 # --- 4. Helpers ---
 def clean_string(val): return str(val).strip() if not pd.isna(val) else ""
+
 def normalize_db_name_field(full_name_str):
     parts = clean_string(full_name_str).split()
     if len(parts) >= 2: return parts[0], " ".join(parts[1:])
     return (parts[0], "") if len(parts) == 1 else ("", "")
 
 def check_registration_logic(df, input_fname, input_lname, input_id):
-    i_fname, i_lname, i_id = clean_string(input_fname), clean_string(input_lname), clean_string(input_id)
-    if not i_fname or not i_lname or not i_id: return False, "กรุณากรอกข้อมูลให้ครบ", None
-    if len(i_id) != 13 or not i_id.isdigit(): return False, "เลขบัตรต้องเป็น 13 หลัก", None
+    """
+    ตรวจสอบสิทธิ์การเข้าใช้งาน:
+    1. ค้นหาจาก ชื่อ-นามสกุล ก่อน (SQLite)
+    2. ถ้าเจอ -> ตรวจสอบว่าเลขบัตรตรงกันหรือไม่
+    """
+    i_fname = clean_string(input_fname)
+    i_lname = clean_string(input_lname)
+    i_id = clean_string(input_id)
     
-    user_match = df[df['เลขบัตรประชาชน'].astype(str).str.strip() == i_id]
-    if user_match.empty: return False, "ไม่พบเลขบัตรในระบบ", None
+    # Basic Validation
+    if not i_fname or not i_lname or not i_id: 
+        return False, "กรุณากรอกข้อมูลให้ครบ", None
+    if len(i_id) != 13 or not i_id.isdigit(): 
+        return False, "เลขบัตรต้องเป็น 13 หลัก", None
     
-    for _, row in user_match.iterrows():
-        db_f, db_l = normalize_db_name_field(row['ชื่อ-สกุล'])
-        if db_f.replace(" ","") == i_fname.replace(" ","") and db_l.replace(" ","") == i_lname.replace(" ",""):
-            return True, "OK", row.to_dict()
-    return False, "ชื่อ-สกุลไม่ตรงกับฐานข้อมูล", None
+    # เตรียมข้อมูลสำหรับค้นหา (ลบช่องว่างเพื่อความแม่นยำ)
+    i_fname_norm = i_fname.replace(" ", "")
+    i_lname_norm = i_lname.replace(" ", "")
+
+    # Helper function สำหรับตรวจสอบชื่อใน DataFrame
+    def name_match(row_val):
+        if pd.isna(row_val): return False
+        db_f, db_l = normalize_db_name_field(str(row_val))
+        return (db_f.replace(" ", "") == i_fname_norm) and (db_l.replace(" ", "") == i_lname_norm)
+
+    # 1. ค้นหาคนที่ชื่อตรงกัน
+    # ใช้ apply เพื่อค้นหา (รองรับกรณีชื่อใน DB มีวรรคตอนไม่แน่นอน)
+    name_matches = df[df['ชื่อ-สกุล'].apply(name_match)]
+    
+    if name_matches.empty:
+        return False, "ไม่พบชื่อ-นามสกุลนี้ในระบบฐานข้อมูลสุขภาพ", None
+    
+    # 2. ตรวจสอบเลขบัตรประชาชน (Validation)
+    # ในกลุ่มคนที่ชื่อตรงกัน มีคนไหนเลขบัตรตรงไหม?
+    valid_user = name_matches[name_matches['เลขบัตรประชาชน'].astype(str).str.strip() == i_id]
+    
+    if valid_user.empty:
+        return False, "ชื่อ-นามสกุลถูกต้อง แต่เลขบัตรประชาชนไม่ตรงกับฐานข้อมูล", None
+        
+    # เจอข้อมูลที่ถูกต้อง (คืนค่า row แรกที่เจอ)
+    return True, "OK", valid_user.iloc[0].to_dict()
 
 # --- 5. LIFF Listener (ตัวช่วยดึง ID จาก LINE) ---
 def liff_token_catcher():
@@ -184,30 +215,15 @@ def render_admin_line_manager():
 # --- 7. MAIN RENDER FUNCTION ---
 def render_registration_page(df):
     
-    # A. รันตัวดักจับสัญญาณ (สำคัญ!)
+    # A. รันตัวดักจับสัญญาณ LIFF
     liff_token_catcher()
 
-    # B. เช็คสถานะ Google Sheet (Debug ชั่วคราว)
-    # เราจะซ่อนไว้ใน Expander เพื่อไม่ให้รก
-    with st.expander("🛠️ ตรวจสอบสถานะระบบ (Admin Only)", expanded=False):
-        client, msg = get_gsheet_client()
-        if client:
-            st.success("✅ เชื่อมต่อ Google Sheets สำเร็จ")
-            # ลองเปิดไฟล์ดู
-            sheet, s_msg = get_user_worksheet()
-            if sheet:
-                st.info(f"เจอไฟล์ Sheet และเปิดได้เรียบร้อย")
-            else:
-                st.error(f"❌ เจอ Credential แต่เปิดไฟล์ไม่ได้: {s_msg}")
-        else:
-            st.error(f"❌ เชื่อมต่อไม่ได้: {msg}")
-
-    # C. รับ User ID จาก URL (ถ้ามี)
+    # B. รับ User ID จาก URL (ถ้ามี)
     qp_userid = st.query_params.get("userid", None)
     if qp_userid: 
         st.session_state["line_user_id"] = qp_userid
 
-    # D. ตรวจสอบว่ามี User ID ใน Session หรือยัง
+    # C. ตรวจสอบว่ามี User ID ใน Session หรือยัง
     if "line_user_id" not in st.session_state:
         # --- กรณีที่ 1: ยังไม่มี ID (แสดงปุ่ม Login) ---
         st.markdown("---")
@@ -230,24 +246,30 @@ def render_registration_page(df):
     st.success(f"✅ เชื่อมต่อ LINE สำเร็จ (ID: {line_user_id[:8]}...)")
 
     # ตรวจสอบกับ Google Sheet ว่าเคยลงทะเบียนหรือยัง
-    with st.spinner("กำลังตรวจสอบข้อมูลในระบบ..."):
+    with st.spinner("กำลังตรวจสอบข้อมูลสมาชิก..."):
         is_registered, user_info = check_if_user_registered(line_user_id)
 
     if is_registered:
         # --- เคยลงทะเบียนแล้ว -> ให้ Login อัตโนมัติ ---
-        found_rows = df[df['ชื่อ-สกุล'].str.contains(user_info['first_name'], na=False)]
-        matched_user = None
-        for _, row in found_rows.iterrows():
-            db_f, db_l = normalize_db_name_field(row['ชื่อ-สกุล'])
-            if db_f == user_info['first_name'] and db_l == user_info['last_name']:
-                matched_user = row
-                break
+        # ใช้ชื่อ-นามสกุลจาก Google Sheet มาค้นหาข้อมูลใน SQLite
+        # เพื่อดึง HN และข้อมูลล่าสุด
         
-        if matched_user is not None:
+        # ค้นหาแบบ Name Match (Logic เดียวกับ check_registration_logic แต่ไม่ต้องเช็ค ID แล้ว)
+        def name_match_auto(row_val):
+            if pd.isna(row_val): return False
+            db_f, db_l = normalize_db_name_field(str(row_val))
+            # เปรียบเทียบแบบตัดช่องว่าง
+            return (db_f.replace(" ", "") == user_info['first_name'].replace(" ", "")) and \
+                   (db_l.replace(" ", "") == user_info['last_name'].replace(" ", ""))
+
+        matched_rows = df[df['ชื่อ-สกุล'].apply(name_match_auto)]
+        
+        if not matched_rows.empty:
+             matched_user = matched_rows.iloc[0]
              if not st.session_state.get('authenticated'):
                 st.session_state.update({
                     'authenticated': True, 
-                    'pdpa_accepted': True, 
+                    'pdpa_accepted': True, # ถือว่ายอมรับแล้วจากการลงทะเบียนครั้งแรก
                     'user_hn': matched_user['HN'], 
                     'user_name': matched_user['ชื่อ-สกุล'], 
                     'is_line_login': True
@@ -255,28 +277,32 @@ def render_registration_page(df):
                 st.rerun()
              return
         else:
-             st.error(f"ไม่พบประวัติสุขภาพของ คุณ{user_info['first_name']} ในปีนี้ (แต่มีชื่อในระบบลงทะเบียน)")
+             st.error(f"⚠️ พบประวัติการลงทะเบียนของคุณ {user_info['first_name']} {user_info['last_name']} แต่ไม่พบข้อมูลผลตรวจสุขภาพในฐานข้อมูลปีนี้")
+             st.info("กรุณาติดต่อเจ้าหน้าที่หากท่านมั่นใจว่าได้ตรวจสุขภาพแล้ว")
              return
 
-    # --- ยังไม่เคยลงทะเบียน -> แสดงฟอร์ม ---
+    # --- ยังไม่เคยลงทะเบียน -> แสดงฟอร์มลงทะเบียน ---
     st.markdown("---")
-    st.subheader("📝 ลงทะเบียนครั้งแรก")
+    st.subheader("📝 ลงทะเบียนครั้งแรก (First-time Registration)")
     
     with st.form("reg_form"):
-        st.caption("กรอกข้อมูลให้ตรงกับบัตรประชาชนเพื่อยืนยันตัวตน")
+        st.caption("กรุณากรอกข้อมูลให้ตรงกับบัตรประชาชนเพื่อยืนยันตัวตน")
         f = st.text_input("ชื่อ (ไม่ต้องมีคำนำหน้า)")
         l = st.text_input("นามสกุล")
         i = st.text_input("เลขบัตรประชาชน (13 หลัก)", max_chars=13)
-        pdpa = st.checkbox("ข้าพเจ้ายอมรับข้อตกลงและเงื่อนไข (PDPA)")
+        pdpa = st.checkbox("ข้าพเจ้ายอมรับข้อตกลงและเงื่อนไข (PDPA) ในการเปิดเผยข้อมูลสุขภาพ")
         
         if st.form_submit_button("ยืนยันข้อมูล", use_container_width=True):
             if not pdpa:
                 st.warning("⚠️ กรุณายอมรับข้อตกลง PDPA ก่อนดำเนินการ")
             else:
+                # ใช้ Logic ใหม่: ค้นหาชื่อ -> เช็ค ID
                 valid, msg, row = check_registration_logic(df, f, l, i)
+                
                 if valid:
-                    # บันทึกข้อมูลลง Google Sheet
+                    # บันทึกข้อมูลลง Google Sheet (ชื่อ, นามสกุล, LINE ID)
                     save_suc, save_msg = save_new_user_to_gsheet(clean_string(f), clean_string(l), line_user_id)
+                    
                     if save_suc:
                         st.balloons()
                         st.success("✅ ลงทะเบียนสำเร็จ! กำลังเข้าสู่ระบบ...")
@@ -289,6 +315,6 @@ def render_registration_page(df):
                         })
                         st.rerun()
                     else:
-                        st.error(f"❌ บันทึกข้อมูลไม่สำเร็จ: {save_msg}")
+                        st.error(f"❌ บันทึกข้อมูลลงระบบทะเบียนไม่สำเร็จ: {save_msg}")
                 else:
                     st.error(f"❌ {msg}")
