@@ -12,9 +12,12 @@ import urllib.parse
 SERVICE_ACCOUNT_FILE = "service_account.json" 
 GOOGLE_SHEET_FILENAME = "LINE User id for Database"
 GOOGLE_SHEET_TABNAME = "UserID"
-LIFF_ID = "2008725340-YHOiWxtj" 
+LIFF_ID = "2008725340-YHOiWxtj"
 
-# --- 2. Google Sheets Connection (ตัวเขียนข้อมูล) ---
+# *** ระบุลิ้งค์เว็บของคุณที่นี่ (ต้องตรงกับ Endpoint URL ใน LINE Dev) ***
+APP_URL = "https://health-report-fromappdatabase-d53gxcssza4ravg7plcbcv.streamlit.app/"
+
+# --- 2. Google Sheets Connection ---
 def get_gsheet_client():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/spreadsheets"]
     creds = None
@@ -102,7 +105,44 @@ def check_registration_logic(df, input_fname, input_lname, input_id):
             return True, "OK", row.to_dict()
     return False, "ชื่อ-สกุลไม่ตรงกับฐานข้อมูล", None
 
-# --- 5. Admin Panel ---
+# --- 5. LIFF Listener (Fixed for Cloud) ---
+def liff_token_catcher():
+    """
+    ดักจับ ID หลัง Login แล้ว Redirect ไปยัง APP_URL ที่กำหนดตายตัว
+    เพื่อแก้ปัญหาหา URL ไม่เจอใน Iframe
+    """
+    if "line_user_id" in st.session_state or st.query_params.get("userid"):
+        return
+
+    js_code = f"""
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script>
+        const TARGET_APP_URL = "{APP_URL}"; // ใช้ URL ที่กำหนดไว้เป๊ะๆ
+        
+        async function main() {{
+            try {{
+                await liff.init({{ liffId: "{LIFF_ID}" }});
+                if (liff.isLoggedIn()) {{
+                    const profile = await liff.getProfile();
+                    
+                    // สร้าง URL ปลายทางแบบชัวร์ๆ
+                    // ตรวจสอบว่ามี ? หรือยัง ถ้ามีใช้ & ถ้าไม่มีใช้ ?
+                    const separator = TARGET_APP_URL.includes("?") ? "&" : "?";
+                    const finalUrl = TARGET_APP_URL + separator + "userid=" + profile.userId;
+                    
+                    // สั่ง Redirect หน้าหลัก (window.top) ไปยัง URL นั้นทันที
+                    window.top.location.href = finalUrl;
+                }}
+            }} catch (e) {{
+                console.log("Listener error:", e);
+            }}
+        }}
+        main();
+    </script>
+    """
+    components.html(js_code, height=0, width=0)
+
+# --- 6. Admin Panel ---
 def render_admin_line_manager():
     st.subheader("📱 จัดการผู้ใช้งาน (Google Sheets)")
     sheet, msg = get_user_worksheet()
@@ -111,28 +151,24 @@ def render_admin_line_manager():
     else:
         st.error(f"ไม่สามารถโหลดข้อมูลได้: {msg}")
 
-# --- 6. MAIN RENDER FUNCTION ---
+# --- 7. MAIN RENDER FUNCTION ---
 def render_registration_page(df):
     
-    # 1. เช็คสถานะ Google Sheet
+    # A. รันตัวดักจับ (พร้อม URL ปลายทางที่ถูกต้อง)
+    liff_token_catcher()
+
+    # B. เช็คสถานะ Google Sheet
     client, msg = get_gsheet_client()
     if not client:
         st.error(f"❌ ระบบเชื่อมต่อ Google Sheets ไม่ได้: {msg}")
-        st.warning("Admin: กรุณาตรวจสอบ st.secrets บน Cloud")
         return
 
-    # 2. ดึง User ID จาก URL
-    # LIFF จะส่งกลับมาในรูปแบบ ?liff.state=... ถ้าใช้ LIFF v2 Login
-    # แต่ถ้าใช้ liff.line.me แบบ Basic มันจะวิ่งไปตาม Endpoint ที่ตั้งใน Developer Console
+    # C. รับ User ID จาก URL
     qp_userid = st.query_params.get("userid", None)
-    
-    # บางที LIFF อาจส่ง id_token มาแทน (ถ้าตั้งค่า OpenID Connect)
-    # แต่เบื้องต้นเราเช็ค userid แบบธรรมดาก่อน
-    
     if qp_userid: 
         st.session_state["line_user_id"] = qp_userid
 
-    # 3. ถ้ายังไม่มี User ID -> แสดงปุ่ม Login
+    # D. ถ้ายังไม่มี ID -> แสดงปุ่ม Login
     if "line_user_id" not in st.session_state:
         st.markdown("---")
         st.markdown("""
@@ -142,17 +178,16 @@ def render_registration_page(df):
         </div>
         """, unsafe_allow_html=True)
         
-        # สร้าง Login URL ที่ปลอดภัยขึ้น
-        # ใช้ LIFF URL โดยตรง (https://liff.line.me/{LIFF_ID})
-        # ซึ่งใน LINE Developer Console ต้องตั้ง Endpoint URL ให้ตรงกับหน้าเว็บนี้
         login_url = f"https://liff.line.me/{LIFF_ID}"
-        
         st.link_button("🟢 เข้าสู่ระบบด้วย LINE (คลิก)", login_url, type="primary", use_container_width=True)
         return
 
-    # 4. ได้ User ID แล้ว -> ทำงานต่อ
+    # E. ได้ ID แล้ว -> ทำงานต่อ
     line_user_id = st.session_state["line_user_id"]
     
+    # แสดง ID ให้เห็นชัดๆ ว่ามาแล้ว
+    st.success(f"✅ เชื่อมต่อ LINE สำเร็จ (ID: {line_user_id[:8]}...)")
+
     with st.spinner("กำลังตรวจสอบข้อมูล..."):
         is_registered, user_info = check_if_user_registered(line_user_id)
 
@@ -174,7 +209,7 @@ def render_registration_page(df):
              st.error(f"ไม่พบประวัติสุขภาพของ {user_info['first_name']} ในปีนี้")
              return
 
-    # 5. ยังไม่เคยลงทะเบียน -> แสดงฟอร์ม
+    # แสดงฟอร์มลงทะเบียน
     st.markdown("---")
     st.subheader("📝 ลงทะเบียนครั้งแรก")
     
