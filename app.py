@@ -14,7 +14,7 @@ from auth import authentication_flow, pdpa_consent_page
 # --- Import LINE Registration Function (Google Sheet Version) ---
 try:
     from line_register import (
-        liff_initializer_component, 
+        # liff_initializer_component, # เอาออกเพราะเราไม่ใช้แล้วในแบบ Manual
         check_if_user_registered, 
         normalize_db_name_field,
         render_registration_page,
@@ -23,7 +23,6 @@ try:
 except ImportError as e:
     st.error(f"Error importing line_register: {e}")
     # Fallback dummies
-    def liff_initializer_component(): pass
     def check_if_user_registered(uid): return False, None
     def normalize_db_name_field(s): return s, ""
     def render_registration_page(df): st.error("Registration module error")
@@ -249,33 +248,24 @@ q_userid = st.query_params.get("userid", "")
 if q_userid:
     st.session_state["line_user_id"] = q_userid
 
-# --- แก้ไขจุดสำคัญ (Trigger LIFF) ---
-# ถ้ายังไม่มี UserID ในระบบ ให้เรียก LIFF Script ทันที
-# (ลบเงื่อนไข page == register ออกแล้ว)
-if "line_user_id" not in st.session_state:
-    liff_initializer_component()
-
-# ถ้ามี Line UserID แต่ยังไม่ Auth ให้เข้า Flow ของ render_registration_page (ซึ่งจัดการ auto-login ด้วย)
-if st.session_state.get("line_user_id") and not st.session_state['authenticated']:
-    # ใช้ render_registration_page เป็นตัวจัดการหลักสำหรับ LINE Flow
+# --- Update for Manual Login Flow ---
+# ถ้ายังไม่ได้ Login ให้ไปที่หน้าลงทะเบียน (ซึ่งมีปุ่ม Login LINE + ฟอร์มลงทะเบียน)
+if not st.session_state['authenticated']:
+    # ฟังก์ชันนี้จัดการทั้ง 1. ปุ่ม Login (ถ้าไม่มี ID) 2. ฟอร์มลงทะเบียน (ถ้ามี ID แต่ยังไม่ลง) 3. Auto Login (ถ้ามี ID และลงแล้ว)
     render_registration_page(df)
     
-    # ถ้า render_registration_page ทำงานสำเร็จ มันจะ set authenticated = True และ rerun
-    # ถ้ายังไม่สำเร็จ (ต้องกรอกฟอร์ม) มันจะแสดงฟอร์ม และหยุดการทำงานส่วนล่าง
+    # ถ้ายังไม่ Authenticated ก็ให้หยุดการทำงานตรงนี้ (แสดง UI ของ render_registration_page)
     if not st.session_state['authenticated']:
-        st.stop() # หยุดการทำงานของ main_app ไว้ก่อน รอ user กรอกฟอร์ม
+        st.stop()
 
 # 4. Normal Web Routing Decision
+# เมื่อผ่านด่าน render_registration_page มาแล้ว แปลว่า st.session_state['authenticated'] = True
 
 if st.session_state['authenticated']:
     if st.session_state.get('is_admin', False):
         display_admin_panel(df)
     else:
         main_app(df)
-elif not st.session_state['pdpa_accepted']:
-    # กรณีเข้าผ่าน Web Login ปกติ (ไม่ใช่ LINE)
-    # แต่ถ้าเป็น Flow LINE มันจะหยุดที่ st.stop() ข้างบนแล้ว
-    authentication_flow(df) # หน้า Login ปกติ
 else:
-    # กรณี Login แล้วแต่ยังไม่เข้าเงื่อนไขอื่น (ไม่น่าเกิด)
-    pdpa_consent_page()
+    # Fallback (ไม่น่าจะมาถึงตรงนี้ ถ้า render_registration_page ทำงานถูกต้อง)
+    pass
