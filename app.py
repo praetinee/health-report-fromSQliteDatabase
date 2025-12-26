@@ -247,7 +247,7 @@ q_userid = st.query_params.get("userid", "")
 if q_userid:
     st.session_state["line_user_id"] = q_userid
 
-# --- MANUAL LOGIN LOGIC ---
+# --- MANUAL LOGIN / REGISTRATION LOGIC ---
 # ถ้ายังไม่ Login ให้ไปที่หน้าลงทะเบียน
 if not st.session_state['authenticated']:
     render_registration_page(df)
