@@ -15,7 +15,7 @@ GOOGLE_SHEET_TABNAME = "UserID"
 LIFF_ID = "2008725340-YHOiWxtj"
 APP_URL = "https://health-report-fromappdatabase-d53gxcssza4ravg7plcbcv.streamlit.app/"
 
-# --- 2. Google Sheets Connection (Core Logic - ไม่แตะต้องส่วนนี้) ---
+# --- 2. Google Sheets Connection (Core Logic) ---
 def get_gsheet_client():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/spreadsheets"]
     creds = None
@@ -97,107 +97,109 @@ def check_registration_logic(df, input_fname, input_lname, input_id):
         
     return True, "OK", valid_user.iloc[0].to_dict()
 
-# --- 5. UI & Styling (The Luxurious Upgrade) ---
+# --- 5. UI & Styling (Modern & Luxurious) ---
 def inject_premium_css():
     st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap');
         
-        /* Global Reset */
-        .stApp { font-family: 'Sarabun', sans-serif; background-color: #f8f9fa; }
+        .stApp { font-family: 'Sarabun', sans-serif; background-color: #f4f7f6; }
         
-        /* Card Style */
-        .login-card {
+        /* Modern Card */
+        .auth-card {
             background: #ffffff;
             padding: 2.5rem;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-            border: 1px solid rgba(0,0,0,0.02);
+            border-radius: 24px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.05);
             text-align: center;
-            max-width: 500px;
-            margin: 0 auto;
+            max-width: 480px;
+            margin: 2rem auto;
+            border: 1px solid rgba(0,0,0,0.02);
         }
 
         /* Typography */
-        .header-title {
-            color: #1B5E20; /* Dark Green */
-            font-size: 1.6rem;
+        .auth-title {
+            color: #111;
+            font-size: 1.8rem;
             font-weight: 700;
             margin-bottom: 0.5rem;
+            letter-spacing: -0.5px;
         }
-        .header-subtitle {
+        .auth-subtitle {
             color: #666;
-            font-size: 0.95rem;
+            font-size: 1rem;
             margin-bottom: 2rem;
             font-weight: 400;
         }
 
-        /* Input Fields Customization */
+        /* Input Styling */
+        div[data-testid="stTextInput"] label {
+            font-size: 0.9rem;
+            color: #444;
+            font-weight: 500;
+        }
         div[data-testid="stTextInput"] input {
             border-radius: 12px !important;
             border: 1px solid #e0e0e0 !important;
             padding: 12px 15px !important;
-            font-size: 1rem !important;
-            transition: all 0.3s;
+            transition: all 0.2s;
         }
         div[data-testid="stTextInput"] input:focus {
-            border-color: #1B5E20 !important;
-            box-shadow: 0 0 0 2px rgba(27, 94, 32, 0.1) !important;
+            border-color: #00A699 !important;
+            box-shadow: 0 0 0 3px rgba(0, 166, 153, 0.1) !important;
         }
 
-        /* Buttons */
+        /* Premium Button */
         .stButton button {
-            background: linear-gradient(135deg, #2E7D32 0%, #1B5E20 100%) !important;
+            background: linear-gradient(135deg, #00A699 0%, #00796B 100%) !important;
             color: white !important;
             border: none !important;
             border-radius: 50px !important;
-            padding: 12px 24px !important;
+            padding: 14px 28px !important;
             font-size: 1.1rem !important;
             font-weight: 600 !important;
-            box-shadow: 0 4px 15px rgba(27, 94, 32, 0.3) !important;
-            transition: transform 0.2s, box-shadow 0.2s !important;
             width: 100%;
+            box-shadow: 0 4px 12px rgba(0, 121, 107, 0.2) !important;
+            transition: transform 0.2s !important;
         }
         .stButton button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(27, 94, 32, 0.4) !important;
+            filter: brightness(1.05);
         }
-
-        /* Success/Error Message Styling */
-        .msg-box {
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
+        
+        /* Status Box */
+        .status-box {
+            background: #E0F2F1;
+            color: #00695C;
+            padding: 12px;
+            border-radius: 12px;
             font-size: 0.9rem;
+            margin-bottom: 20px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            justify-content: center;
+            gap: 8px;
         }
-        .msg-error { background-color: #FFEBEE; color: #C62828; border: 1px solid #FFCDD2; }
-        .msg-success { background-color: #E8F5E9; color: #2E7D32; border: 1px solid #C8E6C9; }
-        .msg-info { background-color: #E3F2FD; color: #1565C0; border: 1px solid #BBDEFB; }
-
-        /* Loader */
-        .stSpinner > div { border-top-color: #1B5E20 !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 6. LIFF Listener (The Anti-Loop Version) ---
+# --- 6. LIFF Listener (ANTI-LOOP Logic) ---
 def liff_token_catcher():
-    # ถ้ามี ID ใน Session แล้ว ไม่ต้องรัน Script ซ้ำ (หยุด Loop)
+    # 1. เช็ค Session State ก่อนเลย (เร็วที่สุด)
     if "line_user_id" in st.session_state:
-        return
+        return True
 
-    # Check query params
+    # 2. เช็ค URL Parameters
     qp_userid = st.query_params.get("userid")
-    
-    # ถ้าใน URL มี ID แล้ว ให้ดึงมาใส่ Session เลย ไม่ต้องรัน Script
     if qp_userid:
         st.session_state["line_user_id"] = qp_userid
-        st.rerun() # รีโหลดเพื่ออัปเดต State ทันที
-        return
+        # บังคับหยุดการทำงานตรงนี้เลย แล้ว rerun ใหม่ เพื่อให้หน้าเว็บรับรู้ Session ทันที
+        # ไม่ต้องรอ render HTML ข้างล่าง
+        st.rerun() 
+        return True
 
-    # ถ้ายังไม่มีอะไรเลย รัน Script นี้เพื่อ Redirect
+    # 3. ถ้าไม่มีอะไรเลย -> รัน JS LIFF
+    # ตรรกะสำคัญ: JS จะเช็ค URL ก่อนว่ามี userid ไหม ถ้ามีจะไม่ redirect ซ้ำ
     js_code = f"""
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script>
@@ -205,21 +207,29 @@ def liff_token_catcher():
         const TARGET_URL = "{APP_URL}";
 
         async function main() {{
+            // SAFETY CHECK 1: ถ้า URL มี userid แล้ว ห้ามทำอะไรต่อ (ป้องกัน Loop)
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('userid')) {{
+                console.log("User ID found in URL, stopping LIFF script.");
+                return;
+            }}
+
             try {{
                 await liff.init({{ liffId: LIFF_ID }});
                 if (liff.isLoggedIn()) {{
                     const profile = await liff.getProfile();
                     const userId = profile.userId;
                     
-                    // ตรวจสอบว่า URL ปัจจุบันมี userid หรือยัง เพื่อป้องกัน Loop
-                    const urlParams = new URLSearchParams(window.location.search);
-                    if (!urlParams.has('userid')) {{
-                        // Redirect เพื่อเติม parameter
+                    // Redirect เพื่อเติม parameter
+                    // SAFETY CHECK 2: เช็คอีกครั้งก่อน redirect
+                    if (!window.location.href.includes(userId)) {{
                         const separator = TARGET_URL.includes("?") ? "&" : "?";
                         window.top.location.href = TARGET_URL + separator + "userid=" + userId;
                     }}
                 }} else {{
-                    // ถ้ายังไม่ Login ไม่ต้องทำอะไร รอ user กดปุ่ม
+                    // กรณีเปิดใน Browser นอก LINE และยังไม่ Login
+                    // เราจะไม่ Auto-Login เพื่อให้ User กดปุ่มเอง (UX ดีกว่า)
+                    console.log("User not logged in.");
                 }}
             }} catch (e) {{
                 console.error("LIFF Error:", e);
@@ -229,66 +239,65 @@ def liff_token_catcher():
     </script>
     """
     components.html(js_code, height=0, width=0)
+    return False
 
 # --- 7. Admin Manager ---
 def render_admin_line_manager():
-    st.subheader("📱 จัดการผู้ใช้งาน (Admin Only)")
+    st.subheader("📱 จัดการผู้ใช้งาน")
     sheet, msg = get_user_worksheet()
     if sheet:
         st.dataframe(pd.DataFrame(sheet.get_all_records()), use_container_width=True)
     else:
-        st.error(f"Error: {msg}")
+        st.error(msg)
 
 # --- 8. MAIN RENDER FUNCTION ---
 def render_registration_page(df):
     inject_premium_css()
     
-    # 1. รัน LIFF Listener (แบบป้องกัน Loop)
-    liff_token_catcher()
+    # 1. พยายามดึง Token
+    has_token = liff_token_catcher()
 
-    # 2. จัด Layout ให้อยู่ตรงกลางแบบ Card
-    cols = st.columns([1, 2, 1])
-    with cols[1]:
-        
-        # --- A. เช็คสถานะการเชื่อมต่อ LINE ---
-        if "line_user_id" not in st.session_state:
-            # กรณี: ยังไม่ได้รับ Line ID
+    # 2. จัด Layout กึ่งกลาง
+    col1, col2, col3 = st.columns([1, 6, 1])
+    
+    with col2:
+        # --- กรณีที่ 1: ยังไม่ได้รับ Line ID (แสดงปุ่ม Login) ---
+        if not has_token:
             st.markdown("""
-            <div class="login-card">
-                <h2 class="header-title">บริการรายงานผลสุขภาพ</h2>
-                <p class="header-subtitle">Health Report Service</p>
-                <div style="margin: 30px 0;">
-                    <img src="https://img.icons8.com/color/96/line-me.png" alt="LINE" style="width:80px; margin-bottom:15px;">
-                    <p style="color:#555; font-size:0.9rem;">กรุณายืนยันตัวตนผ่าน LINE เพื่อความปลอดภัย<br>และเข้าถึงข้อมูลสุขภาพของท่าน</p>
+            <div class="auth-card">
+                <div style="margin-bottom: 20px;">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg" width="60" alt="LINE">
                 </div>
+                <h2 class="auth-title">ยินดีต้อนรับ</h2>
+                <p class="auth-subtitle">ระบบรายงานผลสุขภาพออนไลน์</p>
+                <div style="height: 20px;"></div>
+                <p style="font-size: 0.95rem; color: #555; margin-bottom: 30px;">
+                    เพื่อความปลอดภัยของข้อมูลส่วนบุคคล<br>กรุณายืนยันตัวตนผ่าน LINE
+                </p>
             </div>
             """, unsafe_allow_html=True)
             
-            # ปุ่ม Login (ใช้ Link LIFF ตรงๆ เพื่อความชัวร์)
+            # ใช้ Link Button โดยตรงเพื่อความเสถียร (หนีปัญหา JS Loop)
             login_url = f"https://liff.line.me/{LIFF_ID}"
-            st.link_button("🟢 เข้าสู่ระบบด้วย LINE", login_url, type="primary", use_container_width=True)
+            st.link_button("เข้าสู่ระบบด้วย LINE", login_url, type="primary", use_container_width=True)
             return
 
-        # --- B. ได้รับ Line ID แล้ว -> กำลังตรวจสอบ ---
+        # --- กรณีที่ 2: มี ID แล้ว -> เช็คสถานะ ---
         line_user_id = st.session_state["line_user_id"]
         
-        # ค้นหาใน Google Sheets (ใช้ Spinner เพื่อความสวยงาม)
-        if "reg_check_done" not in st.session_state:
-            with st.spinner("⏳ กำลังตรวจสอบสถานะสมาชิก..."):
-                is_registered, user_info = check_if_user_registered(line_user_id)
-                st.session_state["reg_is_registered"] = is_registered
-                st.session_state["reg_user_info"] = user_info
-                st.session_state["reg_check_done"] = True
-                # หน่วงเวลาเล็กน้อยให้ UX ดูลื่นไหล ไม่กระพริบ
-                time.sleep(0.5) 
+        # ตรวจสอบสมาชิก (ใช้ Cache เพื่อไม่ให้เช็คซ้ำๆ จนกระพริบ)
+        if "reg_check_result" not in st.session_state:
+            with st.spinner("⏳ กำลังยืนยันข้อมูลสมาชิก..."):
+                is_reg, u_info = check_if_user_registered(line_user_id)
+                st.session_state["reg_check_result"] = (is_reg, u_info)
+                # บังคับ Rerun เพื่อให้ UI อัปเดตทันที
                 st.rerun()
 
-        is_registered = st.session_state.get("reg_is_registered", False)
-        user_info = st.session_state.get("reg_user_info", None)
+        is_registered, user_info = st.session_state["reg_check_result"]
 
-        # --- C. กรณี: เป็นสมาชิกแล้ว (Auto Login) ---
+        # --- กรณีที่ 3: เป็นสมาชิกเก่า (Auto Login) ---
         if is_registered:
-            # Logic: ค้นหาข้อมูลใน SQLite ตามชื่อที่ได้จาก GSheet
+            # ค้นหาใน SQLite
             def name_match_auto(row_val):
                 if pd.isna(row_val): return False
                 db_f, db_l = normalize_db_name_field(str(row_val))
@@ -310,62 +319,55 @@ def render_registration_page(df):
                     })
                     st.rerun()
             else:
-                # กรณีแปลก: ลงทะเบียนแล้ว แต่ปีนี้ไม่มีชื่อใน SQLite
                 st.markdown(f"""
-                <div class="login-card">
-                    <div class="msg-box msg-info">
-                        <span>👋 สวัสดีคุณ <b>{user_info['first_name']}</b><br>พบประวัติการลงทะเบียนเดิม แต่ไม่พบผลตรวจสุขภาพในปีนี้</span>
+                <div class="auth-card">
+                    <h3 class="auth-title">ไม่พบผลตรวจ</h3>
+                    <div class="status-box">
+                        คุณ {user_info['first_name']}
                     </div>
-                    <p style="color:#666; font-size:0.9rem;">หากท่านมั่นใจว่าได้ตรวจสุขภาพแล้ว กรุณาติดต่อเจ้าหน้าที่</p>
+                    <p class="auth-subtitle">พบประวัติการลงทะเบียน แต่ไม่พบข้อมูลผลตรวจสุขภาพในปีนี้</p>
+                    <hr style="opacity: 0.1;">
+                    <p style="font-size: 0.85rem; color: #888;">หากมั่นใจว่าตรวจแล้ว กรุณาติดต่อเจ้าหน้าที่</p>
                 </div>
                 """, unsafe_allow_html=True)
-                if st.button("ลองค้นหาใหม่อีกครั้ง", use_container_width=True):
+                if st.button("ลองใหม่", use_container_width=True):
                     st.session_state.clear()
                     st.rerun()
             return
 
-        # --- D. กรณี: สมาชิกใหม่ (แสดงฟอร์มลงทะเบียน) ---
+        # --- กรณีที่ 4: สมาชิกใหม่ (แสดงฟอร์ม) ---
         st.markdown(f"""
-        <div class="login-card">
-            <h2 class="header-title">ลงทะเบียนใช้งานครั้งแรก</h2>
-            <p class="header-subtitle">First-time Registration</p>
-            <div class="msg-box msg-info" style="justify-content: center;">
-                <span>เชื่อมต่อกับ LINE ID: <b>{line_user_id[:6]}...</b> ✅</span>
+        <div class="auth-card" style="padding-bottom: 10px;">
+            <h2 class="auth-title">ลงทะเบียนครั้งแรก</h2>
+            <div class="status-box">
+                ✅ เชื่อมต่อกับ LINE: {line_user_id[:4]}...
             </div>
-            <p style="font-size: 0.9rem; color: #555; text-align: left; margin-bottom: 15px;">
-                กรุณากรอกข้อมูลให้ตรงกับบัตรประชาชน เพื่อยืนยันว่าเป็นเจ้าของข้อมูลจริง
-            </p>
+            <p class="auth-subtitle" style="margin-bottom: 10px;">กรอกข้อมูลให้ตรงกับบัตรประชาชน</p>
         </div>
         """, unsafe_allow_html=True)
 
-        # Form Container (แยกออกมานอก Card HTML เพื่อให้ Streamlit Input ทำงานได้)
         with st.form("modern_reg_form"):
-            fname = st.text_input("ชื่อจริง (ไม่ต้องระบุคำนำหน้า)", placeholder="เช่น สมชาย")
-            lname = st.text_input("นามสกุล", placeholder="เช่น ใจดี")
-            cid = st.text_input("เลขบัตรประชาชน (13 หลัก)", max_chars=13, placeholder="xxxxxxxxxxxxx")
+            fname = st.text_input("ชื่อจริง (ไม่ต้องมีคำนำหน้า)")
+            lname = st.text_input("นามสกุล")
+            cid = st.text_input("เลขบัตรประชาชน (13 หลัก)", max_chars=13)
             
-            st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
-            pdpa = st.checkbox("ข้าพเจ้ายอมรับข้อตกลง PDPA ในการเปิดเผยข้อมูลสุขภาพ")
+            st.markdown("<div style='height:15px'></div>", unsafe_allow_html=True)
+            pdpa = st.checkbox("ข้าพเจ้ายอมรับข้อตกลง PDPA ในการเปิดเผยข้อมูล")
             
             st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
-            submit_btn = st.form_submit_button("ยืนยันข้อมูลและเข้าสู่ระบบ")
+            submit_btn = st.form_submit_button("ยืนยันข้อมูล")
 
         if submit_btn:
             if not pdpa:
-                st.toast("⚠️ กรุณายอมรับข้อตกลง PDPA ก่อนดำเนินการ")
+                st.toast("⚠️ กรุณายอมรับข้อตกลง PDPA")
             else:
-                with st.spinner("กำลังตรวจสอบความถูกต้อง..."):
+                with st.spinner("กำลังตรวจสอบ..."):
                     valid, msg, row = check_registration_logic(df, fname, lname, cid)
-                    
                     if valid:
-                        # บันทึก GSheet
-                        save_suc, save_msg = save_new_user_to_gsheet(clean_string(fname), clean_string(lname), line_user_id)
-                        
-                        if save_suc:
-                            st.balloons()
-                            st.toast("✅ ลงทะเบียนสำเร็จ! ยินดีต้อนรับครับ")
-                            time.sleep(1) # รอให้ user อ่านข้อความ
-                            # Login
+                        success, save_msg = save_new_user_to_gsheet(clean_string(fname), clean_string(lname), line_user_id)
+                        if success:
+                            st.toast("✅ ลงทะเบียนสำเร็จ!")
+                            time.sleep(1)
                             st.session_state.update({
                                 'authenticated': True, 
                                 'pdpa_accepted': True, 
@@ -374,6 +376,6 @@ def render_registration_page(df):
                             })
                             st.rerun()
                         else:
-                            st.error(f"ระบบบันทึกข้อมูลขัดข้อง: {save_msg}")
+                            st.error(f"ระบบบันทึกมีปัญหา: {save_msg}")
                     else:
                         st.error(f"❌ {msg}")
