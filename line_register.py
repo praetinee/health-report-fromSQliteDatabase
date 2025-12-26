@@ -10,12 +10,15 @@ import urllib.parse
 
 # --- 1. Configuration ---
 SERVICE_ACCOUNT_FILE = "service_account.json" 
-# แก้ชื่อไฟล์และชื่อแท็บให้ตรงกับที่คุณแจ้งมา
+# ชื่อไฟล์บน Google Drive ต้องตรงเป๊ะทุกตัวอักษร
 GOOGLE_SHEET_FILENAME = "LINE User id for Database" 
+# ชื่อแท็บด้านล่าง
 GOOGLE_SHEET_TABNAME = "UserID"
+# LIFF ID ของคุณ
 LIFF_ID = "2008725340-YHOiWxtj"
 
 # ลิ้งค์ปลายทาง (Endpoint URL) ที่ถูกต้อง
+# *** สำคัญ: ต้องตรงกับ Endpoint URL ใน LINE Developers Console เป๊ะๆ ***
 APP_URL = "https://health-report-fromappdatabase-d53gxcssza4ravg7plcbcv.streamlit.app/"
 
 # --- 2. Google Sheets Connection ---
@@ -58,10 +61,11 @@ def get_user_worksheet():
         try:
             worksheet = sheet_file.worksheet(GOOGLE_SHEET_TABNAME)
         except gspread.WorksheetNotFound:
-            # ถ้าหาแท็บไม่เจอ ให้ใช้แท็บแรกแทน
+            # ถ้าหาแท็บไม่เจอ ให้ใช้แท็บแรกแทน และแจ้งเตือนใน Console (ไม่โชว์ user)
+            print(f"Warning: Sheet '{GOOGLE_SHEET_TABNAME}' not found. Using the first sheet.")
             worksheet = sheet_file.sheet1
         
-        # เช็คหัวตาราง
+        # เช็คหัวตาราง (ถ้าว่างเปล่า ให้สร้างหัวตาราง)
         if not worksheet.row_values(1):
             worksheet.append_row(["ชื่อ", "นามสกุล", "LINE User ID", "Timestamp"])
             
@@ -80,6 +84,7 @@ def check_if_user_registered(line_user_id):
         # ป้องกัน Error ถ้า Sheet ว่างเปล่าหรือไม่มี Column นี้
         if "LINE User ID" not in df.columns: return False, None
         
+        # แปลงเป็น string เพื่อความชัวร์ในการเปรียบเทียบ
         match = df[df["LINE User ID"].astype(str) == str(line_user_id)]
         if not match.empty:
             row = match.iloc[0]
@@ -120,11 +125,17 @@ def check_registration_logic(df, input_fname, input_lname, input_id):
             return True, "OK", row.to_dict()
     return False, "ชื่อ-สกุลไม่ตรงกับฐานข้อมูล", None
 
-# --- 5. LIFF Listener ---
+# --- 5. LIFF Listener (ตัวช่วยดึง ID จาก LINE) ---
 def liff_token_catcher():
+    """
+    ฟังก์ชันนี้จะทำงานอยู่เบื้องหลัง เพื่อรอรับค่าจาก LINE Login
+    """
+    # ถ้ามี ID แล้ว ไม่ต้องทำอะไร
     if "line_user_id" in st.session_state or st.query_params.get("userid"):
         return
 
+    # ถ้ายังไม่มี ID ให้รัน Script นี้
+    # มันจะเช็คว่า User Login ผ่าน LINE หรือยัง ถ้า Login แล้วจะดึง ID มาใส่ URL
     js_code = f"""
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script>
@@ -132,17 +143,33 @@ def liff_token_catcher():
         async function main() {{
             try {{
                 await liff.init({{ liffId: "{LIFF_ID}" }});
+                
+                // เช็คว่า Login แล้วหรือยัง
                 if (liff.isLoggedIn()) {{
                     const profile = await liff.getProfile();
-                    const separator = TARGET_APP_URL.includes("?") ? "&" : "?";
-                    const finalUrl = TARGET_APP_URL + separator + "userid=" + profile.userId;
-                    window.top.location.href = finalUrl;
+                    const userId = profile.userId;
+                    
+                    // ตรวจสอบ URL ปัจจุบัน
+                    const currentUrl = new URL(window.location.href);
+                    
+                    // ถ้าใน URL ยังไม่มี userid ให้เติมเข้าไปแล้ว Redirect
+                    if (!currentUrl.searchParams.has("userid")) {{
+                        // สร้าง URL ใหม่ที่มี userid
+                        const separator = TARGET_APP_URL.includes("?") ? "&" : "?";
+                        const finalUrl = TARGET_APP_URL + separator + "userid=" + userId;
+                        
+                        // สั่ง Redirect ไปยังหน้าที่มี userid
+                        window.top.location.href = finalUrl;
+                    }}
                 }}
-            }} catch (e) {{ console.log("Listener error:", e); }}
+            }} catch (e) {{ 
+                console.log("LIFF Listener error:", e); 
+            }}
         }}
         main();
     </script>
     """
+    # height=0 เพื่อซ่อนไม่ให้เห็น
     components.html(js_code, height=0, width=0)
 
 # --- 6. Admin Manager ---
@@ -157,43 +184,57 @@ def render_admin_line_manager():
 # --- 7. MAIN RENDER FUNCTION ---
 def render_registration_page(df):
     
+    # A. รันตัวดักจับสัญญาณ (สำคัญ!)
     liff_token_catcher()
 
-    # --- Debug Connection Status (Hidden by default, click to see) ---
-    with st.expander("🛠️ Admin: ตรวจสอบการเชื่อมต่อ Google Sheets"):
+    # B. เช็คสถานะ Google Sheet (Debug ชั่วคราว)
+    # เราจะซ่อนไว้ใน Expander เพื่อไม่ให้รก
+    with st.expander("🛠️ ตรวจสอบสถานะระบบ (Admin Only)", expanded=False):
         client, msg = get_gsheet_client()
         if client:
             st.success("✅ เชื่อมต่อ Google Sheets สำเร็จ")
+            # ลองเปิดไฟล์ดู
             sheet, s_msg = get_user_worksheet()
             if sheet:
-                st.info(f"เจอไฟล์ Sheet: {sheet.title}")
+                st.info(f"เจอไฟล์ Sheet และเปิดได้เรียบร้อย")
             else:
-                st.error(f"❌ หาไฟล์ Sheet ไม่เจอ: {s_msg}")
+                st.error(f"❌ เจอ Credential แต่เปิดไฟล์ไม่ได้: {s_msg}")
         else:
             st.error(f"❌ เชื่อมต่อไม่ได้: {msg}")
-            st.code(st.secrets.get("gcp_service_account", "No Secrets Found")) # ระวัง: โชว์ข้อมูลลับเฉพาะ Admin ดู
 
-    # รับ User ID
+    # C. รับ User ID จาก URL (ถ้ามี)
     qp_userid = st.query_params.get("userid", None)
     if qp_userid: 
         st.session_state["line_user_id"] = qp_userid
 
-    # ถ้ายังไม่มี ID -> ปุ่ม Login
+    # D. ตรวจสอบว่ามี User ID ใน Session หรือยัง
     if "line_user_id" not in st.session_state:
+        # --- กรณีที่ 1: ยังไม่มี ID (แสดงปุ่ม Login) ---
         st.markdown("---")
-        st.markdown("<h3 style='text-align: center;'>ยืนยันตัวตนเพื่อดูผลตรวจ</h3>", unsafe_allow_html=True)
+        st.markdown("""
+        <div style="text-align: center; padding: 30px; background-color: #f9f9f9; border-radius: 10px;">
+            <h3 style="color: #333;">ยืนยันตัวตนเพื่อดูผลตรวจสุขภาพ</h3>
+            <p style="color:gray;">กรุณากดปุ่มสีเขียวด้านล่าง เพื่อเข้าสู่ระบบผ่าน LINE</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # ปุ่ม Login โดยใช้ LIFF URL
         login_url = f"https://liff.line.me/{LIFF_ID}"
         st.link_button("🟢 เข้าสู่ระบบด้วย LINE (คลิก)", login_url, type="primary", use_container_width=True)
         return
 
-    # ถ้ามี ID -> เช็คข้อมูล
+    # --- กรณีที่ 2: มี ID แล้ว (แสดง ID และทำงานต่อ) ---
     line_user_id = st.session_state["line_user_id"]
     
-    with st.spinner("กำลังตรวจสอบข้อมูล..."):
+    # แสดงข้อความยืนยันว่าได้รับ ID แล้ว
+    st.success(f"✅ เชื่อมต่อ LINE สำเร็จ (ID: {line_user_id[:8]}...)")
+
+    # ตรวจสอบกับ Google Sheet ว่าเคยลงทะเบียนหรือยัง
+    with st.spinner("กำลังตรวจสอบข้อมูลในระบบ..."):
         is_registered, user_info = check_if_user_registered(line_user_id)
 
     if is_registered:
-        # มีในระบบ -> Login
+        # --- เคยลงทะเบียนแล้ว -> ให้ Login อัตโนมัติ ---
         found_rows = df[df['ชื่อ-สกุล'].str.contains(user_info['first_name'], na=False)]
         matched_user = None
         for _, row in found_rows.iterrows():
@@ -204,36 +245,50 @@ def render_registration_page(df):
         
         if matched_user is not None:
              if not st.session_state.get('authenticated'):
-                st.session_state.update({'authenticated': True, 'pdpa_accepted': True, 'user_hn': matched_user['HN'], 'user_name': matched_user['ชื่อ-สกุล'], 'is_line_login': True})
+                st.session_state.update({
+                    'authenticated': True, 
+                    'pdpa_accepted': True, 
+                    'user_hn': matched_user['HN'], 
+                    'user_name': matched_user['ชื่อ-สกุล'], 
+                    'is_line_login': True
+                })
                 st.rerun()
              return
         else:
-             st.error(f"ไม่พบประวัติสุขภาพของ {user_info['first_name']} ในปีนี้")
+             st.error(f"ไม่พบประวัติสุขภาพของ คุณ{user_info['first_name']} ในปีนี้ (แต่มีชื่อในระบบลงทะเบียน)")
              return
 
-    # ถ้าไม่มีในระบบ -> ฟอร์มลงทะเบียน
+    # --- ยังไม่เคยลงทะเบียน -> แสดงฟอร์ม ---
     st.markdown("---")
     st.subheader("📝 ลงทะเบียนครั้งแรก")
     
     with st.form("reg_form"):
-        st.caption("กรอกข้อมูลให้ตรงกับบัตรประชาชน")
+        st.caption("กรอกข้อมูลให้ตรงกับบัตรประชาชนเพื่อยืนยันตัวตน")
         f = st.text_input("ชื่อ (ไม่ต้องมีคำนำหน้า)")
         l = st.text_input("นามสกุล")
-        i = st.text_input("เลขบัตรประชาชน (13 หลัก)")
-        pdpa = st.checkbox("ข้าพเจ้ายอมรับข้อตกลง PDPA")
+        i = st.text_input("เลขบัตรประชาชน (13 หลัก)", max_chars=13)
+        pdpa = st.checkbox("ข้าพเจ้ายอมรับข้อตกลงและเงื่อนไข (PDPA)")
         
         if st.form_submit_button("ยืนยันข้อมูล", use_container_width=True):
             if not pdpa:
-                st.warning("⚠️ กรุณายอมรับข้อตกลง PDPA")
+                st.warning("⚠️ กรุณายอมรับข้อตกลง PDPA ก่อนดำเนินการ")
             else:
                 valid, msg, row = check_registration_logic(df, f, l, i)
                 if valid:
+                    # บันทึกข้อมูลลง Google Sheet
                     save_suc, save_msg = save_new_user_to_gsheet(clean_string(f), clean_string(l), line_user_id)
                     if save_suc:
+                        st.balloons()
                         st.success("✅ ลงทะเบียนสำเร็จ! กำลังเข้าสู่ระบบ...")
-                        st.session_state.update({'authenticated': True, 'pdpa_accepted': True, 'user_hn': row['HN'], 'user_name': row['ชื่อ-สกุล']})
+                        # อัปเดต Session เพื่อเข้าหน้าหลัก
+                        st.session_state.update({
+                            'authenticated': True, 
+                            'pdpa_accepted': True, 
+                            'user_hn': row['HN'], 
+                            'user_name': row['ชื่อ-สกุล']
+                        })
                         st.rerun()
                     else:
-                        st.error(f"❌ บันทึก Google Sheet ไม่ได้: {save_msg}")
+                        st.error(f"❌ บันทึกข้อมูลไม่สำเร็จ: {save_msg}")
                 else:
                     st.error(f"❌ {msg}")
