@@ -33,19 +33,15 @@ def get_gsheet_client():
     creds = None
     
     # 1. ลองอ่านจาก Streamlit Secrets (สำหรับ Cloud)
-    # ค้นหาหัวข้อ [gcp_service_account] ใน Secrets
     if "gcp_service_account" in st.secrets:
         try:
-            # แปลง Secrets object ให้เป็น Dictionary
             creds_dict = dict(st.secrets["gcp_service_account"])
-            
-            # สร้าง Credentials จาก Dictionary
             creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
         except Exception as e:
             st.error(f"❌ อ่าน Secrets ไม่สำเร็จ: {e}")
             return None
 
-    # 2. ถ้าไม่มี Secrets ให้ลองอ่านจากไฟล์ (สำหรับ Local Test)
+    # 2. ถ้าไม่มี Secrets ให้ลองอ่านจากไฟล์ (สำหรับ Local)
     elif os.path.exists(SERVICE_ACCOUNT_FILE):
         try:
             creds = ServiceAccountCredentials.from_json_keyfile_name(SERVICE_ACCOUNT_FILE, scope)
@@ -54,8 +50,7 @@ def get_gsheet_client():
             return None
     
     else:
-        # ถ้าหาไม่เจอทั้งคู่
-        st.error("❌ ไม่พบ Credentials! (กรุณาตั้งค่า st.secrets บน Cloud หรือวางไฟล์ json ใน Local)")
+        st.error("❌ ไม่พบ Credentials! (กรุณาตั้งค่า st.secrets หรือวางไฟล์ json)")
         return None
 
     try:
@@ -180,6 +175,8 @@ def liff_initializer_component():
     if "line_user_id" in st.session_state or st.query_params.get("userid"):
         return
 
+    # แก้ไข Script ให้ใช้ liff.login() เพื่อจัดการ Redirect อย่างถูกต้อง
+    # และเพิ่มการตรวจสอบว่ารันใน Client หรือ External Browser
     js_code = f"""
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script>
@@ -193,24 +190,32 @@ def liff_initializer_component():
                     
                     if (!currentUrl.searchParams.has("userid")) {{
                         currentUrl.searchParams.set("userid", userId);
+                        // ใช้ window.top.location.href เพื่อ redirect หน้าหลัก (ไม่ใช่ iframe)
                         window.top.location.href = currentUrl.toString();
                     }}
                 }} else {{
-                    liff.login();
+                    // ถ้ายังไม่ login ให้สั่ง login โดยระบุ redirectUri เป็นหน้าปัจจุบัน
+                    liff.login({{ redirectUri: window.location.href }});
                 }}
             }} catch (err) {{
-                // document.getElementById("status-text").innerText = "Error: " + err;
+                // แสดง error ใน console และบนหน้าจอ (ถ้าทำได้)
                 console.error("LIFF Init failed", err);
+                const statusElem = document.getElementById("status-text");
+                if (statusElem) {{
+                    statusElem.innerText = "Error: " + err.message;
+                    statusElem.style.color = "red";
+                }}
             }}
         }}
 
+        // รอให้หน้าเว็บโหลดเสร็จก่อนค่อยรัน LIFF
         if (document.readyState === "loading") {{
             document.addEventListener("DOMContentLoaded", runLiff);
         }} else {{
             runLiff();
         }}
     </script>
-    <div style="text-align:center; padding:20px; color: #666; background-color: #f0f2f6; border-radius: 10px;">
+    <div style="text-align:center; padding:20px; color: #666; background-color: #f0f2f6; border-radius: 10px; margin-bottom: 20px;">
         <p id="status-text">🔄 กำลังเชื่อมต่อกับ LINE... <br>(กรุณารอสักครู่)</p>
     </div>
     """
