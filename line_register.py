@@ -9,9 +9,9 @@ from datetime import datetime
 # LIFF ID ของคุณแจน
 LIFF_ID = "2008725340-YHOiWxtj"
 
-# ตั้งค่า Google Sheet (แก้ไขชื่อไฟล์ให้ตรงกับ CSV ของคุณแจน)
-SHEET_NAME = "LINE User id for Database - UserID" 
-WORKSHEET_NAME = "Users"
+# ตั้งค่า Google Sheet
+SHEET_NAME = "LINE User ID for Database" 
+WORKSHEET_NAME = "UserID"  # แก้ไขตามที่คุณแจนแจ้ง
 
 # --- Google Sheets Connection ---
 @st.cache_resource
@@ -42,12 +42,11 @@ def get_worksheet():
     
     try:
         sheet = client.open(SHEET_NAME)
-        # ลองหา Worksheet ที่ชื่อ Users ก่อน
+        # ลองหา Worksheet ที่ชื่อ UserID ก่อน
         try:
             return sheet.worksheet(WORKSHEET_NAME)
         except gspread.WorksheetNotFound:
             # ถ้าไม่มี ให้สร้างใหม่ พร้อม Header ตามไฟล์ CSV ที่คุณแจนให้มา
-            # เพิ่ม Timestamp และ เลขบัตรประชาชน เพื่อความครบถ้วนในการเก็บข้อมูล
             ws = sheet.add_worksheet(title=WORKSHEET_NAME, rows=100, cols=10)
             ws.append_row(["Timestamp", "ชื่อ", "นามสกุล", "LINE User ID", "เลขบัตรประชาชน"])
             return ws
