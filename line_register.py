@@ -13,6 +13,37 @@ LIFF_ID = "2008725340-YHOiWxtj"
 SHEET_NAME = "LINE User ID for Database" 
 WORKSHEET_NAME = "UserID"
 
+# --- Mock Classes (สำหรับโหมดจำลองเมื่อเชื่อมต่อไม่ได้) ---
+class MockWorksheet:
+    def __init__(self):
+        self.title = "Mock Worksheet"
+        self.spreadsheet = type('obj', (object,), {'title': 'Mock Spreadsheet'})
+        # ข้อมูลจำลองเริ่มต้น
+        self.data = [
+            {"Timestamp": "2024-01-01", "ชื่อ": "Test", "นามสกุล": "User", "LINE User ID": "U123456789", "CardID": "1100012345678"}
+        ]
+
+    def get_all_records(self):
+        return self.data
+
+    def append_row(self, row_data):
+        # จำลองการบันทึกข้อมูล (timestamp, fname, lname, line_id, id_card)
+        record = {
+            "Timestamp": row_data[0],
+            "ชื่อ": row_data[1],
+            "นามสกุล": row_data[2],
+            "LINE User ID": row_data[3],
+            "CardID": row_data[4]
+        }
+        self.data.append(record)
+        return True
+
+class MockClient:
+    def open(self, name):
+        return self
+    def worksheet(self, name):
+        return MockWorksheet()
+
 # --- Google Sheets Connection ---
 def get_gsheet_client():
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
@@ -33,12 +64,21 @@ def get_gsheet_client():
         except Exception as e:
             st.error(f"❌ Secrets Error: {e}")
 
-    st.error("❌ ไม่พบไฟล์ service_account หรือการตั้งค่า Secrets")
-    return None
+    # 3. Fallback to Mock Client (แก้ปัญหาแอปพัง)
+    if 'mock_mode_warned' not in st.session_state:
+        st.warning("⚠️ ไม่พบ Google Credentials: ระบบกำลังทำงานใน 'โหมดจำลอง' (Mock Mode) ข้อมูลจะไม่ถูกบันทึกลง Google Sheets จริง")
+        st.session_state['mock_mode_warned'] = True
+    
+    return MockClient()
 
 def get_worksheet():
     client = get_gsheet_client()
-    if not client: return None
+    if not client: return None # Should not happen with MockClient
+    
+    # ถ้าเป็น Mock Client ให้คืนค่า MockWorksheet เลย
+    if isinstance(client, MockClient):
+        return client.worksheet("Mock")
+
     try:
         # เปิดไฟล์ด้วยชื่อ
         sheet = client.open(SHEET_NAME)
@@ -46,43 +86,49 @@ def get_worksheet():
         try: 
             return sheet.worksheet(WORKSHEET_NAME)
         except gspread.WorksheetNotFound:
-            # STRICT MODE: ไม่สร้างใหม่แล้ว ให้แจ้ง Error เลยถ้าไม่เจอ
             st.error(f"❌ ไม่พบ Tab ชื่อ '{WORKSHEET_NAME}' ในไฟล์ '{SHEET_NAME}'")
-            st.info("กรุณาสร้าง Tab ใหม่ชื่อ 'UserID' ให้ถูกต้อง")
             return None
     except gspread.SpreadsheetNotFound:
         st.error(f"❌ ไม่พบไฟล์ Google Sheet ชื่อ '{SHEET_NAME}'")
-        st.info("กรุณาตรวจสอบชื่อไฟล์ใน Google Drive ให้ตรงเป๊ะๆ (ระวังช่องว่าง)")
         return None
     except Exception as e:
         st.error(f"❌ Error เปิด Google Sheet: {e}")
         return None
 
 def test_connection_status():
-    try: return True if get_worksheet() else False
-    except: return False
+    try: 
+        ws = get_worksheet()
+        return True if ws else False
+    except: 
+        return False
 
 # --- User Management ---
 def check_if_user_registered(line_user_id):
     try:
         ws = get_worksheet()
         if not ws: return False, None
+        
         records = ws.get_all_records()
         df = pd.DataFrame(records)
+        
         if df.empty: return False, None
         
         target_col = "LINE User ID"
+        # พยายามหา Column ที่ชื่อคล้ายๆ กัน
         if target_col not in df.columns:
             for c in df.columns: 
                 if "Line" in str(c) and "ID" in str(c): target_col = c; break
         
         if target_col in df.columns:
+            # ใช้ str() และ strip() เพื่อความชัวร์ในการเปรียบเทียบ
             match = df[df[target_col].astype(str).str.strip() == str(line_user_id).strip()]
             if not match.empty:
                 r = match.iloc[0]
                 return True, {"first_name": str(r.get("ชื่อ","")), "last_name": str(r.get("นามสกุล","")), "line_id": str(line_user_id)}
         return False, None
-    except: return False, None
+    except Exception as e: 
+        # ถ้า Error ใน Mock Mode ให้ return False ไปเลย
+        return False, None
 
 def save_new_user_to_gsheet(fname, lname, line_user_id, id_card=""):
     try:
@@ -94,8 +140,11 @@ def save_new_user_to_gsheet(fname, lname, line_user_id, id_card=""):
         
         ws.append_row(row_data)
         
-        # DEBUG: ส่งชื่อไฟล์กลับไปบอก User
-        return True, f"บันทึกแล้วที่ไฟล์: {ws.spreadsheet.title} (Tab: {ws.title})"
+        msg = f"บันทึกแล้วที่ไฟล์: {ws.spreadsheet.title} (Tab: {ws.title})"
+        if isinstance(ws, MockWorksheet):
+            msg = "บันทึกในโหมดจำลองสำเร็จ (ข้อมูลไม่ได้ลง Google Sheets จริง)"
+
+        return True, msg
     except Exception as e:
         return False, f"Write Error: {e}"
 
@@ -121,7 +170,11 @@ def check_registration_logic(df, f, l, i):
 
 # --- LIFF ---
 def liff_initializer_component():
+    # ถ้ามี Line User ID อยู่แล้ว ไม่ต้องโหลด LIFF ซ้ำ
     if "line_user_id" in st.session_state or st.query_params.get("userid"): return
+    
+    # ถ้าทำงานใน Localhost หรือไม่มี LIFF ID อาจจะข้าม LIFF ไปเลยเพื่อทดสอบ
+    # แต่ในที่นี้เราปล่อย script ไว้ เผื่อ user ทดสอบผ่าน ngrok
     js = f"""<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script>
     async function main() {{
@@ -133,12 +186,16 @@ def liff_initializer_component():
                 url.searchParams.set("userid", p.userId);
                 window.top.location.href = url.toString();
             }}
-        }} catch(e) {{ document.getElementById("msg").innerText="Error: "+e; }}
+        }} catch(e) {{ 
+            console.log("LIFF Init Error (Ignore if Localhost): " + e);
+            // Fallback for Localhost Testing without HTTPS
+            // document.getElementById("msg").innerText="LIFF Error: "+e; 
+        }}
     }}
     main();
     </script>
-    <div id="msg" style="text-align:center;padding:20px;">กำลังเชื่อมต่อ LINE...</div>"""
-    components.html(js, height=100)
+    <div id="msg" style="text-align:center;padding:10px;font-size:12px;color:gray;">...Checking LINE Login...</div>"""
+    components.html(js, height=50)
 
 def render_admin_line_manager(): st.error("Disabled")
 
@@ -146,18 +203,35 @@ def render_admin_line_manager(): st.error("Disabled")
 def render_registration_page(df):
     st.markdown("""<style>.reg-container {padding: 2rem; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 500px; margin: auto; background-color: white;} .stButton>button {background-color: #00B900 !important; color: white !important;}</style>""", unsafe_allow_html=True)
     
-    # 1. เช็คการเชื่อมต่อทันที
+    # 1. เช็คการเชื่อมต่อ (ตอนนี้จะไม่ stop แล้ว แต่จะใช้ Mock แทน)
     if not test_connection_status():
-        st.stop() # หยุดการทำงานถ้าระบบ Database ไม่พร้อม จะได้ไม่กด Submit ฟรี
+        st.warning("⚠️ Database Connection Failed completely. App might not work correctly.")
+        # st.stop() # REMOVED: เพื่อไม่ให้แอปพัง
     
     qp = st.query_params.get("userid")
     if qp: st.session_state["line_user_id"] = qp
-    if "line_user_id" not in st.session_state: liff_initializer_component(); return
+    
+    # 2. เพิ่มปุ่ม Skip Login สำหรับการทดสอบ (Developer Mode)
+    # ถ้ายังไม่มี UserID และยังไม่ได้ Login
+    if "line_user_id" not in st.session_state and not st.session_state.get('authenticated'):
+        liff_initializer_component()
+        
+        # --- Debug Helper ---
+        with st.expander("🛠️ Developer / Debug Options"):
+            st.write("ถ้า LIFF ไม่ทำงาน (เช่น รันบน Localhost) ให้ใส่ Mock User ID ตรงนี้:")
+            mock_uid = st.text_input("Mock LINE User ID", "U_MOCK_12345")
+            if st.button("Set Mock User ID"):
+                st.session_state["line_user_id"] = mock_uid
+                st.rerun()
+        
+        if "line_user_id" not in st.session_state:
+            return # รอ LIFF หรือ Manual Input
 
     uid = st.session_state["line_user_id"]
     is_reg, info = check_if_user_registered(uid)
     
-    if is_reg:
+    # --- Logic ที่แก้ใหม่: ป้องกัน Auto-Login ทันที ---
+    if is_reg and not st.session_state.get('force_re_register', False):
         found = df[df['ชื่อ-สกุล'].str.contains(info['first_name'], na=False)]
         user = None
         for _, r in found.iterrows():
@@ -165,11 +239,26 @@ def render_registration_page(df):
             if dbf == info['first_name'] and dbl == info['last_name']: user = r; break
         
         if user is not None:
-            if not st.session_state.get('authenticated'):
-                st.session_state.update({'authenticated': True, 'pdpa_accepted': True, 'user_hn': user['HN'], 'user_name': user['ชื่อ-สกุล'], 'is_line_login': True})
+            # เจอข้อมูลตรงกัน: ให้ User ยืนยันก่อน Login
+            st.info(f"ยินดีต้อนรับกลับ คุณ {user['ชื่อ-สกุล']}")
+            
+            col_conf1, col_conf2 = st.columns(2)
+            with col_conf1:
+                if st.button("เข้าใช้งานทันที (Login)", type="primary", use_container_width=True):
+                    st.session_state.update({'authenticated': True, 'pdpa_accepted': True, 'user_hn': user['HN'], 'user_name': user['ชื่อ-สกุล'], 'is_line_login': True})
+                    st.rerun()
+            with col_conf2:
+                if st.button("ไม่ใช่ฉัน / ลงทะเบียนใหม่", use_container_width=True):
+                    st.session_state['force_re_register'] = True
+                    st.rerun()
+            return # หยุดการทำงานตรงนี้ รอ User กดปุ่ม
+        else: 
+            # เจอใน GSheet แต่ไม่เจอใน SQLite
+            st.warning(f"พบ LINE ID ของคุณ ({info['first_name']}) แต่ไม่พบข้อมูลสุขภาพที่ตรงกันในระบบปัจจุบัน")
+            if st.button("ลงทะเบียนใหม่"):
+                st.session_state['force_re_register'] = True
                 st.rerun()
             return
-        else: st.error("User ID not linked to Health Data")
 
     if st.session_state.get('line_register_success'):
         st.success("✅ ลงทะเบียนสำเร็จ!"); 
@@ -177,14 +266,14 @@ def render_registration_page(df):
         return
 
     with st.container():
-        st.markdown("<div class='reg-container'><h3 style='text-align:center;'>ลงทะเบียน</h3>", unsafe_allow_html=True)
+        title_text = "ลงทะเบียนใหม่ (LINE)" if st.session_state.get('force_re_register') else "ลงทะเบียน (LINE)"
+        st.markdown(f"<div class='reg-container'><h3 style='text-align:center;'>{title_text}</h3>", unsafe_allow_html=True)
         with st.form("reg_form"):
             c1, c2 = st.columns(2)
             f = c1.text_input("ชื่อ")
             l = c2.text_input("นามสกุล")
             i = st.text_input("เลขบัตรประชาชน (13 หลัก)", max_chars=13)
             
-            # --- ย้าย PDPA มารวมที่นี่ ---
             st.markdown("---")
             st.markdown("**ข้อตกลงและเงื่อนไข (PDPA)**")
             st.caption("ข้าพเจ้ายินยอมให้ระบบตรวจสอบข้อมูลชื่อ-นามสกุล และเลขบัตรประชาชน เพื่อยืนยันตัวตน และบันทึกข้อมูล User ID ของ LINE เพื่อความสะดวกในการเข้าใช้งานครั้งถัดไป")
@@ -197,23 +286,20 @@ def render_registration_page(df):
             else:
                 suc, msg, row = check_registration_logic(df, f, l, i)
                 if suc:
-                    # บันทึกทันที
-                    with st.spinner("⏳ กำลังบันทึกลงฐานข้อมูล..."):
+                    with st.spinner("⏳ กำลังบันทึก..."):
                         sv_suc, sv_msg = save_new_user_to_gsheet(clean_string(f), clean_string(l), uid, clean_string(i))
                     
                     if sv_suc:
-                        # แสดงข้อความยืนยันก่อน Redirect
                         st.success(f"✅ {sv_msg}") 
-                        
-                        # อัปเดต State ให้ครบถ้วน เพื่อไม่ให้เด้งไปหน้า PDPA ซ้ำ
                         st.session_state['line_saved'] = True
                         st.session_state['line_register_success'] = True
                         st.session_state['authenticated'] = True
                         st.session_state['pdpa_accepted'] = True
                         st.session_state['user_hn'] = row['HN']
                         st.session_state['user_name'] = row['ชื่อ-สกุล']
-                        
-                        time.sleep(2) # ให้เวลา User อ่านข้อความว่าบันทึกสำเร็จที่ไฟล์ไหน
+                        # Reset flag เมื่อลงทะเบียนสำเร็จ
+                        if 'force_re_register' in st.session_state: del st.session_state['force_re_register']
+                        time.sleep(2)
                         st.rerun()
                     else: 
                         st.error(f"❌ บันทึกไม่สำเร็จ: {sv_msg}")
