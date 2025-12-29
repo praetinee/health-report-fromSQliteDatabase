@@ -6,6 +6,7 @@ from google.oauth2.service_account import Credentials
 from datetime import datetime
 import json
 import os
+import time  # เพิ่ม time เพื่อหน่วงเวลาให้บันทึกทัน
 
 # --- Constants ---
 LIFF_ID = "2008725340-YHOiWxtj"
@@ -73,17 +74,17 @@ def check_if_user_registered(line_user_id):
     except: return False, None
 
 def save_new_user_to_gsheet(fname, lname, line_user_id, id_card=""):
-    st.write("🚀 เริ่มต้นกระบวนการบันทึกข้อมูล...") # Debug Msg
+    st.info("🚀 กำลังส่งข้อมูลไปยัง Google Sheet...") # Debug Msg
     try:
         ws = get_worksheet()
         if not ws: return False, "ไม่สามารถเชื่อมต่อ Sheet ได้"
         
         row_data = [datetime.now().strftime("%Y-%m-%d %H:%M:%S"), str(fname).strip(), str(lname).strip(), str(line_user_id).strip(), str(id_card).strip()]
         ws.append_row(row_data)
-        st.write("✅ คำสั่ง append_row ทำงานเสร็จสิ้น") # Debug Msg
+        st.success("✅ บันทึกข้อมูลสำเร็จ!") # Debug Msg
         return True, "Success"
     except Exception as e:
-        st.write(f"❌ Error ใน save_new_user: {e}") # Debug Msg
+        st.error(f"❌ Error ใน save_new_user: {e}") # Debug Msg
         return False, f"Error: {e}"
 
 # --- Helpers ---
@@ -172,19 +173,26 @@ def render_registration_page(df):
             sub = st.form_submit_button("ยืนยันข้อมูล", use_container_width=True)
         
         if sub:
-            st.write("👉 กดปุ่มยืนยันแล้ว...") # Debug
+            st.write("👉 ตรวจสอบข้อมูล...") # Debug
             if not pdpa: st.warning("กรุณายอมรับ PDPA")
             else:
-                st.write("👉 PDPA ผ่าน... กำลังตรวจสอบข้อมูล...") # Debug
                 suc, msg, row = check_registration_logic(df, f, l, i)
                 if suc:
-                    st.write(f"👉 ข้อมูลถูกต้อง (HN: {row['HN']})... กำลังบันทึก...") # Debug
-                    with st.spinner("⏳ Saving..."):
-                        sv_suc, sv_msg = save_new_user_to_gsheet(clean_string(f), clean_string(l), uid, clean_string(i))
+                    st.write(f"👉 ข้อมูลถูกต้อง... กำลังบันทึก...") # Debug
+                    
+                    # --- CRITICAL FIX: บันทึกทันทีและหน่วงเวลาก่อน Redirect ---
+                    sv_suc, sv_msg = save_new_user_to_gsheet(clean_string(f), clean_string(l), uid, clean_string(i))
                     
                     if sv_suc:
-                        st.success(f"✅ บันทึกสำเร็จ: {sv_msg}") # Debug
-                        st.session_state.update({'line_saved': True, 'line_register_success': True, 'authenticated': True, 'pdpa_accepted': True, 'user_hn': row['HN'], 'user_name': row['ชื่อ-สกุล']})
+                        st.session_state['line_saved'] = True
+                        st.session_state['line_register_success'] = True
+                        st.session_state['authenticated'] = True
+                        st.session_state['pdpa_accepted'] = True # บังคับให้เป็น True เลย เพราะติ๊กแล้ว
+                        st.session_state['user_hn'] = row['HN']
+                        st.session_state['user_name'] = row['ชื่อ-สกุล']
+                        
+                        st.success("✅ บันทึกข้อมูลสำเร็จ! กำลังเข้าสู่ระบบ...")
+                        time.sleep(2) # หน่วงเวลา 2 วินาที ให้ User เห็นข้อความและให้ระบบจัดการ DB เสร็จ
                         st.rerun()
                     else: st.error(f"❌ Save Failed: {sv_msg}")
                 else: st.error(f"❌ {msg}")
