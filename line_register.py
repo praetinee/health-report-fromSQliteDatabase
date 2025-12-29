@@ -6,7 +6,7 @@ from google.oauth2.service_account import Credentials
 from datetime import datetime
 import json
 import os
-import time  # เพิ่ม time เพื่อหน่วงเวลาให้บันทึกทัน
+import time
 
 # --- Constants ---
 LIFF_ID = "2008725340-YHOiWxtj"
@@ -17,22 +17,30 @@ WORKSHEET_NAME = "UserID"
 def get_gsheet_client():
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     
-    # 1. Try st.secrets
+    # Debug: Print current directory files
+    # st.write(f"📂 Files in current directory: {os.listdir('.')}") # Uncomment to see files
+
+    # 1. Try Local JSON (Priority for debugging)
+    # ชื่อไฟล์ตามที่คุณแจนอัปโหลดมาเป๊ะๆ
+    target_files = ["service_account.json.json", "service_account.json"]
+    
+    for f in target_files:
+        if os.path.exists(f):
+            try:
+                # st.success(f"🔑 พบไฟล์กุญแจ: {f}") # Debug
+                return gspread.authorize(Credentials.from_service_account_file(f, scopes=scopes))
+            except Exception as e:
+                st.error(f"❌ อ่านไฟล์ {f} ไม่สำเร็จ: {e}")
+    
+    # 2. Try st.secrets (Fallback)
     if "gcp_service_account" in st.secrets:
         try:
             return gspread.authorize(Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes))
         except Exception as e:
-            st.error(f"❌ Secrets Error: {e}"); return None
-    
-    # 2. Try Local JSON
-    for f in ["service_account.json", "service_account.json.json"]:
-        if os.path.exists(f):
-            try:
-                return gspread.authorize(Credentials.from_service_account_file(f, scopes=scopes))
-            except Exception as e:
-                st.error(f"❌ File Error ({f}): {e}"); return None
+            st.error(f"❌ Secrets Error: {e}")
 
-    st.error("❌ No Credentials Found"); return None
+    st.error("❌ ไม่พบไฟล์ service_account.json.json หรือการตั้งค่า Secrets")
+    return None
 
 def get_worksheet():
     client = get_gsheet_client()
@@ -45,7 +53,9 @@ def get_worksheet():
             ws.append_row(["Timestamp", "ชื่อ", "นามสกุล", "LINE User ID", "เลขบัตรประชาชน"])
             return ws
     except Exception as e:
-        st.error(f"❌ Sheet Error: {e}"); return None
+        st.error(f"❌ เปิด Google Sheet ไม่สำเร็จ: {e}")
+        st.info(f"💡 ตรวจสอบว่าชื่อไฟล์ '{SHEET_NAME}' ตรงกับใน Google Drive หรือไม่")
+        return None
 
 def test_connection_status():
     try: return True if get_worksheet() else False
@@ -74,14 +84,14 @@ def check_if_user_registered(line_user_id):
     except: return False, None
 
 def save_new_user_to_gsheet(fname, lname, line_user_id, id_card=""):
-    st.info("🚀 กำลังส่งข้อมูลไปยัง Google Sheet...") # Debug Msg
+    # st.info("🚀 กำลังส่งข้อมูลไปยัง Google Sheet...") # Debug Msg
     try:
         ws = get_worksheet()
         if not ws: return False, "ไม่สามารถเชื่อมต่อ Sheet ได้"
         
         row_data = [datetime.now().strftime("%Y-%m-%d %H:%M:%S"), str(fname).strip(), str(lname).strip(), str(line_user_id).strip(), str(id_card).strip()]
         ws.append_row(row_data)
-        st.success("✅ บันทึกข้อมูลสำเร็จ!") # Debug Msg
+        # st.success("✅ บันทึกข้อมูลลง Google Sheet สำเร็จ!") # Debug Msg
         return True, "Success"
     except Exception as e:
         st.error(f"❌ Error ใน save_new_user: {e}") # Debug Msg
@@ -134,7 +144,9 @@ def render_admin_line_manager(): st.error("Disabled")
 def render_registration_page(df):
     st.markdown("""<style>.reg-container {padding: 2rem; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 500px; margin: auto; background-color: white;} .stButton>button {background-color: #00B900 !important; color: white !important;}</style>""", unsafe_allow_html=True)
     
-    if not test_connection_status(): st.error("⚠️ Database Connection Failed! (Check Secrets/JSON)"); 
+    # Test Connection immediately
+    if not test_connection_status(): 
+        st.error("⚠️ ไม่สามารถเชื่อมต่อ Google Sheet ได้ กรุณาเช็คไฟล์ service_account.json.json")
     
     qp = st.query_params.get("userid")
     if qp: st.session_state["line_user_id"] = qp
@@ -173,12 +185,12 @@ def render_registration_page(df):
             sub = st.form_submit_button("ยืนยันข้อมูล", use_container_width=True)
         
         if sub:
-            st.write("👉 ตรวจสอบข้อมูล...") # Debug
+            # st.write("👉 ตรวจสอบข้อมูล...") # Debug
             if not pdpa: st.warning("กรุณายอมรับ PDPA")
             else:
                 suc, msg, row = check_registration_logic(df, f, l, i)
                 if suc:
-                    st.write(f"👉 ข้อมูลถูกต้อง... กำลังบันทึก...") # Debug
+                    # st.write(f"👉 ข้อมูลถูกต้อง... กำลังบันทึก...") # Debug
                     
                     # --- CRITICAL FIX: บันทึกทันทีและหน่วงเวลาก่อน Redirect ---
                     sv_suc, sv_msg = save_new_user_to_gsheet(clean_string(f), clean_string(l), uid, clean_string(i))
