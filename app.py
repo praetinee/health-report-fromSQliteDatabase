@@ -22,7 +22,7 @@ try:
         render_admin_line_manager
     )
 except ImportError:
-    # Fallback กรณี error (เพื่อไม่ให้แอปพังทั้งหมด)
+    # Fallback กรณี error
     def save_new_user_to_gsheet(f, l, uid, id_card=""): return True, "Saved"
     def liff_initializer_component(): pass
     def check_if_user_registered(uid): return False, None
@@ -89,7 +89,6 @@ except Exception:
 def load_sqlite_data():
     tmp_path = None
     try:
-        # ID ไฟล์ SQLite ใน Google Drive (Hardcoded ตามเดิม)
         file_id = "1HruO9AMrUfniC8hBWtumVdxLJayEc1Xr"
         download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
         response = requests.get(download_url)
@@ -175,24 +174,22 @@ def main_app(df):
     # เราได้เซ็ต line_saved=True ในหน้า Register แล้ว ดังนั้นตรงนี้จะไม่ทำงานซ้ำซ้อน
     if st.session_state.get("line_user_id") and not st.session_state.get("line_saved", False):
         try:
-            # ดึงข้อมูลจาก Session
             user_name_full = st.session_state.get('user_name', '')
             parts = user_name_full.split()
             f_name = parts[0] if len(parts) > 0 else ""
             l_name = " ".join(parts[1:]) if len(parts) > 1 else ""
             
-            # ดึงเลขบัตรประชาชนจาก row ปัจจุบัน (ถ้ามี)
             id_card_val = ""
             if st.session_state.get("person_row"):
                 id_card_val = str(st.session_state.person_row.get('เลขบัตรประชาชน', ''))
             
-            # บันทึกลง GSheet
             success, msg = save_new_user_to_gsheet(f_name, l_name, st.session_state["line_user_id"], id_card_val)
             if success:
                 st.session_state["line_saved"] = True
             else:
-                # แสดง error ถ้าจำเป็น (ปกติ Auto save จะเงียบๆ แต่ถ้ามีปัญหาควรบอก)
-                print(f"Auto-save failed: {msg}")
+                # กรณี Auto-save พัง ให้เตือน (เพราะตอนนี้เราอยากรู้ว่าทำไม)
+                # st.warning(f"Auto-save failed: {msg}") 
+                pass
         except Exception as e:
             print(f"Auto-save error: {e}")
 
@@ -290,12 +287,10 @@ try:
         is_reg, info = check_if_user_registered(st.session_state["line_user_id"])
         
         if is_reg:
-            # ถ้าเคยลงทะเบียนแล้ว ให้ Auto Login โดยหา HN จาก SQLite
             found_rows = df[df['ชื่อ-สกุล'].str.contains(info['first_name'], na=False)]
             matched_user = None
             for _, row in found_rows.iterrows():
                 db_f, db_l = normalize_db_name_field(row['ชื่อ-สกุล'])
-                # เปรียบเทียบชื่อ-นามสกุล
                 if db_f == info['first_name'] and db_l == info['last_name']:
                     matched_user = row
                     break
@@ -308,7 +303,6 @@ try:
                 st.rerun()
 
 except Exception as e:
-    # กรณี Error ใน Routing ให้ข้ามไป (ยังไงก็ไปติดหน้า Login)
     pass
 
 # 4. Routing Decision (Final)
@@ -316,14 +310,11 @@ is_line_mode = "line_user_id" in st.session_state
 
 if not st.session_state['authenticated']:
     if is_line_mode:
-        # เปิดผ่าน LINE แต่ยังไม่ Login (และ Auto Login ไม่ผ่าน) -> ไปหน้าลงทะเบียน
         render_registration_page(df)
     else:
-        # เปิดผ่าน Browser ปกติ -> ไปหน้า Login เดิม
         authentication_flow(df)
 
 elif not st.session_state['pdpa_accepted']:
-    # กรณี Login ปกติแล้ว แต่ยังไม่ยอมรับ PDPA
     if st.session_state.get('is_admin', False):
         st.session_state['pdpa_accepted'] = True
         st.rerun()
@@ -331,7 +322,6 @@ elif not st.session_state['pdpa_accepted']:
         pdpa_consent_page()
 
 else:
-    # พร้อมใช้งาน
     if st.session_state.get('is_admin', False):
         display_admin_panel(df)
     else:
