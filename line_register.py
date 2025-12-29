@@ -13,7 +13,8 @@ SHEET_NAME = "LINE User ID for Database"
 WORKSHEET_NAME = "UserID"
 
 # --- Google Sheets Connection ---
-@st.cache_resource
+# REMOVED @st.cache_resource to force fresh connection every time
+# การลบ cache ออกช่วยแก้ปัญหาเรื่อง creds เก่าค้าง และบังคับให้เชื่อมต่อใหม่เสมอ
 def get_gsheet_client():
     """เชื่อมต่อ Google Sheets โดยรองรับทั้ง Secrets และไฟล์ JSON ในเครื่อง"""
     scopes = [
@@ -31,9 +32,9 @@ def get_gsheet_client():
             return gspread.authorize(credentials)
         except Exception as e:
             st.error(f"❌ Error using secrets: {e}")
+            return None
     
     # 2. ลองดึงจากไฟล์ JSON (Local)
-    # เช็คทั้งชื่อปกติและชื่อที่มี .json เบิ้ล เพื่อความชัวร์
     possible_files = ["service_account.json", "service_account.json.json"]
     found_file = None
     
@@ -87,6 +88,17 @@ def get_worksheet():
     except Exception as e:
         st.error(f"❌ Error การเข้าถึง Google Sheet: {e}")
         return None
+
+# --- Connection Tester ---
+def test_connection_status():
+    """ฟังก์ชันทดสอบการเชื่อมต่อแบบเงียบๆ แต่แจ้งเตือนถ้าพัง"""
+    try:
+        ws = get_worksheet()
+        if ws:
+            return True
+        return False
+    except Exception:
+        return False
 
 # --- User Management Functions ---
 
@@ -197,31 +209,20 @@ def liff_initializer_component():
         return
 
     # 3. ถ้ายังไม่มี ให้รัน LIFF Script
-    # Logic: Init -> Login (ถ้ายัง) -> Get Profile -> Redirect หน้าหลักพร้อม params
     js_code = f"""
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script>
         async function main() {{
             try {{
-                // 1. Initialize LIFF
                 await liff.init({{ liffId: "{LIFF_ID}" }});
-                
-                // 2. ตรวจสอบสถานะ Login
                 if (!liff.isLoggedIn()) {{
-                    // ถ้ายังไม่ Login ให้สั่ง Login (จะเด้งไปหน้า LINE Login)
                     liff.login();
                     return; 
                 }}
-                
-                // 3. ดึง User Profile
                 const profile = await liff.getProfile();
                 const userId = profile.userId;
                 
-                // 4. ส่งค่า UserID กลับมาที่ Python โดยการ Reload หน้าเว็บแม่ (window.top)
-                // ต้องใช้ window.top เพราะ Streamlit component รันใน iframe
                 const currentUrl = new URL(window.top.location.href);
-                
-                // เติมพารามิเตอร์ userid ลงใน URL ถ้ายังไม่มี
                 if (!currentUrl.searchParams.has("userid")) {{
                     currentUrl.searchParams.set("userid", userId);
                     window.top.location.href = currentUrl.toString();
@@ -268,6 +269,11 @@ def render_registration_page(df):
         .stButton>button { background-color: #00B900 !important; color: white !important; border-radius: 50px; height: 50px; font-size: 18px; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
+    
+    # 1. ทดสอบการเชื่อมต่อ Google Sheet ก่อนเลย ถ้าระบบพังให้บอกทันที
+    if not test_connection_status():
+        st.error("⚠️ **System Warning:** ไม่สามารถเชื่อมต่อฐานข้อมูล Google Sheet ได้")
+        st.warning("กรุณาแจ้งเจ้าหน้าที่ว่า 'ระบบบันทึกข้อมูลมีปัญหา' แต่ท่านยังสามารถใช้งานส่วนอื่นได้หากเคยลงทะเบียนแล้ว")
     
     # เรียกใช้ Script เพื่อดึง UserID (ถ้ายังไม่มี)
     liff_initializer_component()
@@ -331,8 +337,10 @@ def render_registration_page(df):
             else:
                 suc, msg, row = check_registration_logic(df, f, l, i)
                 if suc:
-                    # บันทึกลง Google Sheet
-                    save_suc, save_msg = save_new_user_to_gsheet(clean_string(f), clean_string(l), line_user_id, clean_string(i))
+                    # ใส่ Spinner เพื่อบอก User ว่าระบบกำลังทำงาน ไม่ได้นิ่ง
+                    with st.spinner("⏳ กำลังบันทึกข้อมูลเข้าสู่ระบบ..."):
+                        save_suc, save_msg = save_new_user_to_gsheet(clean_string(f), clean_string(l), line_user_id, clean_string(i))
+                    
                     if save_suc:
                         # SET FLAG: ป้องกันการบันทึกซ้ำ
                         st.session_state["line_saved"] = True  
