@@ -48,8 +48,13 @@ def _post_to_web_app(payload: dict, timeout: int = DEFAULT_TIMEOUT):
         raise ConnectionError(f"Request failed: {e}")
 
     # If Google redirected to login, permissions are misconfigured
-    if resp.url and "accounts.google.com" in resp.url:
-        raise PermissionError("Apps Script redirected to Google login — check 'Who has access' (should allow access to caller) or use appropriate auth.")
+    if resp.url:
+        from urllib.parse import urlparse
+        parsed = urlparse(resp.url)
+        # Check if we were redirected to Google's login page
+        netloc_lower = parsed.netloc.lower()
+        if netloc_lower == "accounts.google.com" or netloc_lower.endswith(".accounts.google.com"):
+            raise PermissionError("Apps Script redirected to Google login — check 'Who has access' (should allow access to caller) or use appropriate auth.")
 
     if resp.status_code != 200:
         raise RuntimeError(f"Apps Script returned HTTP {resp.status_code}")

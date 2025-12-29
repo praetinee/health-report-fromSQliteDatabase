@@ -21,10 +21,15 @@ def get_all_users_from_api():
         # ส่งเป็น POST JSON เพื่อความปลอดภัย (Web App รองรับทั้ง GET/POST)
         payload = {"action": "read"}
         resp = requests.post(WEB_APP_URL, json=payload, timeout=DEFAULT_TIMEOUT)
-        # ถ้า Google redirect ไปที่ accounts.google.com => สิทธิ์ไม่ถูกต้อง
-        if resp.url and "accounts.google.com" in resp.url:
-            # permission problem (sheet not shared / web app not set to anyone)
-            raise PermissionError("Google Script permission error: check 'Who has access' or share settings.")
+        # Check if Google redirected us to login page
+        if resp.url:
+            from urllib.parse import urlparse
+            parsed = urlparse(resp.url)
+            # Check if we were redirected to Google's login page
+            netloc_lower = parsed.netloc.lower()
+            if netloc_lower == "accounts.google.com" or netloc_lower.endswith(".accounts.google.com"):
+                # permission problem (sheet not shared / web app not set to anyone)
+                raise PermissionError("Google Script permission error: check 'Who has access' or share settings.")
         if resp.status_code != 200:
             raise RuntimeError(f"HTTP {resp.status_code}")
         try:
@@ -57,8 +62,13 @@ def save_user_to_api(fname, lname, line_user_id, id_card=""):
         }
         # ใช้ POST JSON
         resp = requests.post(WEB_APP_URL, json=payload, timeout=DEFAULT_TIMEOUT)
-        if resp.url and "accounts.google.com" in resp.url:
-            return {"ok": False, "error": "Permission error: Apps Script requires 'Anyone with link' or proper auth."}
+        # Check if Google redirected us to login page
+        if resp.url:
+            from urllib.parse import urlparse
+            parsed = urlparse(resp.url)
+            netloc_lower = parsed.netloc.lower()
+            if netloc_lower == "accounts.google.com" or netloc_lower.endswith(".accounts.google.com"):
+                return {"ok": False, "error": "Permission error: Apps Script requires 'Anyone with link' or proper auth."}
         if resp.status_code != 200:
             return {"ok": False, "error": f"HTTP {resp.status_code}"}
         try:
