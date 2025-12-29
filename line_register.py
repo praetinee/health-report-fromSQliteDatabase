@@ -60,15 +60,15 @@ def save_user_to_api(fname, lname, line_user_id, id_card=""):
         }
         
         # DEBUG: แสดง URL ที่กำลังจะยิง
-        # st.write(f"Target URL: {WEB_APP_URL}")
-        # st.write(f"Params: {params}")
+        st.write(f"Target URL: {WEB_APP_URL}")
+        st.write(f"Params: {params}")
 
         # 🟢 ใช้ GET Request
         response = requests.get(WEB_APP_URL, params=params, timeout=15, allow_redirects=True)
         
         # DEBUG: แสดงผลลัพธ์ดิบๆ
         st.write(f"Response Status: {response.status_code}")
-        st.code(response.text) # ดูว่า Google ตอบอะไรกลับมา
+        # st.code(response.text) # ดูว่า Google ตอบอะไรกลับมา
 
         if "accounts.google.com" in response.url:
              return False, "Permission Error: กรุณาตั้งค่า Deploy เป็น 'Anyone'"
@@ -187,83 +187,108 @@ def render_registration_page(df):
     if "line_user_id" not in st.session_state and not st.session_state.get('authenticated'):
         liff_initializer_component()
         
-        # Uncomment บรรทัดข้างล่างนี้ถ้าต้องการปุ่มทดสอบ (Mock)
+        # Uncomment for Debug Button
         # with st.expander("🛠️ Debug Options"):
         #     if st.button("ใช้ Mock User ID"): st.session_state["line_user_id"] = "U_DEBUG_123"; st.rerun()
 
         if "line_user_id" not in st.session_state: return 
 
     uid = st.session_state["line_user_id"]
-    is_reg, info = check_if_user_registered(uid)
     
-    # Logic ป้องกัน Auto-Login
-    if is_reg and not st.session_state.get('force_re_register', False):
-        found = df[df['ชื่อ-สกุล'].str.contains(info['first_name'], na=False)]
-        user = None
-        for _, r in found.iterrows():
-            dbf, dbl = normalize_db_name_field(r['ชื่อ-สกุล'])
-            if dbf == info['first_name'] and dbl == info['last_name']: user = r; break
+    # ---------------------------------------------------------
+    # ⚠️ FIXED LOGIC: แยกการเช็ค User เก่า กับการ Render Form ออกจากกัน
+    # ---------------------------------------------------------
+    
+    show_form = False # ตัวแปรควบคุมว่าจะโชว์ฟอร์มไหม
+
+    # 1. ถ้ามี Flag ว่าบังคับลงทะเบียนใหม่ -> โชว์ฟอร์มเลย
+    if st.session_state.get('force_re_register', False):
+        show_form = True
+    else:
+        # 2. ถ้ายังไม่มี Flag -> เช็คว่าเคยลงทะเบียนไหม
+        is_reg, info = check_if_user_registered(uid)
         
-        if user is not None:
-            st.info(f"ยินดีต้อนรับกลับ คุณ {user['ชื่อ-สกุล']}")
-            col_conf1, col_conf2 = st.columns(2)
-            with col_conf1:
-                if st.button("เข้าใช้งานทันที (Login)", type="primary", use_container_width=True):
+        if is_reg:
+            # เคยลงทะเบียน: เช็คว่าตรงกับ Database สุขภาพไหม
+            found = df[df['ชื่อ-สกุล'].str.contains(info['first_name'], na=False)]
+            user = None
+            for _, r in found.iterrows():
+                dbf, dbl = normalize_db_name_field(r['ชื่อ-สกุล'])
+                if dbf == info['first_name'] and dbl == info['last_name']: user = r; break
+            
+            if user is not None:
+                # ข้อมูลตรง -> ให้เลือก Login หรือ ลงทะเบียนใหม่
+                st.info(f"ยินดีต้อนรับกลับ คุณ {user['ชื่อ-สกุล']}")
+                c1, c2 = st.columns(2)
+                if c1.button("เข้าใช้งานทันที (Login)", type="primary", use_container_width=True):
                     st.session_state.update({'authenticated': True, 'pdpa_accepted': True, 'user_hn': user['HN'], 'user_name': user['ชื่อ-สกุล'], 'is_line_login': True})
                     st.rerun()
-            with col_conf2:
-                if st.button("ไม่ใช่ฉัน / ลงทะเบียนใหม่", use_container_width=True):
+                if c2.button("ไม่ใช่ฉัน / ลงทะเบียนใหม่", use_container_width=True):
                     st.session_state['force_re_register'] = True
                     st.rerun()
-            return
-        else: 
-            st.warning(f"พบ LINE ID ({info['first_name']}) แต่ไม่พบข้อมูลสุขภาพในระบบ")
-            if st.button("ลงทะเบียนใหม่"):
-                st.session_state['force_re_register'] = True
-                st.rerun()
-            return
-
-    if st.session_state.get('line_register_success'):
-        st.success("✅ ลงทะเบียนสำเร็จ!"); 
-        if st.button("ดูผลตรวจ"): st.rerun()
-        return
-
-    with st.container():
-        title_text = "ลงทะเบียนใหม่ (LINE)" if st.session_state.get('force_re_register') else "ลงทะเบียน (LINE)"
-        st.markdown(f"<div class='reg-container'><h3 style='text-align:center;'>{title_text}</h3>", unsafe_allow_html=True)
-        with st.form("reg_form"):
-            c1, c2 = st.columns(2)
-            f = c1.text_input("ชื่อ")
-            l = c2.text_input("นามสกุล")
-            i = st.text_input("เลขบัตรประชาชน (13 หลัก)", max_chars=13)
-            
-            st.markdown("---")
-            st.markdown("**ข้อตกลงและเงื่อนไข (PDPA)**")
-            pdpa = st.checkbox("ข้าพเจ้ายอมรับข้อตกลงและเงื่อนไข")
-            
-            sub = st.form_submit_button("ยืนยันข้อมูล", use_container_width=True)
-        
-        if sub:
-            if not pdpa: st.warning("กรุณายอมรับ PDPA")
+                return # จบการทำงาน (รอ user เลือก)
             else:
-                suc, msg, row = check_registration_logic(df, f, l, i)
-                if suc:
-                    with st.spinner("⏳ กำลังบันทึกข้อมูลไปยัง Google Sheets..."):
-                        sv_suc, sv_msg = save_user_to_api(clean_string(f), clean_string(l), uid, clean_string(i))
-                    
-                    if sv_suc:
-                        st.success(f"✅ {sv_msg}") 
-                        st.session_state['line_saved'] = True
-                        st.session_state['line_register_success'] = True
-                        st.session_state['authenticated'] = True
-                        st.session_state['pdpa_accepted'] = True
-                        st.session_state['user_hn'] = row['HN']
-                        st.session_state['user_name'] = row['ชื่อ-สกุล']
-                        if 'force_re_register' in st.session_state: del st.session_state['force_re_register']
-                        time.sleep(2)
-                        st.rerun()
+                # ไม่ตรง -> แจ้งเตือน และให้ปุ่มลงทะเบียนใหม่
+                st.warning(f"พบ LINE ID ({info['first_name']}) แต่ไม่พบข้อมูลสุขภาพในระบบ")
+                if st.button("ลงทะเบียนใหม่"):
+                    st.session_state['force_re_register'] = True
+                    st.rerun()
+                return # จบการทำงาน (รอ user เลือก)
+        else:
+            # ไม่เคยลงทะเบียน -> โชว์ฟอร์ม
+            show_form = True
+
+    # ---------------------------------------------------------
+    # FORM RENDER SECTION
+    # ---------------------------------------------------------
+    if show_form:
+        if st.session_state.get('line_register_success'):
+            st.success("✅ ลงทะเบียนสำเร็จ!"); 
+            if st.button("ดูผลตรวจ"): st.rerun()
+            return
+
+        with st.container():
+            title_text = "ลงทะเบียนใหม่ (LINE)" if st.session_state.get('force_re_register') else "ลงทะเบียน (LINE)"
+            st.markdown(f"<div class='reg-container'><h3 style='text-align:center;'>{title_text}</h3>", unsafe_allow_html=True)
+            
+            with st.form("reg_form"):
+                c1, c2 = st.columns(2)
+                f = c1.text_input("ชื่อ")
+                l = c2.text_input("นามสกุล")
+                i = st.text_input("เลขบัตรประชาชน (13 หลัก)", max_chars=13)
+                
+                st.markdown("---")
+                st.markdown("**ข้อตกลงและเงื่อนไข (PDPA)**")
+                pdpa = st.checkbox("ข้าพเจ้ายอมรับข้อตกลงและเงื่อนไข")
+                
+                # ปุ่ม Submit
+                sub = st.form_submit_button("ยืนยันข้อมูล", use_container_width=True)
+            
+            # --- Logic หลังกดปุ่ม Submit ---
+            if sub:
+                st.write("DEBUG: Submit button pressed!") # DEBUG Checkpoint 1
+                
+                if not pdpa: st.warning("กรุณายอมรับ PDPA")
+                else:
+                    suc, msg, row = check_registration_logic(df, f, l, i)
+                    if suc:
+                        st.write("DEBUG: Logic Passed. Saving...") # DEBUG Checkpoint 2
+                        with st.spinner("⏳ กำลังบันทึกข้อมูลไปยัง Google Sheets..."):
+                            sv_suc, sv_msg = save_user_to_api(clean_string(f), clean_string(l), uid, clean_string(i))
+                        
+                        if sv_suc:
+                            st.success(f"✅ {sv_msg}") 
+                            st.session_state['line_saved'] = True
+                            st.session_state['line_register_success'] = True
+                            st.session_state['authenticated'] = True
+                            st.session_state['pdpa_accepted'] = True
+                            st.session_state['user_hn'] = row['HN']
+                            st.session_state['user_name'] = row['ชื่อ-สกุล']
+                            if 'force_re_register' in st.session_state: del st.session_state['force_re_register']
+                            time.sleep(2)
+                            st.rerun()
+                        else: 
+                            st.error(f"❌ บันทึกไม่สำเร็จ: {sv_msg}")
                     else: 
-                        st.error(f"❌ บันทึกไม่สำเร็จ: {sv_msg}")
-                else: 
-                    st.error(f"❌ {msg}")
-        st.markdown("</div>", unsafe_allow_html=True)
+                        st.error(f"❌ {msg}")
+            st.markdown("</div>", unsafe_allow_html=True)
