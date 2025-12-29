@@ -23,7 +23,13 @@ def get_all_users_from_api():
         response = requests.get(WEB_APP_URL, params={"action": "read"}, timeout=15)
         
         if response.status_code == 200:
-            data = response.json()
+            try:
+                data = response.json()
+            except json.JSONDecodeError:
+                # กรณี Google ส่ง HTML กลับมาแทน JSON (มักเกิดจาก Redirect หรือ Permission)
+                st.error(f"Google Script Response Error: ได้รับ HTML แทนที่จะเป็น JSON (ตรวจสอบสิทธิ์การ Deploy)")
+                return []
+
             # ตรวจสอบว่า API ส่ง Error กลับมาหรือไม่
             if isinstance(data, dict) and data.get("result") == "error":
                 st.error(f"Google Script Error: {data.get('message')}")
@@ -46,15 +52,19 @@ def save_user_to_api(fname, lname, line_user_id, id_card=""):
             "line_id": line_user_id,
             "card_id": id_card
         }
-        # ใช้ POST request เพื่อส่งข้อมูล
-        response = requests.post(WEB_APP_URL, params=payload, timeout=15)
+        # ⚠️ เปลี่ยนจาก POST เป็น GET เพื่อแก้ปัญหาข้อมูลหายตอน Redirect ของ Google
+        # GET จะส่ง parameter ไปใน URL เลย ซึ่งชัวร์กว่าสำหรับ Google Apps Script แบบ Simple
+        response = requests.get(WEB_APP_URL, params=payload, timeout=15)
         
         if response.status_code == 200:
-            res_json = response.json()
-            if res_json.get("result") == "success":
-                return True, "บันทึกข้อมูลเรียบร้อยแล้ว"
-            else:
-                return False, f"Script Error: {res_json.get('message')}"
+            try:
+                res_json = response.json()
+                if res_json.get("result") == "success":
+                    return True, "บันทึกข้อมูลเรียบร้อยแล้ว"
+                else:
+                    return False, f"Script Error: {res_json.get('message')}"
+            except json.JSONDecodeError:
+                return False, "Response Error: Google ไม่ส่งค่า JSON กลับมา (อาจเกิดข้อผิดพลาดที่ฝั่ง Script)"
         else:
             return False, f"HTTP Error: {response.status_code}"
     except Exception as e:
@@ -66,6 +76,7 @@ save_new_user_to_gsheet = save_user_to_api
 
 def test_connection_status():
     """ฟังก์ชันหลอกเพื่อความเข้ากันได้กับ app.py เดิม"""
+    # ถ้ามี URL แล้ว ให้ถือว่าเชื่อมต่อได้เสมอ
     if "YOUR_SCRIPT_ID_HERE" in WEB_APP_URL:
         return False
     return True
