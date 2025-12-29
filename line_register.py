@@ -4,27 +4,26 @@ import streamlit.components.v1 as components
 import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime
-import json
 import os
+import json
 
 # --- Constants ---
-# LIFF ID ของคุณแจน
 LIFF_ID = "2008725340-YHOiWxtj"
 
-# ตั้งค่า Google Sheet
+# ตั้งค่า Google Sheet ให้ตรงกับไฟล์ CSV ของคุณแจน
 SHEET_NAME = "LINE User ID for Database" 
 WORKSHEET_NAME = "UserID"
 
-# --- Google Sheets Connection ---
+# --- Google Sheets Connection (Robust Version) ---
 @st.cache_resource
 def get_gsheet_client():
-    """เชื่อมต่อ Google Sheets โดยรองรับทั้ง st.secrets และไฟล์ JSON"""
+    """เชื่อมต่อ Google Sheets แบบรองรับทั้ง Secrets และไฟล์ JSON ในเครื่อง"""
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive"
     ]
     
-    # 1. ลองดึงจาก st.secrets ก่อน (สำหรับ Streamlit Cloud)
+    # 1. ลองดึงจาก st.secrets (บน Streamlit Cloud)
     if "gcp_service_account" in st.secrets:
         try:
             credentials = Credentials.from_service_account_info(
@@ -33,77 +32,77 @@ def get_gsheet_client():
             )
             return gspread.authorize(credentials)
         except Exception as e:
-            st.error(f"❌ Error using secrets: {e}")
+            st.error(f"❌ อ่านค่าจาก Secrets ไม่สำเร็จ: {e}")
     
-    # 2. ถ้าไม่มี secrets ให้ลองหาไฟล์ JSON ในเครื่อง (สำหรับ Local Dev)
-    # ลองชื่อไฟล์ที่พบบ่อย
-    json_files = ["service_account.json", "service_account.json.json"]
+    # 2. ถ้าไม่มี Secrets ลองหาไฟล์ JSON ในเครื่อง (Local)
+    # เช็คทั้งชื่อปกติและชื่อที่มี .json เบิ้ล
+    possible_files = ["service_account.json", "service_account.json.json"]
     found_file = None
-    for f in json_files:
+    
+    for f in possible_files:
         if os.path.exists(f):
             found_file = f
             break
             
     if found_file:
         try:
+            # st.info(f"กำลังใช้ไฟล์กุญแจจาก: {found_file}") # เปิดบรรทัดนี้ถ้าอยากรู้ว่าใช้ไฟล์ไหน
             credentials = Credentials.from_service_account_file(
                 found_file,
                 scopes=scopes
             )
             return gspread.authorize(credentials)
         except Exception as e:
-            st.error(f"❌ Error reading {found_file}: {e}")
+            st.error(f"❌ อ่านไฟล์ {found_file} ไม่สำเร็จ: {e}")
             return None
 
     # 3. ถ้าไม่เจออะไรเลย
-    st.error("❌ ไม่พบการตั้งค่า Google Service Account")
-    st.info("คำแนะนำ: \n1. ตรวจสอบว่ามีไฟล์ 'service_account.json' ในโฟลเดอร์โปรเจกต์ \n2. หรือตั้งค่า Secrets ใน Streamlit Cloud")
+    st.error("❌ ไม่พบการตั้งค่า Google Service Account (ไม่เจอ Secrets และไม่เจอไฟล์ json)")
     return None
 
 def get_worksheet():
-    """ดึง Worksheet ออกมาใช้งาน พร้อมระบบแจ้งเตือน Error"""
+    """ดึง Worksheet พร้อมแสดง Error ชัดเจนถ้าหาไม่เจอ"""
     client = get_gsheet_client()
     if not client: return None
     
     try:
         sheet = client.open(SHEET_NAME)
-        # ลองหา Worksheet ที่ชื่อ UserID
+        # ลองหา Worksheet
         try:
             return sheet.worksheet(WORKSHEET_NAME)
         except gspread.WorksheetNotFound:
-            # ถ้าหา Worksheet ไม่เจอ ให้ลองสร้างใหม่
+            # ถ้าไม่มี ให้ลองสร้างใหม่
             try:
                 ws = sheet.add_worksheet(title=WORKSHEET_NAME, rows=100, cols=10)
                 ws.append_row(["Timestamp", "ชื่อ", "นามสกุล", "LINE User ID", "เลขบัตรประชาชน"])
                 return ws
             except Exception as create_err:
-                st.error(f"❌ ไม่พบแผ่นงานชื่อ '{WORKSHEET_NAME}' และระบบพยายามสร้างใหม่แต่ไม่สำเร็จ")
-                st.error(f"Error Detail: {create_err}")
+                st.error(f"❌ ไม่พบแผ่นงานชื่อ '{WORKSHEET_NAME}' และสร้างใหม่ไม่ได้")
+                st.error(f"สาเหตุ: {create_err}")
                 return None
 
     except gspread.SpreadsheetNotFound:
         st.error(f"❌ ไม่พบไฟล์ Google Sheet ชื่อ: '{SHEET_NAME}'")
-        st.warning(f"⚠️ กรุณาตรวจสอบว่าชื่อไฟล์ใน Google Drive ตรงกับ '{SHEET_NAME}' เป๊ะๆ หรือไม่ (ระวังช่องว่าง)")
-        st.warning("⚠️ และตรวจสอบว่าได้แชร์ (Share) ไฟล์ให้กับ Email ของ Service Account แล้วหรือยัง")
+        st.warning("⚠️ คำแนะนำ:")
+        st.markdown(f"1. เช็คชื่อไฟล์ใน Google Drive ว่าชื่อ `{SHEET_NAME}` เป๊ะๆ หรือไม่")
+        st.markdown("2. เช็คว่ากด Share ให้ Email ของ Service Account หรือยัง")
         
-        # พยายามดึง Email มาโชว์เพื่อให้ก๊อบไปแชร์ง่ายขึ้น
-        try:
-            if "gcp_service_account" in st.secrets:
-                sa_email = st.secrets["gcp_service_account"].get("client_email", "Unknown")
-                st.code(sa_email, language="text")
-            elif os.path.exists("service_account.json"):
-                with open("service_account.json") as f:
-                    data = json.load(f)
-                    st.code(data.get("client_email", "Unknown"), language="text")
-        except:
-            pass
-            
+        # แสดง Email เพื่อให้ก๊อบไปแชร์ง่ายๆ
+        sa_email = "ไม่พบข้อมูล Email"
+        if "gcp_service_account" in st.secrets:
+            sa_email = st.secrets["gcp_service_account"].get("client_email", "N/A")
+        elif os.path.exists("service_account.json.json"):
+             with open("service_account.json.json") as f:
+                d = json.load(f)
+                sa_email = d.get("client_email")
+        
+        st.code(sa_email, language="text")
         return None
     except Exception as e:
-        st.error(f"❌ Error accessing Google Sheet: {e}")
+        st.error(f"❌ Error การเข้าถึง Google Sheet: {e}")
         return None
 
-# --- User Management Functions (Google Sheets) ---
+# --- User Management Functions ---
 
 def check_if_user_registered(line_user_id):
     """ตรวจสอบว่า LINE ID นี้มีใน Google Sheet แล้วหรือยัง"""
@@ -111,25 +110,21 @@ def check_if_user_registered(line_user_id):
         ws = get_worksheet()
         if not ws: return False, None
         
-        # ดึงข้อมูลทั้งหมดมาเช็ค
         records = ws.get_all_records()
         df = pd.DataFrame(records)
         
-        if df.empty:
-            return False, None
+        if df.empty: return False, None
 
+        # หาคอลัมน์ LINE ID (เผื่อพิมพ์ผิดเล็กน้อย)
         target_col = "LINE User ID"
-        
-        # พยายามหาคอลัมน์ที่ถูกต้อง
         if target_col not in df.columns:
             for col in df.columns:
-                clean_col = str(col).strip()
-                if "Line" in clean_col and "ID" in clean_col:
+                if "Line" in str(col) and "ID" in str(col):
                     target_col = col
                     break
         
         if target_col in df.columns:
-            # แปลงเป็น String เพื่อความชัวร์
+            # แปลงเป็น String และตัดช่องว่างก่อนเทียบ
             match = df[df[target_col].astype(str).str.strip() == str(line_user_id).strip()]
             
             if not match.empty:
@@ -143,18 +138,16 @@ def check_if_user_registered(line_user_id):
         
         return False, None
     except Exception as e: 
-        # แสดง Error ถ้าจำเป็น แต่ปกติฟังก์ชัน Read ไม่ควรบล็อก Flow หลักถ้าแค่หาไม่เจอ
-        print(f"Check User Error: {e}")
+        # st.error(f"Debug Check User: {e}")
         return False, None
 
 def save_new_user_to_gsheet(fname, lname, line_user_id, id_card=""):
-    """บันทึกผู้ใช้ใหม่ลง Google Sheet (ต่อท้าย)"""
+    """บันทึกข้อมูลลง Google Sheet"""
     try:
         ws = get_worksheet()
         if not ws: return False, "เชื่อมต่อ Google Sheet ไม่ได้ (ดู Error ด้านบน)"
         
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        # ข้อมูลที่จะบันทึก
         row_data = [
             timestamp, 
             str(fname).strip(), 
@@ -189,6 +182,7 @@ def check_registration_logic(df, input_fname, input_lname, input_id):
         return False, "เลขบัตรประชาชนต้องมี 13 หลัก", None
     
     try:
+        # ค้นหาใน SQLite
         user_match = df[df['เลขบัตรประชาชน'].astype(str).str.strip().str.replace("-", "") == clean_id]
         
         if user_match.empty: 
@@ -196,6 +190,7 @@ def check_registration_logic(df, input_fname, input_lname, input_id):
         
         for _, row in user_match.iterrows():
             db_f, db_l = normalize_db_name_field(row['ชื่อ-สกุล'])
+            # เทียบชื่อนามสกุลแบบตัดช่องว่าง
             if db_f == i_fname and db_l.replace(" ", "") == i_lname.replace(" ", ""):
                 return True, "ยืนยันตัวตนสำเร็จ", row.to_dict()
                 
@@ -233,34 +228,29 @@ def liff_initializer_component():
     </script>
     <div style="text-align:center; padding:20px; background-color:#f0f2f6; border-radius:10px; margin-bottom:20px;">
         <h4 style="color:#00796B;">กำลังเชื่อมต่อกับ LINE...</h4>
-        <p>กรุณารอสักครู่ ระบบกำลังยืนยันตัวตนของท่าน</p>
+        <p>กรุณารอสักครู่...</p>
     </div>
     """
     components.html(js_code, height=150)
 
-# --- Admin Manager (GSheet Version) ---
+# --- Admin Manager ---
 def render_admin_line_manager():
     st.subheader("📱 จัดการผู้ใช้งาน LINE (Google Sheets)")
-    
     ws = get_worksheet()
-    if not ws:
-        st.warning("ไม่สามารถโหลดข้อมูลได้ กรุณาตรวจสอบการตั้งค่า Google Sheet")
-        return
+    if not ws: return # Error จะแสดงใน get_worksheet แล้ว
 
     try:
         records = ws.get_all_records()
         df = pd.DataFrame(records)
-        
         if df.empty:
-            st.info("ยังไม่มีข้อมูลผู้ลงทะเบียนใน Google Sheet")
+            st.info("ยังไม่มีข้อมูลผู้ลงทะเบียน")
         else:
             st.dataframe(df, use_container_width=True)
-            if st.button("รีเฟรชข้อมูล"): 
-                st.rerun()
+            if st.button("รีเฟรชข้อมูล"): st.rerun()
     except Exception as e:
         st.error(f"เกิดข้อผิดพลาดในการดึงข้อมูล: {e}")
 
-# --- Main Render Function (Registration Page) ---
+# --- Registration Page Renderer ---
 def render_registration_page(df):
     st.markdown("""
     <style>
@@ -270,26 +260,22 @@ def render_registration_page(df):
     </style>
     """, unsafe_allow_html=True)
     
-    # 1. รับ UserID
     qp_userid = st.query_params.get("userid", None)
     if qp_userid: 
         st.session_state["line_user_id"] = qp_userid
     
-    # 2. ถ้ายังไม่มี UserID ให้รัน LIFF
     if "line_user_id" not in st.session_state:
         liff_initializer_component()
         return
 
     line_user_id = st.session_state["line_user_id"]
     
-    # 3. เช็คว่าเคยลงทะเบียนหรือยัง (Check Google Sheet)
+    # เช็คว่าเคยลงทะเบียนไหม
     is_registered, user_info = check_if_user_registered(line_user_id)
     
     if is_registered:
-        # ถ้าเคยลงทะเบียนแล้ว ให้ Auto Login
         found_rows = df[df['ชื่อ-สกุล'].str.contains(user_info['first_name'], na=False)]
         matched_user = None
-        
         for _, row in found_rows.iterrows():
             db_f, db_l = normalize_db_name_field(row['ชื่อ-สกุล'])
             if db_f == user_info['first_name'] and db_l == user_info['last_name']:
@@ -308,52 +294,41 @@ def render_registration_page(df):
                 st.rerun()
              return
         else:
-             st.error("พบข้อมูลการลงทะเบียน LINE แต่ไม่พบข้อมูลสุขภาพในฐานข้อมูล (SQLite)")
-             st.info("กรุณาติดต่อเจ้าหน้าที่เพื่อตรวจสอบความถูกต้องของชื่อ-นามสกุล")
+             st.error("พบ Line ID ในระบบ แต่ไม่พบข้อมูลสุขภาพในฐานข้อมูล (ชื่ออาจไม่ตรงกัน)")
              return
 
-    # 4. ถ้าลงทะเบียนสำเร็จแล้ว
+    # หน้าลงทะเบียน
     if st.session_state.get('line_register_success', False):
         st.success("✅ ลงทะเบียนเรียบร้อยแล้ว!")
-        st.balloons()
-        if st.button("เข้าดูผลตรวจสุขภาพ", type="primary", use_container_width=True): 
+        if st.button("เข้าดูผลตรวจสุขภาพ", type="primary"): 
             st.rerun()
         return
 
-    # 5. Form ลงทะเบียน
     with st.container():
         st.markdown("<div class='reg-container'>", unsafe_allow_html=True)
         st.markdown("<h2 class='reg-header'>ลงทะเบียนดูผลตรวจสุขภาพ</h2>", unsafe_allow_html=True)
-        
-        with st.expander("📄 ข้อตกลงและเงื่อนไข (PDPA)", expanded=False):
-            st.markdown("""
-            1. ข้าพเจ้ายินยอมให้ระบบตรวจสอบข้อมูลชื่อ-นามสกุล และเลขบัตรประชาชน เพื่อยืนยันตัวตน
-            2. ข้อมูล User ID ของ LINE จะถูกบันทึกเพื่อความสะดวกในการเข้าใช้งานครั้งถัดไป
-            3. ผลตรวจสุขภาพนี้เป็นข้อมูลส่วนบุคคล ห้ามเผยแพร่แก่ผู้อื่น
-            """)
-        
-        pdpa_check = st.checkbox("ข้าพเจ้ายอมรับข้อตกลงและเงื่อนไข (PDPA)")
-        st.markdown("---")
         
         with st.form("line_reg_form"):
             c1, c2 = st.columns(2)
             with c1: f = st.text_input("ชื่อ (ไม่ต้องมีคำนำหน้า)")
             with c2: l = st.text_input("นามสกุล")
             i = st.text_input("เลขบัตรประชาชน (13 หลัก)", max_chars=13)
+            pdpa_check = st.checkbox("ข้าพเจ้ายอมรับข้อตกลงและเงื่อนไข (PDPA)")
             
             sub = st.form_submit_button("ยืนยันตัวตน", use_container_width=True)
 
         if sub:
             if not pdpa_check: 
-                st.warning("กรุณาติ๊กยอมรับข้อตกลง PDPA ก่อนลงทะเบียน")
+                st.warning("กรุณาติ๊กยอมรับข้อตกลง PDPA")
             else:
                 suc, msg, row = check_registration_logic(df, f, l, i)
                 if suc:
                     # บันทึกลง Google Sheet
                     save_suc, save_msg = save_new_user_to_gsheet(clean_string(f), clean_string(l), line_user_id, clean_string(i))
+                    
                     if save_suc:
-                        # SET FLAG: ป้องกันการบันทึกซ้ำ
-                        st.session_state["line_saved"] = True  
+                        # ตั้งค่า Session เพื่อให้เข้าระบบได้เลย และไม่เซฟซ้ำ
+                        st.session_state["line_saved"] = True 
                         st.session_state.update({
                             'line_register_success': True,
                             'authenticated': True,
@@ -363,9 +338,8 @@ def render_registration_page(df):
                         })
                         st.rerun()
                     else: 
-                        st.error(f"❌ เกิดปัญหาในการบันทึกข้อมูล: {save_msg}")
-                        st.info("กรุณาแจ้งเจ้าหน้าที่ หรือลองใหม่อีกครั้ง")
+                        st.error(f"❌ บันทึกข้อมูลไม่สำเร็จ: {save_msg}")
                 else: 
-                    st.error(f"❌ ตรวจสอบข้อมูลไม่ผ่าน: {msg}")
+                    st.error(f"❌ ข้อมูลไม่ถูกต้อง: {msg}")
         
         st.markdown("</div>", unsafe_allow_html=True)
