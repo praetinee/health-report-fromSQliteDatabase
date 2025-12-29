@@ -21,18 +21,14 @@ def get_all_users_from_api():
         # ใช้ GET request และ follow redirects
         response = requests.get(WEB_APP_URL, params={"action": "read"}, timeout=15, allow_redirects=True)
         
-        # ตรวจสอบ URL สุดท้ายว่ามีการ Redirect ไปหน้า Login ของ Google หรือไม่ (ถ้าใช่ แสดงว่า Permission ผิด)
         if "accounts.google.com" in response.url:
              st.error("🚨 Permission Error: สคริปต์ Google Sheet ของคุณไม่ได้เปิดเป็น 'Anyone' (ทุกคน)")
-             st.info("วิธีแก้: ไปที่ Google Script > Deploy > New Deployment > Who has access เลือก 'Anyone'")
              return []
 
         if response.status_code == 200:
             try:
                 data = response.json()
             except json.JSONDecodeError:
-                # บางครั้ง Google ส่ง JSON มาแต่ Content-Type เป็น text/html ทำให้ requests ไม่อ่านอัตโนมัติ
-                # เราจะพยายาม parse text เอง
                 try:
                     data = json.loads(response.text)
                 except:
@@ -52,6 +48,7 @@ def get_all_users_from_api():
 
 def save_user_to_api(fname, lname, line_user_id, id_card=""):
     """ส่งข้อมูลไปบันทึกผ่าน Web App URL"""
+    st.info(f"🔄 กำลังส่งข้อมูลไปยัง Google Sheet... (Name: {fname})") # DEBUG
     try:
         # เตรียมข้อมูล
         params = {
@@ -62,14 +59,22 @@ def save_user_to_api(fname, lname, line_user_id, id_card=""):
             "card_id": id_card
         }
         
+        # DEBUG: แสดง URL ที่กำลังจะยิง
+        # st.write(f"Target URL: {WEB_APP_URL}")
+        # st.write(f"Params: {params}")
+
         # 🟢 ใช้ GET Request
         response = requests.get(WEB_APP_URL, params=params, timeout=15, allow_redirects=True)
         
+        # DEBUG: แสดงผลลัพธ์ดิบๆ
+        st.write(f"Response Status: {response.status_code}")
+        st.code(response.text) # ดูว่า Google ตอบอะไรกลับมา
+
         if "accounts.google.com" in response.url:
              return False, "Permission Error: กรุณาตั้งค่า Deploy เป็น 'Anyone'"
 
         if response.status_code == 200:
-            # พยายาม Parse JSON ให้ได้ ไม่ว่าจะมาในรูปแบบไหน
+            # พยายาม Parse JSON
             try:
                 res_json = response.json()
             except json.JSONDecodeError:
@@ -86,6 +91,7 @@ def save_user_to_api(fname, lname, line_user_id, id_card=""):
         else:
             return False, f"HTTP Error: {response.status_code}"
     except Exception as e:
+        st.error(f"🔥 Python Error: {e}") # DEBUG
         return False, f"Write Error: {e}"
 
 # --- Compatibility Functions ---
