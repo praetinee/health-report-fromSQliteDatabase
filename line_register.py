@@ -46,23 +46,37 @@ class MockClient:
 
 # --- Google Sheets Connection ---
 def get_gsheet_client():
-    scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+    # Definite scopes for read/write access
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
     
     # 1. Try Local JSON (Priority)
     target_files = ["service_account.json.json", "service_account.json"]
     for f in target_files:
         if os.path.exists(f):
             try:
-                return gspread.authorize(Credentials.from_service_account_file(f, scopes=scopes))
+                creds = Credentials.from_service_account_file(f, scopes=scopes)
+                return gspread.authorize(creds)
             except Exception as e:
                 st.error(f"❌ อ่านไฟล์ {f} ไม่สำเร็จ: {e}")
     
     # 2. Try st.secrets
     if "gcp_service_account" in st.secrets:
         try:
-            return gspread.authorize(Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes))
+            # Force dictionary conversion just in case it's a Streamlit Secrets object
+            service_account_info = dict(st.secrets["gcp_service_account"])
+            
+            # Create credentials with explicit scopes
+            creds = Credentials.from_service_account_info(
+                service_account_info, 
+                scopes=scopes
+            )
+            return gspread.authorize(creds)
         except Exception as e:
-            st.error(f"❌ Secrets Error: {e}")
+            # Detailed error logging
+            st.error(f"❌ Secrets Error (Detail): {str(e)}")
 
     # 3. Fallback to Mock Client (แก้ปัญหาแอปพัง)
     if 'mock_mode_warned' not in st.session_state:
@@ -89,7 +103,7 @@ def get_worksheet():
             st.error(f"❌ ไม่พบ Tab ชื่อ '{WORKSHEET_NAME}' ในไฟล์ '{SHEET_NAME}'")
             return None
     except gspread.SpreadsheetNotFound:
-        st.error(f"❌ ไม่พบไฟล์ Google Sheet ชื่อ '{SHEET_NAME}'")
+        st.error(f"❌ ไม่พบไฟล์ Google Sheet ชื่อ '{SHEET_NAME}' (ตรวจสอบชื่อไฟล์และการแชร์สิทธิ์)")
         return None
     except Exception as e:
         st.error(f"❌ Error เปิด Google Sheet: {e}")
