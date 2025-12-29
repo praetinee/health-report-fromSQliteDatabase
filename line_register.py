@@ -9,17 +9,19 @@ from datetime import datetime
 # LIFF ID ของคุณแจน
 LIFF_ID = "2008725340-YHOiWxtj"
 
-# ตั้งค่า Google Sheet
+# ตั้งค่า Google Sheet (ตรวจสอบให้แน่ใจว่าชื่อตรงกับไฟล์ใน Google Drive เป๊ะๆ)
 SHEET_NAME = "LINE User ID for Database" 
-WORKSHEET_NAME = "UserID"  # แก้ไขตามที่คุณแจนแจ้ง
+WORKSHEET_NAME = "UserID"
 
 # --- Google Sheets Connection ---
 @st.cache_resource
 def get_gsheet_client():
     """เชื่อมต่อ Google Sheets โดยใช้ st.secrets"""
     try:
+        # Debug: เช็คว่ามี secrets หรือไม่
         if "gcp_service_account" not in st.secrets:
-            st.error("ไม่พบข้อมูล 'gcp_service_account' ใน Secrets กรุณาตั้งค่าก่อนใช้งาน")
+            st.error("❌ ไม่พบการตั้งค่า 'gcp_service_account' ใน Secrets ของ Streamlit")
+            st.info("คำแนะนำ: กรุณาไปที่ Settings > Secrets แล้ววางข้อมูลจากไฟล์ JSON ลงไป")
             return None
             
         scopes = [
@@ -32,29 +34,41 @@ def get_gsheet_client():
         )
         return gspread.authorize(credentials)
     except Exception as e:
-        st.error(f"เกิดข้อผิดพลาดในการเชื่อมต่อ Google Sheets: {e}")
+        st.error(f"❌ เกิดข้อผิดพลาดในการยืนยันตัวตนกับ Google: {e}")
         return None
 
 def get_worksheet():
-    """ดึง Worksheet ออกมาใช้งาน"""
+    """ดึง Worksheet ออกมาใช้งาน พร้อมระบบแจ้งเตือน Error"""
     client = get_gsheet_client()
     if not client: return None
     
     try:
         sheet = client.open(SHEET_NAME)
-        # ลองหา Worksheet ที่ชื่อ UserID ก่อน
+        # ลองหา Worksheet ที่ชื่อ UserID
         try:
             return sheet.worksheet(WORKSHEET_NAME)
         except gspread.WorksheetNotFound:
-            # ถ้าไม่มี ให้สร้างใหม่ พร้อม Header ตามไฟล์ CSV ที่คุณแจนให้มา
-            ws = sheet.add_worksheet(title=WORKSHEET_NAME, rows=100, cols=10)
-            ws.append_row(["Timestamp", "ชื่อ", "นามสกุล", "LINE User ID", "เลขบัตรประชาชน"])
-            return ws
+            # ถ้าหา Worksheet ไม่เจอ ให้ลองสร้างใหม่
+            try:
+                ws = sheet.add_worksheet(title=WORKSHEET_NAME, rows=100, cols=10)
+                ws.append_row(["Timestamp", "ชื่อ", "นามสกุล", "LINE User ID", "เลขบัตรประชาชน"])
+                return ws
+            except Exception as create_err:
+                st.error(f"❌ ไม่พบแผ่นงานชื่อ '{WORKSHEET_NAME}' และระบบพยายามสร้างใหม่แต่ไม่สำเร็จ")
+                st.error(f"Error Detail: {create_err}")
+                return None
+
     except gspread.SpreadsheetNotFound:
-        st.error(f"ไม่พบ Google Sheet ชื่อ '{SHEET_NAME}' กรุณาสร้างไฟล์ชื่อนี้ (หรืออัปโหลดไฟล์ CSV ชื่อนี้ขึ้น Google Drive) และแชร์ให้ Service Account (Email) ก่อนครับ")
+        st.error(f"❌ ไม่พบไฟล์ Google Sheet ชื่อ: '{SHEET_NAME}'")
+        st.warning(f"⚠️ กรุณาตรวจสอบว่าชื่อไฟล์ใน Google Drive ตรงกับ '{SHEET_NAME}' เป๊ะๆ หรือไม่ (ระวังช่องว่าง)")
+        st.warning("⚠️ และตรวจสอบว่าได้แชร์ (Share) ไฟล์ให้กับ Email ของ Service Account แล้วหรือยัง")
+        # แสดง Email เพื่อให้ก๊อบไปแชร์ง่ายๆ
+        if "gcp_service_account" in st.secrets:
+            sa_email = st.secrets["gcp_service_account"].get("client_email", "N/A")
+            st.code(sa_email, language="text")
         return None
     except Exception as e:
-        st.error(f"Error accessing worksheet: {e}")
+        st.error(f"❌ Error accessing Google Sheet: {e}")
         return None
 
 # --- User Management Functions (Google Sheets) ---
@@ -69,23 +83,29 @@ def check_if_user_registered(line_user_id):
         records = ws.get_all_records()
         df = pd.DataFrame(records)
         
+        # ถ้า Sheet ว่างเปล่า หรือไม่มี Header
+        if df.empty:
+            return False, None
+
         # ชื่อคอลัมน์เป้าหมายใน Google Sheet
         target_col = "LINE User ID"
         
-        # กันเหนียว: กรณีหาไม่เจอ ลองดูว่ามีคอลัมน์ไหนคล้ายๆ บ้าง
+        # พยายามหาคอลัมน์ที่ถูกต้อง แม้จะพิมพ์ผิดเล็กน้อย
         if target_col not in df.columns:
+            # ลองวนลูปหา
             for col in df.columns:
-                if "Line" in col and "ID" in col:
+                clean_col = str(col).strip()
+                if "Line" in clean_col and "ID" in clean_col:
                     target_col = col
                     break
         
-        if not df.empty and target_col in df.columns:
-            # แปลงเป็น String เพื่อความชัวร์ในการเปรียบเทียบ
-            match = df[df[target_col].astype(str) == str(line_user_id)]
+        if target_col in df.columns:
+            # แปลงเป็น String เพื่อความชัวร์
+            # ใช้ .astype(str) เพื่อกัน Error กรณีข้อมูลใน Excel เป็นตัวเลข
+            match = df[df[target_col].astype(str).str.strip() == str(line_user_id).strip()]
             
             if not match.empty:
                 row = match.iloc[0]
-                # ดึงข้อมูลกลับมา (Map ตามชื่อคอลัมน์ CSV)
                 user_info = {
                     "first_name": str(row.get("ชื่อ", "")), 
                     "last_name": str(row.get("นามสกุล", "")), 
@@ -95,19 +115,27 @@ def check_if_user_registered(line_user_id):
         
         return False, None
     except Exception as e: 
-        st.error(f"Error checking user in Sheet: {e}")
+        # แสดง Error เฉพาะตอน Debug หรือ Dev Mode
+        # st.error(f"Error checking user in Sheet: {e}")
         return False, None
 
 def save_new_user_to_gsheet(fname, lname, line_user_id, id_card=""):
     """บันทึกผู้ใช้ใหม่ลง Google Sheet (ต่อท้าย)"""
     try:
         ws = get_worksheet()
-        if not ws: return False, "เชื่อมต่อ Google Sheet ไม่ได้"
+        if not ws: return False, "เชื่อมต่อ Google Sheet ไม่ได้ (ดู Error ด้านบน)"
         
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        # เรียงลำดับข้อมูลให้ตรงกับ Header: [Timestamp, ชื่อ, นามสกุล, LINE User ID, เลขบัตรประชาชน]
-        ws.append_row([timestamp, str(fname), str(lname), str(line_user_id), str(id_card)])
+        # ข้อมูลที่จะบันทึก [Timestamp, ชื่อ, นามสกุล, LINE User ID, เลขบัตรประชาชน]
+        row_data = [
+            timestamp, 
+            str(fname).strip(), 
+            str(lname).strip(), 
+            str(line_user_id).strip(), 
+            str(id_card).strip()
+        ]
         
+        ws.append_row(row_data)
         return True, "บันทึกข้อมูลสำเร็จ"
     except Exception as e:
         return False, f"บันทึกข้อมูลล้มเหลว: {e}"
@@ -133,18 +161,24 @@ def check_registration_logic(df, input_fname, input_lname, input_id):
         return False, "เลขบัตรประชาชนต้องมี 13 หลัก", None
     
     # ค้นหาใน SQLite DataFrame
-    user_match = df[df['เลขบัตรประชาชน'].astype(str).str.strip().str.replace("-", "") == clean_id]
-    
-    if user_match.empty: 
-        return False, "ไม่พบเลขบัตรประชาชนนี้ในระบบฐานข้อมูล", None
-    
-    for _, row in user_match.iterrows():
-        db_f, db_l = normalize_db_name_field(row['ชื่อ-สกุล'])
-        # เทียบชื่อนามสกุล
-        if db_f == i_fname and db_l.replace(" ", "") == i_lname.replace(" ", ""):
-            return True, "ยืนยันตัวตนสำเร็จ", row.to_dict()
-            
-    return False, "ชื่อหรือนามสกุลไม่ตรงกับฐานข้อมูล", None
+    # ใช้ try-except เพื่อกัน Error กรณี DataFrame โครงสร้างไม่ตรง
+    try:
+        user_match = df[df['เลขบัตรประชาชน'].astype(str).str.strip().str.replace("-", "") == clean_id]
+        
+        if user_match.empty: 
+            return False, "ไม่พบเลขบัตรประชาชนนี้ในระบบฐานข้อมูล", None
+        
+        for _, row in user_match.iterrows():
+            db_f, db_l = normalize_db_name_field(row['ชื่อ-สกุล'])
+            # เทียบชื่อนามสกุล (ตัดช่องว่างออกเพื่อความชัวร์)
+            if db_f == i_fname and db_l.replace(" ", "") == i_lname.replace(" ", ""):
+                return True, "ยืนยันตัวตนสำเร็จ", row.to_dict()
+                
+        return False, "ชื่อหรือนามสกุลไม่ตรงกับฐานข้อมูล", None
+    except KeyError as k:
+        return False, f"Database Error: ไม่พบคอลัมน์ {k} ในไฟล์ข้อมูล", None
+    except Exception as e:
+        return False, f"System Error: {e}", None
 
 # --- LIFF Script ---
 def liff_initializer_component():
@@ -187,8 +221,9 @@ def render_admin_line_manager():
     st.subheader("📱 จัดการผู้ใช้งาน LINE (Google Sheets)")
     
     ws = get_worksheet()
+    # ถ้าเชื่อมต่อไม่ได้ จะแสดง Error จาก get_worksheet() เอง
     if not ws:
-        st.error("ไม่สามารถเชื่อมต่อ Google Sheets ได้")
+        st.warning("ไม่สามารถโหลดข้อมูลได้ กรุณาตรวจสอบการตั้งค่า Google Sheet")
         return
 
     try:
@@ -293,7 +328,7 @@ def render_registration_page(df):
             else:
                 suc, msg, row = check_registration_logic(df, f, l, i)
                 if suc:
-                    # บันทึกลง Google Sheet
+                    # บันทึกลง Google Sheet พร้อม Debug Msg
                     save_suc, save_msg = save_new_user_to_gsheet(clean_string(f), clean_string(l), line_user_id, clean_string(i))
                     if save_suc:
                         st.session_state.update({
@@ -305,8 +340,10 @@ def render_registration_page(df):
                         })
                         st.rerun()
                     else: 
-                        st.error(f"เกิดปัญหาในการบันทึกข้อมูล: {save_msg}")
+                        # แสดง Error แบบชัดๆ
+                        st.error(f"❌ เกิดปัญหาในการบันทึกข้อมูล: {save_msg}")
+                        st.info("กรุณาแจ้งเจ้าหน้าที่ หรือลองใหม่อีกครั้ง")
                 else: 
-                    st.error(f"ตรวจสอบข้อมูลไม่ผ่าน: {msg}")
+                    st.error(f"❌ ตรวจสอบข้อมูลไม่ผ่าน: {msg}")
         
         st.markdown("</div>", unsafe_allow_html=True)
