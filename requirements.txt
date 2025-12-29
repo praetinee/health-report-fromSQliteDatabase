@@ -1,0 +1,11 @@
+streamlit
+pandas
+numpy
+requests
+streamlit_js_eval
+google-generativeai
+openai
+plotly
+streamlit-lottie
+gspread
+google-auth
