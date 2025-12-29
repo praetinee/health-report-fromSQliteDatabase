@@ -9,8 +9,8 @@ from datetime import datetime
 # LIFF ID ของคุณแจน
 LIFF_ID = "2008725340-YHOiWxtj"
 
-# ตั้งค่า Google Sheet (อ้างอิงจากไฟล์ CSV: ชื่อ, นามสกุล, LINE User ID)
-SHEET_NAME = "HealthCheck_Log" 
+# ตั้งค่า Google Sheet (แก้ไขชื่อไฟล์ให้ตรงกับ CSV ของคุณแจน)
+SHEET_NAME = "LINE User id for Database - UserID" 
 WORKSHEET_NAME = "Users"
 
 # --- Google Sheets Connection ---
@@ -52,7 +52,7 @@ def get_worksheet():
             ws.append_row(["Timestamp", "ชื่อ", "นามสกุล", "LINE User ID", "เลขบัตรประชาชน"])
             return ws
     except gspread.SpreadsheetNotFound:
-        st.error(f"ไม่พบ Google Sheet ชื่อ '{SHEET_NAME}' กรุณาสร้างไฟล์ชื่อนี้และแชร์ให้ Service Account (Email) ก่อนครับ")
+        st.error(f"ไม่พบ Google Sheet ชื่อ '{SHEET_NAME}' กรุณาสร้างไฟล์ชื่อนี้ (หรืออัปโหลดไฟล์ CSV ชื่อนี้ขึ้น Google Drive) และแชร์ให้ Service Account (Email) ก่อนครับ")
         return None
     except Exception as e:
         st.error(f"Error accessing worksheet: {e}")
@@ -133,7 +133,7 @@ def check_registration_logic(df, input_fname, input_lname, input_id):
     if len(clean_id) != 13: 
         return False, "เลขบัตรประชาชนต้องมี 13 หลัก", None
     
-    # ค้นหาใน SQLite DataFrame (ใช้คอลัมน์ "เลขบัตรประชาชน" และ "ชื่อ-สกุล" จาก DB ของคุณ)
+    # ค้นหาใน SQLite DataFrame
     user_match = df[df['เลขบัตรประชาชน'].astype(str).str.strip().str.replace("-", "") == clean_id]
     
     if user_match.empty: 
@@ -141,7 +141,7 @@ def check_registration_logic(df, input_fname, input_lname, input_id):
     
     for _, row in user_match.iterrows():
         db_f, db_l = normalize_db_name_field(row['ชื่อ-สกุล'])
-        # เทียบชื่อนามสกุล (ตัดช่องว่างออกเพื่อความชัวร์)
+        # เทียบชื่อนามสกุล
         if db_f == i_fname and db_l.replace(" ", "") == i_lname.replace(" ", ""):
             return True, "ยืนยันตัวตนสำเร็จ", row.to_dict()
             
