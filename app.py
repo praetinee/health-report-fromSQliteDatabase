@@ -170,8 +170,9 @@ def main_app(df):
         st.session_state.person_row = None
         st.session_state.selected_row_found = False
 
-    # --- Auto-Save LINE ID Logic (Updated for Google Sheets) ---
-    # จะทำงานเมื่อ user login ผ่านหน้า web ปกติ แต่มี userid ติดมาใน session
+    # --- Auto-Save LINE ID Logic ---
+    # จะทำงานเมื่อ: Login แล้ว + มี LineID + ยังไม่เคยเซฟ (line_saved=False)
+    # เราได้เซ็ต line_saved=True ในหน้า Register แล้ว ดังนั้นตรงนี้จะไม่ทำงานซ้ำซ้อน
     if st.session_state.get("line_user_id") and not st.session_state.get("line_saved", False):
         try:
             # ดึงข้อมูลจาก Session
@@ -186,11 +187,14 @@ def main_app(df):
                 id_card_val = str(st.session_state.person_row.get('เลขบัตรประชาชน', ''))
             
             # บันทึกลง GSheet
-            save_new_user_to_gsheet(f_name, l_name, st.session_state["line_user_id"], id_card_val)
-            st.session_state["line_saved"] = True
+            success, msg = save_new_user_to_gsheet(f_name, l_name, st.session_state["line_user_id"], id_card_val)
+            if success:
+                st.session_state["line_saved"] = True
+            else:
+                # แสดง error ถ้าจำเป็น (ปกติ Auto save จะเงียบๆ แต่ถ้ามีปัญหาควรบอก)
+                print(f"Auto-save failed: {msg}")
         except Exception as e:
-            # ซ่อน Error ไม่ให้ User ตกใจ เพราะเป็นการ Save เบื้องหลัง
-            pass
+            print(f"Auto-save error: {e}")
 
     # --- Event Handler ---
     def handle_year_change():
