@@ -64,23 +64,14 @@ def authentication_flow(df):
     """หน้า Login แบบ Responsive และ Theme-Aware พร้อมโลโก้"""
     
     # CSS Style สำหรับหน้า Login
-    # ปรับปรุง: ใช้ Font Stack แบบมี Fallback
+    # ปรับปรุง: ใช้ Sarabun 100%, รองรับ Theme (var(--...)), และ Responsive
     login_style = """
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
         
-        :root {
-            --font-stack: 'Sarabun', 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
-        }
-        
-        /* Apply font to main container */
-        .stApp {
-            font-family: var(--font-stack);
-        }
-        
-        /* Force font on specific text inputs and labels */
-        h1, h2, h3, h4, h5, h6, p, label, .stTextInput input, .stTextInput > label {
-            font-family: var(--font-stack) !important;
+        /* บังคับใช้ Sarabun กับทุก Element */
+        html, body, [class*="st-"], h1, h2, h3, h4, h5, h6, p, div, span, input, button, label, .stTextInput > label, .stTextInput input {
+            font-family: 'Sarabun', sans-serif !important;
         }
 
         .login-container {
@@ -111,7 +102,6 @@ def authentication_flow(df):
             border: none;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             transition: all 0.3s ease;
-            font-family: var(--font-stack) !important; /* Use Fallback Stack */
         }
         
         .stButton>button:hover {
@@ -206,21 +196,13 @@ def pdpa_consent_page():
     """หน้ายอมรับ PDPA ดีไซน์สวยงาม พร้อมข้อความที่กำหนด"""
     
     # CSS สำหรับหน้า PDPA
-    # ปรับปรุง: ใช้ Font Stack แบบมี Fallback
+    # ปรับปรุง: ใช้ Sarabun, Theme-aware variables, และ Responsive layout
     st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
         
-        :root {
-            --font-stack: 'Sarabun', 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
-        }
-
-        .stApp {
-            font-family: var(--font-stack);
-        }
-        
-        h1, h2, h3, h4, h5, h6, p, li, button, label {
-            font-family: var(--font-stack) !important;
+        html, body, [class*="st-"], h1, h2, h3, h4, h5, h6, p, div, span, li {
+            font-family: 'Sarabun', sans-serif !important;
         }
 
         .pdpa-card {
@@ -237,7 +219,7 @@ def pdpa_consent_page():
         
         .pdpa-header {
             text-align: center;
-            font-family: var(--font-stack);
+            font-family: 'Sarabun', sans-serif;
             color: var(--text-color);
             margin-bottom: 20px;
             font-size: 22px;
@@ -253,7 +235,7 @@ def pdpa_consent_page():
             height: 400px;
             overflow-y: auto;
             border: 1px solid rgba(128,128,128,0.2);
-            font-family: var(--font-stack);
+            font-family: 'Sarabun', sans-serif;
             font-size: 16px;
             line-height: 1.8;
             color: var(--text-color);
