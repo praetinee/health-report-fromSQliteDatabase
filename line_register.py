@@ -61,6 +61,9 @@ def save_user_to_api(fname, lname, line_user_id, id_card=""):
         return False, f"Write Error: {e}"
 
 # --- Compatibility Functions (เพิ่มเพื่อป้องกัน Error ใน app.py) ---
+# สร้างชื่อสำรอง (Alias) ให้ app.py เรียกใช้ได้เหมือนเดิม
+save_new_user_to_gsheet = save_user_to_api
+
 def test_connection_status():
     """ฟังก์ชันหลอกเพื่อความเข้ากันได้กับ app.py เดิม"""
     if "YOUR_SCRIPT_ID_HERE" in WEB_APP_URL:
