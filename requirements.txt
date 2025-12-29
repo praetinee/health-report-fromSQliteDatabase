@@ -9,3 +9,4 @@ plotly
 streamlit-lottie
 gspread
 google-auth
+oauth2client
