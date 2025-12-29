@@ -12,23 +12,15 @@ from datetime import datetime
 from auth import authentication_flow, pdpa_consent_page
 
 # --- Import Line Register (GSheet version) ---
-try:
-    from line_register import (
-        save_new_user_to_gsheet, 
-        liff_initializer_component, 
-        check_if_user_registered, 
-        normalize_db_name_field,
-        render_registration_page,
-        render_admin_line_manager
-    )
-except ImportError:
-    # Fallback กรณี error (เพื่อไม่ให้แอปพังทั้งหมด)
-    def save_new_user_to_gsheet(f, l, uid, id_card=""): return True, "Saved"
-    def liff_initializer_component(): pass
-    def check_if_user_registered(uid): return False, None
-    def normalize_db_name_field(s): return s, ""
-    def render_registration_page(df): st.error("Registration module error")
-    def render_admin_line_manager(): st.error("Admin module error")
+# แก้ไข: ลบ try-except ออก เพื่อให้เห็น Error จริง ถ้า module มีปัญหา
+from line_register import (
+    save_new_user_to_gsheet, 
+    liff_initializer_component, 
+    check_if_user_registered, 
+    normalize_db_name_field,
+    render_registration_page,
+    render_admin_line_manager
+)
 
 # --- Import Print Functions ---
 try:
@@ -170,30 +162,25 @@ def main_app(df):
         st.session_state.selected_row_found = False
 
     # --- Auto-Save LINE ID Logic ---
-    # ส่วนนี้จะทำงานเฉพาะกรณีที่ User Login ผ่านหน้าปกติ (auth.py) 
-    # แต่ระบบตรวจเจอว่ามี line_user_id ติดมาใน Session (เช่น เปิดผ่าน LIFF แต่ Login ด้วยชื่อ-สกุล)
-    # ถ้าผ่านหน้า line_register.py มาแล้ว ค่า line_saved จะเป็น True ทำให้ข้ามส่วนนี้ไป (ป้องกันการเซฟซ้ำ)
+    # บันทึกข้อมูลเฉพาะเมื่อยังไม่มี Flag line_saved
+    # จุดนี้สำคัญ: ถ้าหน้า register บันทึกสำเร็จแล้ว มันจะส่ง line_saved=True มา ตรงนี้จะข้ามไป ไม่เซฟซ้ำ
     if st.session_state.get("line_user_id") and not st.session_state.get("line_saved", False):
         try:
-            # ดึงข้อมูลชื่อ-สกุลจาก Session ที่ Login ผ่านมา
             user_name_full = st.session_state.get('user_name', '')
             parts = user_name_full.split()
             f_name = parts[0] if len(parts) > 0 else ""
             l_name = " ".join(parts[1:]) if len(parts) > 1 else ""
             
-            # ดึงเลขบัตรประชาชนจาก row ปัจจุบัน (ถ้ามี)
             id_card_val = ""
             if st.session_state.get("person_row"):
                 id_card_val = str(st.session_state.person_row.get('เลขบัตรประชาชน', ''))
             
-            # บันทึกลง Google Sheet
             success, msg = save_new_user_to_gsheet(f_name, l_name, st.session_state["line_user_id"], id_card_val)
             if success:
                 st.session_state["line_saved"] = True
-                # st.success("เชื่อมต่อข้อมูล LINE เรียบร้อยแล้ว") # (Optional) แสดงข้อความบอก user
             else:
-                # แสดง error ใน Console เพื่อ Debug แต่ไม่รบกวน User หน้างาน
-                print(f"Auto-save to Google Sheet failed: {msg}")
+                # ถ้า Auto-save ไม่สำเร็จ ให้แสดง Error ใน log (ไม่ขัดจังหวะ User)
+                print(f"Auto-save failed: {msg}")
         except Exception as e:
             print(f"Auto-save error: {e}")
 
