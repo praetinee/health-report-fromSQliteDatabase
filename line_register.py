@@ -182,12 +182,18 @@ def render_registration_page(df):
             c1, c2 = st.columns(2)
             f = c1.text_input("ชื่อ")
             l = c2.text_input("นามสกุล")
-            i = st.text_input("เลขบัตร (13 หลัก)", max_chars=13)
-            pdpa = st.checkbox("ยอมรับเงื่อนไข PDPA")
+            i = st.text_input("เลขบัตรประชาชน (13 หลัก)", max_chars=13)
+            
+            # --- ย้าย PDPA มารวมที่นี่ ---
+            st.markdown("---")
+            st.markdown("**ข้อตกลงและเงื่อนไข (PDPA)**")
+            st.caption("ข้าพเจ้ายินยอมให้ระบบตรวจสอบข้อมูลชื่อ-นามสกุล และเลขบัตรประชาชน เพื่อยืนยันตัวตน และบันทึกข้อมูล User ID ของ LINE เพื่อความสะดวกในการเข้าใช้งานครั้งถัดไป")
+            pdpa = st.checkbox("ข้าพเจ้ายอมรับข้อตกลงและเงื่อนไข")
+            
             sub = st.form_submit_button("ยืนยันข้อมูล", use_container_width=True)
         
         if sub:
-            if not pdpa: st.warning("กรุณายอมรับ PDPA")
+            if not pdpa: st.warning("กรุณายอมรับ PDPA ก่อนลงทะเบียน")
             else:
                 suc, msg, row = check_registration_logic(df, f, l, i)
                 if suc:
