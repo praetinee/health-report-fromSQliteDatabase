@@ -22,7 +22,7 @@ try:
         render_admin_line_manager
     )
 except ImportError:
-    # Fallback กรณี error
+    # Fallback กรณี error (เพื่อไม่ให้แอปพังทั้งหมด)
     def save_new_user_to_gsheet(f, l, uid, id_card=""): return True, "Saved"
     def liff_initializer_component(): pass
     def check_if_user_registered(uid): return False, None
@@ -170,26 +170,30 @@ def main_app(df):
         st.session_state.selected_row_found = False
 
     # --- Auto-Save LINE ID Logic ---
-    # จะทำงานเมื่อ: Login แล้ว + มี LineID + ยังไม่เคยเซฟ (line_saved=False)
-    # เราได้เซ็ต line_saved=True ในหน้า Register แล้ว ดังนั้นตรงนี้จะไม่ทำงานซ้ำซ้อน
+    # ส่วนนี้จะทำงานเฉพาะกรณีที่ User Login ผ่านหน้าปกติ (auth.py) 
+    # แต่ระบบตรวจเจอว่ามี line_user_id ติดมาใน Session (เช่น เปิดผ่าน LIFF แต่ Login ด้วยชื่อ-สกุล)
+    # ถ้าผ่านหน้า line_register.py มาแล้ว ค่า line_saved จะเป็น True ทำให้ข้ามส่วนนี้ไป (ป้องกันการเซฟซ้ำ)
     if st.session_state.get("line_user_id") and not st.session_state.get("line_saved", False):
         try:
+            # ดึงข้อมูลชื่อ-สกุลจาก Session ที่ Login ผ่านมา
             user_name_full = st.session_state.get('user_name', '')
             parts = user_name_full.split()
             f_name = parts[0] if len(parts) > 0 else ""
             l_name = " ".join(parts[1:]) if len(parts) > 1 else ""
             
+            # ดึงเลขบัตรประชาชนจาก row ปัจจุบัน (ถ้ามี)
             id_card_val = ""
             if st.session_state.get("person_row"):
                 id_card_val = str(st.session_state.person_row.get('เลขบัตรประชาชน', ''))
             
+            # บันทึกลง Google Sheet
             success, msg = save_new_user_to_gsheet(f_name, l_name, st.session_state["line_user_id"], id_card_val)
             if success:
                 st.session_state["line_saved"] = True
+                # st.success("เชื่อมต่อข้อมูล LINE เรียบร้อยแล้ว") # (Optional) แสดงข้อความบอก user
             else:
-                # กรณี Auto-save พัง ให้เตือน (เพราะตอนนี้เราอยากรู้ว่าทำไม)
-                # st.warning(f"Auto-save failed: {msg}") 
-                pass
+                # แสดง error ใน Console เพื่อ Debug แต่ไม่รบกวน User หน้างาน
+                print(f"Auto-save to Google Sheet failed: {msg}")
         except Exception as e:
             print(f"Auto-save error: {e}")
 
