@@ -31,9 +31,13 @@ def get_all_users_from_api():
             try:
                 data = response.json()
             except json.JSONDecodeError:
-                st.error(f"⚠️ ได้รับ HTML แทน JSON: อาจเกิดจาก URL ผิด หรือสิทธิ์ไม่ถูกต้อง")
-                # st.write(response.text) # Uncomment เพื่อดู HTML ที่ได้ (สำหรับ Debug)
-                return []
+                # บางครั้ง Google ส่ง JSON มาแต่ Content-Type เป็น text/html ทำให้ requests ไม่อ่านอัตโนมัติ
+                # เราจะพยายาม parse text เอง
+                try:
+                    data = json.loads(response.text)
+                except:
+                    st.error(f"⚠️ ได้รับ HTML แทน JSON: อาจเกิดจาก URL ผิด หรือสิทธิ์ไม่ถูกต้อง")
+                    return []
 
             if isinstance(data, dict) and data.get("result") == "error":
                 st.error(f"Google Script Error: {data.get('message')}")
@@ -58,23 +62,27 @@ def save_user_to_api(fname, lname, line_user_id, id_card=""):
             "card_id": id_card
         }
         
-        # 🟢 ใช้ GET Request (ปลอดภัยสุดสำหรับ Google Apps Script Simple Trigger)
-        # เพราะ POST มักจะมีปัญหากับ Redirect 302 ของ Google ทำให้ Payload หาย
+        # 🟢 ใช้ GET Request
         response = requests.get(WEB_APP_URL, params=params, timeout=15, allow_redirects=True)
         
         if "accounts.google.com" in response.url:
              return False, "Permission Error: กรุณาตั้งค่า Deploy เป็น 'Anyone'"
 
         if response.status_code == 200:
+            # พยายาม Parse JSON ให้ได้ ไม่ว่าจะมาในรูปแบบไหน
             try:
                 res_json = response.json()
-                if res_json.get("result") == "success":
-                    return True, "บันทึกข้อมูลเรียบร้อยแล้ว"
-                else:
-                    return False, f"Script Error: {res_json.get('message')}"
             except json.JSONDecodeError:
-                # กรณีนี้มักเกิดจาก Redirect แล้ว Google ส่งหน้า HTML กลับมา
-                return False, "Error: Google ไม่ตอบกลับเป็น JSON (ตรวจสอบการตั้งค่า Deploy)"
+                try:
+                    res_json = json.loads(response.text)
+                except:
+                     return False, f"Response Error: อ่านค่าตอบกลับไม่ได้ ({response.text[:50]}...)"
+
+            # ตรวจสอบผลลัพธ์
+            if res_json.get("result") == "success":
+                return True, "บันทึกข้อมูลลง Google Sheet เรียบร้อยแล้ว"
+            else:
+                return False, f"Script Error: {res_json.get('message')}"
         else:
             return False, f"HTTP Error: {response.status_code}"
     except Exception as e:
