@@ -10,33 +10,37 @@ import time
 # --- Constants ---
 LIFF_ID = "2008725340-YHOiWxtj"
 
-# ✅ URL ของ Google Apps Script Web App (ใส่ให้แล้วครับ)
+# ✅ URL ของ Google Apps Script Web App
 WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw0Dq-kZ2EfQtMSed-qbvt-2u2p4xASbKDVOa96sVAOBYbvLHIR7nKoMw8NSWWNIodb/exec"
 
 # --- API Helper Functions ---
-# ฟังก์ชันคุยกับ Google Apps Script แทนการต่อ GSheet ตรงๆ
 
 def get_all_users_from_api():
     """ดึงข้อมูล User ทั้งหมดผ่าน Web App URL"""
     try:
-        # เรียกข้อมูลด้วย GET request
-        response = requests.get(WEB_APP_URL, params={"action": "read"}, timeout=15)
+        # ใช้ GET request และ follow redirects
+        response = requests.get(WEB_APP_URL, params={"action": "read"}, timeout=15, allow_redirects=True)
         
+        # ตรวจสอบ URL สุดท้ายว่ามีการ Redirect ไปหน้า Login ของ Google หรือไม่ (ถ้าใช่ แสดงว่า Permission ผิด)
+        if "accounts.google.com" in response.url:
+             st.error("🚨 Permission Error: สคริปต์ Google Sheet ของคุณไม่ได้เปิดเป็น 'Anyone' (ทุกคน)")
+             st.info("วิธีแก้: ไปที่ Google Script > Deploy > New Deployment > Who has access เลือก 'Anyone'")
+             return []
+
         if response.status_code == 200:
             try:
                 data = response.json()
             except json.JSONDecodeError:
-                # กรณี Google ส่ง HTML กลับมาแทน JSON (มักเกิดจาก Redirect หรือ Permission)
-                st.error(f"Google Script Response Error: ได้รับ HTML แทนที่จะเป็น JSON (ตรวจสอบสิทธิ์การ Deploy)")
+                st.error(f"⚠️ ได้รับ HTML แทน JSON: อาจเกิดจาก URL ผิด หรือสิทธิ์ไม่ถูกต้อง")
+                # st.write(response.text) # Uncomment เพื่อดู HTML ที่ได้ (สำหรับ Debug)
                 return []
 
-            # ตรวจสอบว่า API ส่ง Error กลับมาหรือไม่
             if isinstance(data, dict) and data.get("result") == "error":
                 st.error(f"Google Script Error: {data.get('message')}")
                 return []
-            return data # คืนค่าเป็น List of Dicts
+            return data
         else:
-            st.error(f"API HTTP Error: {response.status_code} - {response.text}")
+            st.error(f"API HTTP Error: {response.status_code}")
             return []
     except Exception as e:
         st.error(f"Connection Error (Read): {e}")
@@ -45,17 +49,22 @@ def get_all_users_from_api():
 def save_user_to_api(fname, lname, line_user_id, id_card=""):
     """ส่งข้อมูลไปบันทึกผ่าน Web App URL"""
     try:
-        payload = {
+        # เตรียมข้อมูล
+        params = {
             "action": "write",
             "fname": fname,
             "lname": lname,
             "line_id": line_user_id,
             "card_id": id_card
         }
-        # ⚠️ เปลี่ยนจาก POST เป็น GET เพื่อแก้ปัญหาข้อมูลหายตอน Redirect ของ Google
-        # GET จะส่ง parameter ไปใน URL เลย ซึ่งชัวร์กว่าสำหรับ Google Apps Script แบบ Simple
-        response = requests.get(WEB_APP_URL, params=payload, timeout=15)
         
+        # 🟢 ใช้ GET Request (ปลอดภัยสุดสำหรับ Google Apps Script Simple Trigger)
+        # เพราะ POST มักจะมีปัญหากับ Redirect 302 ของ Google ทำให้ Payload หาย
+        response = requests.get(WEB_APP_URL, params=params, timeout=15, allow_redirects=True)
+        
+        if "accounts.google.com" in response.url:
+             return False, "Permission Error: กรุณาตั้งค่า Deploy เป็น 'Anyone'"
+
         if response.status_code == 200:
             try:
                 res_json = response.json()
@@ -64,37 +73,30 @@ def save_user_to_api(fname, lname, line_user_id, id_card=""):
                 else:
                     return False, f"Script Error: {res_json.get('message')}"
             except json.JSONDecodeError:
-                return False, "Response Error: Google ไม่ส่งค่า JSON กลับมา (อาจเกิดข้อผิดพลาดที่ฝั่ง Script)"
+                # กรณีนี้มักเกิดจาก Redirect แล้ว Google ส่งหน้า HTML กลับมา
+                return False, "Error: Google ไม่ตอบกลับเป็น JSON (ตรวจสอบการตั้งค่า Deploy)"
         else:
             return False, f"HTTP Error: {response.status_code}"
     except Exception as e:
         return False, f"Write Error: {e}"
 
-# --- Compatibility Functions (เพิ่มเพื่อป้องกัน Error ใน app.py) ---
-# สร้างชื่อสำรอง (Alias) ให้ app.py เรียกใช้ได้เหมือนเดิม
+# --- Compatibility Functions ---
 save_new_user_to_gsheet = save_user_to_api
 
 def test_connection_status():
-    """ฟังก์ชันหลอกเพื่อความเข้ากันได้กับ app.py เดิม"""
-    # ถ้ามี URL แล้ว ให้ถือว่าเชื่อมต่อได้เสมอ
-    if "YOUR_SCRIPT_ID_HERE" in WEB_APP_URL:
-        return False
+    if "YOUR_SCRIPT_ID_HERE" in WEB_APP_URL: return False
     return True
 
-# --- User Management (Updated to use API) ---
+# --- User Management ---
 def check_if_user_registered(line_user_id):
     try:
         users = get_all_users_from_api()
-        # ถ้าไม่มีข้อมูล หรือ API error ให้ return False
         if not users: return False, None
         
         df = pd.DataFrame(users)
-        
         if df.empty: return False, None
         
         target_col = "LINE User ID"
-        # Normalize Column Names (เผื่อ Google Sheet ส่งมาไม่ตรงเป๊ะ)
-        # ลองหา key ที่มีคำว่า 'Line' และ 'ID'
         actual_cols = df.columns.tolist()
         for col in actual_cols:
              if "line" in str(col).lower() and "id" in str(col).lower():
@@ -102,11 +104,9 @@ def check_if_user_registered(line_user_id):
                  break
         
         if target_col in df.columns:
-            # ใช้ str() และ strip() เพื่อความชัวร์ในการเปรียบเทียบ
             match = df[df[target_col].astype(str).str.strip() == str(line_user_id).strip()]
             if not match.empty:
                 r = match.iloc[0]
-                # รับค่าจาก key ที่อาจจะเป็นภาษาไทยหรืออังกฤษ
                 fname = r.get("ชื่อ") or r.get("fname") or ""
                 lname = r.get("นามสกุล") or r.get("lname") or ""
                 return True, {"first_name": str(fname), "last_name": str(lname), "line_id": str(line_user_id)}
@@ -138,10 +138,8 @@ def check_registration_logic(df, f, l, i):
 
 # --- LIFF ---
 def liff_initializer_component():
-    # ถ้ามี Line User ID อยู่แล้ว ไม่ต้องโหลด LIFF ซ้ำ
     if "line_user_id" in st.session_state or st.query_params.get("userid"): return
     
-    # ถ้าทำงานใน Localhost หรือไม่มี LIFF ID อาจจะข้าม LIFF ไปเลยเพื่อทดสอบ
     js = f"""<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script>
     async function main() {{
@@ -154,7 +152,7 @@ def liff_initializer_component():
                 window.top.location.href = url.toString();
             }}
         }} catch(e) {{ 
-            console.log("LIFF Init Error (Ignore if Localhost): " + e);
+            console.log("LIFF Init Error: " + e);
         }}
     }}
     main();
@@ -171,26 +169,20 @@ def render_registration_page(df):
     qp = st.query_params.get("userid")
     if qp: st.session_state["line_user_id"] = qp
     
-    # Debug / Mock UI (สำหรับทดสอบเมื่อไม่มี LIFF)
+    # Debug / Mock UI
     if "line_user_id" not in st.session_state and not st.session_state.get('authenticated'):
         liff_initializer_component()
         
-        # ส่วนนี้เอาไว้ Debug ตอน Localhost ได้ครับ
-        # with st.expander("🛠️ Developer / Debug Options"):
-        #     st.write("ถ้า LIFF ไม่ทำงาน ให้ใส่ Mock User ID ตรงนี้:")
-        #     mock_uid = st.text_input("Mock LINE User ID", "U_MOCK_12345")
-        #     if st.button("Set Mock User ID"):
-        #         st.session_state["line_user_id"] = mock_uid
-        #         st.rerun()
-        
-        if "line_user_id" not in st.session_state:
-            return 
+        # Uncomment บรรทัดข้างล่างนี้ถ้าต้องการปุ่มทดสอบ (Mock)
+        # with st.expander("🛠️ Debug Options"):
+        #     if st.button("ใช้ Mock User ID"): st.session_state["line_user_id"] = "U_DEBUG_123"; st.rerun()
+
+        if "line_user_id" not in st.session_state: return 
 
     uid = st.session_state["line_user_id"]
     is_reg, info = check_if_user_registered(uid)
     
-    # --- Logic ป้องกัน Auto-Login ---
-    # ถ้าเคยลงทะเบียนแล้ว
+    # Logic ป้องกัน Auto-Login
     if is_reg and not st.session_state.get('force_re_register', False):
         found = df[df['ชื่อ-สกุล'].str.contains(info['first_name'], na=False)]
         user = None
