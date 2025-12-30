@@ -1,4 +1,10 @@
 import streamlit as st
+
+# -----------------------------------------------------------------------------
+# ⚠️ 1. ต้องใส่ set_page_config เป็นบรรทัดแรกสุดของโค้ด Streamlit เสมอ
+# -----------------------------------------------------------------------------
+st.set_page_config(page_title="Health Report System", layout="wide")
+
 import sqlite3
 import requests
 import pandas as pd
@@ -88,21 +94,26 @@ SQLITE_NAME_COL = "ชื่อ-สกุล"
 def normalize_cid(val):
     """
     ฟังก์ชันทำความสะอาดเลขบัตรประชาชนให้เป็นมาตรฐานเดียวกัน (Flexible Match)
-    - แปลงเป็น String
-    - ลบ ' และ " ออก
-    - ลบช่องว่างหน้าหลัง
-    - ลบ .0 (กรณีมาจาก float)
     """
     if pd.isna(val):
         return ""
     
-    # แปลงเป็นข้อความและตัดช่องว่าง
+    # แปลงเป็นข้อความ
     s = str(val).strip()
     
-    # ลบเครื่องหมายคำพูดที่อาจติดมาจาก Google Sheet หรือ CSV
+    # ลบเครื่องหมายคำพูด
     s = s.replace("'", "").replace('"', "")
     
-    # ถ้าเป็นตัวเลขที่มี .0 ต่อท้าย (เช่น 12345.0) ให้ตัดออกเหลือ 12345
+    # แก้ไขกรณีเป็น Scientific Notation (เช่น 1.8205E+12)
+    if "E" in s or "e" in s:
+        try:
+            # ลองแปลงเป็น float แล้วกลับเป็น int เพื่อเอา E ออก
+            f_val = float(s)
+            s = str(int(f_val))
+        except:
+            pass # ถ้าแปลงไม่ได้ก็ปล่อยไว้
+
+    # ลบ .0 (กรณีมาจาก float ปกติ)
     if s.endswith(".0"):
         s = s[:-2]
         
@@ -113,7 +124,6 @@ def get_user_info_from_gas(line_user_id):
     try:
         # Debug URL
         debug_url = f"{GAS_URL}?action=get_user&line_id={line_user_id}"
-        # st.write(f"Debug: กำลังเรียก GAS ที่ {debug_url}")
         
         # เพิ่ม timeout ป้องกันการค้าง
         response = requests.get(debug_url, timeout=10)
@@ -134,7 +144,6 @@ def get_user_info_from_gas(line_user_id):
 def load_sqlite_data():
     tmp_path = None
     try:
-        # ⚠️ แจนอย่าลืมเช็คตรงนี้! file_id ต้องเป็นไฟล์ Database ล่าสุดนะครับ
         file_id = "1HruO9AMrUfniC8hBWtumVdxLJayEc1Xr"
         download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
         
@@ -173,11 +182,10 @@ def load_sqlite_data():
         if SQLITE_NAME_COL in df_loaded.columns:
             df_loaded[SQLITE_NAME_COL] = df_loaded[SQLITE_NAME_COL].astype(str).str.strip().str.replace(r'\s+', ' ', regex=True)
         
-        # ⚠️ ใช้ normalize_cid เพื่อทำความสะอาดข้อมูลฝั่ง SQLite ให้เหมือนกันเป๊ะ
+        # ⚠️ ใช้ normalize_cid
         if SQLITE_CITIZEN_ID_COL in df_loaded.columns:
             df_loaded[SQLITE_CITIZEN_ID_COL] = df_loaded[SQLITE_CITIZEN_ID_COL].apply(normalize_cid)
         else:
-            # เก็บ Error ไว้โชว์ตอน Debug
             st.session_state['debug_db_columns'] = df_loaded.columns.tolist()
             st.session_state['debug_missing_col'] = True
             return None
@@ -323,69 +331,62 @@ if df is None:
 
 # 3. Detect LINE UserID & LIFF (Enhanced Auto Login Logic)
 query_params = st.query_params
-# --- DEBUG: แสดงค่าที่ได้รับจาก URL ---
-st.write("Debug - Params received:", query_params)
-
 line_user_id = query_params.get("userid")
 status = query_params.get("status")
 
 if line_user_id:
     st.session_state["line_user_id"] = line_user_id
-    st.write(f"Debug: กำลังดำเนินการสำหรับ UserID: {line_user_id}")
     
+    # ถ้ายังไม่ Authenticated -> เริ่มกระบวนการตรวจสอบ
     if not st.session_state['authenticated']:
-        with st.status("กำลังตรวจสอบข้อมูลการลงทะเบียน...", expanded=True) as status_box:
-            # 3.1 ถาม Google Sheet
-            st.write("1. เชื่อมต่อฐานข้อมูลผู้ใช้ (Google Sheet)...")
-            user_info = get_user_info_from_gas(line_user_id)
+        st.info(f"⏳ กำลังตรวจสอบสิทธิ์สำหรับ User: {line_user_id}")
+        
+        # 3.1 ถาม Google Sheet
+        user_info = get_user_info_from_gas(line_user_id)
+        
+        # DEBUG: แสดงผลลัพธ์จาก GAS ให้เห็นชัดๆ (ถ้าผ่านแล้วค่อยลบออก)
+        if not user_info.get('found'):
+             st.write("Google Sheet Response:", user_info)
+        
+        if user_info.get('found'):
+            # 3.2 Clean เลขบัตรจาก Sheet
+            raw_card_id = user_info.get('card_id')
+            card_id_from_sheet = normalize_cid(raw_card_id)
             
-            # --- DEBUG: ดูว่า GAS ตอบอะไรมา ---
-            st.write("Debug - GAS Response:", user_info)
+            st.info(f"✅ พบข้อมูลลงทะเบียน: ตรวจสอบเลขบัตร {card_id_from_sheet} ในฐานข้อมูล...")
             
-            if user_info.get('found'):
-                st.write("✅ พบข้อมูลการลงทะเบียน")
+            # 3.3 ค้นหาใน SQLite
+            match = df[df[SQLITE_CITIZEN_ID_COL] == card_id_from_sheet]
+            
+            if not match.empty:
+                st.success("✅ พบประวัติสุขภาพในระบบ! กำลังเข้าสู่ระบบ...")
                 
-                # 3.2 Clean เลขบัตรจาก Sheet ด้วยฟังก์ชัน normalize_cid
-                raw_card_id = user_info.get('card_id')
-                card_id_from_sheet = normalize_cid(raw_card_id)
+                matched_user = match.iloc[0]
+                st.session_state['authenticated'] = True
+                st.session_state['user_hn'] = matched_user['HN']
+                st.session_state['user_name'] = matched_user[SQLITE_NAME_COL]
+                st.session_state['pdpa_accepted'] = True 
+                st.session_state['login_error'] = None
                 
-                st.write(f"🔍 ข้อมูลจาก Sheet (Cleaned): '{card_id_from_sheet}'")
+                if status == "new":
+                    st.toast(f"ลงทะเบียนสำเร็จ! ยินดีต้อนรับคุณ {matched_user[SQLITE_NAME_COL]}")
                 
-                # 3.3 ค้นหาใน SQLite โดยใช้ SQLITE_CITIZEN_ID_COL
-                match = df[df[SQLITE_CITIZEN_ID_COL] == card_id_from_sheet]
-                
-                if not match.empty:
-                    st.write("✅ พบประวัติสุขภาพในระบบ")
-                    status_box.update(label="เข้าสู่ระบบสำเร็จ!", state="complete", expanded=False)
-                    
-                    matched_user = match.iloc[0]
-                    st.session_state['authenticated'] = True
-                    st.session_state['user_hn'] = matched_user['HN']
-                    st.session_state['user_name'] = matched_user[SQLITE_NAME_COL]
-                    st.session_state['pdpa_accepted'] = True 
-                    st.session_state['login_error'] = None
-                    
-                    if status == "new":
-                        st.success(f"ลงทะเบียนสำเร็จ! ยินดีต้อนรับคุณ {matched_user[SQLITE_NAME_COL]}")
-                    
-                    st.rerun()
-                else:
-                    error_msg = f"❌ ไม่พบข้อมูลผลตรวจสุขภาพของเลขบัตร {card_id_from_sheet} ในฐานข้อมูลโรงพยาบาล"
-                    st.session_state['login_error'] = error_msg
-                    
-                    # --- SUPER DEBUG MODE ---
-                    st.session_state['debug_info'] = {
-                        "card_sheet": card_id_from_sheet,
-                        "db_tables": st.session_state.get('debug_tables', []),
-                        "db_columns": df.columns.tolist(),
-                        "db_sample_ids": df[SQLITE_CITIZEN_ID_COL].head(5).tolist() if not df.empty else []
-                    }
-                    status_box.update(label="เกิดข้อผิดพลาด", state="error", expanded=True)
+                st.rerun()
             else:
-                error_detail = user_info.get('error', '')
-                error_msg = f"❌ ไม่พบข้อมูลการลงทะเบียนของคุณในระบบ (Line User ID นี้ยังไม่ถูกผูกบัญชี) {error_detail}"
+                error_msg = f"❌ ไม่พบข้อมูลผลตรวจสุขภาพของเลขบัตร '{card_id_from_sheet}' ในฐานข้อมูลโรงพยาบาล"
                 st.session_state['login_error'] = error_msg
-                status_box.update(label="ไม่พบข้อมูลลงทะเบียน", state="error", expanded=True)
+                
+                # เก็บ Debug Info
+                st.session_state['debug_info'] = {
+                    "card_sheet": card_id_from_sheet,
+                    "db_tables": st.session_state.get('debug_tables', []),
+                    "db_columns": df.columns.tolist(),
+                    "db_sample_ids": df[SQLITE_CITIZEN_ID_COL].head(5).tolist() if not df.empty else []
+                }
+        else:
+            error_detail = user_info.get('error', '')
+            error_msg = f"❌ ไม่พบข้อมูลการลงทะเบียนของคุณในระบบ (Line User ID นี้ยังไม่ถูกผูกบัญชี) {error_detail}"
+            st.session_state['login_error'] = error_msg
 
 # 4. Routing Decision (Final)
 is_line_mode = "line_user_id" in st.session_state
