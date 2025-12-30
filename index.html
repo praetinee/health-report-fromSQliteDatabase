@@ -10,14 +10,24 @@
         body { font-family: 'Sarabun', sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
         .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 90%; max-width: 400px; text-align: center; }
         .hidden { display: none; }
-        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: 'Sarabun', sans-serif; font-size: 16px;}
-        button { width: 100%; padding: 12px; background-color: #00b900; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 15px; }
-        button:disabled { background-color: #ccc; }
+        input[type="text"], input[type="tel"] { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: 'Sarabun', sans-serif; font-size: 16px;}
+        button { width: 100%; padding: 12px; background-color: #00b900; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 15px; transition: background-color 0.3s; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #00b900; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .error { color: #d32f2f; font-size: 0.9rem; margin-top: 10px; }
         label { display: block; text-align: left; margin-top: 10px; font-weight: bold; color: #555; }
         .profile-img { width: 80px; height: 80px; border-radius: 50%; margin-bottom: 15px; border: 3px solid #00b900; }
+        
+        /* PDPA Section Styles */
+        .pdpa-container { text-align: left; margin-top: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #fafafa; padding: 10px; }
+        .pdpa-content { height: 120px; overflow-y: auto; font-size: 0.85rem; color: #666; margin-bottom: 10px; padding-right: 5px; line-height: 1.4; }
+        .pdpa-content::-webkit-scrollbar { width: 6px; }
+        .pdpa-content::-webkit-scrollbar-thumb { background-color: #ccc; border-radius: 3px; }
+        .pdpa-title { font-weight: bold; font-size: 0.9rem; margin-bottom: 5px; color: #333; }
+        .checkbox-wrapper { display: flex; align-items: flex-start; gap: 8px; font-size: 0.9rem; color: #333; margin-top: 5px; }
+        .checkbox-wrapper input { width: 18px; height: 18px; margin-top: 2px; }
+        .checkbox-wrapper label { margin-top: 0; font-weight: normal; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -34,7 +44,7 @@
         <h3 id="userName" style="margin: 0 0 20px 0; color: #333;"></h3>
         
         <h2 style="color: #00b900; margin-top: 0; font-size: 1.2rem;">ลงทะเบียนใช้งานครั้งแรก</h2>
-        <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px;">กรุณากรอกข้อมูลให้ตรงกับบัตรประชาชนเพื่อยืนยันตัวตน</p>
+        <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px;">กรุณากรอกข้อมูลให้ตรงกับบัตรประชาชนเพื่อยืนยันตัวตน</p>
         
         <label>ชื่อ (ไม่ต้องระบุคำนำหน้า)</label>
         <input type="text" id="fname" placeholder="เช่น สมชาย">
@@ -45,12 +55,33 @@
         <label>เลขบัตรประชาชน (13 หลัก)</label>
         <input type="tel" id="cid" maxlength="13" placeholder="xxxxxxxxxxxxx">
 
+        <!-- ส่วน PDPA Consent -->
+        <div class="pdpa-container">
+            <div class="pdpa-title">นโยบายความเป็นส่วนตัว (PDPA)</div>
+            <div class="pdpa-content">
+                <strong>โรงพยาบาลสันทราย</strong> ให้ความสำคัญกับการคุ้มครองข้อมูลส่วนบุคคลของท่าน เพื่อให้ท่านมั่นใจได้ว่าข้อมูลส่วนบุคคลของท่านที่เราได้รับจะถูกนำไปใช้ตรงตามความต้องการของท่านและถูกต้องตามกฎหมายคุ้มครองข้อมูลส่วนบุคคล<br><br>
+                <strong>วัตถุประสงค์ในการเก็บรวบรวม ใช้ หรือเปิดเผยข้อมูลส่วนบุคคล</strong><br>
+                - เพื่อใช้ในการระบุและยืนยันตัวตนของท่านก่อนเข้าใช้งานระบบรายงานผลตรวจสุขภาพ<br>
+                - เพื่อแสดงผลการตรวจสุขภาพและข้อมูลที่เกี่ยวข้องซึ่งเป็นข้อมูลส่วนบุคคลที่มีความอ่อนไหว<br>
+                - เพื่อการวิเคราะห์ข้อมูลในภาพรวมสำหรับการพัฒนาคุณภาพบริการ (โดยไม่ระบุตัวตน)<br><br>
+                <strong>การรักษาความปลอดภัยของข้อมูล</strong><br>
+                ระบบมีมาตรการรักษาความปลอดภัยของข้อมูลส่วนบุคคลของท่านอย่างเข้มงวด เพื่อป้องกันการเข้าถึง การใช้ หรือการเปิดเผยข้อมูลโดยไม่ได้รับอนุญาต<br><br>
+                <strong>การเปิดเผยข้อมูลส่วนบุคคล</strong><br>
+                ระบบจะไม่เปิดเผยข้อมูลส่วนบุคคลของท่านแก่บุคคลภายนอก เว้นแต่จะได้รับความยินยอมจากท่าน หรือเป็นไปตามที่กฎหมายกำหนด<br><br>
+                <em>โดยการคลิกปุ่ม "ยอมรับ" ด้านล่างนี้ ท่านรับทราบและยินยอมให้ระบบเก็บรวบรวม ใช้ และเปิดเผยข้อมูลส่วนบุคคลของท่านตามวัตถุประสงค์ที่ระบุไว้ในคำประกาศนี้</em>
+            </div>
+            <div class="checkbox-wrapper">
+                <input type="checkbox" id="pdpaConsent" onchange="toggleSubmit()">
+                <label for="pdpaConsent">ข้าพเจ้าได้อ่านและยอมรับข้อตกลง</label>
+            </div>
+        </div>
+
         <!-- ข้อความเตือนก่อนปุ่มกด -->
-        <p style="color: #d32f2f; font-size: 0.9rem; margin-top: 20px; margin-bottom: 5px; font-weight: 500;">
+        <p style="color: #d32f2f; font-size: 0.85rem; margin-top: 15px; margin-bottom: 5px; font-weight: 500;">
             ตรวจสอบข้อมูลให้ถูกต้อง หากกรอกข้อมูลผิดจะไม่สามารถแสดงผลตรวจสุขภาพได้
         </p>
 
-        <button onclick="handleRegister()" id="submitBtn">ยืนยันข้อมูล</button>
+        <button onclick="handleRegister()" id="submitBtn" disabled>ยืนยันข้อมูล</button>
         <p id="errorMsg" class="error"></p>
     </div>
 
@@ -113,11 +144,19 @@
                 });
         }
 
+        // ฟังก์ชันเปิด/ปิดปุ่ม Submit ตาม Checkbox
+        function toggleSubmit() {
+            const checkbox = document.getElementById('pdpaConsent');
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = !checkbox.checked;
+        }
+
         // ฟังก์ชันเมื่อกดปุ่ม "ยืนยันข้อมูล"
         function handleRegister() {
             const fname = document.getElementById('fname').value.trim();
             const lname = document.getElementById('lname').value.trim();
             const cid = document.getElementById('cid').value.trim();
+            const pdpaChecked = document.getElementById('pdpaConsent').checked;
             const btn = document.getElementById('submitBtn');
             const err = document.getElementById('errorMsg');
 
@@ -128,6 +167,10 @@
             }
             if(cid.length !== 13 || isNaN(cid)) {
                 err.innerText = "เลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก";
+                return;
+            }
+            if(!pdpaChecked) {
+                err.innerText = "กรุณายอมรับเงื่อนไขนโยบายความเป็นส่วนตัว";
                 return;
             }
 
