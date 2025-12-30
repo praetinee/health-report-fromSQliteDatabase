@@ -111,16 +111,20 @@ def normalize_cid(val):
 def get_user_info_from_gas(line_user_id):
     """ฟังก์ชันสำหรับถาม Google Sheet ว่า UserID นี้คือใคร"""
     try:
+        # Debug URL
+        debug_url = f"{GAS_URL}?action=get_user&line_id={line_user_id}"
+        # st.write(f"Debug: กำลังเรียก GAS ที่ {debug_url}")
+        
         # เพิ่ม timeout ป้องกันการค้าง
-        response = requests.get(f"{GAS_URL}?action=get_user&line_id={line_user_id}", timeout=10)
+        response = requests.get(debug_url, timeout=10)
         response.raise_for_status()
         data = response.json()
         return data
     except requests.exceptions.RequestException as e:
-        print(f"GAS Network Error: {e}")
+        st.error(f"GAS Network Error: {e}")
         return {"found": False, "error": str(e)}
     except Exception as e:
-        print(f"GAS General Error: {e}")
+        st.error(f"GAS General Error: {e}")
         return {"found": False, "error": str(e)}
 
 # -----------------------------------------------------------------------------
@@ -144,14 +148,12 @@ def load_sqlite_data():
         conn = sqlite3.connect(tmp_path)
         
         # --- DEBUG: เช็คชื่อตารางทั้งหมดใน DB ---
-        # ถ้าชื่อตารางไม่ใช่ health_data เราจะได้รู้
         tables = pd.read_sql("SELECT name FROM sqlite_master WHERE type='table';", conn)
         st.session_state['debug_tables'] = tables['name'].tolist()
         
-        # พยายามโหลดจาก health_data (หรือเปลี่ยนเป็น health_report ถ้าแจนใช้ชื่อนั้น)
+        # พยายามโหลดจาก health_data
         table_name = "health_data" 
         if table_name not in st.session_state['debug_tables']:
-             # ถ้าไม่เจอ health_data ลองหาชื่อที่ใกล้เคียง หรือใช้ตารางแรกที่เจอ
              if len(st.session_state['debug_tables']) > 0:
                  table_name = st.session_state['debug_tables'][0]
         
@@ -321,17 +323,24 @@ if df is None:
 
 # 3. Detect LINE UserID & LIFF (Enhanced Auto Login Logic)
 query_params = st.query_params
+# --- DEBUG: แสดงค่าที่ได้รับจาก URL ---
+st.write("Debug - Params received:", query_params)
+
 line_user_id = query_params.get("userid")
 status = query_params.get("status")
 
 if line_user_id:
     st.session_state["line_user_id"] = line_user_id
+    st.write(f"Debug: กำลังดำเนินการสำหรับ UserID: {line_user_id}")
     
     if not st.session_state['authenticated']:
         with st.status("กำลังตรวจสอบข้อมูลการลงทะเบียน...", expanded=True) as status_box:
             # 3.1 ถาม Google Sheet
             st.write("1. เชื่อมต่อฐานข้อมูลผู้ใช้ (Google Sheet)...")
             user_info = get_user_info_from_gas(line_user_id)
+            
+            # --- DEBUG: ดูว่า GAS ตอบอะไรมา ---
+            st.write("Debug - GAS Response:", user_info)
             
             if user_info.get('found'):
                 st.write("✅ พบข้อมูลการลงทะเบียน")
@@ -340,8 +349,7 @@ if line_user_id:
                 raw_card_id = user_info.get('card_id')
                 card_id_from_sheet = normalize_cid(raw_card_id)
                 
-                # Debug: แสดงข้อมูลที่กำลังจะเอาไปเทียบกัน
-                st.write(f"🔍 ข้อมูลจาก Sheet: '{card_id_from_sheet}'")
+                st.write(f"🔍 ข้อมูลจาก Sheet (Cleaned): '{card_id_from_sheet}'")
                 
                 # 3.3 ค้นหาใน SQLite โดยใช้ SQLITE_CITIZEN_ID_COL
                 match = df[df[SQLITE_CITIZEN_ID_COL] == card_id_from_sheet]
