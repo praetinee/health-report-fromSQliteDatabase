@@ -93,8 +93,8 @@
                 .then(res => res.json())
                 .then(data => {
                     if (data.registered) {
-                        // ถ้ามีข้อมูลใน Sheet แล้ว -> ส่งไปหน้า Streamlit เลย
-                        goToStreamlit(uid);
+                        // ถ้ามีข้อมูลใน Sheet แล้ว -> ส่งไปหน้า Streamlit เลย (สถานะ existing)
+                        goToStreamlit(uid, false);
                     } else {
                         // ถ้ายังไม่มี -> เปิดฟอร์มให้กรอก
                         document.getElementById('loading').classList.add('hidden');
@@ -146,8 +146,8 @@
             .then(res => res.json())
             .then(data => {
                 if(data.result === 'success') {
-                    // บันทึกสำเร็จ -> ไปหน้า Streamlit
-                    goToStreamlit(userProfile.userId);
+                    // บันทึกสำเร็จ -> ไปหน้า Streamlit พร้อมแจ้งว่าเป็นคนใหม่ (isNew = true)
+                    goToStreamlit(userProfile.userId, true);
                 } else {
                     err.innerText = "บันทึกไม่สำเร็จ: " + (data.message || "ไม่ทราบสาเหตุ");
                     btn.disabled = false;
@@ -163,14 +163,23 @@
         }
 
         // ฟังก์ชัน Redirect ไปหน้า Python (Streamlit)
-        function goToStreamlit(uid) {
+        // เพิ่ม Parameter isNew เพื่อบอก Python ว่าคนนี้เพิ่งลงทะเบียนมานะ
+        function goToStreamlit(uid, isNew = false) {
             // แสดงหน้าโหลดอีกครั้งก่อนไป
             document.getElementById('registerForm').classList.add('hidden');
             document.getElementById('loading').classList.remove('hidden');
             document.querySelector('#loading p').innerText = "ลงทะเบียนเรียบร้อย กำลังเข้าสู่ระบบ...";
             
-            // ส่งค่า userid ไปทาง URL parameter
-            window.location.replace(`${STREAMLIT_URL}?userid=${uid}`);
+            // สร้าง URL เป้าหมาย
+            const separator = STREAMLIT_URL.includes('?') ? '&' : '?';
+            let targetUrl = `${STREAMLIT_URL}${separator}userid=${uid}`;
+            
+            // ถ้าเป็นคนใหม่ ให้แนบ flag status=new ไปด้วย
+            if (isNew) {
+                targetUrl += "&status=new";
+            }
+            
+            window.location.replace(targetUrl);
         }
 
         function showError(msg) {
