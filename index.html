@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>กำลังเข้าสู่ระบบสุขภาพ...</title>
+    <!-- โหลด SDK ของ LINE LIFF -->
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f9f9f9;
+        }
+        .loader-container { text-align: center; }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #00b900;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        p { color: #555; font-size: 18px; }
+    </style>
+</head>
+<body>
+
+    <div class="loader-container">
+        <div class="spinner"></div>
+        <p>กำลังตรวจสอบข้อมูล LINE...</p>
+    </div>
+
+    <script>
+        // --- ส่วนที่แจนต้องตรวจสอบค่า ---
+        const MY_LIFF_ID = "2008725340-YHOiWxtj"; // ตรวจสอบจาก LINE Developers
+        const MY_STREAMLIT_URL = "https://health-report-fromsq-praetinee.streamlit.app/"; // URL ของหน้า Streamlit
+
+        async function initializeLiff() {
+            try {
+                // 1. เริ่มต้นระบบ LIFF
+                await liff.init({ liffId: MY_LIFF_ID });
+
+                // 2. ถ้ายังไม่ Login ให้พาไปหน้า Login ของ LINE
+                if (!liff.isLoggedIn()) {
+                    liff.login();
+                } else {
+                    // 3. ดึงข้อมูลผู้ใช้
+                    const profile = await liff.getProfile();
+                    const userId = profile.userId;
+
+                    // 4. ส่งผู้ใช้ไปยัง Streamlit พร้อม ID (แบบ Redirect)
+                    // เราใช้ window.location.replace เพื่อไม่ให้ user กด Back กลับมาหน้าโหลดนี้
+                    const finalUrl = `${MY_STREAMLIT_URL}?userid=${userId}`;
+                    window.location.replace(finalUrl);
+                }
+            } catch (error) {
+                console.error("LIFF Error:", error);
+                document.querySelector('p').innerHTML = "เกิดข้อผิดพลาดในการเชื่อมต่อ LINE<br>โปรดลองเข้าใหม่อีกครั้ง";
+            }
+        }
+
+        // เริ่มทำงานทันทีที่โหลดหน้าเสร็จ
+        window.onload = initializeLiff;
+    </script>
+</body>
+</html>
