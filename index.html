@@ -3,71 +3,183 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>กำลังเข้าสู่ระบบสุขภาพ...</title>
-    <!-- โหลด SDK ของ LINE LIFF -->
+    <title>ระบบลงทะเบียนสุขภาพ</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Sarabun', sans-serif;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f9f9f9;
-        }
-        .loader-container { text-align: center; }
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #00b900;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
-        }
+        body { font-family: 'Sarabun', sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 90%; max-width: 400px; text-align: center; }
+        .hidden { display: none; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: 'Sarabun', sans-serif; font-size: 16px;}
+        button { width: 100%; padding: 12px; background-color: #00b900; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+        button:disabled { background-color: #ccc; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #00b900; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        p { color: #555; font-size: 18px; }
+        .error { color: #d32f2f; font-size: 0.9rem; margin-top: 10px; }
+        label { display: block; text-align: left; margin-top: 10px; font-weight: bold; color: #555; }
+        .profile-img { width: 80px; height: 80px; border-radius: 50%; margin-bottom: 15px; border: 3px solid #00b900; }
     </style>
 </head>
 <body>
 
-    <div class="loader-container">
+    <!-- ส่วนโหลดข้อมูล (แสดงตอนแรก) -->
+    <div id="loading" class="card">
         <div class="spinner"></div>
-        <p>กำลังตรวจสอบข้อมูล LINE...</p>
+        <p>กำลังตรวจสอบข้อมูลของคุณ...</p>
+    </div>
+
+    <!-- ส่วนฟอร์มลงทะเบียน (แสดงเมื่อยังไม่เคยลงทะเบียน) -->
+    <div id="registerForm" class="card hidden">
+        <img id="userPicture" class="profile-img" src="" alt="Profile">
+        <h3 id="userName" style="margin: 0 0 20px 0; color: #333;"></h3>
+        
+        <h2 style="color: #00b900; margin-top: 0; font-size: 1.2rem;">ลงทะเบียนใช้งานครั้งแรก</h2>
+        <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px;">กรุณากรอกข้อมูลให้ตรงกับบัตรประชาชนเพื่อยืนยันตัวตน</p>
+        
+        <label>ชื่อ (ไม่ต้องระบุคำนำหน้า)</label>
+        <input type="text" id="fname" placeholder="เช่น สมชาย">
+        
+        <label>นามสกุล</label>
+        <input type="text" id="lname" placeholder="เช่น ใจดี">
+        
+        <label>เลขบัตรประชาชน (13 หลัก)</label>
+        <input type="tel" id="cid" maxlength="13" placeholder="xxxxxxxxxxxxx">
+
+        <button onclick="handleRegister()" id="submitBtn">ยืนยันข้อมูล</button>
+        <p id="errorMsg" class="error"></p>
     </div>
 
     <script>
-        // --- ส่วนที่แจนต้องตรวจสอบค่า ---
-        const MY_LIFF_ID = "2008725340-YHOiWxtj"; // ตรวจสอบจาก LINE Developers
-        const MY_STREAMLIT_URL = "https://health-report-fromsq-praetinee.streamlit.app/"; // URL ของหน้า Streamlit
+        // --- การตั้งค่า (Configuration) ---
+        const LIFF_ID = "2008725340-YHOiWxtj"; 
+        
+        // URL ของ Google Apps Script ที่แจนให้มา
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbzmtd5H-YZr8EeeTUab3M2L2nEtUofDBtYCP9-CN6MVfIff94P6lDWS-cUHCi9asLlR/exec"; 
+        
+        const STREAMLIT_URL = "https://health-report-fromsq-praetinee.streamlit.app/"; 
 
-        async function initializeLiff() {
+        let userProfile = null;
+
+        async function main() {
             try {
-                // 1. เริ่มต้นระบบ LIFF
-                await liff.init({ liffId: MY_LIFF_ID });
+                // 1. เริ่มต้น LIFF
+                await liff.init({ liffId: LIFF_ID });
 
-                // 2. ถ้ายังไม่ Login ให้พาไปหน้า Login ของ LINE
+                // 2. ถ้ายังไม่ Login ให้พาไปหน้า Login
                 if (!liff.isLoggedIn()) {
                     liff.login();
-                } else {
-                    // 3. ดึงข้อมูลผู้ใช้
-                    const profile = await liff.getProfile();
-                    const userId = profile.userId;
-
-                    // 4. ส่งผู้ใช้ไปยัง Streamlit พร้อม ID (แบบ Redirect)
-                    // เราใช้ window.location.replace เพื่อไม่ให้ user กด Back กลับมาหน้าโหลดนี้
-                    const finalUrl = `${MY_STREAMLIT_URL}?userid=${userId}`;
-                    window.location.replace(finalUrl);
+                    return;
                 }
-            } catch (error) {
-                console.error("LIFF Error:", error);
-                document.querySelector('p').innerHTML = "เกิดข้อผิดพลาดในการเชื่อมต่อ LINE<br>โปรดลองเข้าใหม่อีกครั้ง";
+                
+                // 3. ดึงข้อมูลโปรไฟล์
+                userProfile = await liff.getProfile();
+                
+                // 4. แสดงข้อมูลเบื้องต้นในฟอร์ม (รูปและชื่อไลน์)
+                document.getElementById('userPicture').src = userProfile.pictureUrl;
+                document.getElementById('userName').innerText = userProfile.displayName;
+
+                // 5. เช็คสถานะกับ Google Sheet ว่าเคยลงทะเบียนหรือยัง
+                checkUserStatus(userProfile.userId);
+
+            } catch (err) {
+                showError("เกิดข้อผิดพลาดในการเชื่อมต่อ LINE: " + err.message);
             }
         }
 
-        // เริ่มทำงานทันทีที่โหลดหน้าเสร็จ
-        window.onload = initializeLiff;
+        // ฟังก์ชันเช็คสถานะ User
+        function checkUserStatus(uid) {
+            // เรียกใช้ doGet ของ Google Apps Script (action=check)
+            fetch(`${GAS_URL}?action=check&line_id=${uid}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.registered) {
+                        // ถ้ามีข้อมูลใน Sheet แล้ว -> ส่งไปหน้า Streamlit เลย
+                        goToStreamlit(uid);
+                    } else {
+                        // ถ้ายังไม่มี -> เปิดฟอร์มให้กรอก
+                        document.getElementById('loading').classList.add('hidden');
+                        document.getElementById('registerForm').classList.remove('hidden');
+                    }
+                })
+                .catch(err => {
+                    console.error("Check Status Error:", err);
+                    // กรณี Error (เช่น Script ตาย) อาจจะลองส่งไปก่อน หรือแจ้งเตือน
+                    showError("ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
+                });
+        }
+
+        // ฟังก์ชันเมื่อกดปุ่ม "ยืนยันข้อมูล"
+        function handleRegister() {
+            const fname = document.getElementById('fname').value.trim();
+            const lname = document.getElementById('lname').value.trim();
+            const cid = document.getElementById('cid').value.trim();
+            const btn = document.getElementById('submitBtn');
+            const err = document.getElementById('errorMsg');
+
+            // Validation ตรวจสอบความถูกต้องเบื้องต้น
+            if(!fname || !lname || !cid) {
+                err.innerText = "กรุณากรอกข้อมูลให้ครบทุกช่อง";
+                return;
+            }
+            if(cid.length !== 13 || isNaN(cid)) {
+                err.innerText = "เลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก";
+                return;
+            }
+
+            // เริ่มกระบวนการบันทึก
+            btn.disabled = true;
+            btn.innerText = "กำลังบันทึก...";
+            err.innerText = "";
+
+            // เตรียมข้อมูลส่งไป Google Apps Script (doPost)
+            const formData = new URLSearchParams();
+            formData.append('action', 'register');
+            formData.append('line_id', userProfile.userId);
+            formData.append('fname', fname);
+            formData.append('lname', lname);
+            formData.append('card_id', cid);
+
+            fetch(GAS_URL, {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.result === 'success') {
+                    // บันทึกสำเร็จ -> ไปหน้า Streamlit
+                    goToStreamlit(userProfile.userId);
+                } else {
+                    err.innerText = "บันทึกไม่สำเร็จ: " + (data.message || "ไม่ทราบสาเหตุ");
+                    btn.disabled = false;
+                    btn.innerText = "ยืนยันข้อมูล";
+                }
+            })
+            .catch(error => {
+                err.innerText = "เกิดข้อผิดพลาดในการเชื่อมต่อ";
+                console.error(error);
+                btn.disabled = false;
+                btn.innerText = "ยืนยันข้อมูล";
+            });
+        }
+
+        // ฟังก์ชัน Redirect ไปหน้า Python (Streamlit)
+        function goToStreamlit(uid) {
+            // แสดงหน้าโหลดอีกครั้งก่อนไป
+            document.getElementById('registerForm').classList.add('hidden');
+            document.getElementById('loading').classList.remove('hidden');
+            document.querySelector('#loading p').innerText = "ลงทะเบียนเรียบร้อย กำลังเข้าสู่ระบบ...";
+            
+            // ส่งค่า userid ไปทาง URL parameter
+            window.location.replace(`${STREAMLIT_URL}?userid=${uid}`);
+        }
+
+        function showError(msg) {
+            document.getElementById('loading').innerHTML = `<p style="color:red; font-weight:bold;">${msg}</p>`;
+            document.getElementById('registerForm').classList.add('hidden');
+        }
+
+        // เริ่มทำงานเมื่อโหลดหน้าเสร็จ
+        window.onload = main;
     </script>
 </body>
 </html>
