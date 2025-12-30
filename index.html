@@ -185,7 +185,8 @@
             formData.append('line_id', userProfile.userId);
             formData.append('fname', fname);
             formData.append('lname', lname);
-            formData.append('card_id', cid);
+            // ใส่ ' นำหน้าเพื่อให้ Google Sheets เก็บเป็นข้อความ (ป้องกันเลข 0 นำหน้าหาย)
+            formData.append('card_id', "'" + cid);
 
             fetch(GAS_URL, {
                 method: 'POST',
