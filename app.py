@@ -89,6 +89,7 @@ def get_user_info_from_gas(line_user_id):
     """ฟังก์ชันสำหรับถาม Google Sheet ว่า UserID นี้คือใคร"""
     try:
         # เพิ่ม timeout ป้องกันการค้าง
+        # ⚠️ สำคัญ: ส่ง parameter ชื่อ 'line_id' ไปให้ GAS (เพื่อให้ตรงกับชื่อคอลัมน์ใน Sheet)
         response = requests.get(f"{GAS_URL}?action=get_user&line_id={line_user_id}", timeout=10)
         response.raise_for_status()
         data = response.json()
@@ -283,6 +284,7 @@ if df is None: st.stop()
 
 # 3. Detect LINE UserID & LIFF (Enhanced Auto Login Logic)
 query_params = st.query_params
+# หมายเหตุ: index.html ส่งค่ามาด้วยชื่อ 'userid'
 line_user_id = query_params.get("userid")
 status = query_params.get("status")
 
@@ -293,6 +295,7 @@ if line_user_id:
         with st.status("กำลังตรวจสอบข้อมูลการลงทะเบียน...", expanded=True) as status_box:
             # 3.1 ถาม Google Sheet
             st.write("1. เชื่อมต่อฐานข้อมูลผู้ใช้ (Google Sheet)...")
+            # ส่งค่าไปตรวจสอบ (ฟังก์ชันนี้จะใช้ key 'line_id' ส่งไปที่ GAS)
             user_info = get_user_info_from_gas(line_user_id)
             
             if user_info.get('found'):
