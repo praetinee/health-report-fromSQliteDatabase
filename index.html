@@ -45,6 +45,11 @@
         <label>เลขบัตรประชาชน (13 หลัก)</label>
         <input type="tel" id="cid" maxlength="13" placeholder="xxxxxxxxxxxxx">
 
+        <!-- ข้อความเตือนก่อนปุ่มกด -->
+        <p style="color: #d32f2f; font-size: 0.9rem; margin-top: 20px; margin-bottom: 5px; font-weight: 500;">
+            ตรวจสอบข้อมูลให้ถูกต้อง หากกรอกข้อมูลผิดจะไม่สามารถแสดงผลตรวจสุขภาพได้
+        </p>
+
         <button onclick="handleRegister()" id="submitBtn">ยืนยันข้อมูล</button>
         <p id="errorMsg" class="error"></p>
     </div>
