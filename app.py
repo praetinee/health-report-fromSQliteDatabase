@@ -11,11 +11,9 @@ from datetime import datetime
 # --- Import Authentication & Consent ---
 from auth import authentication_flow, pdpa_consent_page
 
-# --- Import Line Register (GSheet version) ---
-# แก้ไข: ลบ try-except ออก เพื่อให้เห็น Error จริง ถ้า module มีปัญหา
+# --- Import Line Register (Modules) ---
 from line_register import (
     save_new_user_to_gsheet, 
-    liff_initializer_component, 
     check_if_user_registered, 
     normalize_db_name_field,
     render_registration_page,
@@ -76,31 +74,60 @@ try:
 except Exception:
     def display_admin_panel(df): st.error("Admin Panel Error")
 
-# --- Data Loading ---
+# -----------------------------------------------------------------------------
+# Configuration & New Helper Functions
+# -----------------------------------------------------------------------------
+
+# URL ของ Google Apps Script (ตัวใหม่ที่แจนเพิ่ง Deploy)
+GAS_URL = "https://script.google.com/macros/s/AKfycbzmtd5H-YZr8EeeTUab3M2L2nEtUofDBtYCP9-CN6MVfIff94P6lDWS-cUHCi9asLlR/exec"
+
+def get_user_info_from_gas(line_user_id):
+    """ฟังก์ชันสำหรับถาม Google Sheet ว่า UserID นี้คือใคร"""
+    try:
+        response = requests.get(f"{GAS_URL}?action=get_user&line_id={line_user_id}")
+        data = response.json()
+        return data
+    except Exception as e:
+        print(f"GAS Connection Error: {e}")
+        return {"found": False}
+
+# -----------------------------------------------------------------------------
+# Data Loading (คงเดิมจากไฟล์เก่าของแจน)
+# -----------------------------------------------------------------------------
 @st.cache_data(ttl=600)
 def load_sqlite_data():
     tmp_path = None
     try:
+        # ใช้ File ID เดิมของแจน
         file_id = "1HruO9AMrUfniC8hBWtumVdxLJayEc1Xr"
         download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
+        
         response = requests.get(download_url)
         response.raise_for_status()
+        
         with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as tmp:
             tmp.write(response.content)
             tmp_path = tmp.name
+            
         conn = sqlite3.connect(tmp_path)
         df_loaded = pd.read_sql("SELECT * FROM health_data", conn)
         conn.close()
+        
+        # Data Cleaning
         df_loaded.columns = df_loaded.columns.str.strip()
+        
         def clean_hn(hn_val):
             if pd.isna(hn_val): return ""
             s_val = str(hn_val).strip()
             return s_val[:-2] if s_val.endswith('.0') else s_val
+            
         df_loaded['HN'] = df_loaded['HN'].apply(clean_hn)
         df_loaded['ชื่อ-สกุล'] = df_loaded['ชื่อ-สกุล'].astype(str).str.strip().str.replace(r'\s+', ' ', regex=True)
+        # แปลงเลขบัตรประชาชนให้เป็น String เพื่อให้ตรงกับการเปรียบเทียบ
         df_loaded['เลขบัตรประชาชน'] = df_loaded['เลขบัตรประชาชน'].astype(str).str.strip()
         df_loaded['Year'] = df_loaded['Year'].astype(int)
         df_loaded['วันที่ตรวจ'] = df_loaded['วันที่ตรวจ'].astype(str).str.strip().replace('nan', '')
+        
         return df_loaded
     except Exception as e:
         st.error(f"❌ โหลดฐานข้อมูลไม่สำเร็จ: {e}")
@@ -108,9 +135,11 @@ def load_sqlite_data():
     finally:
         if tmp_path and os.path.exists(tmp_path): os.remove(tmp_path)
 
-# --- Main App Logic ---
+# -----------------------------------------------------------------------------
+# Main App Logic (UI & Features)
+# -----------------------------------------------------------------------------
 def main_app(df):
-    st.set_page_config(page_title="ระบบรายงานสุขภาพ", layout="wide")
+    # inject_custom_css ถูกย้ายไปเรียกข้างนอก main_app หรือเรียกซ้ำได้ไม่มีปัญหา
     inject_custom_css()
 
     st.markdown("""
@@ -160,29 +189,6 @@ def main_app(df):
     else:
         st.session_state.person_row = None
         st.session_state.selected_row_found = False
-
-    # --- Auto-Save LINE ID Logic ---
-    # บันทึกข้อมูลเฉพาะเมื่อยังไม่มี Flag line_saved
-    # จุดนี้สำคัญ: ถ้าหน้า register บันทึกสำเร็จแล้ว มันจะส่ง line_saved=True มา ตรงนี้จะข้ามไป ไม่เซฟซ้ำ
-    if st.session_state.get("line_user_id") and not st.session_state.get("line_saved", False):
-        try:
-            user_name_full = st.session_state.get('user_name', '')
-            parts = user_name_full.split()
-            f_name = parts[0] if len(parts) > 0 else ""
-            l_name = " ".join(parts[1:]) if len(parts) > 1 else ""
-            
-            id_card_val = ""
-            if st.session_state.get("person_row"):
-                id_card_val = str(st.session_state.person_row.get('เลขบัตรประชาชน', ''))
-            
-            success, msg = save_new_user_to_gsheet(f_name, l_name, st.session_state["line_user_id"], id_card_val)
-            if success:
-                st.session_state["line_saved"] = True
-            else:
-                # ถ้า Auto-save ไม่สำเร็จ ให้แสดง Error ใน log (ไม่ขัดจังหวะ User)
-                print(f"Auto-save failed: {msg}")
-        except Exception as e:
-            print(f"Auto-save error: {e}")
 
     # --- Event Handler ---
     def handle_year_change():
@@ -234,7 +240,7 @@ def main_app(df):
             st.warning("ไม่พบข้อมูลการตรวจสำหรับหมวดหมู่ที่กำหนด แต่พบประวัติการมาตรวจ")
             display_main_report(p_data, all_hist)
 
-        # --- Print Logic (Hidden) ---
+        # --- Print Logic ---
         if st.session_state.get('print_trigger', False):
             h = generate_printable_report(p_data, all_hist)
             escaped_html = json.dumps(h)
@@ -255,57 +261,80 @@ def main_app(df):
         st.rerun()
 
 # --------------------------------------------------------------------------------
-# MAIN ROUTING LOGIC
+# MAIN ROUTING LOGIC (หัวใจสำคัญของการเชื่อมต่อ)
 # --------------------------------------------------------------------------------
 
 # 1. Initialize State
 if 'authenticated' not in st.session_state: st.session_state['authenticated'] = False
 if 'pdpa_accepted' not in st.session_state: st.session_state['pdpa_accepted'] = False
 
-# 2. Load Data
+# 2. Load Data (จาก Google Drive)
 df = load_sqlite_data()
 if df is None: st.stop()
 
-# 3. Detect LINE UserID & LIFF (Enhanced Routing)
-try:
-    # 3.1 รับ UserID จาก URL (กรณี Redirect มาจาก LIFF)
-    q_userid = st.query_params.get("userid", "")
-    if q_userid:
-        st.session_state["line_user_id"] = q_userid
+# 3. Detect LINE UserID & LIFF (New Auto Login Logic)
+# ---------------------------------------------------
+# ดึงค่าจาก URL ที่ HTML ส่งมา
+query_params = st.query_params
+line_user_id = query_params.get("userid")
+status = query_params.get("status")
 
-    # 3.2 ถ้ามี LineUserID แต่ยังไม่ได้ Login -> เช็คใน Google Sheet ว่าเคยลงทะเบียนไหม
-    if st.session_state.get("line_user_id") and not st.session_state['authenticated']:
-        is_reg, info = check_if_user_registered(st.session_state["line_user_id"])
-        
-        if is_reg:
-            found_rows = df[df['ชื่อ-สกุล'].str.contains(info['first_name'], na=False)]
-            matched_user = None
-            for _, row in found_rows.iterrows():
-                db_f, db_l = normalize_db_name_field(row['ชื่อ-สกุล'])
-                if db_f == info['first_name'] and db_l == info['last_name']:
-                    matched_user = row
-                    break
+# ถ้ามี UserID ใน URL ให้พยายาม Auto Login
+if line_user_id:
+    st.session_state["line_user_id"] = line_user_id
+    
+    # ถ้ายังไม่ Authenticated -> ไปถาม GAS
+    if not st.session_state['authenticated']:
+        with st.spinner('กำลังยืนยันตัวตน...'):
+            user_info = get_user_info_from_gas(line_user_id)
             
-            if matched_user is not None:
-                st.session_state['authenticated'] = True
-                st.session_state['user_hn'] = matched_user['HN']
-                st.session_state['user_name'] = matched_user['ชื่อ-สกุล']
-                st.session_state['pdpa_accepted'] = True 
-                st.rerun()
-
-except Exception as e:
-    pass
+            if user_info['found']:
+                # ได้เลขบัตรประชาชนมาจาก Google Sheet
+                card_id_from_sheet = user_info['card_id']
+                
+                # เอาไปค้นใน SQLite
+                # หมายเหตุ: คอลัมน์ใน SQLite ต้องชื่อ 'เลขบัตรประชาชน' (ตามที่ Load มา)
+                match = df[df['เลขบัตรประชาชน'] == str(card_id_from_sheet)]
+                
+                if not match.empty:
+                    # เจอตัวจริง! Login เลย
+                    matched_user = match.iloc[0]
+                    st.session_state['authenticated'] = True
+                    st.session_state['user_hn'] = matched_user['HN']
+                    st.session_state['user_name'] = matched_user['ชื่อ-สกุล']
+                    st.session_state['pdpa_accepted'] = True 
+                    
+                    if status == "new":
+                        st.success(f"ลงทะเบียนสำเร็จ! ยินดีต้อนรับคุณ {matched_user['ชื่อ-สกุล']}")
+                    
+                    st.rerun()
+                else:
+                    st.error(f"ไม่พบข้อมูลผลตรวจสุขภาพของเลขบัตร {card_id_from_sheet} ในระบบ")
+                    st.info("หากท่านมั่นใจว่าเคยตรวจสุขภาพแล้ว โปรดติดต่อเจ้าหน้าที่")
+            else:
+                # กรณีมี ID มา แต่ไม่เจอใน Sheet (แปลกมาก เพราะ HTML เช็คก่อนแล้ว)
+                # อาจจะเกิดจาก HTML ส่งมาผิด หรือยังไม่ได้ลงทะเบียน
+                pass
 
 # 4. Routing Decision (Final)
 is_line_mode = "line_user_id" in st.session_state
 
 if not st.session_state['authenticated']:
     if is_line_mode:
-        render_registration_page(df)
+        # ถ้าเข้ามาแบบ LINE แต่ Auto Login ไม่ผ่าน (เช่น ไม่พบเลขบัตรใน SQLite)
+        # ให้แสดงหน้าแจ้งเตือน หรือหน้าลงทะเบียนใหม่ (ถ้าจำเป็น)
+        st.warning("ไม่สามารถเข้าสู่ระบบอัตโนมัติได้")
+        if st.button("ลองลงทะเบียนใหม่อีกครั้ง"):
+             # ล้างค่าเพื่อให้กลับไปเริ่มต้นใหม่
+             st.query_params.clear()
+             st.session_state.clear()
+             st.rerun()
     else:
+        # เข้าผ่าน Browser ปกติ -> หน้า Login แบบเดิม
         authentication_flow(df)
 
 elif not st.session_state['pdpa_accepted']:
+    # ถ้า Login แล้วแต่ยังไม่กด PDPA (เผื่อไว้)
     if st.session_state.get('is_admin', False):
         st.session_state['pdpa_accepted'] = True
         st.rerun()
@@ -313,6 +342,7 @@ elif not st.session_state['pdpa_accepted']:
         pdpa_consent_page()
 
 else:
+    # Login ผ่านหมดแล้ว -> เข้าหน้าแอปหลัก
     if st.session_state.get('is_admin', False):
         display_admin_panel(df)
     else:
