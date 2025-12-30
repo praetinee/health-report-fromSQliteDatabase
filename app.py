@@ -75,21 +75,43 @@ except Exception:
     def display_admin_panel(df): st.error("Admin Panel Error")
 
 # -----------------------------------------------------------------------------
-# Configuration
+# Configuration & Helper Functions
 # -----------------------------------------------------------------------------
 
 # URL ของ Google Apps Script
 GAS_URL = "https://script.google.com/macros/s/AKfycbzmtd5H-YZr8EeeTUab3M2L2nEtUofDBtYCP9-CN6MVfIff94P6lDWS-cUHCi9asLlR/exec"
 
-# ⚠️ ตั้งค่าชื่อคอลัมน์ให้ตรงกับ Database จริง (ตามที่แจนแจ้งมา)
-SQLITE_CITIZEN_ID_COL = "เลขบัตรประชาชน"  # ใช้จับคู่กับ card_id ใน Sheet
-SQLITE_NAME_COL = "ชื่อ-สกุล"           # ใช้แสดงผลต้อนรับ
+# ⚠️ ตั้งค่าชื่อคอลัมน์ให้ตรงกับ Database จริง
+SQLITE_CITIZEN_ID_COL = "เลขบัตรประชาชน"  
+SQLITE_NAME_COL = "ชื่อ-สกุล"           
+
+def normalize_cid(val):
+    """
+    ฟังก์ชันทำความสะอาดเลขบัตรประชาชนให้เป็นมาตรฐานเดียวกัน (Flexible Match)
+    - แปลงเป็น String
+    - ลบ ' และ " ออก
+    - ลบช่องว่างหน้าหลัง
+    - ลบ .0 (กรณีมาจาก float)
+    """
+    if pd.isna(val):
+        return ""
+    
+    # แปลงเป็นข้อความและตัดช่องว่าง
+    s = str(val).strip()
+    
+    # ลบเครื่องหมายคำพูดที่อาจติดมาจาก Google Sheet หรือ CSV
+    s = s.replace("'", "").replace('"', "")
+    
+    # ถ้าเป็นตัวเลขที่มี .0 ต่อท้าย (เช่น 12345.0) ให้ตัดออกเหลือ 12345
+    if s.endswith(".0"):
+        s = s[:-2]
+        
+    return s
 
 def get_user_info_from_gas(line_user_id):
     """ฟังก์ชันสำหรับถาม Google Sheet ว่า UserID นี้คือใคร"""
     try:
         # เพิ่ม timeout ป้องกันการค้าง
-        # ⚠️ สำคัญ: ส่ง parameter ชื่อ 'line_id' ไปให้ GAS (เพื่อให้ตรงกับชื่อคอลัมน์ใน Sheet)
         response = requests.get(f"{GAS_URL}?action=get_user&line_id={line_user_id}", timeout=10)
         response.raise_for_status()
         data = response.json()
@@ -132,16 +154,14 @@ def load_sqlite_data():
             
         df_loaded['HN'] = df_loaded['HN'].apply(clean_hn)
         
-        # Clean ชื่อ-สกุล
         if SQLITE_NAME_COL in df_loaded.columns:
             df_loaded[SQLITE_NAME_COL] = df_loaded[SQLITE_NAME_COL].astype(str).str.strip().str.replace(r'\s+', ' ', regex=True)
         
-        # Clean เลขบัตรประชาชน (สำคัญมากสำหรับการจับคู่)
+        # ⚠️ ใช้ normalize_cid เพื่อทำความสะอาดข้อมูลฝั่ง SQLite ให้เหมือนกันเป๊ะ
         if SQLITE_CITIZEN_ID_COL in df_loaded.columns:
-            df_loaded[SQLITE_CITIZEN_ID_COL] = df_loaded[SQLITE_CITIZEN_ID_COL].astype(str).str.strip()
+            df_loaded[SQLITE_CITIZEN_ID_COL] = df_loaded[SQLITE_CITIZEN_ID_COL].apply(normalize_cid)
         else:
             st.error(f"❌ ไม่พบคอลัมน์ '{SQLITE_CITIZEN_ID_COL}' ในฐานข้อมูล SQLite")
-            # Debug: แสดงรายชื่อคอลัมน์ที่มีอยู่จริง
             with st.expander("รายชื่อคอลัมน์ทั้งหมดใน Database"):
                 st.write(df_loaded.columns.tolist())
             return None
@@ -209,7 +229,6 @@ def main_app(df):
         st.session_state.selected_year = st.session_state.year_select
 
     with st.sidebar:
-        # แสดงชื่อจากตัวแปร SQLITE_NAME_COL (ชื่อ-สกุล)
         user_display_name = st.session_state.get('user_name', '')
         st.markdown(f"<div class='sidebar-title'>ยินดีต้อนรับ</div><h3>{user_display_name}</h3>", unsafe_allow_html=True)
         st.markdown(f"**HN:** {user_hn}")
@@ -278,13 +297,12 @@ if 'authenticated' not in st.session_state: st.session_state['authenticated'] = 
 if 'pdpa_accepted' not in st.session_state: st.session_state['pdpa_accepted'] = False
 if 'login_error' not in st.session_state: st.session_state['login_error'] = None 
 
-# 2. Load Data (จาก Google Drive)
+# 2. Load Data
 df = load_sqlite_data()
 if df is None: st.stop()
 
 # 3. Detect LINE UserID & LIFF (Enhanced Auto Login Logic)
 query_params = st.query_params
-# หมายเหตุ: index.html ส่งค่ามาด้วยชื่อ 'userid'
 line_user_id = query_params.get("userid")
 status = query_params.get("status")
 
@@ -295,17 +313,25 @@ if line_user_id:
         with st.status("กำลังตรวจสอบข้อมูลการลงทะเบียน...", expanded=True) as status_box:
             # 3.1 ถาม Google Sheet
             st.write("1. เชื่อมต่อฐานข้อมูลผู้ใช้ (Google Sheet)...")
-            # ส่งค่าไปตรวจสอบ (ฟังก์ชันนี้จะใช้ key 'line_id' ส่งไปที่ GAS)
             user_info = get_user_info_from_gas(line_user_id)
             
             if user_info.get('found'):
                 st.write("✅ พบข้อมูลการลงทะเบียน")
-                st.write(f"2. ตรวจสอบเลขบัตรประชาชน: {user_info.get('card_id')}...")
                 
-                # Clean เลขบัตรจาก Sheet
-                card_id_from_sheet = str(user_info['card_id']).strip()
+                # 3.2 Clean เลขบัตรจาก Sheet ด้วยฟังก์ชัน normalize_cid
+                raw_card_id = user_info.get('card_id')
+                card_id_from_sheet = normalize_cid(raw_card_id)
                 
-                # 3.2 ค้นหาใน SQLite โดยใช้ SQLITE_CITIZEN_ID_COL
+                # Debug: แสดงข้อมูลที่กำลังจะเอาไปเทียบกัน
+                st.write(f"🔍 ข้อมูลจาก Sheet: '{card_id_from_sheet}'")
+                if not df.empty:
+                     # แสดงตัวอย่างข้อมูลใน SQLite เพื่อเช็คความถูกต้อง
+                    example_db_val = df[SQLITE_CITIZEN_ID_COL].iloc[0]
+                    st.write(f"🔍 ตัวอย่างใน DB: '{example_db_val}'")
+                
+                st.write(f"2. กำลังค้นหาเลขบัตรประชาชน: {card_id_from_sheet} ในระบบ...")
+
+                # 3.3 ค้นหาใน SQLite
                 match = df[df[SQLITE_CITIZEN_ID_COL] == card_id_from_sheet]
                 
                 if not match.empty:
@@ -315,7 +341,6 @@ if line_user_id:
                     matched_user = match.iloc[0]
                     st.session_state['authenticated'] = True
                     st.session_state['user_hn'] = matched_user['HN']
-                    # ใช้ชื่อจาก SQLite (ชื่อ-สกุล) แสดงผล
                     st.session_state['user_name'] = matched_user[SQLITE_NAME_COL]
                     st.session_state['pdpa_accepted'] = True 
                     st.session_state['login_error'] = None
