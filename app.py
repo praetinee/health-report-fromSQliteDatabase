@@ -130,6 +130,7 @@ def get_user_info_from_gas(line_user_id):
 def load_sqlite_data():
     tmp_path = None
     try:
+        # ⚠️ แจนอย่าลืมเช็คตรงนี้! file_id ต้องเป็นไฟล์ Database ล่าสุดนะครับ
         file_id = "1HruO9AMrUfniC8hBWtumVdxLJayEc1Xr"
         download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
         
@@ -141,7 +142,20 @@ def load_sqlite_data():
             tmp_path = tmp.name
             
         conn = sqlite3.connect(tmp_path)
-        df_loaded = pd.read_sql("SELECT * FROM health_data", conn)
+        
+        # --- DEBUG: เช็คชื่อตารางทั้งหมดใน DB ---
+        # ถ้าชื่อตารางไม่ใช่ health_data เราจะได้รู้
+        tables = pd.read_sql("SELECT name FROM sqlite_master WHERE type='table';", conn)
+        st.session_state['debug_tables'] = tables['name'].tolist()
+        
+        # พยายามโหลดจาก health_data (หรือเปลี่ยนเป็น health_report ถ้าแจนใช้ชื่อนั้น)
+        table_name = "health_data" 
+        if table_name not in st.session_state['debug_tables']:
+             # ถ้าไม่เจอ health_data ลองหาชื่อที่ใกล้เคียง หรือใช้ตารางแรกที่เจอ
+             if len(st.session_state['debug_tables']) > 0:
+                 table_name = st.session_state['debug_tables'][0]
+        
+        df_loaded = pd.read_sql(f"SELECT * FROM {table_name}", conn)
         conn.close()
         
         # Data Cleaning
@@ -161,9 +175,9 @@ def load_sqlite_data():
         if SQLITE_CITIZEN_ID_COL in df_loaded.columns:
             df_loaded[SQLITE_CITIZEN_ID_COL] = df_loaded[SQLITE_CITIZEN_ID_COL].apply(normalize_cid)
         else:
-            st.error(f"❌ ไม่พบคอลัมน์ '{SQLITE_CITIZEN_ID_COL}' ในฐานข้อมูล SQLite")
-            with st.expander("รายชื่อคอลัมน์ทั้งหมดใน Database"):
-                st.write(df_loaded.columns.tolist())
+            # เก็บ Error ไว้โชว์ตอน Debug
+            st.session_state['debug_db_columns'] = df_loaded.columns.tolist()
+            st.session_state['debug_missing_col'] = True
             return None
             
         df_loaded['Year'] = df_loaded['Year'].astype(int)
@@ -299,7 +313,11 @@ if 'login_error' not in st.session_state: st.session_state['login_error'] = None
 
 # 2. Load Data
 df = load_sqlite_data()
-if df is None: st.stop()
+if df is None:
+    if st.session_state.get('debug_missing_col'):
+        st.error(f"❌ ไม่พบคอลัมน์ '{SQLITE_CITIZEN_ID_COL}' ในฐานข้อมูล")
+        st.write("รายชื่อคอลัมน์ที่มี:", st.session_state.get('debug_db_columns'))
+    st.stop()
 
 # 3. Detect LINE UserID & LIFF (Enhanced Auto Login Logic)
 query_params = st.query_params
@@ -324,14 +342,8 @@ if line_user_id:
                 
                 # Debug: แสดงข้อมูลที่กำลังจะเอาไปเทียบกัน
                 st.write(f"🔍 ข้อมูลจาก Sheet: '{card_id_from_sheet}'")
-                if not df.empty:
-                     # แสดงตัวอย่างข้อมูลใน SQLite เพื่อเช็คความถูกต้อง
-                    example_db_val = df[SQLITE_CITIZEN_ID_COL].iloc[0]
-                    st.write(f"🔍 ตัวอย่างใน DB: '{example_db_val}'")
                 
-                st.write(f"2. กำลังค้นหาเลขบัตรประชาชน: {card_id_from_sheet} ในระบบ...")
-
-                # 3.3 ค้นหาใน SQLite
+                # 3.3 ค้นหาใน SQLite โดยใช้ SQLITE_CITIZEN_ID_COL
                 match = df[df[SQLITE_CITIZEN_ID_COL] == card_id_from_sheet]
                 
                 if not match.empty:
@@ -352,6 +364,14 @@ if line_user_id:
                 else:
                     error_msg = f"❌ ไม่พบข้อมูลผลตรวจสุขภาพของเลขบัตร {card_id_from_sheet} ในฐานข้อมูลโรงพยาบาล"
                     st.session_state['login_error'] = error_msg
+                    
+                    # --- SUPER DEBUG MODE ---
+                    st.session_state['debug_info'] = {
+                        "card_sheet": card_id_from_sheet,
+                        "db_tables": st.session_state.get('debug_tables', []),
+                        "db_columns": df.columns.tolist(),
+                        "db_sample_ids": df[SQLITE_CITIZEN_ID_COL].head(5).tolist() if not df.empty else []
+                    }
                     status_box.update(label="เกิดข้อผิดพลาด", state="error", expanded=True)
             else:
                 error_detail = user_info.get('error', '')
@@ -368,7 +388,20 @@ if not st.session_state['authenticated']:
         
         if st.session_state.get('login_error'):
             st.error(st.session_state['login_error'])
-            st.info("คำแนะนำ: โปรดตรวจสอบว่าท่านกรอกเลขบัตรประชาชนถูกต้อง หรือท่านเคยตรวจสุขภาพกับโรงพยาบาลแล้วหรือไม่")
+            
+            # --- ปุ่มเปิดดูความลับ (Debug) ---
+            with st.expander("🛠️ ดูข้อมูลเชิงลึก (Debug Info) - กดที่นี่เพื่อหาสาเหตุ"):
+                debug_info = st.session_state.get('debug_info', {})
+                if debug_info:
+                    st.write("**สิ่งที่ Google Sheet ส่งมา:**", debug_info.get('card_sheet'))
+                    st.write("**รายชื่อตารางใน SQLite:**", debug_info.get('db_tables'))
+                    st.write("**ตัวอย่างเลขบัตร 5 คนแรกใน SQLite:**")
+                    st.code(debug_info.get('db_sample_ids'))
+                    st.write("**รายชื่อคอลัมน์ทั้งหมด:**", debug_info.get('db_columns'))
+                else:
+                    st.write("ไม่มีข้อมูล Debug (อาจจะยังเชื่อมต่อ GAS ไม่ได้)")
+
+            st.info("คำแนะนำ: หากเลขบัตรใน 'ตัวอย่าง SQLite' ดูแปลกๆ (เช่น มี .0 หรือว่างเปล่า) แสดงว่าการโหลดข้อมูลมีปัญหา")
         
         col1, col2 = st.columns(2)
         with col1:
