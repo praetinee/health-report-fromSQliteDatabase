@@ -75,18 +75,22 @@ except Exception:
     def display_admin_panel(df): st.error("Admin Panel Error")
 
 # -----------------------------------------------------------------------------
-# Configuration & New Helper Functions
+# Configuration
 # -----------------------------------------------------------------------------
 
-# URL ของ Google Apps Script (ตรวจสอบให้แน่ใจว่าเป็นตัวล่าสุด)
+# URL ของ Google Apps Script
 GAS_URL = "https://script.google.com/macros/s/AKfycbzmtd5H-YZr8EeeTUab3M2L2nEtUofDBtYCP9-CN6MVfIff94P6lDWS-cUHCi9asLlR/exec"
+
+# ⚠️ ตั้งค่าชื่อคอลัมน์ให้ตรงกับ Database จริง (ตามที่แจนแจ้งมา)
+SQLITE_CITIZEN_ID_COL = "เลขบัตรประชาชน"  # ใช้จับคู่กับ card_id ใน Sheet
+SQLITE_NAME_COL = "ชื่อ-สกุล"           # ใช้แสดงผลต้อนรับ
 
 def get_user_info_from_gas(line_user_id):
     """ฟังก์ชันสำหรับถาม Google Sheet ว่า UserID นี้คือใคร"""
     try:
         # เพิ่ม timeout ป้องกันการค้าง
         response = requests.get(f"{GAS_URL}?action=get_user&line_id={line_user_id}", timeout=10)
-        response.raise_for_status() # เช็ค HTTP Error
+        response.raise_for_status()
         data = response.json()
         return data
     except requests.exceptions.RequestException as e:
@@ -126,12 +130,19 @@ def load_sqlite_data():
             return s_val[:-2] if s_val.endswith('.0') else s_val
             
         df_loaded['HN'] = df_loaded['HN'].apply(clean_hn)
-        df_loaded['ชื่อ-สกุล'] = df_loaded['ชื่อ-สกุล'].astype(str).str.strip().str.replace(r'\s+', ' ', regex=True)
-        # ⚠️ สำคัญ: แปลงเลขบัตรประชาชนให้เป็น String และตัดช่องว่าง
-        if 'เลขบัตรประชาชน' in df_loaded.columns:
-            df_loaded['เลขบัตรประชาชน'] = df_loaded['เลขบัตรประชาชน'].astype(str).str.strip()
+        
+        # Clean ชื่อ-สกุล
+        if SQLITE_NAME_COL in df_loaded.columns:
+            df_loaded[SQLITE_NAME_COL] = df_loaded[SQLITE_NAME_COL].astype(str).str.strip().str.replace(r'\s+', ' ', regex=True)
+        
+        # Clean เลขบัตรประชาชน (สำคัญมากสำหรับการจับคู่)
+        if SQLITE_CITIZEN_ID_COL in df_loaded.columns:
+            df_loaded[SQLITE_CITIZEN_ID_COL] = df_loaded[SQLITE_CITIZEN_ID_COL].astype(str).str.strip()
         else:
-            st.error("ไม่พบคอลัมน์ 'เลขบัตรประชาชน' ในฐานข้อมูล SQLite กรุณาตรวจสอบชื่อคอลัมน์")
+            st.error(f"❌ ไม่พบคอลัมน์ '{SQLITE_CITIZEN_ID_COL}' ในฐานข้อมูล SQLite")
+            # Debug: แสดงรายชื่อคอลัมน์ที่มีอยู่จริง
+            with st.expander("รายชื่อคอลัมน์ทั้งหมดใน Database"):
+                st.write(df_loaded.columns.tolist())
             return None
             
         df_loaded['Year'] = df_loaded['Year'].astype(int)
@@ -197,7 +208,9 @@ def main_app(df):
         st.session_state.selected_year = st.session_state.year_select
 
     with st.sidebar:
-        st.markdown(f"<div class='sidebar-title'>ยินดีต้อนรับ</div><h3>{st.session_state.get('user_name', '')}</h3>", unsafe_allow_html=True)
+        # แสดงชื่อจากตัวแปร SQLITE_NAME_COL (ชื่อ-สกุล)
+        user_display_name = st.session_state.get('user_name', '')
+        st.markdown(f"<div class='sidebar-title'>ยินดีต้อนรับ</div><h3>{user_display_name}</h3>", unsafe_allow_html=True)
         st.markdown(f"**HN:** {user_hn}")
         st.markdown("---")
         idx = available_years.index(st.session_state.selected_year)
@@ -256,20 +269,19 @@ def main_app(df):
         st.rerun()
 
 # --------------------------------------------------------------------------------
-# MAIN ROUTING LOGIC (หัวใจสำคัญของการเชื่อมต่อ)
+# MAIN ROUTING LOGIC
 # --------------------------------------------------------------------------------
 
 # 1. Initialize State
 if 'authenticated' not in st.session_state: st.session_state['authenticated'] = False
 if 'pdpa_accepted' not in st.session_state: st.session_state['pdpa_accepted'] = False
-if 'login_error' not in st.session_state: st.session_state['login_error'] = None # เก็บข้อความ Error
+if 'login_error' not in st.session_state: st.session_state['login_error'] = None 
 
 # 2. Load Data (จาก Google Drive)
 df = load_sqlite_data()
 if df is None: st.stop()
 
 # 3. Detect LINE UserID & LIFF (Enhanced Auto Login Logic)
-# ---------------------------------------------------
 query_params = st.query_params
 line_user_id = query_params.get("userid")
 status = query_params.get("status")
@@ -277,10 +289,9 @@ status = query_params.get("status")
 if line_user_id:
     st.session_state["line_user_id"] = line_user_id
     
-    # ถ้ายังไม่ Authenticated -> เริ่มกระบวนการตรวจสอบ
     if not st.session_state['authenticated']:
-        # แสดงสถานะให้ User เห็น (จะได้รู้ว่าไม่ค้าง)
         with st.status("กำลังตรวจสอบข้อมูลการลงทะเบียน...", expanded=True) as status_box:
+            # 3.1 ถาม Google Sheet
             st.write("1. เชื่อมต่อฐานข้อมูลผู้ใช้ (Google Sheet)...")
             user_info = get_user_info_from_gas(line_user_id)
             
@@ -288,35 +299,33 @@ if line_user_id:
                 st.write("✅ พบข้อมูลการลงทะเบียน")
                 st.write(f"2. ตรวจสอบเลขบัตรประชาชน: {user_info.get('card_id')}...")
                 
-                # ได้เลขบัตรมาจาก Sheet (ต้อง Clean ให้แน่ใจ)
+                # Clean เลขบัตรจาก Sheet
                 card_id_from_sheet = str(user_info['card_id']).strip()
                 
-                # เอาไปค้นใน SQLite
-                match = df[df['เลขบัตรประชาชน'] == card_id_from_sheet]
+                # 3.2 ค้นหาใน SQLite โดยใช้ SQLITE_CITIZEN_ID_COL
+                match = df[df[SQLITE_CITIZEN_ID_COL] == card_id_from_sheet]
                 
                 if not match.empty:
                     st.write("✅ พบประวัติสุขภาพในระบบ")
                     status_box.update(label="เข้าสู่ระบบสำเร็จ!", state="complete", expanded=False)
                     
-                    # เจอตัวจริง! Login เลย
                     matched_user = match.iloc[0]
                     st.session_state['authenticated'] = True
                     st.session_state['user_hn'] = matched_user['HN']
-                    st.session_state['user_name'] = matched_user['ชื่อ-สกุล']
+                    # ใช้ชื่อจาก SQLite (ชื่อ-สกุล) แสดงผล
+                    st.session_state['user_name'] = matched_user[SQLITE_NAME_COL]
                     st.session_state['pdpa_accepted'] = True 
-                    st.session_state['login_error'] = None # เคลียร์ Error เดิม
+                    st.session_state['login_error'] = None
                     
                     if status == "new":
-                        st.success(f"ลงทะเบียนสำเร็จ! ยินดีต้อนรับคุณ {matched_user['ชื่อ-สกุล']}")
+                        st.success(f"ลงทะเบียนสำเร็จ! ยินดีต้อนรับคุณ {matched_user[SQLITE_NAME_COL]}")
                     
                     st.rerun()
                 else:
-                    # กรณีหาเลขบัตรไม่เจอใน SQLite
-                    error_msg = f"❌ ไม่พบผลตรวจสุขภาพของเลขบัตร {card_id_from_sheet} ในฐานข้อมูลโรงพยาบาล"
+                    error_msg = f"❌ ไม่พบข้อมูลผลตรวจสุขภาพของเลขบัตร {card_id_from_sheet} ในฐานข้อมูลโรงพยาบาล"
                     st.session_state['login_error'] = error_msg
                     status_box.update(label="เกิดข้อผิดพลาด", state="error", expanded=True)
             else:
-                # กรณีไม่เจอ UserID ใน Google Sheet
                 error_detail = user_info.get('error', '')
                 error_msg = f"❌ ไม่พบข้อมูลการลงทะเบียนของคุณในระบบ (Line User ID นี้ยังไม่ถูกผูกบัญชี) {error_detail}"
                 st.session_state['login_error'] = error_msg
@@ -327,10 +336,8 @@ is_line_mode = "line_user_id" in st.session_state
 
 if not st.session_state['authenticated']:
     if is_line_mode:
-        # แสดงหน้าจอแจ้งเตือนข้อผิดพลาด (แทนที่จะเด้งไปหน้า Login ปกติ)
         st.warning("⚠️ ไม่สามารถเข้าสู่ระบบอัตโนมัติได้")
         
-        # แสดงข้อความ Error ที่เก็บไว้
         if st.session_state.get('login_error'):
             st.error(st.session_state['login_error'])
             st.info("คำแนะนำ: โปรดตรวจสอบว่าท่านกรอกเลขบัตรประชาชนถูกต้อง หรือท่านเคยตรวจสุขภาพกับโรงพยาบาลแล้วหรือไม่")
@@ -340,14 +347,11 @@ if not st.session_state['authenticated']:
             if st.button("ลองลงทะเบียนใหม่"):
                  st.query_params.clear()
                  st.session_state.clear()
-                 # ลิ้งค์กลับไปหน้า HTML ลงทะเบียน
                  st.markdown(f'<meta http-equiv="refresh" content="0;url=https://praetinee.github.io/health-report-fromsqlitedatabase/">', unsafe_allow_html=True)
         with col2:
             if st.button("รีเฟรชหน้าจอ"):
                 st.rerun()
-
     else:
-        # เข้าผ่าน Browser ปกติ -> หน้า Login แบบเดิม
         authentication_flow(df)
 
 elif not st.session_state['pdpa_accepted']:
