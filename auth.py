@@ -67,30 +67,67 @@ def check_user_credentials(df, fname, lname, cid):
         return False, "ชื่อหรือนามสกุลไม่ตรงกับฐานข้อมูล (แต่เลขบัตรถูกต้อง)", None
 
 def authentication_flow(df):
+    # CSS ปรับแต่งปุ่มและฟอนต์ (ลบส่วนที่ครอบ div ออกเพื่อความเสถียร)
     login_style = """
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
         html, body, [class*="st-"], h1, h2, h3, h4, h5, h6, p, div, span, input, button, label {
             font-family: 'Sarabun', sans-serif !important;
         }
-        .login-header { text-align: center; color: #00B900; font-weight: bold; font-size: 1.8rem; margin-bottom: 1.5rem; }
-        .stButton>button { border-radius: 50px; background-color: #00B900 !important; color: white !important; font-weight: bold; width: 100%; height: 50px; }
-        .logo-container { display: flex; justify-content: center; margin-bottom: 10px; }
+        .login-header { 
+            text-align: center; 
+            color: #00B900; 
+            font-weight: bold; 
+            font-size: 1.8rem; 
+            margin-bottom: 1rem; 
+        }
+        /* ปรับปุ่มให้เต็มความกว้างและสีเขียว */
+        div.stButton > button {
+            width: 100%;
+            background-color: #00B900 !important;
+            color: white !important;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            padding: 0.5rem 1rem;
+        }
+        div.stButton > button:hover {
+            background-color: #009900 !important;
+            color: white !important;
+        }
+        .logo-img {
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            width: 120px;
+            margin-bottom: 20px;
+        }
     </style>
     """
     st.markdown(login_style, unsafe_allow_html=True)
 
-    # แสดงโลโก้
-    logo_content = "<img src='https://i.postimg.cc/MGxD3yWn/fce5f6c4-b813-48cc-bf40-393032a7eb6d.png' style='width: 120px;'>"
-    st.markdown(f"<div class='logo-container'>{logo_content}</div>", unsafe_allow_html=True)
+    # จัด layout ให้อยู่ตรงกลาง (ใช้ columns แทน div wrapper)
+    col1, col2, col3 = st.columns([1, 2, 1])
     
-    with st.container():
+    with col2:
+        # แสดงโลโก้
+        st.markdown(
+            f"<img src='https://i.postimg.cc/MGxD3yWn/fce5f6c4-b813-48cc-bf40-393032a7eb6d.png' class='logo-img'>", 
+            unsafe_allow_html=True
+        )
+        
         st.markdown("<h2 class='login-header'>ลงทะเบียน / เข้าสู่ระบบ</h2>", unsafe_allow_html=True)
-        with st.form("login_form"):
-            fname = st.text_input("ชื่อ (ไม่ต้องระบุคำนำหน้า)", placeholder="เช่น สมชาย")
-            lname = st.text_input("นามสกุล", placeholder="เช่น ใจดี")
-            cid = st.text_input("เลขบัตรประชาชน (13 หลัก)", max_chars=13, placeholder="xxxxxxxxxxxxx")
-            submitted = st.form_submit_button("ยืนยันตัวตน")
+        
+        # ใช้ st.container แบบมีขอบ (ถ้า streamlit version รองรับ) หรือแบบธรรมดา
+        with st.container(border=True):
+            with st.form("login_form"):
+                st.markdown("กรุณากรอกข้อมูลเพื่อยืนยันตัวตน")
+                fname = st.text_input("ชื่อ (ไม่ต้องระบุคำนำหน้า)", placeholder="เช่น สมชาย")
+                lname = st.text_input("นามสกุล", placeholder="เช่น ใจดี")
+                cid = st.text_input("เลขบัตรประชาชน (13 หลัก)", max_chars=13, placeholder="xxxxxxxxxxxxx")
+                
+                submitted = st.form_submit_button("เข้าสู่ระบบ")
 
     if submitted:
         success, msg, user_data = check_user_credentials(df, fname, lname, cid)
@@ -112,19 +149,26 @@ def authentication_flow(df):
 def pdpa_consent_page():
     st.markdown("""
     <style>
-        .pdpa-card { background-color: #f8f9fa; padding: 30px; border-radius: 16px; border: 1px solid #dee2e6; margin: 20px auto; max-width: 800px; }
-        .pdpa-content { background-color: white; padding: 20px; border-radius: 8px; height: 300px; overflow-y: auto; border: 1px solid #dee2e6; margin-bottom: 20px; }
+        .pdpa-card { background-color: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #dee2e6; margin: 10px 0; color: #333; }
+        .pdpa-content { background-color: white; padding: 15px; border-radius: 5px; height: 300px; overflow-y: auto; border: 1px solid #dee2e6; margin-bottom: 15px; font-size: 14px; color: #333; }
     </style>
     """, unsafe_allow_html=True)
 
-    st.markdown("""
+    st.markdown("### นโยบายคุ้มครองข้อมูลส่วนบุคคล")
+    
+    html_content = """
     <div class="pdpa-card">
-        <h3 style="text-align:center;">นโยบายคุ้มครองข้อมูลส่วนบุคคล</h3>
         <div class="pdpa-content">
-            <p>โรงพยาบาลสันทราย ขอรับรองว่าจะเก็บรักษาข้อมูลสุขภาพของท่านเป็นความลับ และจะใช้เพื่อการแสดงผลในระบบนี้เท่านั้น...</p>
+            <p><strong>โรงพยาบาลสันทราย</strong> ให้ความสำคัญกับการคุ้มครองข้อมูลส่วนบุคคลของท่าน...</p>
+            <p>(เนื้อหานโยบายความเป็นส่วนตัว...)</p>
+            <ul>
+                <li>เพื่อยืนยันตัวตนก่อนเข้าถึงข้อมูลสุขภาพ</li>
+                <li>เพื่อแสดงผลการตรวจสุขภาพประจำปี</li>
+            </ul>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """
+    st.markdown(html_content, unsafe_allow_html=True)
 
     agree = st.checkbox("ข้าพเจ้าได้อ่านและยอมรับนโยบายข้างต้น")
     if st.button("ยอมรับและเข้าใช้งาน", type="primary", use_container_width=True, disabled=not agree):
