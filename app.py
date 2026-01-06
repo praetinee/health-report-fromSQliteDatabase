@@ -68,15 +68,16 @@ except Exception:
 try:
     from shared_ui import (
         inject_custom_css, 
-        display_common_header,
         display_main_report, 
-        display_performance_report
+        display_performance_report,
+        # เราจะไม่ใช้ display_common_header ตัวเดิมแล้ว เพราะจะสร้างใหม่ในนี้เพื่อแทรกปุ่ม
+        get_float 
     )
 except Exception:
     def inject_custom_css(): pass
-    def display_common_header(data): st.write(f"**รายงานผลสุขภาพ:** {data.get('ชื่อ-สกุล', '-')}")
     def display_main_report(p, a): st.error("Main Report Module Missing")
     def display_performance_report(p, t, a=None): pass
+    def get_float(c, p): return None
 
 # --- Import Admin Panel ---
 try:
@@ -111,6 +112,172 @@ def get_user_info_from_gas(line_user_id):
         return response.json()
     except Exception as e:
         return {"found": False, "error": str(e)}
+
+# --- Custom Header Function (เพื่อการจัดวางตามต้องการ) ---
+def render_custom_header_with_actions(person_data, available_years):
+    # เตรียมข้อมูล
+    name = person_data.get('ชื่อ-สกุล', '-')
+    age = str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person_data.get('อายุ', '-')
+    sex = person_data.get('เพศ', '-')
+    hn = str(int(float(person_data.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person_data.get('HN', '-')
+    department = person_data.get('หน่วยงาน', '-')
+    check_date = person_data.get("วันที่ตรวจ", "-")
+    
+    # ไอคอน SVG (คัดลอกมาจาก shared_ui เพื่อความสวยงามเหมือนเดิม)
+    icon_profile = """<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>"""
+    icon_body = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>"""
+    icon_waist = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 12h8"></path></svg>"""
+    icon_heart = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>"""
+    icon_pulse = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>"""
+
+    # Vitals Calculations
+    try:
+        sbp_int, dbp_int = int(float(person_data.get("SBP", 0))), int(float(person_data.get("DBP", 0)))
+        bp_val = f"{sbp_int}/{dbp_int}"
+        # Simple Interpretation
+        if sbp_int >= 140 or dbp_int >= 90: bp_desc = "ความดันสูง"
+        elif sbp_int < 120 and dbp_int < 80: bp_desc = "ความดันปกติ"
+        else: bp_desc = "ความดันค่อนข้างสูง"
+    except:
+        bp_val = "-"
+        bp_desc = "ไม่มีข้อมูล"
+        
+    try: pulse_val = f"{int(float(person_data.get('pulse', 0)))}"
+    except: pulse_val = "-"
+    
+    weight = get_float('น้ำหนัก', person_data)
+    height = get_float('ส่วนสูง', person_data)
+    weight_val = f"{weight}" if weight is not None else "-"
+    height_val = f"{height}" if height is not None else "-"
+    waist_val = f"{person_data.get('รอบเอว', '-')}"
+    
+    bmi_val_str = "-"
+    bmi_desc = ""
+    if weight is not None and height is not None and height > 0:
+        bmi = weight / ((height / 100) ** 2)
+        bmi_val_str = f"{bmi:.1f}"
+        if bmi < 18.5: bmi_desc = "น้ำหนักน้อย"
+        elif 18.5 <= bmi < 23: bmi_desc = "น้ำหนักปกติ"
+        elif 23 <= bmi < 25: bmi_desc = "น้ำหนักเกิน"
+        elif 25 <= bmi < 30: bmi_desc = "อ้วน"
+        elif bmi >= 30: bmi_desc = "อ้วนอันตราย"
+
+    # --- Render Container ---
+    st.markdown("""
+    <style>
+        .report-header-wrapper {
+            background-color: var(--secondary-background-color);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            border: 1px solid rgba(128,128,128,0.2);
+            margin-bottom: 20px;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    with st.container():
+        st.markdown('<div class="report-header-wrapper">', unsafe_allow_html=True)
+        
+        # แบ่งคอลัมน์ บน (Profile + Meta)
+        # c1 = ซ้าย (ข้อมูลส่วนตัว + ปุ่ม), c2 = ขวา (วันที่ + Dropdown)
+        c1, c2 = st.columns([3, 1.3])
+        
+        with c1:
+            # 1. ข้อมูลส่วนตัว (HTML)
+            st.markdown(f"""
+            <div style="display: flex; gap: 15px; align-items: flex-start;">
+                <div style="min-width: 60px; height: 60px; background-color: rgba(0, 121, 107, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #00796B;">
+                    {icon_profile}
+                </div>
+                <div>
+                    <div style="font-size: 1.5rem; font-weight: bold; line-height: 1.2;">{name}</div>
+                    <div style="font-size: 0.95rem; opacity: 0.8; margin-top: 4px;">
+                        HN: {hn} | เพศ: {sex} | อายุ: {age} ปี
+                    </div>
+                    <div style="background-color: rgba(128,128,128,0.1); padding: 2px 10px; border-radius: 4px; display: inline-block; font-size: 0.85rem; margin-top: 6px; font-weight: 500;">
+                        หน่วยงาน: {department}
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # 2. ปุ่มพิมพ์ (บรรทัดถัดจากหน่วยงาน)
+            st.markdown('<div style="height: 12px;"></div>', unsafe_allow_html=True)
+            st.markdown('<div class="print-menu-anchor"></div>', unsafe_allow_html=True) # Anchor for JS hiding
+            
+            # ใช้ Columns ย่อยเพื่อให้ปุ่มอยู่ชิดซ้ายและขนาดพอดี
+            cb1, cb2, cb_rest = st.columns([1.2, 1.2, 2.5])
+            with cb1:
+                if st.button("🖨️ ผลสุขภาพ", key="hdr_print_h", use_container_width=True):
+                    st.session_state.print_trigger = True
+            with cb2:
+                if st.button("🖨️ ผลสมรรถภาพ", key="hdr_print_p", use_container_width=True):
+                    st.session_state.print_performance_trigger = True
+
+        with c2:
+            # 3. วันที่และสถานที่ (HTML ชิดขวา)
+            st.markdown(f"""
+            <div style="text-align: right; color: var(--text-color);">
+                <div style="font-size: 0.95rem; font-weight: bold; margin-bottom: 2px;">วันที่ตรวจ: {check_date}</div>
+                <div style="font-size: 0.9rem; opacity: 0.8;">คลินิกตรวจสุขภาพ</div>
+                <div style="font-size: 0.9rem; opacity: 0.8;">อาชีวเวชกรรม</div>
+                <div style="font-size: 0.9rem; opacity: 0.8;">รพ.สันทราย</div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # 4. Dropdown เลือกปี (บรรทัดถัดมา)
+            st.markdown('<div style="height: 8px;"></div>', unsafe_allow_html=True)
+            st.selectbox(
+                "เลือกปี พ.ศ.", 
+                available_years, 
+                index=available_years.index(st.session_state.selected_year), 
+                format_func=lambda y: f"พ.ศ. {y}", 
+                key="year_select", 
+                on_change=lambda: st.session_state.update({"selected_year": st.session_state.year_select}),
+                label_visibility="collapsed" # ซ่อน Label เพื่อความสวยงาม (เพราะอยู่ใต้กลุ่มวันที่แล้ว)
+            )
+
+        # เส้นคั่นบางๆ ก่อนส่วน Vitals
+        st.markdown('<hr style="margin: 15px 0; border: 0; border-top: 1px solid rgba(128,128,128,0.2);">', unsafe_allow_html=True)
+
+        # 5. Vitals Grid (ส่วนล่าง)
+        # ใช้ HTML/CSS Grid เพื่อความสวยงามเหมือนเดิม
+        st.markdown(f"""
+        <div class="vitals-grid-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px;">
+            <div class="vital-card" style="background: var(--card-bg-color); border-radius: 8px; padding: 15px; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(128,128,128,0.2);">
+                <div class="vital-icon-box" style="color: #2196F3;">{icon_body}</div>
+                <div class="vital-content">
+                    <div class="vital-label" style="font-size: 0.8rem; opacity: 0.7;">สัดส่วนร่างกาย</div>
+                    <div class="vital-value" style="font-size: 1.1rem; font-weight: bold;">{weight_val} <span style="font-size:0.8rem; font-weight:normal;">kg</span> / {height_val} <span style="font-size:0.8rem; font-weight:normal;">cm</span></div>
+                    <div class="vital-sub" style="font-size: 0.75rem; opacity: 0.8;">BMI: {bmi_val_str} ({bmi_desc})</div>
+                </div>
+            </div>
+            <div class="vital-card" style="background: var(--card-bg-color); border-radius: 8px; padding: 15px; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(128,128,128,0.2);">
+                <div class="vital-icon-box" style="color: #4CAF50;">{icon_waist}</div>
+                <div class="vital-content">
+                    <div class="vital-label" style="font-size: 0.8rem; opacity: 0.7;">รอบเอว</div>
+                    <div class="vital-value" style="font-size: 1.1rem; font-weight: bold;">{waist_val} <span style="font-size:0.8rem; font-weight:normal;">cm</span></div>
+                </div>
+            </div>
+            <div class="vital-card" style="background: var(--card-bg-color); border-radius: 8px; padding: 15px; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(128,128,128,0.2);">
+                <div class="vital-icon-box" style="color: #F44336;">{icon_heart}</div>
+                <div class="vital-content">
+                    <div class="vital-label" style="font-size: 0.8rem; opacity: 0.7;">ความดันโลหิต</div>
+                    <div class="vital-value" style="font-size: 1.1rem; font-weight: bold;">{bp_val} <span style="font-size:0.8rem; font-weight:normal;">mmHg</span></div>
+                    <div class="vital-sub" style="font-size: 0.75rem; opacity: 0.8;">{bp_desc}</div>
+                </div>
+            </div>
+            <div class="vital-card" style="background: var(--card-bg-color); border-radius: 8px; padding: 15px; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(128,128,128,0.2);">
+                <div class="vital-icon-box" style="color: #FF9800;">{icon_pulse}</div>
+                <div class="vital-content">
+                    <div class="vital-label" style="font-size: 0.8rem; opacity: 0.7;">ชีพจร</div>
+                    <div class="vital-value" style="font-size: 1.1rem; font-weight: bold;">{pulse_val} <span style="font-size:0.8rem; font-weight:normal;">bpm</span></div>
+                </div>
+            </div>
+        </div>
+        </div>
+        """, unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
 # Data Loading
@@ -167,60 +334,6 @@ def main_app(df):
     if 'selected_year' not in st.session_state or st.session_state.selected_year not in available_years:
         st.session_state.selected_year = available_years[0]
 
-    # --- ส่วน Header ใหม่ (แทน Sidebar) ---
-    st.markdown("---") # เส้นคั่นสวยงาม
-    
-    # แบ่งคอลัมน์ใหม่: ซ้าย 2 ส่วน (ชื่อ), ขวา 1 ส่วน (เลือกปี + ปุ่มพิมพ์)
-    col_info, col_actions = st.columns([2, 1])
-    
-    with col_info:
-        # ชื่อและ HN อยู่ฝั่งซ้าย
-        st.markdown(f"### คุณ {st.session_state.get('user_name', '')}")
-        st.caption(f"เลข HN: {user_hn}")
-
-    with col_actions:
-        # 1. เลือกปี พ.ศ.
-        st.selectbox(
-            "📅 เลือกปี พ.ศ. ที่ตรวจ", 
-            available_years, 
-            index=available_years.index(st.session_state.selected_year), 
-            format_func=lambda y: f"พ.ศ. {y}", 
-            key="year_select", 
-            on_change=lambda: st.session_state.update({"selected_year": st.session_state.year_select})
-        )
-        
-        # 2. ปุ่มพิมพ์ (ย้ายมาไว้ใต้ Selectbox)
-        # ใส่ Container เปล่าเพื่อเป็น Anchor ให้ CSS/JS (สำหรับซ่อนบนมือถือ)
-        st.markdown('<div class="print-menu-anchor"></div>', unsafe_allow_html=True)
-        
-        # ใช้ columns ย่อยภายใน col_actions เพื่อจัดปุ่มให้อยู่บรรทัดเดียวกันและชิดขวาหรือกระจายตัว
-        # หรือวางเรียงกันเลยถ้าง่ายกว่า
-        
-        # ใส่ CSS เฉพาะจุดเพื่อปรับระยะห่างปุ่ม
-        st.markdown("""
-            <style>
-            /* ปรับปุ่มให้เล็กกระชับ */
-            div[data-testid="column"] button[kind="secondary"] {
-                padding: 0.2rem 0.5rem;
-                font-size: 0.85rem;
-                height: auto;
-                min-height: 0px;
-            }
-            </style>
-        """, unsafe_allow_html=True)
-
-        # สร้าง Columns ย่อยสำหรับปุ่ม 2 ปุ่ม
-        # ปุ่มพิมพ์สุขภาพ | ปุ่มพิมพ์สมรรถภาพ
-        c_p1, c_p2 = st.columns(2)
-        
-        with c_p1:
-            if st.button("🖨️ ผลสุขภาพ", key="print_health", use_container_width=True, help="พิมพ์รายงานสุขภาพ"):
-                st.session_state.print_trigger = True
-        
-        with c_p2:
-            if st.button("🖨️ ผลสมรรถภาพ", key="print_perf", use_container_width=True, help="พิมพ์รายงานสมรรถภาพ"):
-                st.session_state.print_performance_trigger = True
-
     # --- ส่วน CSS/JS สำหรับซ่อนปุ่มพิมพ์บนมือถือ ---
     st.markdown("""
         <style>
@@ -231,12 +344,9 @@ def main_app(df):
 
         /* CSS สำหรับ Mobile/Tablet (หน้าจอ <= 992px) */
         @media (max-width: 992px) {
-            /* ซ่อนปุ่มโดยใช้ Attribute Selector ที่ Streamlit สร้าง */
             button[kind="secondary"]:has(div p:contains("🖨️")) {
                  display: none !important;
             }
-            /* Fallback Selector (ถ้า browser ไม่รองรับ :has) */
-            /* เราจะใช้ JS ช่วยซ่อนเป็นหลัก */
         }
         </style>
         
@@ -247,25 +357,18 @@ def main_app(df):
                 const buttons = window.parent.document.querySelectorAll('button');
                 buttons.forEach(btn => {
                     if (btn.innerText.includes('🖨️')) {
-                        // ซ่อนปุ่ม
                         btn.style.display = 'none';
-                        // ซ่อน Column ที่ครอบปุ่มอยู่ (เพื่อให้ layout ไม่โหว่)
                         const col = btn.closest('[data-testid="column"]');
                         if (col) col.style.display = 'none';
                     }
                 });
             }
         }
-        // Run on load
         removePrintButtonsOnMobile();
-        // Run on resize
         window.addEventListener('resize', removePrintButtonsOnMobile);
-        // Run periodically incase of rerender
         setInterval(removePrintButtonsOnMobile, 500);
         </script>
     """, unsafe_allow_html=True)
-
-    st.markdown("---")
 
     # --- ส่วนแสดงผลรายงาน ---
     yr_df = results_df[results_df["Year"] == st.session_state.selected_year]
@@ -273,7 +376,8 @@ def main_app(df):
     st.session_state.person_row = person_row
 
     if person_row:
-        display_common_header(person_row)
+        # ใช้ Custom Header ที่เราสร้างขึ้นใหม่แทน display_common_header เดิม
+        render_custom_header_with_actions(person_row, available_years)
         
         tabs_map = OrderedDict()
         if has_visualization_data(results_df): tabs_map['ภาพรวม (Graphs)'] = 'viz'
