@@ -161,17 +161,15 @@ def main_app(df):
         st.session_state.selected_year = available_years[0]
 
     # --- ส่วน Header ใหม่ (แทน Sidebar) ---
-    # ใช้ Columns แบ่งพื้นที่: ซ้าย(ชื่อคนไข้) 2 ส่วน, ขวา(เลือกปี) 1 ส่วน
-    
     st.markdown("---") # เส้นคั่นสวยงาม
     col_info, col_year = st.columns([2, 1])
     
     with col_info:
-        st.markdown(f"### 👋 สวัสดีคุณ {st.session_state.get('user_name', '')}")
+        # 1. เอา Emoji และคำว่า สวัสดี ออก เหลือแค่ คุณ [ชื่อ]
+        st.markdown(f"### คุณ {st.session_state.get('user_name', '')}")
         st.caption(f"เลข HN: {user_hn}")
 
     with col_year:
-        # ย้าย Dropdown เลือกปีมาตรงนี้
         st.selectbox(
             "📅 เลือกปี พ.ศ. ที่ตรวจ", 
             available_years, 
@@ -182,15 +180,17 @@ def main_app(df):
         )
 
     # --- ส่วนเมนูพิมพ์ (ซ่อนใน Expander) ---
-    # เอาปุ่มพิมพ์มาใส่ในนี้แทน เพื่อไม่ให้รกหน้าจอมือถือ
-    with st.expander("🖨️ ตัวเลือกการพิมพ์ / เมนูเพิ่มเติม"):
-        p_col1, p_col2 = st.columns(2)
-        with p_col1:
-            if st.button("พิมพ์รายงานสุขภาพ", type="secondary", use_container_width=True): 
-                st.session_state.print_trigger = True
-        with p_col2:
-            if st.button("พิมพ์รายงานสมรรถภาพ", type="secondary", use_container_width=True): 
-                st.session_state.print_performance_trigger = True
+    # 2. ปรับ layout ให้ปุ่มไม่ซ้อนทับกัน (ใช้แบบ container ธรรมดาเพื่อให้เรียงลงมา)
+    with st.expander("🖨️ เมนูพิมพ์รายงาน (Print Menu)"):
+        st.caption("เลือกประเภทรายงานที่ต้องการพิมพ์:")
+        
+        # ใช้ container ธรรมดาเพื่อให้ปุ่มเรียงแนวตั้งและเต็มความกว้าง (Mobile-Friendly)
+        if st.button("พิมพ์รายงานสุขภาพ (Health Report)", type="secondary", use_container_width=True): 
+            st.session_state.print_trigger = True
+            
+        # เว้นระยะห่างเล็กน้อย (ถ้าจำเป็น แต่ st.button ปกติจะมี margin อยู่แล้ว)
+        if st.button("พิมพ์รายงานสมรรถภาพ (Performance Report)", type="secondary", use_container_width=True): 
+            st.session_state.print_performance_trigger = True
     
     st.markdown("---")
 
@@ -200,7 +200,6 @@ def main_app(df):
     st.session_state.person_row = person_row
 
     if person_row:
-        # Header ของรายงาน (โรงพยาบาลสันทราย...) ยังคงอยู่
         display_common_header(person_row)
         
         tabs_map = OrderedDict()
@@ -219,7 +218,7 @@ def main_app(df):
                 elif v == 'hearing': display_performance_report(person_row, 'hearing', all_person_history_df=results_df)
                 elif v == 'lung': display_performance_report(person_row, 'lung')
 
-        # Print Logic (Hidden functionality)
+        # Print Logic
         if st.session_state.get('print_trigger'):
             h = generate_printable_report(person_row, results_df)
             st.components.v1.html(f"<script>var w=window.open();w.document.write({json.dumps(h)});w.print();w.close();</script>", height=0)
@@ -281,7 +280,6 @@ if line_user_id and not st.session_state['authenticated']:
 # --- Final Decision ---
 if not st.session_state['authenticated']:
     if st.session_state.get('login_error'):
-        # หาก Auto-login ล้มเหลว แสดง Error แต่ยังให้สิทธิ์ Login ปกติ
         st.error(st.session_state['login_error'])
         if st.button("เข้าสู่ระบบด้วยชื่อ-นามสกุล"):
             del st.session_state["line_user_id"]
