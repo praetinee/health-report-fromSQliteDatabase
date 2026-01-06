@@ -119,7 +119,7 @@ def render_custom_header_with_actions(person_data, available_years):
     name = person_data.get('ชื่อ-สกุล', '-')
     age = str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person_data.get('อายุ', '-')
     sex = person_data.get('เพศ', '-')
-    hn = str(int(float(person_data.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person_data.get('HN', '-')
+    hn = str(int(float(person_data.get('HN')))) if str(person_data.get('HN')).replace('.', '', 1).isdigit() else person_data.get('HN', '-')
     department = person_data.get('หน่วยงาน', '-')
     check_date = person_data.get("วันที่ตรวจ", "-")
     
