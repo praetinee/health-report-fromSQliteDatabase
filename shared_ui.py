@@ -46,7 +46,7 @@ def clean_html_string(html_str):
     return "\n".join([line.strip() for line in html_str.split('\n') if line.strip()])
 
 def inject_custom_css():
-    # แก้ไข: ปรับ CSS Tabs เป็นแบบแถบเขียวยาว และแท็บที่เลือกเป็นสีขาว
+    # แก้ไข: เพิ่ม Padding ให้แท็บเพื่อให้ข้อความไม่ชิดขอบเกินไป
     css_content = clean_html_string("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
@@ -73,24 +73,25 @@ def inject_custom_css():
         
         /* พื้นหลังของแถบเมนูทั้งหมดเป็นสีเขียว */
         .stTabs [data-baseweb="tab-list"] {
-            gap: 8px;
+            gap: 10px; /* เพิ่มระยะห่างระหว่างแท็บ */
             background-color: var(--primary); 
             border-radius: 10px 10px 0px 0px;
-            padding: 10px 10px 0px 10px;
+            padding: 12px 15px 0px 15px; /* เพิ่ม Padding รอบๆ แถบเมนู */
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
 
         /* สไตล์ของแท็บปกติ (ยังไม่เลือก) */
         .stTabs [data-baseweb="tab"] {
-            height: 45px;
+            height: auto;
+            min-height: 50px; /* เพิ่มความสูงขั้นต่ำ */
             white-space: pre-wrap;
             background-color: transparent; 
             border-radius: 8px 8px 0px 0px;
             gap: 1px;
-            padding-top: 8px;
-            padding-bottom: 8px;
-            color: rgba(255, 255, 255, 0.8); /* ตัวอักษรสีขาวจางๆ */
+            padding: 10px 25px; /* เพิ่ม Padding ภายในแท็บ (บนล่าง 10px, ซ้ายขวา 25px) */
+            color: rgba(255, 255, 255, 0.85);
             font-weight: 600;
+            font-size: 1rem; /* เพิ่มขนาดตัวอักษรเล็กน้อย */
             border: none; 
             transition: all 0.2s ease;
         }
@@ -98,15 +99,19 @@ def inject_custom_css():
         /* เมื่อเอาเมาส์ชี้แท็บปกติ */
         .stTabs [data-baseweb="tab"]:hover {
             color: #ffffff;
-            background-color: rgba(255, 255, 255, 0.1);
+            background-color: rgba(255, 255, 255, 0.15);
         }
 
         /* สไตล์ของแท็บที่ 'ถูกเลือก' (Active Tab) */
         .stTabs [aria-selected="true"] {
-            background-color: #ffffff !important; /* พื้นหลังสีขาว */
-            color: var(--primary) !important; /* ตัวอักษรสีเขียว */
-            border-radius: 8px 8px 0px 0px;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.15); /* เงาให้ดูเด้งขึ้นมา */
+            background-color: #ffffff !important; 
+            color: var(--primary) !important;
+            border-radius: 10px 10px 0px 0px; /* ปรับความโค้งให้รับกับแถบ */
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.2); 
+            padding: 12px 30px; /* เพิ่ม Padding ให้มากกว่าแท็บปกติเล็กน้อยเพื่อความโดดเด่น */
+            font-weight: 700;
+            position: relative;
+            top: 1px; /* ดันลงมาปิดขอบล่าง */
         }
         
         /* ซ่อนเส้นขีดด้านล่างเดิมของ Streamlit */
