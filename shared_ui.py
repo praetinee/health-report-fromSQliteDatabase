@@ -46,7 +46,7 @@ def clean_html_string(html_str):
     return "\n".join([line.strip() for line in html_str.split('\n') if line.strip()])
 
 def inject_custom_css():
-    # แก้ไข: ใช้ CSS Variable ของ Streamlit เพื่อรองรับ Theme
+    # แก้ไข: เพิ่ม CSS สำหรับปรับแต่ง Tabs ให้มีพื้นหลังสีเขียวเข้ม
     css_content = clean_html_string("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
@@ -68,6 +68,50 @@ def inject_custom_css():
         html, body, [class*="st-"], h1, h2, h3, h4, h5, h6, p, div, span, th, td {
             font-family: 'Sarabun', sans-serif !important;
         }
+        
+        /* --- Customized Tabs Style --- */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 2px;
+            background-color: transparent;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 0px;
+        }
+
+        .stTabs [data-baseweb="tab"] {
+            height: 50px;
+            white-space: pre-wrap;
+            background-color: #f0f2f6; /* สีพื้นหลังแท็บปกติ (เทาอ่อน) */
+            border-radius: 8px 8px 0px 0px;
+            gap: 1px;
+            padding-top: 10px;
+            padding-bottom: 10px;
+            color: #333; /* สีตัวอักษรปกติ */
+            font-weight: 600;
+            border: 1px solid transparent; 
+            transition: all 0.3s ease;
+        }
+
+        .stTabs [data-baseweb="tab"]:hover {
+            background-color: #e0e0e0;
+            color: var(--primary);
+        }
+
+        .stTabs [aria-selected="true"] {
+            background-color: var(--primary) !important; /* สีเขียวเข้มเมื่อถูกเลือก */
+            color: white !important; /* สีตัวอักษรขาวเมื่อถูกเลือก */
+            border-bottom: none;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+        }
+        
+        /* เพิ่มแถบสีเขียวคาดทั้งแถวถ้าต้องการเน้นพื้นที่ Tab ทั้งหมด */
+        div[data-testid="stTabs"] {
+           /* padding: 10px;
+            background-color: rgba(0, 121, 107, 0.05); 
+            border-radius: 10px; */
+        }
+
+        /* --------------------------- */
+
         .section-header-styled {
             font-size: 1.25rem; font-weight: 600; color: var(--primary);
             border-left: 5px solid var(--primary); padding-left: 15px; margin-top: 30px; margin-bottom: 20px;
