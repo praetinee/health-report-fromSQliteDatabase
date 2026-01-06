@@ -89,10 +89,11 @@
         // --- การตั้งค่า (Configuration) ---
         const LIFF_ID = "2008725340-YHOiWxtj"; 
         
-        // URL ของ Google Apps Script ที่แจนให้มา
+        // URL ของ Google Apps Script
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzmtd5H-YZr8EeeTUab3M2L2nEtUofDBtYCP9-CN6MVfIff94P6lDWS-cUHCi9asLlR/exec"; 
         
-        const STREAMLIT_URL = "https://health-report-fromsq-praetinee.streamlit.app/"; 
+        // 🔴 URL Streamlit ของคุณ 🔴
+        const STREAMLIT_APP_URL = "https://ohsansaihospital.streamlit.app/"; 
 
         let userProfile = null;
 
@@ -124,34 +125,28 @@
 
         // ฟังก์ชันเช็คสถานะ User
         function checkUserStatus(uid) {
-            // เรียกใช้ doGet ของ Google Apps Script (action=check)
             fetch(`${GAS_URL}?action=check&line_id=${uid}`)
                 .then(res => res.json())
                 .then(data => {
                     if (data.registered) {
-                        // ถ้ามีข้อมูลใน Sheet แล้ว -> ส่งไปหน้า Streamlit เลย (สถานะ existing)
                         goToStreamlit(uid, false);
                     } else {
-                        // ถ้ายังไม่มี -> เปิดฟอร์มให้กรอก
                         document.getElementById('loading').classList.add('hidden');
                         document.getElementById('registerForm').classList.remove('hidden');
                     }
                 })
                 .catch(err => {
                     console.error("Check Status Error:", err);
-                    // กรณี Error (เช่น Script ตาย) อาจจะลองส่งไปก่อน หรือแจ้งเตือน
                     showError("ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
                 });
         }
 
-        // ฟังก์ชันเปิด/ปิดปุ่ม Submit ตาม Checkbox
         function toggleSubmit() {
             const checkbox = document.getElementById('pdpaConsent');
             const btn = document.getElementById('submitBtn');
             btn.disabled = !checkbox.checked;
         }
 
-        // ฟังก์ชันเมื่อกดปุ่ม "ยืนยันข้อมูล"
         function handleRegister() {
             const fname = document.getElementById('fname').value.trim();
             const lname = document.getElementById('lname').value.trim();
@@ -160,7 +155,6 @@
             const btn = document.getElementById('submitBtn');
             const err = document.getElementById('errorMsg');
 
-            // Validation ตรวจสอบความถูกต้องเบื้องต้น
             if(!fname || !lname || !cid) {
                 err.innerText = "กรุณากรอกข้อมูลให้ครบทุกช่อง";
                 return;
@@ -174,18 +168,15 @@
                 return;
             }
 
-            // เริ่มกระบวนการบันทึก
             btn.disabled = true;
             btn.innerText = "กำลังบันทึก...";
             err.innerText = "";
 
-            // เตรียมข้อมูลส่งไป Google Apps Script (doPost)
             const formData = new URLSearchParams();
             formData.append('action', 'register');
             formData.append('line_id', userProfile.userId);
             formData.append('fname', fname);
             formData.append('lname', lname);
-            // ใส่ ' นำหน้าเพื่อให้ Google Sheets เก็บเป็นข้อความ (ป้องกันเลข 0 นำหน้าหาย)
             formData.append('card_id', "'" + cid);
 
             fetch(GAS_URL, {
@@ -195,7 +186,6 @@
             .then(res => res.json())
             .then(data => {
                 if(data.result === 'success') {
-                    // บันทึกสำเร็จ -> ไปหน้า Streamlit พร้อมแจ้งว่าเป็นคนใหม่ (isNew = true)
                     goToStreamlit(userProfile.userId, true);
                 } else {
                     err.innerText = "บันทึกไม่สำเร็จ: " + (data.message || "ไม่ทราบสาเหตุ");
@@ -211,19 +201,14 @@
             });
         }
 
-        // ฟังก์ชัน Redirect ไปหน้า Python (Streamlit)
-        // เพิ่ม Parameter isNew เพื่อบอก Python ว่าคนนี้เพิ่งลงทะเบียนมานะ
         function goToStreamlit(uid, isNew = false) {
-            // แสดงหน้าโหลดอีกครั้งก่อนไป
             document.getElementById('registerForm').classList.add('hidden');
             document.getElementById('loading').classList.remove('hidden');
             document.querySelector('#loading p').innerText = "ลงทะเบียนเรียบร้อย กำลังเข้าสู่ระบบ...";
             
-            // สร้าง URL เป้าหมาย
-            const separator = STREAMLIT_URL.includes('?') ? '&' : '?';
-            let targetUrl = `${STREAMLIT_URL}${separator}userid=${uid}`;
+            const separator = STREAMLIT_APP_URL.includes('?') ? '&' : '?';
+            let targetUrl = `${STREAMLIT_APP_URL}${separator}userid=${uid}`;
             
-            // ถ้าเป็นคนใหม่ ให้แนบ flag status=new ไปด้วย
             if (isNew) {
                 targetUrl += "&status=new";
             }
@@ -236,7 +221,6 @@
             document.getElementById('registerForm').classList.add('hidden');
         }
 
-        // เริ่มทำงานเมื่อโหลดหน้าเสร็จ
         window.onload = main;
     </script>
 </body>
