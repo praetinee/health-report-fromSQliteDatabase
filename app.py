@@ -119,6 +119,7 @@ def render_custom_header_with_actions(person_data, available_years):
     name = person_data.get('ชื่อ-สกุล', '-')
     age = str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person_data.get('อายุ', '-')
     sex = person_data.get('เพศ', '-')
+    # แก้ไข: เปลี่ยน person.get เป็น person_data.get เพื่อแก้ NameError
     hn = str(int(float(person_data.get('HN')))) if str(person_data.get('HN')).replace('.', '', 1).isdigit() else person_data.get('HN', '-')
     department = person_data.get('หน่วยงาน', '-')
     check_date = person_data.get("วันที่ตรวจ", "-")
@@ -162,22 +163,9 @@ def render_custom_header_with_actions(person_data, available_years):
         elif 25 <= bmi < 30: bmi_desc = "อ้วน"
         elif bmi >= 30: bmi_desc = "อ้วนอันตราย"
 
-    # --- Render Container ---
-    st.markdown("""
-    <style>
-        .report-header-wrapper {
-            background-color: var(--secondary-background-color);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            border: 1px solid rgba(128,128,128,0.2);
-            margin-bottom: 20px;
-        }
-    </style>
-    """, unsafe_allow_html=True)
-
+    # --- Render Container (เอาสไตล์กรอบออกตามคำขอ) ---
     with st.container():
-        st.markdown('<div class="report-header-wrapper">', unsafe_allow_html=True)
+        # ลบ div wrapper ที่สร้างกรอบออก
         
         # แบ่งคอลัมน์ บน (Profile + Meta)
         # c1 = ซ้าย (ข้อมูลส่วนตัว + ปุ่ม), c2 = ขวา (วันที่ + Dropdown)
@@ -275,7 +263,6 @@ def render_custom_header_with_actions(person_data, available_years):
                     <div class="vital-value" style="font-size: 1.1rem; font-weight: bold;">{pulse_val} <span style="font-size:0.8rem; font-weight:normal;">bpm</span></div>
                 </div>
             </div>
-        </div>
         </div>
         """, unsafe_allow_html=True)
 
