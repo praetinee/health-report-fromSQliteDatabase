@@ -179,17 +179,34 @@ def main_app(df):
             on_change=lambda: st.session_state.update({"selected_year": st.session_state.year_select})
         )
 
-    # --- ส่วนเมนูพิมพ์ (แสดงผลโดยตรง ไม่ใช้ Expander) ---
-    st.markdown("##### 🖨️ เมนูพิมพ์รายงาน (Print Menu)")
-    st.caption("เลือกประเภทรายงานที่ต้องการพิมพ์:")
+    # --- ส่วนเมนูพิมพ์ (Toolbar Style) ---
+    st.markdown("---")
     
-    # ใช้ container ธรรมดาเพื่อให้ปุ่มเรียงแนวตั้งและเต็มความกว้าง (Mobile-Friendly)
-    if st.button("พิมพ์รายงานสุขภาพ (Health Report)", type="secondary", use_container_width=True): 
-        st.session_state.print_trigger = True
-        
-    # เว้นระยะห่างเล็กน้อย (ถ้าจำเป็น แต่ st.button ปกติจะมี margin อยู่แล้ว)
-    if st.button("พิมพ์รายงานสมรรถภาพ (Performance Report)", type="secondary", use_container_width=True): 
-        st.session_state.print_performance_trigger = True
+    # CSS เพื่อจัดกึ่งกลาง Content ในคอลัมน์ (Vertical Alignment)
+    st.markdown("""
+        <style>
+        div[data-testid="column"] {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # จัดวาง Layout แนวนอน: Label | Button 1 | Button 2
+    # กำหนด Ratio ให้ Label กว้างกว่าปุ่มเล็กน้อย
+    c_label, c_btn1, c_btn2 = st.columns([1.2, 1, 1], gap="small")
+    
+    with c_label:
+        st.markdown("<h5 style='margin:0; padding:0; text-align:center; white-space:nowrap;'>🖨️ เมนูพิมพ์รายงาน</h5>", unsafe_allow_html=True)
+    
+    with c_btn1:
+        if st.button("พิมพ์รายงานสุขภาพ", key="print_health", use_container_width=True):
+            st.session_state.print_trigger = True
+            
+    with c_btn2:
+        if st.button("พิมพ์รายงานสมรรถภาพ", key="print_perf", use_container_width=True):
+            st.session_state.print_performance_trigger = True
     
     st.markdown("---")
 
