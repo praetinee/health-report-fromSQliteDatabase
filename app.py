@@ -160,21 +160,49 @@ def main_app(df):
     if 'selected_year' not in st.session_state or st.session_state.selected_year not in available_years:
         st.session_state.selected_year = available_years[0]
 
+    # --- ส่วน Header ใหม่ (แทน Sidebar) ---
+    # ใช้ Columns แบ่งพื้นที่: ซ้าย(ชื่อคนไข้) 2 ส่วน, ขวา(เลือกปี) 1 ส่วน
+    
+    st.markdown("---") # เส้นคั่นสวยงาม
+    col_info, col_year = st.columns([2, 1])
+    
+    with col_info:
+        st.markdown(f"### 👋 สวัสดีคุณ {st.session_state.get('user_name', '')}")
+        st.caption(f"เลข HN: {user_hn}")
+
+    with col_year:
+        # ย้าย Dropdown เลือกปีมาตรงนี้
+        st.selectbox(
+            "📅 เลือกปี พ.ศ. ที่ตรวจ", 
+            available_years, 
+            index=available_years.index(st.session_state.selected_year), 
+            format_func=lambda y: f"พ.ศ. {y}", 
+            key="year_select", 
+            on_change=lambda: st.session_state.update({"selected_year": st.session_state.year_select})
+        )
+
+    # --- ส่วนเมนูพิมพ์ (ซ่อนใน Expander) ---
+    # เอาปุ่มพิมพ์มาใส่ในนี้แทน เพื่อไม่ให้รกหน้าจอมือถือ
+    with st.expander("🖨️ ตัวเลือกการพิมพ์ / เมนูเพิ่มเติม"):
+        p_col1, p_col2 = st.columns(2)
+        with p_col1:
+            if st.button("พิมพ์รายงานสุขภาพ", type="secondary", use_container_width=True): 
+                st.session_state.print_trigger = True
+        with p_col2:
+            if st.button("พิมพ์รายงานสมรรถภาพ", type="secondary", use_container_width=True): 
+                st.session_state.print_performance_trigger = True
+    
+    st.markdown("---")
+
+    # --- ส่วนแสดงผลรายงาน ---
     yr_df = results_df[results_df["Year"] == st.session_state.selected_year]
     person_row = yr_df.bfill().ffill().iloc[0].to_dict() if not yr_df.empty else None
     st.session_state.person_row = person_row
 
-    with st.sidebar:
-        st.markdown(f"ยินดีต้อนรับ<br><h3>{st.session_state.get('user_name', '')}</h3>", unsafe_allow_html=True)
-        st.markdown(f"**HN:** {user_hn}")
-        st.selectbox("เลือกปี พ.ศ.", available_years, index=available_years.index(st.session_state.selected_year), format_func=lambda y: f"พ.ศ. {y}", key="year_select", on_change=lambda: st.session_state.update({"selected_year": st.session_state.year_select}))
-        if person_row:
-            if st.button("พิมพ์รายงานสุขภาพ", type="primary", use_container_width=True): st.session_state.print_trigger = True
-            if st.button("พิมพ์รายงานสมรรถภาพ", type="primary", use_container_width=True): st.session_state.print_performance_trigger = True
-        if st.button("ออกจากระบบ"): st.session_state.clear(); st.rerun()
-
     if person_row:
+        # Header ของรายงาน (โรงพยาบาลสันทราย...) ยังคงอยู่
         display_common_header(person_row)
+        
         tabs_map = OrderedDict()
         if has_visualization_data(results_df): tabs_map['ภาพรวม (Graphs)'] = 'viz'
         if has_basic_health_data(person_row): tabs_map['สุขภาพพื้นฐาน'] = 'main'
@@ -191,7 +219,7 @@ def main_app(df):
                 elif v == 'hearing': display_performance_report(person_row, 'hearing', all_person_history_df=results_df)
                 elif v == 'lung': display_performance_report(person_row, 'lung')
 
-        # Print Logic
+        # Print Logic (Hidden functionality)
         if st.session_state.get('print_trigger'):
             h = generate_printable_report(person_row, results_df)
             st.components.v1.html(f"<script>var w=window.open();w.document.write({json.dumps(h)});w.print();w.close();</script>", height=0)
