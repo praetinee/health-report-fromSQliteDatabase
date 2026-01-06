@@ -93,25 +93,22 @@ SQLITE_NAME_COL = "ชื่อ-สกุล"
 
 def normalize_cid(val):
     """
-    ฟังก์ชันทำความสะอาดเลขบัตรประชาชนให้เป็นมาตรฐานเดียวกัน (Flexible Match)
+    ฟังก์ชันทำความสะอาดเลขบัตรประชาชนให้เป็นมาตรฐานเดียวกัน (13 หลักล้วน)
     """
     if pd.isna(val):
         return ""
     
-    # แปลงเป็นข้อความ
-    s = str(val).strip()
-    
-    # ลบเครื่องหมายคำพูด
+    # แปลงเป็นข้อความ ลบช่องว่าง ลบขีด ลบเครื่องหมายคำพูด
+    s = str(val).strip().replace("-", "").replace(" ", "")
     s = s.replace("'", "").replace('"', "")
     
     # แก้ไขกรณีเป็น Scientific Notation (เช่น 1.8205E+12)
     if "E" in s or "e" in s:
         try:
-            # ลองแปลงเป็น float แล้วกลับเป็น int เพื่อเอา E ออก
             f_val = float(s)
             s = str(int(f_val))
         except:
-            pass # ถ้าแปลงไม่ได้ก็ปล่อยไว้
+            pass
 
     # ลบ .0 (กรณีมาจาก float ปกติ)
     if s.endswith(".0"):
@@ -131,10 +128,8 @@ def get_user_info_from_gas(line_user_id):
         data = response.json()
         return data
     except requests.exceptions.RequestException as e:
-        st.error(f"GAS Network Error: {e}")
-        return {"found": False, "error": str(e)}
+        return {"found": False, "error": f"Network Error: {str(e)}"}
     except Exception as e:
-        st.error(f"GAS General Error: {e}")
         return {"found": False, "error": str(e)}
 
 # -----------------------------------------------------------------------------
@@ -344,41 +339,60 @@ if line_user_id:
         # 3.1 ถาม Google Sheet
         user_info = get_user_info_from_gas(line_user_id)
         
-        # DEBUG: แสดงผลลัพธ์จาก GAS ให้เห็นชัดๆ (ถ้าผ่านแล้วค่อยลบออก)
-        if not user_info.get('found'):
-             st.write("Google Sheet Response:", user_info)
-        
         if user_info.get('found'):
-            # 3.2 Clean เลขบัตรจาก Sheet
+            # 3.2 ดึงข้อมูลจาก Google Sheet (เพิ่มชื่อและนามสกุลมาตรวจสอบ)
             raw_card_id = user_info.get('card_id')
+            sheet_fname = user_info.get('fname', '').strip()
+            sheet_lname = user_info.get('lname', '').strip()
+            
             card_id_from_sheet = normalize_cid(raw_card_id)
             
             st.info(f"✅ พบข้อมูลลงทะเบียน: ตรวจสอบเลขบัตร {card_id_from_sheet} ในฐานข้อมูล...")
             
-            # 3.3 ค้นหาใน SQLite
-            match = df[df[SQLITE_CITIZEN_ID_COL] == card_id_from_sheet]
+            # 3.3 ค้นหาใน SQLite (ปรับปรุงการค้นหาให้แม่นยำขึ้นเหมือน line_register.py)
+            # กรองด้วยเลขบัตรก่อน
+            potential_matches = df[df[SQLITE_CITIZEN_ID_COL] == card_id_from_sheet]
             
-            if not match.empty:
-                st.success("✅ พบประวัติสุขภาพในระบบ! กำลังเข้าสู่ระบบ...")
+            found_user_row = None
+            if not potential_matches.empty:
+                # ถ้าเลขบัตรตรง ให้เช็คชื่อ-นามสกุลเสริม (ถ้าใน Google Sheet มีชื่อเก็บไว้)
+                if sheet_fname and sheet_lname:
+                    for _, row in potential_matches.iterrows():
+                        db_f, db_l = normalize_db_name_field(row[SQLITE_NAME_COL])
+                        # เทียบชื่อ และ นามสกุล (ลบช่องว่างออกเพื่อความยืดหยุ่น)
+                        if db_f == sheet_fname and db_l.replace(" ", "") == sheet_lname.replace(" ", ""):
+                            found_user_row = row
+                            break
+                    
+                    # กรณีชื่ออาจมีสะกดผิดเล็กน้อยในระบบใดระบบหนึ่ง แต่ถ้า CID ตรงและมีแค่คนเดียว มักจะเป็นเจ้าของข้อมูล
+                    if found_user_row is None and len(potential_matches) == 1:
+                        found_user_row = potential_matches.iloc[0]
+                else:
+                    # ถ้าไม่มีชื่อจาก Sheet ให้ใช้คนแรกที่เลขบัตรตรง
+                    found_user_row = potential_matches.iloc[0]
+            
+            if found_user_row is not None:
+                st.success(f"✅ พบประวัติสุขภาพของคุณ {found_user_row[SQLITE_NAME_COL]}! กำลังเข้าสู่ระบบ...")
                 
-                matched_user = match.iloc[0]
                 st.session_state['authenticated'] = True
-                st.session_state['user_hn'] = matched_user['HN']
-                st.session_state['user_name'] = matched_user[SQLITE_NAME_COL]
+                st.session_state['user_hn'] = found_user_row['HN']
+                st.session_state['user_name'] = found_user_row[SQLITE_NAME_COL]
                 st.session_state['pdpa_accepted'] = True 
                 st.session_state['login_error'] = None
                 
                 if status == "new":
-                    st.toast(f"ลงทะเบียนสำเร็จ! ยินดีต้อนรับคุณ {matched_user[SQLITE_NAME_COL]}")
+                    st.toast(f"ลงทะเบียนสำเร็จ! ยินดีต้อนรับคุณ {found_user_row[SQLITE_NAME_COL]}")
                 
                 st.rerun()
             else:
                 error_msg = f"❌ ไม่พบข้อมูลผลตรวจสุขภาพของเลขบัตร '{card_id_from_sheet}' ในฐานข้อมูลโรงพยาบาล"
+                if sheet_fname: error_msg += f" (ชื่อ {sheet_fname} {sheet_lname})"
                 st.session_state['login_error'] = error_msg
                 
                 # เก็บ Debug Info
                 st.session_state['debug_info'] = {
                     "card_sheet": card_id_from_sheet,
+                    "name_sheet": f"{sheet_fname} {sheet_lname}",
                     "db_tables": st.session_state.get('debug_tables', []),
                     "db_columns": df.columns.tolist(),
                     "db_sample_ids": df[SQLITE_CITIZEN_ID_COL].head(5).tolist() if not df.empty else []
@@ -402,7 +416,11 @@ if not st.session_state['authenticated']:
             with st.expander("🛠️ ดูข้อมูลเชิงลึก (Debug Info) - กดที่นี่เพื่อหาสาเหตุ"):
                 debug_info = st.session_state.get('debug_info', {})
                 if debug_info:
-                    st.write("**สิ่งที่ Google Sheet ส่งมา:**", debug_info.get('card_sheet'))
+                    st.write("**สิ่งที่ Google Sheet ส่งมา:**")
+                    st.json({
+                        "เลขบัตร": debug_info.get('card_sheet'),
+                        "ชื่อ-นามสกุล": debug_info.get('name_sheet')
+                    })
                     st.write("**รายชื่อตารางใน SQLite:**", debug_info.get('db_tables'))
                     st.write("**ตัวอย่างเลขบัตร 5 คนแรกใน SQLite:**")
                     st.code(debug_info.get('db_sample_ids'))
@@ -410,7 +428,7 @@ if not st.session_state['authenticated']:
                 else:
                     st.write("ไม่มีข้อมูล Debug (อาจจะยังเชื่อมต่อ GAS ไม่ได้)")
 
-            st.info("คำแนะนำ: หากเลขบัตรใน 'ตัวอย่าง SQLite' ดูแปลกๆ (เช่น มี .0 หรือว่างเปล่า) แสดงว่าการโหลดข้อมูลมีปัญหา")
+            st.info("คำแนะนำ: หากเลขบัตรใน 'ตัวอย่าง SQLite' ดูแปลกๆ หรือไม่ตรงกับที่ลงทะเบียนไว้ แสดงว่าการโหลดข้อมูลมีปัญหา")
         
         col1, col2 = st.columns(2)
         with col1:
