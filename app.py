@@ -169,14 +169,17 @@ def main_app(df):
 
     # --- ส่วน Header ใหม่ (แทน Sidebar) ---
     st.markdown("---") # เส้นคั่นสวยงาม
-    col_info, col_year = st.columns([2, 1])
+    
+    # แบ่งคอลัมน์ใหม่: ซ้าย 2 ส่วน (ชื่อ), ขวา 1 ส่วน (เลือกปี + ปุ่มพิมพ์)
+    col_info, col_actions = st.columns([2, 1])
     
     with col_info:
-        # 1. เอา Emoji และคำว่า สวัสดี ออก เหลือแค่ คุณ [ชื่อ]
+        # ชื่อและ HN อยู่ฝั่งซ้าย
         st.markdown(f"### คุณ {st.session_state.get('user_name', '')}")
         st.caption(f"เลข HN: {user_hn}")
 
-    with col_year:
+    with col_actions:
+        # 1. เลือกปี พ.ศ.
         st.selectbox(
             "📅 เลือกปี พ.ศ. ที่ตรวจ", 
             available_years, 
@@ -185,101 +188,83 @@ def main_app(df):
             key="year_select", 
             on_change=lambda: st.session_state.update({"selected_year": st.session_state.year_select})
         )
+        
+        # 2. ปุ่มพิมพ์ (ย้ายมาไว้ใต้ Selectbox)
+        # ใส่ Container เปล่าเพื่อเป็น Anchor ให้ CSS/JS (สำหรับซ่อนบนมือถือ)
+        st.markdown('<div class="print-menu-anchor"></div>', unsafe_allow_html=True)
+        
+        # ใช้ columns ย่อยภายใน col_actions เพื่อจัดปุ่มให้อยู่บรรทัดเดียวกันและชิดขวาหรือกระจายตัว
+        # หรือวางเรียงกันเลยถ้าง่ายกว่า
+        
+        # ใส่ CSS เฉพาะจุดเพื่อปรับระยะห่างปุ่ม
+        st.markdown("""
+            <style>
+            /* ปรับปุ่มให้เล็กกระชับ */
+            div[data-testid="column"] button[kind="secondary"] {
+                padding: 0.2rem 0.5rem;
+                font-size: 0.85rem;
+                height: auto;
+                min-height: 0px;
+            }
+            </style>
+        """, unsafe_allow_html=True)
 
-    # --- ส่วนเมนูพิมพ์ (Toolbar Style) ---
-    
-    # ใช้วิธี CSS ซ่อนแบบบังคับ (Force Hide) ด้วย !important และ Media Query ที่ครอบคลุม
-    # และใช้ JavaScript เข้ามาช่วยลบ Element ทิ้งไปเลยหากเป็น Mobile
-    
+        # สร้าง Columns ย่อยสำหรับปุ่ม 2 ปุ่ม
+        # ปุ่มพิมพ์สุขภาพ | ปุ่มพิมพ์สมรรถภาพ
+        c_p1, c_p2 = st.columns(2)
+        
+        with c_p1:
+            if st.button("🖨️ ผลสุขภาพ", key="print_health", use_container_width=True, help="พิมพ์รายงานสุขภาพ"):
+                st.session_state.print_trigger = True
+        
+        with c_p2:
+            if st.button("🖨️ ผลสมรรถภาพ", key="print_perf", use_container_width=True, help="พิมพ์รายงานสมรรถภาพ"):
+                st.session_state.print_performance_trigger = True
+
+    # --- ส่วน CSS/JS สำหรับซ่อนปุ่มพิมพ์บนมือถือ ---
     st.markdown("""
         <style>
         /* CSS สำหรับ Desktop (หน้าจอ > 992px) */
         @media (min-width: 993px) {
-            .print-menu-container {
-                display: block !important;
-            }
+            .print-menu-anchor { display: block; }
         }
 
         /* CSS สำหรับ Mobile/Tablet (หน้าจอ <= 992px) */
         @media (max-width: 992px) {
-            .print-menu-container {
-                display: none !important;
-            }
             /* ซ่อนปุ่มโดยใช้ Attribute Selector ที่ Streamlit สร้าง */
-            button[kind="secondary"]:has(div p:contains("พิมพ์รายงาน")) {
+            button[kind="secondary"]:has(div p:contains("🖨️")) {
                  display: none !important;
             }
-            /* Fallback Selector */
-            div[data-testid="column"]:has(button p:contains("พิมพ์รายงาน")) {
-                 display: none !important;
-            }
+            /* Fallback Selector (ถ้า browser ไม่รองรับ :has) */
+            /* เราจะใช้ JS ช่วยซ่อนเป็นหลัก */
         }
         </style>
         
         <script>
-        function removePrintMenuOnMobile() {
+        function removePrintButtonsOnMobile() {
             if (window.innerWidth <= 992) {
-                // หาปุ่มที่มีคำว่า "พิมพ์รายงาน"
+                // หาปุ่มที่มีไอคอนเครื่องพิมพ์
                 const buttons = window.parent.document.querySelectorAll('button');
                 buttons.forEach(btn => {
-                    if (btn.innerText.includes('พิมพ์รายงาน')) {
+                    if (btn.innerText.includes('🖨️')) {
                         // ซ่อนปุ่ม
                         btn.style.display = 'none';
-                        // ซ่อน Column ที่ครอบปุ่มอยู่
+                        // ซ่อน Column ที่ครอบปุ่มอยู่ (เพื่อให้ layout ไม่โหว่)
                         const col = btn.closest('[data-testid="column"]');
-                        if (col) col.style.display = 'none';
-                    }
-                });
-                
-                // หาหัวข้อ "เมนูพิมพ์รายงาน"
-                const headings = window.parent.document.querySelectorAll('h5');
-                headings.forEach(h => {
-                    if (h.innerText.includes('เมนูพิมพ์รายงาน')) {
-                        h.style.display = 'none';
-                        const col = h.closest('[data-testid="column"]');
                         if (col) col.style.display = 'none';
                     }
                 });
             }
         }
         // Run on load
-        removePrintMenuOnMobile();
+        removePrintButtonsOnMobile();
         // Run on resize
-        window.addEventListener('resize', removePrintMenuOnMobile);
+        window.addEventListener('resize', removePrintButtonsOnMobile);
         // Run periodically incase of rerender
-        setInterval(removePrintMenuOnMobile, 500);
+        setInterval(removePrintButtonsOnMobile, 500);
         </script>
     """, unsafe_allow_html=True)
 
-    # --- เช็คขนาดหน้าจอ (Server-Side Logic) ---
-    # ใช้ streamlit_js_eval เพื่อหาขนาดหน้าจอ (Return width)
-    # หมายเหตุ: การใช้ js_eval อาจทำให้แอป reload 1 ครั้งตอนเปิด
-    # หากไม่ต้องการ reload ให้ใช้เฉพาะ CSS/JS ด้านบน
-    
-    # เพื่อความชัวร์และไม่กระทบ performance เราจะใช้ CSS/JS เป็นหลัก
-    # แต่เพิ่ม Class พิเศษให้ Container เพื่อให้ CSS Target ได้ง่ายขึ้น
-    
-    # ⚠️ ใช้ st.container() ปกติ แล้วใช้ CSS Selector ที่แม่นยำ
-    
-    st.markdown("---")
-    
-    # ส่วน UI ของปุ่มพิมพ์
-    # เราจะใส่ Empty Element เพื่อเป็น Anchor ให้ CSS/JS
-    st.markdown('<div class="print-menu-anchor"></div>', unsafe_allow_html=True)
-    
-    c_label, c_btn1, c_btn2 = st.columns([1.2, 1, 1], gap="small")
-    
-    with c_label:
-        st.markdown("<h5 class='print-label' style='margin:0; padding:0; text-align:center; white-space:nowrap;'>🖨️ เมนูพิมพ์รายงาน</h5>", unsafe_allow_html=True)
-    
-    with c_btn1:
-        if st.button("พิมพ์รายงานสุขภาพ", key="print_health", use_container_width=True):
-            st.session_state.print_trigger = True
-            
-    with c_btn2:
-        if st.button("พิมพ์รายงานสมรรถภาพ", key="print_perf", use_container_width=True):
-            st.session_state.print_performance_trigger = True
-    
     st.markdown("---")
 
     # --- ส่วนแสดงผลรายงาน ---
