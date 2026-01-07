@@ -427,7 +427,7 @@ def get_performance_report_css():
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
         body {
             font-family: 'Sarabun', sans-serif !important;
-            font-size: 13.5px;
+            font-size: 14px; /* CHANGED FROM 13.5px TO 14px */
             margin: 0.5cm 0.7cm; 
             color: #333;
             background-color: #fff;
