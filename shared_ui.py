@@ -198,6 +198,7 @@ def inject_custom_css():
             border-bottom: 2px solid var(--border-color);
             text-align: left;
             white-space: nowrap; /* ป้องกันหัวตารางตัดคำถ้าไม่จำเป็น */
+            /* ลบ text-transform: uppercase; ออกแล้ว */
         }
         
         .lab-table td, .info-detail-table td { 
@@ -492,9 +493,88 @@ def interpret_bmi(bmi):
     return ""
 
 def display_common_header(person_data):
-    # ฟังก์ชันนี้อาจจะไม่ได้ถูกเรียกใช้แล้วถ้าใช้ Custom Header ใน app.py 
-    # แต่เก็บไว้เป็น Fallback ได้
-    pass
+    name = person_data.get('ชื่อ-สกุล', '-')
+    age = str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person_data.get('อายุ', '-')
+    sex = person_data.get('เพศ', '-')
+    hn = str(int(float(person_data.get('HN')))) if str(person_data.get('HN')).replace('.', '', 1).isdigit() else person_data.get('HN', '-')
+    department = person_data.get('หน่วยงาน', '-')
+    check_date = person_data.get("วันที่ตรวจ", "-")
+    try:
+        sbp_int, dbp_int = int(float(person_data.get("SBP", ""))), int(float(person_data.get("DBP", "")))
+        bp_val = f"{sbp_int}/{dbp_int}"
+        bp_desc = interpret_bp(sbp_int, dbp_int)
+    except:
+        bp_val = "-"
+        bp_desc = "ไม่มีข้อมูล"
+    try: pulse_val = f"{int(float(person_data.get('pulse', '-')))}"
+    except: pulse_val = "-"
+    weight = get_float('น้ำหนัก', person_data)
+    height = get_float('ส่วนสูง', person_data)
+    weight_val = f"{weight}" if weight is not None else "-"
+    height_val = f"{height}" if height is not None else "-"
+    waist_val = f"{person_data.get('รอบเอว', '-')}"
+    bmi_val_str = "-"
+    bmi_desc = ""
+    if weight is not None and height is not None and height > 0:
+        bmi = weight / ((height / 100) ** 2)
+        bmi_val_str = f"{bmi:.1f}"
+        bmi_desc = interpret_bmi(bmi)
+
+    icon_profile = """<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>"""
+    icon_body = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>"""
+    icon_waist = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 12h8"></path></svg>"""
+    icon_heart = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>"""
+    icon_pulse = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>"""
+
+    html_content = clean_html_string(f"""
+    <div class="report-header-container">
+        <div class="header-main">
+            <div class="patient-profile">
+                <div class="profile-icon">{icon_profile}</div>
+                <div class="profile-details">
+                    <div class="patient-name">{name}</div>
+                    <div class="patient-meta"><span>HN: {hn}</span> | <span>เพศ: {sex}</span> | <span>อายุ: {age} ปี</span></div>
+                    <div class="patient-dept">หน่วยงาน: {department}</div>
+                </div>
+            </div>
+            <div class="report-meta">
+                <div class="meta-date">วันที่ตรวจ: {check_date}</div>
+                <div class="hospital-brand">
+                    <div class="hosp-name">คลินิกตรวจสุขภาพ</div>
+                    <div class="hosp-dept">อาชีวเวชกรรม</div>
+                    <div class="hosp-sub">รพ.สันทราย</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="vitals-grid-container">
+        <div class="vital-card">
+            <div class="vital-icon-box color-blue">{icon_body}</div>
+            <div class="vital-content">
+                <div class="vital-label">สัดส่วนร่างกาย</div>
+                <div class="vital-value">{weight_val} <span class="unit">kg</span> / {height_val} <span class="unit">cm</span></div>
+                <div class="vital-sub">BMI: {bmi_val_str} <br><span class="badge badge-bmi">{bmi_desc}</span></div>
+            </div>
+        </div>
+        <div class="vital-card">
+            <div class="vital-icon-box color-green">{icon_waist}</div>
+            <div class="vital-content"><div class="vital-label">รอบเอว</div><div class="vital-value">{waist_val} <span class="unit">cm</span></div></div>
+        </div>
+        <div class="vital-card">
+            <div class="vital-icon-box color-red">{icon_heart}</div>
+            <div class="vital-content">
+                <div class="vital-label">ความดันโลหิต</div>
+                <div class="vital-value">{bp_val} <span class="unit">mmHg</span></div>
+                <div class="vital-sub">{bp_desc}</div>
+            </div>
+        </div>
+        <div class="vital-card">
+            <div class="vital-icon-box color-orange">{icon_pulse}</div>
+            <div class="vital-content"><div class="vital-label">ชีพจร</div><div class="vital-value">{pulse_val} <span class="unit">bpm</span></div></div>
+        </div>
+    </div>
+    """)
+    st.markdown(html_content, unsafe_allow_html=True)
 
 def render_vision_details_table(person_data):
     vision_config = [
@@ -547,14 +627,16 @@ def render_vision_details_table(person_data):
         if not is_empty(summary_advice): footer_html += f"<b>สรุปความเหมาะสมกับงาน:</b> {summary_advice}<br>"
         if not is_empty(doctor_advice): footer_html += f"<b>คำแนะนำแพทย์:</b> {doctor_advice}"
         footer_html += "</div>"
-    html_content = clean_html_string(f"""<div class='card-container'><div class='table-title'>ผลการตรวจสมรรถภาพการมองเห็น (Vision Test)</div><div class='table-responsive'><table class='lab-table'><thead><tr><th>รายการทดสอบ</th><th style='text-align: center; width: 150px;'>ผลการตรวจ</th></tr></thead><tbody>{html_rows}</tbody></table></div></div>{footer_html}""")
+    html_content = clean_html_string(f"""<div class='card-container'><div class='table-title'>ผลการตรวจสมรรถภาพการมองเห็น (Vision Test)</div><table class='vision-table'><thead><tr><th>รายการทดสอบ</th><th style='text-align: center; width: 150px;'>ผลการตรวจ</th></tr></thead><tbody>{html_rows}</tbody></table></div>{footer_html}""")
     if any_data_found: st.markdown(html_content, unsafe_allow_html=True)
     else: st.info("ไม่พบข้อมูลการตรวจสายตา")
 
 def display_performance_report_vision(person_data):
+    """Wrapper function to match calling convention"""
     render_vision_details_table(person_data)
 
 def display_performance_report_hearing(person_data, all_person_history_df):
+    # ย้าย import มาไว้ในฟังก์ชันเพื่อแก้ Circular Import
     from performance_tests import interpret_audiogram
     results = interpret_audiogram(person_data, all_person_history_df)
     freqs = [250, 500, 1000, 2000, 3000, 4000, 6000, 8000]
@@ -569,7 +651,7 @@ def display_performance_report_hearing(person_data, all_person_history_df):
         return "-"
     r_vals = [get_hearing_val('R', f) for f in freqs]
     l_vals = [get_hearing_val('L', f) for f in freqs]
-    st.markdown(clean_html_string("""<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px;"><div class="card-container" style="margin: 0; border-left: 4px solid #FF9800;"><div style="font-weight: bold; color: var(--text-color); margin-bottom: 5px;">🔊 ความถี่ (Hz)</div><div style="font-size: 0.85rem; opacity: 0.8;">คือ ระดับเสียงทุ้ม-แหลม (250=ทุ้มต่ำ, 8000=แหลมสูง)</div></div><div class="card-container" style="margin: 0; border-left: 4px solid #4CAF50;"><div style="font-weight: bold; color: var(--text-color); margin-bottom: 5px;">👂 ระดับการได้ยิน (dB)</div><div style="font-size: 0.85rem; opacity: 0.8;">คือ ความดังที่เริ่มได้ยิน <b>(ค่าปกติ ≤ 25 dB)</b> *ค่ายิ่งน้อย ยิ่งได้ยินดี</div></div></div>"""), unsafe_allow_html=True)
+    st.markdown(clean_html_string("""<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px;"><div class="card-container" style="margin: 0; border-left: 4px solid #FF9800;"><div style="font-weight: bold; color: var(--main-text-color); margin-bottom: 5px;">🔊 ความถี่ (Hz)</div><div style="font-size: 0.85rem; opacity: 0.8;">คือ ระดับเสียงทุ้ม-แหลม (250=ทุ้มต่ำ, 8000=แหลมสูง)</div></div><div class="card-container" style="margin: 0; border-left: 4px solid #4CAF50;"><div style="font-weight: bold; color: var(--main-text-color); margin-bottom: 5px;">👂 ระดับการได้ยิน (dB)</div><div style="font-size: 0.85rem; opacity: 0.8;">คือ ความดังที่เริ่มได้ยิน <b>(ค่าปกติ ≤ 25 dB)</b> *ค่ายิ่งน้อย ยิ่งได้ยินดี</div></div></div>"""), unsafe_allow_html=True)
     table_html = clean_html_string(f"""<div class='card-container'><div class='table-title'>ตารางระดับการได้ยิน (dB)</div><div class='table-responsive'><table class='lab-table'><thead><tr><th>ความถี่ (Hz)</th>{"".join([f"<th>{f}</th>" for f in freqs])}</tr></thead><tbody><tr><td><b>หูขวา (Right)</b></td>{"".join([f"<td style='text-align:center;'>{v}</td>" for v in r_vals])}</tr><tr><td><b>หูซ้าย (Left)</b></td>{"".join([f"<td style='text-align:center;'>{v}</td>" for v in l_vals])}</tr></tbody></table></div></div>""")
     st.markdown(table_html, unsafe_allow_html=True)
     col1, col2 = st.columns(2)
@@ -578,9 +660,10 @@ def display_performance_report_hearing(person_data, all_person_history_df):
     if results['advice']: st.warning(f"คำแนะนำ: {results['advice']}")
 
 def display_performance_report_lung(person_data):
+    # ย้าย import มาไว้ในฟังก์ชันเพื่อแก้ Circular Import
     from performance_tests import interpret_lung_capacity
     summary, advice, raw_data = interpret_lung_capacity(person_data)
-    st.markdown(clean_html_string("""<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px;"><div class="card-container" style="margin: 0; border-left: 4px solid #2196F3;"><div style="font-weight: bold; color: var(--text-color); margin-bottom: 5px;">🫁 FVC (ความจุปอด)</div><div style="font-size: 0.85rem; opacity: 0.8;">ปริมาตรอากาศทั้งหมดที่เป่าออกมาได้เต็มที่ (บอกขนาดปอด)</div></div><div class="card-container" style="margin: 0; border-left: 4px solid #00BCD4;"><div style="font-weight: bold; color: var(--text-color); margin-bottom: 5px;">💨 FEV1 (ปริมาตรลมเป่าเร็ว)</div><div style="font-size: 0.85rem; opacity: 0.8;">ปริมาตรอากาศที่เป่าออกได้ในวินาทีแรก (บอกความโล่งของหลอดลม)</div></div></div>"""), unsafe_allow_html=True)
+    st.markdown(clean_html_string("""<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px;"><div class="card-container" style="margin: 0; border-left: 4px solid #2196F3;"><div style="font-weight: bold; color: var(--main-text-color); margin-bottom: 5px;">🫁 FVC (ความจุปอด)</div><div style="font-size: 0.85rem; opacity: 0.8;">ปริมาตรอากาศทั้งหมดที่เป่าออกมาได้เต็มที่ (บอกขนาดปอด)</div></div><div class="card-container" style="margin: 0; border-left: 4px solid #00BCD4;"><div style="font-weight: bold; color: var(--main-text-color); margin-bottom: 5px;">💨 FEV1 (ปริมาตรลมเป่าเร็ว)</div><div style="font-size: 0.85rem; opacity: 0.8;">ปริมาตรอากาศที่เป่าออกได้ในวินาทีแรก (บอกความโล่งของหลอดลม)</div></div></div>"""), unsafe_allow_html=True)
     lung_items = [("FVC (ความจุปอด)", raw_data['FVC predic'], raw_data['FVC'], raw_data['FVC %']), ("FEV1 (ปริมาตรลมเป่าเร็ว)", raw_data['FEV1 predic'], raw_data['FEV1'], raw_data['FEV1 %']), ("FEV1/FVC Ratio (สัดส่วน)", "-", raw_data['FEV1/FVC %'], "-")]
     def make_bar(val):
         try:
@@ -588,11 +671,11 @@ def display_performance_report_lung(person_data):
             color = "var(--success-text)" if v >= 80 else "var(--warning-text)" if v >= 60 else "var(--danger-text)"
             return f"<div style='background:rgba(128,128,128,0.2);height:6px;border-radius:3px;width:100px;display:inline-block;vertical-align:middle;margin-right:8px;'><div style='width:{min(v,100)}%;background:{color};height:100%;border-radius:3px;'></div></div> {v}%"
         except: return str(val)
-    html_content = clean_html_string("""<div class='card-container'><div class='table-title'>ผลการตรวจสมรรถภาพปอด (Spirometry)</div><div class='table-responsive'><table class='lab-table'><thead><tr><th style='width: 30%;'>รายการ</th><th style='text-align: center;'>ค่ามาตรฐาน</th><th style='text-align: center;'>ค่าที่วัดได้</th><th style='width: 35%;'>ผลเทียบมาตรฐาน (%)</th></tr></thead><tbody>""")
+    html_content = clean_html_string("""<div class='card-container'><div class='table-title'>ผลการตรวจสมรรถภาพปอด (Spirometry)</div><table class='lab-table'><thead><tr><th style='width: 30%;'>รายการ</th><th style='text-align: center;'>ค่ามาตรฐาน</th><th style='text-align: center;'>ค่าที่วัดได้</th><th style='width: 35%;'>ผลเทียบมาตรฐาน (%)</th></tr></thead><tbody>""")
     for label, pred, act, per in lung_items:
         display_per = make_bar(per) if per != "-" else "-"
         html_content += f"<tr><td>{label}</td><td style='text-align:center;'>{pred}</td><td style='text-align:center;'>{act}</td><td>{display_per}</td></tr>"
-    html_content += "</tbody></table></div></div>"
+    html_content += "</tbody></table></div>"
     st.markdown(html_content, unsafe_allow_html=True)
     st.markdown(f"<div class='card-container'><b>สรุปผล:</b> {summary}<br><br><b>คำแนะนำ:</b> {advice}</div>", unsafe_allow_html=True)
 
@@ -608,6 +691,7 @@ def display_performance_report(person_data, report_type, all_person_history_df=N
         display_performance_report_hearing(person_data, all_person_history_df)
 
 def render_urine_section(person_data, sex, year):
+    # Config for Urine Tests
     urine_config = [
         ("สี (Colour)", "Color", "Yellow"),
         ("น้ำตาล (Sugar)", "sugar", "Negative"),
@@ -619,18 +703,27 @@ def render_urine_section(person_data, sex, year):
         ("เซลล์เยื่อบุผิว (Epit)", "SQ-epi", "0 - 10"),
         ("อื่นๆ", "ORTER", "-")
     ]
+    
     rows = []
     for label, col, norm in urine_config:
         val = person_data.get(col)
+        # Check abnormality
         is_abn = is_urine_abnormal(label, val, norm)
-        rows.append([(label, is_abn), (safe_value(val), is_abn), (norm, is_abn)])
+        
+        # Format for table: (Text, Is_Abnormal)
+        label_tuple = (label, is_abn)
+        val_tuple = (safe_value(val), is_abn)
+        norm_tuple = (norm, is_abn)
+        
+        rows.append([label_tuple, val_tuple, norm_tuple])
+    
+    # Render table
     st.markdown(render_lab_table_html("ผลการตรวจปัสสาวะ (Urinalysis)", ["รายการ", "ผลตรวจ", "ค่าปกติ"], rows), unsafe_allow_html=True)
 
 def render_stool_html_table(exam_result, cs_result):
     html = f"""
     <div class="card-container">
         <div class='table-title'>ผลการตรวจอุจจาระ (Stool Examination)</div>
-        <div class='table-responsive'>
         <table class="lab-table">
             <thead><tr><th>รายการ</th><th>ผลตรวจ</th></tr></thead>
             <tbody>
@@ -638,7 +731,6 @@ def render_stool_html_table(exam_result, cs_result):
                 <tr><td>Stool Culture</td><td>{cs_result}</td></tr>
             </tbody>
         </table>
-        </div>
     </div>
     """
     return clean_html_string(html)
@@ -667,6 +759,8 @@ def display_main_report(person_data, all_person_history_df):
         col_ua_left, col_ua_right = st.columns(2)
         with col_ua_left:
             render_urine_section(person, sex, selected_year)
+            # st.markdown("<h5 class='section-subtitle'>ผลตรวจอุจจาระ (Stool Examination)</h5>", unsafe_allow_html=True)
+            # Use new function
             st.markdown(render_stool_html_table(interpret_stool_exam(person.get("Stool exam", "")), interpret_stool_cs(person.get("Stool C/S", ""))), unsafe_allow_html=True)
 
         with col_ua_right:
@@ -677,8 +771,7 @@ def display_main_report(person_data, all_person_history_df):
             hep_a_display_text = "ไม่ได้ตรวจ" if is_empty(hep_a_value) else safe_text(hep_a_value)
 
             st.markdown(clean_html_string(f"""
-            <div class="card-container">
-                <div class="table-responsive">
+            <div class="table-container">
                 <table class="info-detail-table">
                     <tbody>
                         <tr><th>ผลเอกซเรย์ (Chest X-ray)</th><td>{interpret_cxr(person.get(cxr_col, ''))}</td></tr>
@@ -686,10 +779,10 @@ def display_main_report(person_data, all_person_history_df):
                         <tr><th>ไวรัสตับอักเสบเอ (Hepatitis A)</th><td>{hep_a_display_text}</td></tr>
                     </tbody>
                 </table>
-                </div>
             </div>
             """), unsafe_allow_html=True)
 
+            # --- Logic to get correct Hepatitis B columns based on year ---
             hbsag_col = "HbsAg"
             hbsab_col = "HbsAb"
             hbcab_col = "HBcAB"
@@ -702,8 +795,10 @@ def display_main_report(person_data, all_person_history_df):
 
             hep_year_rec = str(person.get("ปีตรวจHEP", "")).strip()
             header_suffix = ""
-            if not is_empty(hep_year_rec): header_suffix = f" (ตรวจเมื่อ: {hep_year_rec})"
-            elif selected_year and selected_year != current_thai_year: header_suffix = f" (พ.ศ. {selected_year})"
+            if not is_empty(hep_year_rec):
+                 header_suffix = f" (ตรวจเมื่อ: {hep_year_rec})"
+            elif selected_year and selected_year != current_thai_year:
+                 header_suffix = f" (พ.ศ. {selected_year})"
 
             st.markdown(f"<h5 class='section-subtitle'>ผลการตรวจไวรัสตับอักเสบบี (Viral hepatitis B){header_suffix}</h5>", unsafe_allow_html=True)
 
@@ -711,26 +806,30 @@ def display_main_report(person_data, all_person_history_df):
             hbsab = safe_text(person.get(hbsab_col))
             hbcab = safe_text(person.get(hbcab_col))
             
+            # แก้ไข: ตรงนี้หัวตารางจะแสดง HBsAg, HBsAb, HBcAb ตามที่ต้องการได้แล้ว เพราะลบ uppercase ออกจาก CSS
             st.markdown(clean_html_string(f"""
-            <div class="card-container">
-                <div class="table-responsive">
+            <div class="table-container">
                 <table class='lab-table'>
                     <thead><tr><th style='text-align: center;'>HBsAg</th><th style='text-align: center;'>HBsAb</th><th style='text-align: center;'>HBcAb</th></tr></thead>
                     <tbody><tr><td style='text-align: center;'>{hbsag}</td><td style='text-align: center;'>{hbsab}</td><td style='text-align: center;'>{hbcab}</td></tr></tbody>
                 </table>
-                </div>
             </div>
             """), unsafe_allow_html=True)
 
             if not (is_empty(hbsag) and is_empty(hbsab) and is_empty(hbcab)):
                 advice, status = hepatitis_b_advice(hbsag, hbsab, hbcab)
                 status_class = ""
-                if status == 'immune': status_class = 'immune-box'
-                elif status == 'no_immune': status_class = 'no-immune-box'
-                else: status_class = 'warning-box'
+                if status == 'immune':
+                    status_class = 'immune-box'
+                elif status == 'no_immune':
+                    status_class = 'no-immune-box'
+                else:
+                    status_class = 'warning-box'
+                
                 st.markdown(clean_html_string(f"""<div class='custom-advice-box {status_class}'>{advice}</div>"""), unsafe_allow_html=True)
 
     with st.container(border=True):
+        # ย้าย import มาไว้ในฟังก์ชันเพื่อแก้ Circular Import
         from performance_tests import generate_comprehensive_recommendations
         render_section_header("สรุปและคำแนะนำการปฏิบัติตัว (Summary & Recommendations)")
         recommendations_html = generate_comprehensive_recommendations(person_data)
