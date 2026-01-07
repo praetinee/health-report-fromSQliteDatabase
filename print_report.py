@@ -426,7 +426,7 @@ def generate_doctor_opinion(person_data, sex, cbc_statuses, urine_statuses):
 def render_section_header(title, subtitle=None):
     full_title = f"{title} <span style='font-weight: normal;'>({subtitle})</span>" if subtitle else title
     return f"""
-    <div style='background-color: #f0f2f6; color: #333; text-align: center; padding: 0.2rem 0.4rem; font-weight: bold; border-radius: 6px; margin-top: 0.5rem; margin-bottom: 0.2rem; font-size: 12px; border: 1px solid #ddd;'>
+    <div style='background-color: #f0f2f6; color: #333; text-align: center; padding: 0.2rem 0.4rem; font-weight: bold; border-radius: 6px; margin-top: 0.5rem; margin-bottom: 0.2rem; font-size: 15px; border: 1px solid #ddd;'>
         {full_title}
     </div>
     """
@@ -454,7 +454,7 @@ def render_header_and_vitals(person_data):
     name = person_data.get('ชื่อ-สกุล', '-')
     age = str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person_data.get('อายุ', '-')
     sex = person_data.get('เพศ', '-')
-    hn = str(int(float(person_data.get('HN')))) if str(person_data.get('HN')).replace('.', '', 1).isdigit() else person_data.get('HN', '-')
+    hn = str(int(float(person_data.get('HN')))) if str(person_data.get('HN')).replace('.', '', 1).isdigit() else person.get('HN', '-')
     department = person_data.get('หน่วยงาน', '-')
     check_date = person_data.get("วันที่ตรวจ", "-")
     sbp, dbp = get_float("SBP", person_data), get_float("DBP", person_data)
@@ -468,9 +468,9 @@ def render_header_and_vitals(person_data):
     return f"""
     <div class="header-grid">
         <div class="header-left">
-            <h1 style="font-size: 1.5rem; margin:0;">รายงานผลการตรวจสุขภาพ</h1>
-            <p style="font-size: 0.8rem; margin:0;">คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย</p>
-            <p style="font-size: 0.8rem; margin:0;"><b>วันที่ตรวจ:</b> {check_date}</p>
+            <h1 style="font-size: 1.6rem; margin:0;">รายงานผลการตรวจสุขภาพ</h1>
+            <p style="font-size: 0.9rem; margin:0;">คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย</p>
+            <p style="font-size: 0.9rem; margin:0;"><b>วันที่ตรวจ:</b> {check_date}</p>
         </div>
         <div class="header-right">
             <table class="info-table">
@@ -635,7 +635,7 @@ def get_main_report_css():
         
         body { 
             font-family: 'Sarabun', sans-serif !important; 
-            font-size: 11.5px; 
+            font-size: 14px; 
             margin: 0.5cm;
             color: #333; 
             background-color: #fff; 
@@ -649,7 +649,7 @@ def get_main_report_css():
         
         .print-lab-table tfoot .recommendation-row td {
             background-color: #fcf8e3; /* Light yellow */
-            font-size: 10.5px;
+            font-size: 13px;
             line-height: 1.3;
             border: 1px solid #ccc;
             text-align: left;
@@ -667,11 +667,11 @@ def get_main_report_css():
         .header-grid { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 0.5rem; }
         .header-left { text-align: left; }
         .header-right { text-align: right; }
-        .info-table { font-size: 11.5px; text-align: left; }
+        .info-table { font-size: 13px; text-align: left; }
         .info-table td {{ padding: 1px 5px; border: none; }}
         
         .advice-box { padding: 0.5rem 1rem; border-radius: 8px; line-height: 1.5; margin-top: 0.5rem; border: 1px solid #ddd; page-break-inside: avoid; }
-        .advice-title { font-weight: bold; margin-bottom: 0.3rem; font-size: 13px; }
+        .advice-title { font-weight: bold; margin-bottom: 0.3rem; font-size: 15px; }
         .advice-content ul { padding-left: 20px; margin: 0; }
         .advice-content ul li { margin-bottom: 4px; }
         
@@ -684,12 +684,12 @@ def get_main_report_css():
             line-height: 1.5;
             margin-top: 0.5rem;
             page-break-inside: avoid;
-            font-size: 11.5px;
+            font-size: 14px;
             white-space: pre-wrap;
         }
         
         .perf-section { margin-top: 0.5rem; page-break-inside: avoid; border: 1px solid #e0e0e0; border-radius: 8px; padding: 0.5rem; }
-        .summary-box { background-color: #f8f9fa; border-radius: 4px; padding: 4px 8px; margin-top: 2px; font-size: 10.5px; }
+        .summary-box { background-color: #f8f9fa; border-radius: 4px; padding: 4px 8px; margin-top: 2px; font-size: 13px; }
         @media print { body { -webkit-print-color-adjust: exact; margin: 0; } }
     </style>
     """
