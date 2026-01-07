@@ -426,7 +426,7 @@ def generate_doctor_opinion(person_data, sex, cbc_statuses, urine_statuses):
 def render_section_header(title, subtitle=None):
     full_title = f"{title} <span style='font-weight: normal;'>({subtitle})</span>" if subtitle else title
     return f"""
-    <div style='background-color: #f0f2f6; color: #333; text-align: center; padding: 0.2rem 0.4rem; font-weight: bold; border-radius: 6px; margin-top: 0.5rem; margin-bottom: 0.2rem; font-size: 11px; border: 1px solid #ddd;'>
+    <div style='background-color: #f0f2f6; color: #333; text-align: center; padding: 0.2rem 0.4rem; font-weight: bold; border-radius: 6px; margin-top: 0.5rem; margin-bottom: 0.2rem; font-size: 12px; border: 1px solid #ddd;'>
         {full_title}
     </div>
     """
@@ -635,7 +635,7 @@ def get_main_report_css():
         
         body { 
             font-family: 'Sarabun', sans-serif !important; 
-            font-size: 9.5px; 
+            font-size: 11.5px; 
             margin: 0.5cm;
             color: #333; 
             background-color: #fff; 
@@ -649,7 +649,7 @@ def get_main_report_css():
         
         .print-lab-table tfoot .recommendation-row td {
             background-color: #fcf8e3; /* Light yellow */
-            font-size: 9px;
+            font-size: 10.5px;
             line-height: 1.3;
             border: 1px solid #ccc;
             text-align: left;
@@ -667,11 +667,11 @@ def get_main_report_css():
         .header-grid { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 0.5rem; }
         .header-left { text-align: left; }
         .header-right { text-align: right; }
-        .info-table { font-size: 9.5px; text-align: left; }
+        .info-table { font-size: 11.5px; text-align: left; }
         .info-table td {{ padding: 1px 5px; border: none; }}
         
         .advice-box { padding: 0.5rem 1rem; border-radius: 8px; line-height: 1.5; margin-top: 0.5rem; border: 1px solid #ddd; page-break-inside: avoid; }
-        .advice-title { font-weight: bold; margin-bottom: 0.3rem; font-size: 11px; }
+        .advice-title { font-weight: bold; margin-bottom: 0.3rem; font-size: 13px; }
         .advice-content ul { padding-left: 20px; margin: 0; }
         .advice-content ul li { margin-bottom: 4px; }
         
@@ -684,12 +684,12 @@ def get_main_report_css():
             line-height: 1.5;
             margin-top: 0.5rem;
             page-break-inside: avoid;
-            font-size: 9.5px;
+            font-size: 11.5px;
             white-space: pre-wrap;
         }
         
         .perf-section { margin-top: 0.5rem; page-break-inside: avoid; border: 1px solid #e0e0e0; border-radius: 8px; padding: 0.5rem; }
-        .summary-box { background-color: #f8f9fa; border-radius: 4px; padding: 4px 8px; margin-top: 2px; font-size: 9px; }
+        .summary-box { background-color: #f8f9fa; border-radius: 4px; padding: 4px 8px; margin-top: 2px; font-size: 10.5px; }
         @media print { body { -webkit-print-color-adjust: exact; margin: 0; } }
     </style>
     """
