@@ -1,413 +1,408 @@
 import streamlit as st
-
-st.set_page_config(page_title="Health Report System", layout="wide")
-
-import sqlite3
-import requests
 import pandas as pd
-import tempfile
-import os
-import json
-import base64 
-from collections import OrderedDict
+import sqlite3
+import plotly.graph_objects as go
 from datetime import datetime
+import io
+import time
+import base64
 
-try:
-    from streamlit_js_eval import streamlit_js_eval
-except ImportError:
-    def streamlit_js_eval(**kwargs): return 1200 
+# --- Import modules ---
+from auth import check_password, logout
+from visualization import (
+    render_gauge_chart,
+    render_history_chart,
+    render_bmi_gauge,
+    render_blood_pressure_gauge,
+    render_risk_factors_chart
+)
+from utils import (
+    load_data,
+    get_unique_years,
+    filter_data_by_year,
+    safe_float,
+    calculate_age,
+    process_uploaded_file,
+    sync_to_database
+)
+from admin_panel import render_admin_panel
+from batch_print import render_batch_print_page
+from performance_tests import render_performance_tests_summary
+from print_report import generate_printable_report
+from print_performance_report import generate_performance_report_html
+from line_register import render_line_registration_ui # Import Line Registration UI
 
-from auth import authentication_flow, pdpa_consent_page
+# --- Constants ---
+DB_PATH = 'health_data.db'
 
-from line_register import (
-    save_new_user_to_gsheet, 
-    check_if_user_registered, 
-    normalize_db_name_field,
-    render_registration_page,
-    render_admin_line_manager
+# --- Page Config ---
+st.set_page_config(
+    page_title="Health Data Analytics",
+    page_icon="🏥",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-try:
-    from print_report import generate_printable_report
-except Exception:
-    def generate_printable_report(*args): return ""
+# --- Session State Initialization ---
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
+if 'username' not in st.session_state:
+    st.session_state.username = None
+if 'role' not in st.session_state:
+    st.session_state.role = None
+if 'selected_year' not in st.session_state:
+    st.session_state.selected_year = None
+if 'selected_hn' not in st.session_state:
+    st.session_state.selected_hn = None
+if 'show_history' not in st.session_state:
+    st.session_state.show_history = False
 
-try:
-    from print_performance_report import generate_performance_report_html
-except Exception:
-    def generate_performance_report_html(*args): return ""
-
-try:
-    from utils import (
-        is_empty, has_basic_health_data, 
-        has_vision_data, has_hearing_data, has_lung_data, has_visualization_data
-    )
-except Exception:
-    def is_empty(v): return pd.isna(v) or str(v).strip() == ""
-    def has_basic_health_data(r): return True
-    def has_vision_data(r): return False
-    def has_hearing_data(r): return False
-    def has_lung_data(r): return False
-    def has_visualization_data(d): return False
-
-try:
-    from visualization import display_visualization_tab
-except Exception:
-    def display_visualization_tab(d, a): st.info("No visualization module")
-
-try:
-    from shared_ui import (
-        inject_custom_css, 
-        display_main_report, 
-        display_performance_report,
-        get_float 
-    )
-except Exception:
-    def inject_custom_css(): pass
-    def display_main_report(p, a): st.error("Main Report Module Missing")
-    def display_performance_report(p, t, a=None): pass
-    def get_float(c, p): return None
-
-try:
-    from admin_panel import display_admin_panel
-except Exception:
-    def display_admin_panel(df): st.error("Admin Panel Error")
-
-# -----------------------------------------------------------------------------
-# Configuration & Helper Functions
-# -----------------------------------------------------------------------------
-
-GAS_URL = "https://script.google.com/macros/s/AKfycbzmtd5H-YZr8EeeTUab3M2L2nEtUofDBtYCP9-CN6MVfIff94P6lDWS-cUHCi9asLlR/exec"
-SQLITE_CITIZEN_ID_COL = "เลขบัตรประชาชน"  
-SQLITE_NAME_COL = "ชื่อ-สกุล"           
-
-def normalize_cid(val):
-    if pd.isna(val): return ""
-    s = str(val).strip().replace("-", "").replace(" ", "").replace("'", "").replace('"', "")
-    if "E" in s or "e" in s:
-        try: s = str(int(float(s)))
-        except: pass
-    if s.endswith(".0"): s = s[:-2]
-    return s
-
-def get_user_info_from_gas(line_user_id):
+# --- Helper Functions for UI ---
+def format_value(val, unit=""):
+    if pd.isna(val) or val == "":
+        return "-"
     try:
-        url = f"{GAS_URL}?action=get_user&line_id={line_user_id}"
-        response = requests.get(url, timeout=15)
-        response.raise_for_status()
-        return response.json()
-    except Exception as e:
-        return {"found": False, "error": str(e)}
-
-# --- Custom Header Function ---
-def render_custom_header_with_actions(person_data, available_years):
-    name = person_data.get('ชื่อ-สกุล', '-')
-    age = str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person_data.get('อายุ', '-')
-    sex = person_data.get('เพศ', '-')
-    hn = str(int(float(person_data.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person_data.get('HN', '-')
-    department = person_data.get('หน่วยงาน', '-')
-    check_date = person_data.get("วันที่ตรวจ", "-")
-    
-    icon_profile = """<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>"""
-    icon_body = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>"""
-    icon_waist = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 12h8"></path></svg>"""
-    icon_heart = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>"""
-    icon_pulse = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>"""
-
-    try:
-        sbp_int, dbp_int = int(float(person_data.get("SBP", 0))), int(float(person_data.get("DBP", 0)))
-        bp_val = f"{sbp_int}/{dbp_int}"
-        if sbp_int >= 140 or dbp_int >= 90: bp_desc = "ความดันสูง"
-        elif sbp_int < 120 and dbp_int < 80: bp_desc = "ความดันปกติ"
-        else: bp_desc = "ความดันค่อนข้างสูง"
+        # Check if it's an integer stored as float
+        if isinstance(val, float) and val.is_integer():
+            return f"{int(val)} {unit}"
+        # Check if it's a float
+        elif isinstance(val, float):
+             return f"{val:.2f} {unit}"
+        return f"{val} {unit}"
     except:
-        bp_val = "-"
-        bp_desc = "ไม่มีข้อมูล"
-        
-    try: pulse_val = f"{int(float(person_data.get('pulse', 0)))}"
-    except: pulse_val = "-"
+        return f"{val} {unit}"
+
+def get_status_color(val, low, high, reverse=False):
+    if val is None:
+        return "normal"
+    try:
+        val = float(val)
+        if reverse:
+             if val > high: return "normal" # Higher is better (e.g. HDL) -> Normal if > high
+             if val < low: return "danger" # Too low
+             return "warning" # In between
+        else:
+            if val < low: return "normal" # Too low is generally not flagged red in basic logic, or maybe warning. Let's assume normal for now or add 'low' logic.
+            # Actually, standard logic:
+            if low <= val <= high: return "normal"
+            if val > high: return "danger"
+            return "normal" # Default
+    except:
+        return "normal"
     
-    weight = get_float('น้ำหนัก', person_data)
-    height = get_float('ส่วนสูง', person_data)
-    weight_val = f"{weight}" if weight is not None else "-"
-    height_val = f"{height}" if height is not None else "-"
-    waist_val = f"{person_data.get('รอบเอว', '-')}"
+def display_kpi_card(title, value, unit, status="normal", sub_text=""):
+    colors = {
+        "normal": "#e8f5e9", # Light Green
+        "warning": "#fff3e0", # Light Orange
+        "danger": "#ffebee"   # Light Red
+    }
+    text_colors = {
+        "normal": "#1b5e20",
+        "warning": "#e65100",
+        "danger": "#b71c1c"
+    }
     
-    bmi_val_str = "-"
-    bmi_desc = ""
-    if weight is not None and height is not None and height > 0:
-        bmi = weight / ((height / 100) ** 2)
-        bmi_val_str = f"{bmi:.1f}"
-        if bmi < 18.5: bmi_desc = "น้ำหนักน้อย"
-        elif 18.5 <= bmi < 23: bmi_desc = "น้ำหนักปกติ"
-        elif 23 <= bmi < 25: bmi_desc = "น้ำหนักเกิน"
-        elif 25 <= bmi < 30: bmi_desc = "อ้วน"
-        elif bmi >= 30: bmi_desc = "อ้วนอันตราย"
+    st.markdown(
+        f"""
+        <div style="
+            background-color: {colors.get(status, '#ffffff')};
+            padding: 1rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+            height: 100%;
+            border: 1px solid rgba(0,0,0,0.05);
+        ">
+            <h4 style="margin: 0; color: #555; font-size: 0.9rem;">{title}</h4>
+            <h2 style="margin: 0.5rem 0; color: {text_colors.get(status, '#333')}; font-size: 1.8rem;">{value}</h2>
+            <p style="margin: 0; color: #777; font-size: 0.8rem;">{unit}</p>
+            {f'<p style="margin-top: 0.2rem; color: #666; font-size: 0.75rem;">{sub_text}</p>' if sub_text else ''}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    with st.container():
-        c1, c2 = st.columns([3, 1.3])
-        
-        with c1:
-            st.markdown(f"""
-            <div style="display: flex; gap: 15px; align-items: flex-start;">
-                <div style="min-width: 60px; height: 60px; background-color: rgba(0, 121, 107, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #00796B;">
-                    {icon_profile}
-                </div>
-                <div>
-                    <div style="font-size: 1.5rem; font-weight: bold; line-height: 1.2;">{name}</div>
-                    <div style="font-size: 0.95rem; opacity: 0.8; margin-top: 4px;">
-                        HN: {hn} | เพศ: {sex} | อายุ: {age} ปี
-                    </div>
-                    <div style="background-color: rgba(128,128,128,0.1); padding: 2px 10px; border-radius: 4px; display: inline-block; font-size: 0.85rem; margin-top: 6px; font-weight: 500;">
-                        หน่วยงาน: {department}
-                    </div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            st.markdown('<div style="height: 12px;"></div>', unsafe_allow_html=True)
-            
-            cb1, cb2, cb_rest = st.columns([1.2, 1.2, 2.5])
-            with cb1:
-                if st.button("🖨️ ผลสุขภาพ", key="hdr_print_h", use_container_width=True):
-                    st.session_state.print_trigger = True
-            with cb2:
-                if st.button("🖨️ ผลสมรรถภาพ", key="hdr_print_p", use_container_width=True):
-                    st.session_state.print_performance_trigger = True
-            
-            st.markdown("""
-            <style>
-                .mobile-print-note-container { display: block !important; width: 100%; margin-top: 0px; }
-                .mobile-print-note { background: linear-gradient(to right, #fff3cd, #ffffff) !important; border: none !important; border-left: 5px solid #ffc107 !important; color: #856404; font-size: 0.75rem; font-weight: 400; padding: 5px 10px; width: 100%; max-width: 300px; margin-left: 2px; line-height: 1.2; border-radius: 4px; }
-            </style>
-            <div class="mobile-print-note-container">
-                 <div class="mobile-print-note">
-                    ฟังก์ชันพิมพ์ รองรับการใช้งานผ่านคอมพิวเตอร์ (PC) เท่านั้น
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+def render_custom_header_with_actions(person_data, available_years):
+    """
+    Renders a custom header with personal info on the left/center
+    and action buttons (Print, History Toggle, Year Select) on the right.
+    """
+    # 1. Prepare Data
+    name = person_data.get('ชื่อ-สกุล', 'Unknown')
+    # Safe HN parsing
+    raw_hn = person_data.get('HN')
+    if pd.isna(raw_hn) or str(raw_hn).strip() == '':
+        hn = '-'
+    else:
+        try:
+            str_hn = str(raw_hn)
+            # Remove decimals if present (e.g. "12345.0" -> "12345")
+            if "." in str_hn:
+                str_hn = str_hn.split(".")[0]
+            hn = str_hn
+        except:
+             hn = str(raw_hn)
+             
+    age = person_data.get('อายุ', '-')
+    if isinstance(age, float) and age.is_integer():
+        age = int(age)
 
-        with c2:
-            st.markdown(f"""
-            <div style="text-align: right; color: var(--text-color);">
-                <div style="font-size: 0.95rem; font-weight: bold; margin-bottom: 2px;">วันที่ตรวจ: {check_date}</div>
-                <div style="font-size: 0.9rem; opacity: 0.8;">คลินิกตรวจสุขภาพ</div>
-                <div style="font-size: 0.9rem; opacity: 0.8;">อาชีวเวชกรรม</div>
-                <div style="font-size: 0.9rem; opacity: 0.8;">รพ.สันทราย</div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            st.markdown('<div style="height: 8px;"></div>', unsafe_allow_html=True)
-            st.selectbox(
-                "เลือกปี พ.ศ.", 
-                available_years, 
-                index=available_years.index(st.session_state.selected_year), 
-                format_func=lambda y: f"พ.ศ. {y}", 
-                key="year_select", 
-                on_change=lambda: st.session_state.update({"selected_year": st.session_state.year_select}),
-                label_visibility="collapsed" 
-            )
+    # 2. Container Layout
+    # Use columns to separate info and controls
+    c1, c2 = st.columns([3, 2])
 
-        st.markdown('<hr style="margin: 15px 0; border: 0; border-top: 1px solid rgba(128,128,128,0.2);">', unsafe_allow_html=True)
-
+    with c1:
         st.markdown(f"""
-        <div class="vitals-grid-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px;">
-            <div class="vital-card" style="background: var(--card-bg-color); border-radius: 8px; padding: 15px; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(128,128,128,0.2);">
-                <div class="vital-icon-box" style="color: #2196F3;">{icon_body}</div>
-                <div class="vital-content">
-                    <div class="vital-label" style="font-size: 0.8rem; opacity: 0.7;">สัดส่วนร่างกาย</div>
-                    <div class="vital-value" style="font-size: 1.1rem; font-weight: bold;">{weight_val} <span style="font-size:0.8rem; font-weight:normal;">kg</span> / {height_val} <span style="font-size:0.8rem; font-weight:normal;">cm</span></div>
-                    <div class="vital-sub" style="font-size: 0.75rem; opacity: 0.8;">BMI: {bmi_val_str} ({bmi_desc})</div>
-                </div>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <div style="background-color: #00796b; color: white; padding: 10px 15px; border-radius: 50%; font-weight: bold; font-size: 1.2rem;">
+                {name[0] if name else '?'}
             </div>
-            <div class="vital-card" style="background: var(--card-bg-color); border-radius: 8px; padding: 15px; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(128,128,128,0.2);">
-                <div class="vital-icon-box" style="color: #4CAF50;">{icon_waist}</div>
-                <div class="vital-content">
-                    <div class="vital-label" style="font-size: 0.8rem; opacity: 0.7;">รอบเอว</div>
-                    <div class="vital-value" style="font-size: 1.1rem; font-weight: bold;">{waist_val} <span style="font-size:0.8rem; font-weight:normal;">cm</span></div>
-                </div>
-            </div>
-            <div class="vital-card" style="background: var(--card-bg-color); border-radius: 8px; padding: 15px; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(128,128,128,0.2);">
-                <div class="vital-icon-box" style="color: #F44336;">{icon_heart}</div>
-                <div class="vital-content">
-                    <div class="vital-label" style="font-size: 0.8rem; opacity: 0.7;">ความดันโลหิต</div>
-                    <div class="vital-value" style="font-size: 1.1rem; font-weight: bold;">{bp_val} <span style="font-size:0.8rem; font-weight:normal;">mmHg</span></div>
-                    <div class="vital-sub" style="font-size: 0.75rem; opacity: 0.8;">{bp_desc}</div>
-                </div>
-            </div>
-            <div class="vital-card" style="background: var(--card-bg-color); border-radius: 8px; padding: 15px; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(128,128,128,0.2);">
-                <div class="vital-icon-box" style="color: #FF9800;">{icon_pulse}</div>
-                <div class="vital-content">
-                    <div class="vital-label" style="font-size: 0.8rem; opacity: 0.7;">ชีพจร</div>
-                    <div class="vital-value" style="font-size: 1.1rem; font-weight: bold;">{pulse_val} <span style="font-size:0.8rem; font-weight:normal;">bpm</span></div>
-                </div>
+            <div>
+                <h2 style="margin: 0; color: #333;">{name}</h2>
+                <p style="margin: 0; color: #666; font-size: 0.95rem;">
+                    <strong>HN:</strong> {hn} &nbsp;|&nbsp; 
+                    <strong>Age:</strong> {age} &nbsp;|&nbsp; 
+                    <strong>Dep:</strong> {person_data.get('หน่วยงาน', '-')}
+                </p>
             </div>
         </div>
         """, unsafe_allow_html=True)
 
-# -----------------------------------------------------------------------------
-# Data Loading
-# -----------------------------------------------------------------------------
-@st.cache_data(ttl=600)
-def load_sqlite_data():
-    tmp_path = None
-    try:
-        file_id = "1HruO9AMrUfniC8hBWtumVdxLJayEc1Xr"
-        download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
-        response = requests.get(download_url)
-        response.raise_for_status()
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as tmp:
-            tmp.write(response.content)
-            tmp_path = tmp.name
-        conn = sqlite3.connect(tmp_path)
-        tables = pd.read_sql("SELECT name FROM sqlite_master WHERE type='table';", conn)
-        st.session_state['debug_tables'] = tables['name'].tolist()
-        table_name = "health_data" 
-        if table_name not in st.session_state['debug_tables']:
-             if len(st.session_state['debug_tables']) > 0: table_name = st.session_state['debug_tables'][0]
-        df_loaded = pd.read_sql(f"SELECT * FROM {table_name}", conn)
-        conn.close()
-        df_loaded.columns = df_loaded.columns.str.strip()
-        df_loaded['HN'] = df_loaded['HN'].astype(str).str.strip().apply(lambda x: x[:-2] if x.endswith('.0') else x)
-        if SQLITE_NAME_COL in df_loaded.columns:
-            df_loaded[SQLITE_NAME_COL] = df_loaded[SQLITE_NAME_COL].astype(str).str.strip().str.replace(r'\s+', ' ', regex=True)
-        if SQLITE_CITIZEN_ID_COL in df_loaded.columns:
-            df_loaded[SQLITE_CITIZEN_ID_COL] = df_loaded[SQLITE_CITIZEN_ID_COL].apply(normalize_cid)
-        df_loaded['Year'] = df_loaded['Year'].astype(int)
-        return df_loaded
-    except Exception as e:
-        st.error(f"❌ โหลดฐานข้อมูลไม่สำเร็จ: {e}")
-        return None
-    finally:
-        if tmp_path and os.path.exists(tmp_path): os.remove(tmp_path)
-
-# -----------------------------------------------------------------------------
-# Main App Logic
-# -----------------------------------------------------------------------------
-def main_app(df):
-    inject_custom_css()
-    if 'user_hn' not in st.session_state: st.stop()
-    user_hn = st.session_state['user_hn']
-    results_df = df[df['HN'] == user_hn].copy()
-    st.session_state['search_result'] = results_df
-
-    if results_df.empty:
-        st.error(f"ไม่พบข้อมูลผลตรวจสำหรับ HN: {user_hn}")
-        if st.button("กลับหน้าหลัก"): st.session_state.clear(); st.rerun()
-        return
-
-    available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
-    if 'selected_year' not in st.session_state or st.session_state.selected_year not in available_years:
-        st.session_state.selected_year = available_years[0]
-
-    yr_df = results_df[results_df["Year"] == st.session_state.selected_year]
-    person_row = yr_df.bfill().ffill().iloc[0].to_dict() if not yr_df.empty else None
-    st.session_state.person_row = person_row
-
-    if person_row:
-        render_custom_header_with_actions(person_row, available_years)
+    with c2:
+        # Align controls to the right
+        rc1, rc2, rc3 = st.columns([1.5, 1, 1])
         
-        tabs_map = OrderedDict()
-        if has_visualization_data(results_df): tabs_map['ภาพรวม (Graphs)'] = 'viz'
-        if has_basic_health_data(person_row): tabs_map['สุขภาพพื้นฐาน'] = 'main'
-        if has_vision_data(person_row): tabs_map['การมองเห็น'] = 'vision'
-        if has_hearing_data(person_row): tabs_map['การได้ยิน'] = 'hearing'
-        if has_lung_data(person_row): tabs_map['ปอด'] = 'lung'
+        with rc1:
+            # Year Selection
+            selected_year = st.selectbox(
+                "📅 ปีงบประมาณ",
+                options=available_years,
+                index=available_years.index(st.session_state.selected_year) if st.session_state.selected_year in available_years else 0,
+                key="year_selector_header",
+                label_visibility="collapsed"
+            )
+            if selected_year != st.session_state.selected_year:
+                st.session_state.selected_year = selected_year
+                st.rerun()
 
-        t_objs = st.tabs(list(tabs_map.keys()))
-        for i, (k, v) in enumerate(tabs_map.items()):
-            with t_objs[i]:
-                if v == 'viz': display_visualization_tab(person_row, results_df)
-                elif v == 'main': display_main_report(person_row, results_df)
-                elif v == 'vision': display_performance_report(person_row, 'vision')
-                elif v == 'hearing': display_performance_report(person_row, 'hearing', all_person_history_df=results_df)
-                elif v == 'lung': display_performance_report(person_row, 'lung')
+        with rc2:
+             # History Toggle
+            if st.button("📊 ประวัติ", use_container_width=True, type="primary" if st.session_state.show_history else "secondary"):
+                st.session_state.show_history = not st.session_state.show_history
+                st.rerun()
 
-        # --- Trigger Printing using New Window Logic ---
-        if st.session_state.get('print_trigger'):
-            h = generate_printable_report(person_row, results_df)
-            b64_html = base64.b64encode(h.encode('utf-8')).decode('utf-8')
-            print_script = f"""<script>
-                const w = window.open('', '_blank');
-                if (w) {{
-                    w.document.write(decodeURIComponent(escape(window.atob("{b64_html}"))));
-                    w.document.close();
-                }} else {{ alert("โปรดอนุญาต Pop-up เพื่อพิมพ์"); }}
-            </script>"""
-            st.components.v1.html(print_script, height=0)
-            st.session_state.print_trigger = False
+        with rc3:
+            # Print Button (Opens Modal or Direct Action)
+            # Since we can't easily pop up a print window from Streamlit directly without JS,
+            # we'll use a link to a "printable" view or generate HTML.
+            # For now, let's make it a download button for the HTML report.
+            pass # We will handle print generation below in the main area to keep this clean or add a button here that triggers it.
             
-        if st.session_state.get('print_performance_trigger'):
-            h = generate_performance_report_html(person_row, results_df)
-            b64_html = base64.b64encode(h.encode('utf-8')).decode('utf-8')
-            print_script = f"""<script>
-                const w = window.open('', '_blank');
-                if (w) {{
-                    w.document.write(decodeURIComponent(escape(window.atob("{b64_html}"))));
-                    w.document.close();
-                }} else {{ alert("โปรดอนุญาต Pop-up เพื่อพิมพ์"); }}
-            </script>"""
-            st.components.v1.html(print_script, height=0)
-            st.session_state.print_performance_trigger = False
+    st.markdown("---")
 
-# --------------------------------------------------------------------------------
-# MAIN ROUTING LOGIC
-# --------------------------------------------------------------------------------
-
-if 'authenticated' not in st.session_state: st.session_state['authenticated'] = False
-if 'pdpa_accepted' not in st.session_state: st.session_state['pdpa_accepted'] = False
-
-df = load_sqlite_data()
-if df is None: st.stop()
-
-query_params = st.query_params
-line_user_id = query_params.get("userid")
-
-if line_user_id and not st.session_state['authenticated']:
-    st.session_state["line_user_id"] = line_user_id
-    st.info("⏳ กำลังตรวจสอบสิทธิ์การใช้งาน LINE...")
+# --- Main App Logic ---
+def main_app(df):
     
-    u_info = get_user_info_from_gas(line_user_id)
-    
-    if u_info.get('found'):
-        cid = normalize_cid(u_info.get('card_id'))
-        fname = u_info.get('fname', '').strip()
-        lname = u_info.get('lname', '').strip()
-        
-        match = df[df[SQLITE_CITIZEN_ID_COL] == cid]
-        user_found = None
-        if not match.empty:
-            if fname and lname:
-                for _, row in match.iterrows():
-                    db_f, db_l = normalize_db_name_field(row[SQLITE_NAME_COL])
-                    if db_f == fname and db_l.replace(" ","") == lname.replace(" ",""):
-                        user_found = row; break
-            if user_found is None: user_found = match.iloc[0]
-        
-        if user_found is not None:
-            st.session_state.update({
-                'authenticated': True, 
-                'user_hn': user_found['HN'], 
-                'user_name': user_found[SQLITE_NAME_COL], 
-                'pdpa_accepted': True
-            })
+    # --- Sidebar ---
+    with st.sidebar:
+        st.markdown(f"### 👤 {st.session_state.username} ({st.session_state.role})")
+        if st.button("Logout", key="logout_btn", use_container_width=True):
+            logout()
             st.rerun()
+        
+        st.markdown("---")
+        
+        # Navigation
+        page = st.radio("Navigation", ["Dashboard", "Individual Report", "Batch Print", "Line Registration", "Admin Panel"] if st.session_state.role == 'admin' else ["Dashboard", "Individual Report", "Batch Print", "Line Registration"])
+        
+        # Year Filter (Global)
+        available_years = get_unique_years(df)
+        if not available_years:
+            st.error("No data available.")
+            return
+
+        # Ensure selected year is valid
+        if st.session_state.selected_year not in available_years:
+             st.session_state.selected_year = available_years[0]
+    
+    # --- Filter Data by Year ---
+    df_year = filter_data_by_year(df, st.session_state.selected_year)
+    
+    # --- Page Routing ---
+    if page == "Dashboard":
+        st.title(f"📊 Health Analytics Dashboard ({st.session_state.selected_year})")
+        
+        # 1. Key Metrics Row
+        m1, m2, m3, m4 = st.columns(4)
+        with m1: display_kpi_card("Total Staff", len(df_year), "Persons")
+        with m2: 
+            bmi_high = df_year[pd.to_numeric(df_year['BMI'], errors='coerce') >= 25]
+            display_kpi_card("Overweight/Obese", len(bmi_high), "Persons", "warning", f"{len(bmi_high)/len(df_year)*100:.1f}%")
+        with m3:
+            sbp_high = df_year[pd.to_numeric(df_year['SBP'], errors='coerce') >= 140]
+            display_kpi_card("High BP", len(sbp_high), "Persons", "danger", f"{len(sbp_high)/len(df_year)*100:.1f}%")
+        with m4:
+             # Example: Vision Issues
+             vision_issues = df_year[df_year['สรุปเหมาะสมกับงาน'].astype(str).str.contains('ผิดปกติ', na=False)]
+             display_kpi_card("Vision Issues", len(vision_issues), "Persons", "warning")
+
+        # 2. Charts Row 1
+        st.markdown("### 📈 Health Trends & Distributions")
+        c1, c2 = st.columns(2)
+        with c1:
+            render_bmi_gauge(df_year)
+        with c2:
+            render_blood_pressure_gauge(df_year)
+            
+        # 3. Risk Factors
+        st.markdown("### ⚠️ Risk Factors Analysis")
+        render_risk_factors_chart(df_year)
+
+    elif page == "Individual Report":
+        # Search / Select Person
+        # Combine HN and Name for search
+        df_year['Search_Label'] = df_year['HN'].astype(str) + " - " + df_year['ชื่อ-สกุล']
+        
+        # If a person was selected previously, try to find them in the current year's list
+        default_idx = 0
+        if st.session_state.selected_hn:
+             match = df_year[df_year['HN'].astype(str) == str(st.session_state.selected_hn)]
+             if not match.empty:
+                 # Find index in the dropdown
+                 options = df_year['Search_Label'].tolist()
+                 try:
+                    default_idx = options.index(match.iloc[0]['Search_Label'])
+                 except: pass
+
+        selected_person_label = st.sidebar.selectbox(
+            "🔍 Search Person",
+            df_year['Search_Label'],
+            index=default_idx
+        )
+        
+        if selected_person_label:
+            # Get selected row
+            person_row = df_year[df_year['Search_Label'] == selected_person_label].iloc[0]
+            st.session_state.selected_hn = person_row['HN'] # Update session state
+            
+            # --- Custom Header ---
+            render_custom_header_with_actions(person_row, available_years)
+
+            # --- Main Content Area ---
+            tab1, tab2, tab3 = st.tabs(["📋 General Health", "👁️ Performance Tests", "🖨️ Printable Report"])
+            
+            with tab1:
+                # 1. Vitals & Basic Labs (Cards Layout)
+                st.markdown("#### Vital Signs")
+                v1, v2, v3, v4 = st.columns(4)
+                with v1: display_kpi_card("BMI", format_value(person_row.get('BMI')), "kg/m²")
+                with v2: display_kpi_card("Blood Pressure", f"{format_value(person_row.get('SBP'), '')}/{format_value(person_row.get('DBP'), '')}", "mmHg")
+                with v3: display_kpi_card("Fasting Sugar", format_value(person_row.get('FBS')), "mg/dL", "normal" if safe_float(person_row.get('FBS')) < 100 else "warning")
+                with v4: display_kpi_card("Cholesterol", format_value(person_row.get('CHOL')), "mg/dL")
+
+                st.markdown("#### Laboratory Results")
+                # Create a clean dataframe for lab results
+                lab_data = {
+                    "Test": ["Hb", "WBC", "Platelet", "Creatinine", "Uric Acid", "SGOT", "SGPT"],
+                    "Value": [
+                        format_value(person_row.get('Hb(%)')),
+                        format_value(person_row.get('WBC (cumm)')),
+                        format_value(person_row.get('Plt (/mm)')),
+                        format_value(person_row.get('Cr')),
+                        format_value(person_row.get('Uric Acid')),
+                        format_value(person_row.get('SGOT')),
+                        format_value(person_row.get('SGPT'))
+                    ],
+                    "Reference": ["12-16", "4000-10000", "150000-450000", "0.5-1.2", "2.4-6.0", "<40", "<40"]
+                }
+                st.table(pd.DataFrame(lab_data))
+                
+                # History Chart (If toggled)
+                if st.session_state.show_history:
+                    st.markdown("### 📉 Historical Trends")
+                    # Filter all data for this person across all years
+                    person_history = df[df['HN'] == person_row['HN']].sort_values('Year')
+                    render_history_chart(person_history)
+
+            with tab2:
+                render_performance_tests_summary(person_row, df)
+            
+            with tab3:
+                st.info("Generating printable report...")
+                
+                # Filter history for charts in print view
+                person_history = df[df['HN'] == person_row['HN']].sort_values('Year')
+                
+                # 1. Main Health Report
+                html_report = generate_printable_report(person_row, person_history)
+                
+                # 2. Performance Report
+                html_perf_report = generate_performance_report_html(person_row, person_history)
+                
+                c_print1, c_print2 = st.columns(2)
+                
+                with c_print1:
+                    st.markdown("#### 📄 Main Health Report")
+                    # Convert to base64 for download link
+                    b64_report = base64.b64encode(html_report.encode()).decode()
+                    href_report = f'<a href="data:text/html;base64,{b64_report}" download="Health_Report_{person_row["HN"]}.html" class="button-primary">Download Health Report (HTML)</a>'
+                    st.markdown(href_report, unsafe_allow_html=True)
+                    
+                    # Preview (iframe)
+                    st.components.v1.html(html_report, height=600, scrolling=True)
+
+                with c_print2:
+                    st.markdown("#### 👁️ Performance Report")
+                    b64_perf = base64.b64encode(html_perf_report.encode()).decode()
+                    href_perf = f'<a href="data:text/html;base64,{b64_perf}" download="Performance_Report_{person_row["HN"]}.html" class="button-primary">Download Performance Report (HTML)</a>'
+                    st.markdown(href_perf, unsafe_allow_html=True)
+                    
+                    # Preview
+                    st.components.v1.html(html_perf_report, height=600, scrolling=True)
+
+    elif page == "Batch Print":
+        render_batch_print_page(df_year, df) # Pass full df for history
+
+    elif page == "Line Registration":
+        render_line_registration_ui(df)
+
+    elif page == "Admin Panel":
+        render_admin_panel(df)
+
+
+# --- Entry Point ---
+if __name__ == "__main__":
+    if not st.session_state.authenticated:
+        # Login Screen
+        c1, c2, c3 = st.columns([1, 2, 1])
+        with c2:
+            st.title("🏥 Health Data Analytics System")
+            st.markdown("Please login to continue.")
+            
+            with st.form("login_form"):
+                username = st.text_input("Username")
+                password = st.text_input("Password", type="password")
+                submit = st.form_submit_button("Login")
+                
+                if submit:
+                    if check_password(username, password):
+                        st.session_state.authenticated = True
+                        st.session_state.username = username
+                        st.session_state.role = "admin" if username == "admin" else "user" # Simple role logic
+                        st.success("Login successful!")
+                        st.rerun()
+                    else:
+                        st.error("Invalid username or password")
+    else:
+        # Load Data
+        df = load_data(DB_PATH)
+        
+        if df is None:
+            st.warning("No data found in database. Please upload a file in the Admin Panel.")
+            # Still show main app but with empty structure or redirect to admin if admin
+            if st.session_state.role == 'admin':
+                main_app(pd.DataFrame()) # Pass empty DF to handle UI structure
+            else:
+                 st.stop()
         else:
-            st.session_state['login_error'] = f"❌ ไม่พบประวัติสุขภาพของเลขบัตร '{cid}' ในระบบโรงพยาบาล"
-    else:
-        st.session_state['login_error'] = "❌ ไม่พบข้อมูลการลงทะเบียนของคุณในระบบ LINE"
-
-if not st.session_state['authenticated']:
-    if st.session_state.get('login_error'):
-        st.error(st.session_state['login_error'])
-        if st.button("เข้าสู่ระบบด้วยชื่อ-นามสกุล"):
-            del st.session_state["line_user_id"]
-            del st.session_state["login_error"]
-            st.rerun()
-    else:
-        authentication_flow(df)
-elif not st.session_state['pdpa_accepted']:
-    pdpa_consent_page()
-else:
-    if st.session_state.get('is_admin'): display_admin_panel(df)
-    else: main_app(df)
+             main_app(df)
