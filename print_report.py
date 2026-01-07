@@ -280,6 +280,9 @@ def generate_printable_report(person_data, all_person_history_df=None):
 
     # --- 4. Assemble Final HTML ---
     
+    # Create unique identifier to force re-render in Streamlit/Browser
+    unique_id = datetime.now().strftime("%Y%m%d%H%M%S%f")
+
     return f"""
     <!DOCTYPE html>
     <html lang="th">
@@ -289,6 +292,7 @@ def generate_printable_report(person_data, all_person_history_df=None):
         {get_report_css()}
     </head>
     <body onload="setTimeout(function(){{window.print();}}, 500)">
+        <!-- Force Reload ID: {unique_id} -->
         <div class="container">
             
             <!-- Header -->
