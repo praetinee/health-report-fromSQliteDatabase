@@ -183,8 +183,9 @@ def generate_printable_report(person_data, all_person_history_df=None):
     """
     # --- 1. Prepare Data ---
     name = person_data.get('ชื่อ-สกุล', '-')
-    age = str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')
-    hn = str(int(float(person_data.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person_data.get('HN', '-')
+    age = str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person_data.get('อายุ', '-')
+    # FIX: Changed 'person' to 'person_data'
+    hn = str(int(float(person_data.get('HN')))) if str(person_data.get('HN')).replace('.', '', 1).isdigit() else person_data.get('HN', '-')
     date = person_data.get("วันที่ตรวจ", datetime.now().strftime("%d/%m/%Y"))
     dept = person_data.get('หน่วยงาน', '-')
     sex = person_data.get('เพศ', '-')
