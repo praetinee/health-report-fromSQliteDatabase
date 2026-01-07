@@ -195,8 +195,10 @@ def render_custom_header_with_actions(person_data, available_years):
             st.markdown('<div class="print-menu-anchor"></div>', unsafe_allow_html=True) # Anchor for JS hiding
             
             # ใช้ Columns ย่อยเพื่อให้ปุ่มอยู่ชิดซ้ายและขนาดพอดี
+            # ใส่ class 'desktop-only' ที่ container ของปุ่ม
             cb1, cb2, cb_rest = st.columns([1.2, 1.2, 2.5])
             with cb1:
+                # เราใช้ st.button ปกติ แต่เราจะใช้ JS ซ่อนมันถ้ารันบนมือถือ
                 if st.button("🖨️ ผลสุขภาพ", key="hdr_print_h", use_container_width=True):
                     st.session_state.print_trigger = True
             with cb2:
@@ -331,7 +333,12 @@ def main_app(df):
 
         /* CSS สำหรับ Mobile/Tablet (หน้าจอ <= 992px) */
         @media (max-width: 992px) {
-            button[kind="secondary"]:has(div p:contains("🖨️")) {
+            /* ซ่อนปุ่มที่มีไอคอนเครื่องพิมพ์ */
+            button[kind="secondary"] p:contains("🖨️") {
+                 display: none !important;
+            }
+            /* ซ่อนตัวปุ่มเองถ้าหาเจอ */
+            div[data-testid="stButton"] > button:has(p:contains("🖨️")) {
                  display: none !important;
             }
         }
@@ -340,20 +347,26 @@ def main_app(df):
         <script>
         function removePrintButtonsOnMobile() {
             if (window.innerWidth <= 992) {
-                // หาปุ่มที่มีไอคอนเครื่องพิมพ์
+                // หาปุ่มที่มีไอคอนเครื่องพิมพ์ในทุก Button element
                 const buttons = window.parent.document.querySelectorAll('button');
                 buttons.forEach(btn => {
                     if (btn.innerText.includes('🖨️')) {
+                        // ซ่อนปุ่มนั้น
                         btn.style.display = 'none';
-                        const col = btn.closest('[data-testid="column"]');
-                        if (col) col.style.display = 'none';
+                        // ซ่อน Container ของปุ่มด้วยถ้าจำเป็น
+                        const parent = btn.closest('[data-testid="column"]');
+                        if (parent) {
+                            // parent.style.display = 'none'; // อาจจะแรงไป ซ่อนแค่ปุ่มพอ
+                        }
                     }
                 });
             }
         }
+        // เรียกใช้ฟังก์ชันเมื่อโหลดและเมื่อปรับขนาดหน้าจอ
         removePrintButtonsOnMobile();
         window.addEventListener('resize', removePrintButtonsOnMobile);
-        setInterval(removePrintButtonsOnMobile, 500);
+        // เช็คซ้ำทุกๆ 1 วินาทีเผื่อ Streamlit re-render
+        setInterval(removePrintButtonsOnMobile, 1000);
         </script>
     """, unsafe_allow_html=True)
 
