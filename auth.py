@@ -71,9 +71,11 @@ def authentication_flow(df):
     login_style = """
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
-        html, body, [class*="st-"], h1, h2, h3, h4, h5, h6, p, div, span, input, button, label {
+        
+        html, body, [class*="st-"], h1, h2, h3, h4, h5, h6, p, div, span, input, button, label, select, option {
             font-family: 'Sarabun', sans-serif !important;
         }
+        
         .login-header { 
             text-align: center; 
             color: #00B900; 
@@ -149,6 +151,12 @@ def authentication_flow(df):
 def pdpa_consent_page():
     st.markdown("""
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+        
+        html, body, [class*="st-"], h1, h2, h3, h4, h5, h6, p, div, span, input, button, label, li, ul {
+            font-family: 'Sarabun', sans-serif !important;
+        }
+
         .pdpa-card { background-color: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #dee2e6; margin: 10px 0; color: #333; }
         .pdpa-content { background-color: white; padding: 15px; border-radius: 5px; height: 300px; overflow-y: auto; border: 1px solid #dee2e6; margin-bottom: 15px; font-size: 14px; color: #333; }
     </style>
