@@ -56,22 +56,31 @@ def get_report_css():
 
         body {
             font-family: 'Sarabun', sans-serif;
-            font-size: 13px; /* Optimized for A4 single page */
+            font-size: 13px;
             line-height: 1.3;
             color: #333;
             margin: 0;
-            padding: 20px;
-            background-color: #fff;
+            padding: 20px; /* Padding for screen view */
+            background-color: #eee; /* Grey background for screen view to distinguish paper */
             -webkit-print-color-adjust: exact;
         }
 
         @page {
             size: A4;
-            margin: 0.5cm; /* Small margins to fit everything */
+            margin: 0; /* Set to 0 to override browser defaults */
         }
 
         /* Layout Utility */
-        .container { width: 100%; max-width: 210mm; margin: 0 auto; }
+        .container { 
+            width: 210mm; 
+            min-height: 297mm;
+            margin: 0 auto; 
+            background-color: white;
+            padding: 10mm; /* Actual Margin on Paper (1cm) */
+            box-sizing: border-box;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1); /* Drop shadow for screen view */
+        }
+        
         .row { display: flex; flex-wrap: wrap; margin: 0 -10px; }
         .col-50 { width: 50%; flex: 0 0 50%; padding: 0 10px; box-sizing: border-box; }
 
@@ -154,7 +163,18 @@ def get_report_css():
 
         /* Print adjustments */
         @media print {
-            body { margin: 0; padding: 0; }
+            body { 
+                margin: 0; 
+                padding: 0; 
+                background-color: white; 
+            }
+            .container {
+                width: 100%;
+                margin: 0;
+                border: none;
+                box-shadow: none;
+                padding: 10mm; /* Enforce 10mm margin on print */
+            }
             .no-print { display: none; }
         }
     </style>
