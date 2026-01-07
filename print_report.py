@@ -76,7 +76,7 @@ def get_report_css():
             min-height: 297mm;
             margin: 0 auto; 
             background-color: white;
-            padding: 10mm; /* Actual Margin on Paper (1cm) */
+            padding: 5mm; /* Reduced to 0.5cm (5mm) */
             box-sizing: border-box;
             box-shadow: 0 0 10px rgba(0,0,0,0.1); /* Drop shadow for screen view */
         }
@@ -173,7 +173,7 @@ def get_report_css():
                 margin: 0;
                 border: none;
                 box-shadow: none;
-                padding: 10mm; /* Enforce 10mm margin on print */
+                padding: 5mm; /* Enforce 5mm (0.5cm) margin on print */
             }
             .no-print { display: none; }
         }
@@ -203,7 +203,7 @@ def generate_printable_report(person_data, all_person_history_df=None):
     """
     # --- 1. Prepare Data ---
     name = person_data.get('ชื่อ-สกุล', '-')
-    age = str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person_data.get('อายุ', '-')
+    age = str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')
     # FIX: Changed 'person' to 'person_data'
     hn = str(int(float(person_data.get('HN')))) if str(person_data.get('HN')).replace('.', '', 1).isdigit() else person_data.get('HN', '-')
     date = person_data.get("วันที่ตรวจ", datetime.now().strftime("%d/%m/%Y"))
