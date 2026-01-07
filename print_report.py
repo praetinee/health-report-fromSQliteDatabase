@@ -5,13 +5,14 @@ from collections import OrderedDict
 import json
 
 # --- Import a key function from performance_tests ---
-from performance_tests import generate_holistic_advice # (ยังคง import ไว้เผื่อใช้ในอนาคต แต่เราจะไม่เรียกใช้)
+from performance_tests import generate_holistic_advice
 from print_performance_report import generate_performance_report_html_for_main_report
 
 # ==============================================================================
 # NOTE: This file generates the printable health report.
 # Refactored to separate CSS and Body generation for Batch Printing.
 # Updated: Expanded font size and Auto-fit to 1 page layout.
+# Fixed: Corrected variable name 'person' to 'person_data' in render_header_and_vitals
 # ==============================================================================
 
 # --- START OF CHANGE: Add CBC Recommendation Texts ---
@@ -432,10 +433,6 @@ def render_section_header(title, subtitle=None):
     return f"<div class='section-header-box'>{full_title}</div>"
 
 def render_lab_table_html(title, subtitle, headers, rows, table_class="print-lab-table", footer_html=None):
-    # If subtitle is provided, append it to title or ignore based on preference. 
-    # Here we use the clean CSS box for headers so we can skip the extra div wrapper if needed, 
-    # but the old logic used a helper. Let's use the new section header helper.
-    
     header_html = render_section_header(title, subtitle)
     
     html_content = f"{header_html}<table class='{table_class}'><colgroup><col style='width: 40%;'><col style='width: 20%;'><col style='width: 40%;'></colgroup><thead><tr>"
@@ -459,7 +456,10 @@ def render_header_and_vitals(person_data):
     name = person_data.get('ชื่อ-สกุล', '-')
     age = str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person_data.get('อายุ', '-')
     sex = person_data.get('เพศ', '-')
-    hn = str(int(float(person_data.get('HN')))) if str(person_data.get('HN')).replace('.', '', 1).isdigit() else person.get('HN', '-')
+    
+    # FIXED: Replaced `person.get` with `person_data.get`
+    hn = str(int(float(person_data.get('HN')))) if str(person_data.get('HN')).replace('.', '', 1).isdigit() else person_data.get('HN', '-')
+    
     department = person_data.get('หน่วยงาน', '-')
     check_date = person_data.get("วันที่ตรวจ", "-")
     sbp, dbp = get_float("SBP", person_data), get_float("DBP", person_data)
@@ -670,4 +670,119 @@ def get_main_report_css():
             border: 1px solid #888; 
             text-align: center; 
             vertical-align: middle; 
-            font-size: 12px; /* ขนาดตัว
+            font-size: 12px; /* ขนาดตัวอักษรในตาราง */
+        }
+        
+        .print-lab-table th { background-color: #eee; font-weight: bold; }
+        .print-lab-table-abn { background-color: #fff1f0 !important; }
+        
+        .print-lab-table tfoot .recommendation-row td {
+            background-color: #f9f9f9;
+            font-size: 11px;
+            text-align: left;
+            padding: 2px 4px;
+        }
+        
+        .print-lab-table tfoot ul { padding-left: 15px; margin: 0; }
+        .print-lab-table tfoot li { margin-bottom: 1px; }
+        
+        /* Grid Layout for Header */
+        .header-grid { 
+            display: flex; 
+            align-items: flex-end; 
+            justify-content: space-between; 
+            margin-bottom: 5px; 
+            border-bottom: 2px solid #333; 
+            padding-bottom: 5px;
+        }
+        .info-table td { border: none; padding: 0 5px; font-size: 13px; text-align: left; }
+        
+        /* Section Headers */
+        .section-header-box {
+            background-color: #e0e0e0;
+            color: #000;
+            padding: 2px 5px;
+            font-weight: bold;
+            font-size: 13px;
+            border-radius: 2px;
+            margin-top: 3px;
+            margin-bottom: 2px;
+            border: 1px solid #ccc;
+        }
+        
+        .doctor-opinion-box {
+            background-color: #f1f8e9;
+            border: 1px solid #a5d6a7;
+            padding: 4px;
+            border-radius: 4px;
+            margin-top: 2px;
+            font-size: 12px;
+            min-height: 25px;
+        }
+        
+        .signature-section {
+            margin-top: 8px;
+            text-align: right;
+            page-break-inside: avoid;
+        }
+        
+        /* Utilities */
+        .text-danger { color: #d32f2f; font-weight: bold; }
+        
+        @media print {
+            body { -webkit-print-color-adjust: exact; }
+        }
+    </style>
+    """
+
+def render_printable_report_body(person_data, all_person_history_df=None):
+    """Generates the HTML body content (without <html><head>) for a single person."""
+    sex = str(person_data.get("เพศ", "")).strip()
+    if sex not in ["ชาย", "หญิง"]: sex = "ไม่ระบุ"
+    
+    cbc_results = generate_cbc_recommendations(person_data, sex)
+    urine_results = generate_urine_recommendations(person_data, sex)
+    doctor_opinion = generate_doctor_opinion(person_data, sex, cbc_results, urine_results)
+    
+    header_vitals_html = render_header_and_vitals(person_data)
+    lab_section_html = render_lab_section(person_data, sex, cbc_results)
+    other_results_html = render_other_results_html(person_data, sex, urine_results, doctor_opinion, all_person_history_df)
+    
+    signature_html = """
+    <div class="signature-section">
+        <div style="display: inline-block; text-align: center; width: 250px;">
+            <div style="border-bottom: 1px dotted #333; margin-bottom: 2px; width: 100%;"></div>
+            <div style="font-size: 12px;">นายแพทย์นพรัตน์ รัชฎาพร</div>
+            <div style="font-size: 11px;">แพทย์อาชีวเวชศาสตร์ ว.26674</div>
+        </div>
+    </div>
+    """
+    
+    return f"""
+    <div class="report-container">
+        {header_vitals_html}
+        {lab_section_html}
+        {other_results_html}
+        {signature_html}
+    </div>
+    """
+
+def generate_printable_report(person_data, all_person_history_df=None):
+    """Generates a full, self-contained HTML string for the health report."""
+    css_html = get_main_report_css()
+    body_html = render_printable_report_body(person_data, all_person_history_df)
+    
+    final_html = f"""
+    <!DOCTYPE html>
+    <html lang="th">
+    <head>
+        <meta charset="UTF-8">
+        <title>รายงานผลการตรวจสุขภาพ - {html.escape(person_data.get('ชื่อ-สกุล', ''))}</title>
+        {css_html}
+    </head>
+    <body>
+        {body_html}
+    </body>
+    </html>
+    """
+    return final_html
