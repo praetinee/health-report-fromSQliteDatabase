@@ -115,7 +115,7 @@ def inject_custom_css():
         }
 
         .stTabs [aria-selected="true"] {
-            background-color: var(--bg-color) !important; /* เปลี่ยนเป็นสีพื้นหลังตามธีม */
+            background-color: #ffffff !important; /* เปลี่ยนเป็นสีขาวตามที่ขอ */
             color: var(--primary) !important;
             border-radius: 10px 10px 0px 0px;
             box-shadow: 0 -2px 10px rgba(0,0,0,0.1); 
@@ -455,7 +455,7 @@ def get_ekg_col_name(year):
 
 def interpret_ekg(val):
     val = str(val or "").strip()
-    if is_empty(val): return "ไม่ได้เข้ารับการตรวจคลื่นไฟฟ้าหัวใจ"
+    if is_empty(val): return "ไม่ได้เข้ารับการตรวจ"
     if any(x in val.lower() for x in ["ผิดปกติ", "abnormal", "arrhythmia"]): return f"<span class='text-danger'>{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม</span>"
     return val
 
@@ -479,7 +479,7 @@ def interpret_bp(sbp, dbp):
 
 def interpret_cxr(val):
     val = str(val or "").strip()
-    if is_empty(val): return "ไม่ได้เข้ารับการตรวจเอกซเรย์"
+    if is_empty(val): return "ไม่ได้เข้ารับการตรวจ"
     if any(keyword in val.lower() for keyword in ["ผิดปกติ", "ฝ้า", "รอย", "abnormal", "infiltrate", "lesion"]): return f"<span class='text-danger'>{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม</span>"
     return val
 
@@ -768,7 +768,7 @@ def display_main_report(person_data, all_person_history_df):
             cxr_col = f"CXR{str(selected_year)[-2:]}" if selected_year != (datetime.now().year + 543) else "CXR"
             ekg_col_name = get_ekg_col_name(selected_year)
             hep_a_value = person.get("Hepatitis A")
-            hep_a_display_text = "ไม่ได้ตรวจ" if is_empty(hep_a_value) else safe_text(hep_a_value)
+            hep_a_display_text = "ไม่ได้เข้ารับการตรวจ" if is_empty(hep_a_value) else safe_text(hep_a_value)
 
             st.markdown(clean_html_string(f"""
             <div class="table-container">
@@ -821,7 +821,7 @@ def display_main_report(person_data, all_person_history_df):
                 status_class = ""
                 if status == 'immune':
                     status_class = 'immune-box'
-                elif status == 'no_immune':
+                elif status == 'no-immune':
                     status_class = 'no-immune-box'
                 else:
                     status_class = 'warning-box'
