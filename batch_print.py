@@ -3,6 +3,7 @@ import pandas as pd
 import html
 import json
 from datetime import datetime
+import base64
 
 # --- Import ฟังก์ชันสำหรับการสร้างรายงาน (Report Generation) ---
 from print_report import (
@@ -94,6 +95,11 @@ def get_batch_auto_fit_script():
                 report.style.zoom = scale;
             }
         }
+        
+        // Auto print after a short delay to allow scaling to apply
+        setTimeout(function() {
+            window.print();
+        }, 1000);
     };
     </script>
     """
@@ -509,39 +515,50 @@ def display_print_center_page(df):
                     if skipped > 0:
                         st.warning(f"สร้างรายงานสำเร็จ! (ข้าม {skipped} คน เนื่องจากไม่มีข้อมูล)")
                     else:
-                        st.success("สร้างรายงานสำเร็จครบถ้วน!")
+                        st.success("สร้างรายงานสำเร็จครบถ้วน! กำลังเปิดหน้าต่างพิมพ์...")
                     st.rerun()
                 else:
                     st.error("ไม่สามารถสร้างรายงานได้")
 
-    # --- Hidden Print Trigger ---
+    # --- Hidden Print Trigger & Manual Link ---
     if st.session_state.get("batch_print_ready", False):
         html_content = st.session_state.batch_print_html
-        escaped_html = json.dumps(html_content)
-        iframe_id = f"print-batch-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
         
+        # 1. Open New Tab Method (More Reliable)
+        # Encode HTML to Base64 to avoid quote escaping issues
+        b64_html = base64.b64encode(html_content.encode('utf-8')).decode('utf-8')
+        
+        # Javascript to open a new window and write content
         print_script = f"""
-        <iframe id="{iframe_id}" style="display:none;"></iframe>
         <script>
             (function() {{
-                const iframe = document.getElementById('{iframe_id}');
-                if (!iframe) return;
-                const doc = iframe.contentWindow.document;
-                doc.open();
-                doc.write({escaped_html});
-                doc.close();
-                iframe.onload = function() {{
-                    setTimeout(function() {{
-                        try {{ 
-                            iframe.contentWindow.focus(); 
-                            iframe.contentWindow.print(); 
-                        }} catch (e) {{ 
-                            console.error("Print error:", e); 
-                        }}
-                    }}, 1000);
-                }};
+                const htmlContent = decodeURIComponent(escape(window.atob("{b64_html}")));
+                const printWindow = window.open('', '_blank');
+                if (printWindow) {{
+                    printWindow.document.open();
+                    printWindow.document.write(htmlContent);
+                    printWindow.document.close();
+                    // Printing is triggered by window.onload inside the generated HTML
+                }} else {{
+                    console.error("Popup blocked");
+                    alert("โปรดอนุญาต Pop-up เพื่อพิมพ์รายงาน");
+                }}
             }})();
         </script>
         """
         st.components.v1.html(print_script, height=0, width=0)
-        st.session_state.batch_print_ready = False
+        
+        # 2. Provide a manual link if popup is blocked
+        st.markdown(f"""
+            <div style="text-align: center; margin-top: 20px; padding: 20px; background-color: #e8f5e9; border: 1px solid #4caf50; border-radius: 8px;">
+                <p style="color: #2e7d32; font-weight: bold;">หากหน้าต่างพิมพ์ไม่ปรากฏขึ้นอัตโนมัติ</p>
+                <a href="data:text/html;base64,{b64_html}" target="_blank" style="text-decoration: none;">
+                    <button style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;">
+                        🖨️ คลิกที่นี่เพื่อพิมพ์รายงาน
+                    </button>
+                </a>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # Do not immediately set to False so the link remains available
+        # You might want to add a "Close" button or rely on user navigating away
