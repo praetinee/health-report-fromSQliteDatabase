@@ -6,7 +6,7 @@ from datetime import datetime
 from performance_tests import interpret_audiogram, interpret_lung_capacity, interpret_cxr
 
 # ==============================================================================
-# Refactored for proper A4 full-width printing without excessive scaling.
+# Refactored: ปรับปรุง CSS ให้ Auto-fit เต็มหน้ากระดาษ A4 จริงๆ
 # ==============================================================================
 
 # --- Helper & Data Availability Functions ---
@@ -412,23 +412,23 @@ def get_performance_report_css():
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
         
         @page {
-            size: A4;
-            margin: 10mm;
+            size: A4 portrait;
+            margin: 1cm;
         }
 
         body {
             font-family: 'Sarabun', sans-serif !important;
-            font-size: 10px;
+            font-size: 10.5px;
             margin: 0;
             padding: 0;
             width: 100%;
-            color: #333;
             background-color: #fff;
+            color: #333;
         }
         
         .report-container {
             width: 100%;
-            margin: 0 auto;
+            box-sizing: border-box;
         }
 
         hr { border: 0; border-top: 1px solid #e0e0e0; margin: 0.3rem 0; }
@@ -573,6 +573,17 @@ def generate_performance_report_html(person_data, all_person_history_df):
     css_html = get_performance_report_css()
     body_html = render_performance_report_body(person_data, all_person_history_df)
     
+    # JavaScript: Auto-print on load
+    print_script = """
+    <script>
+        window.onload = function() {
+            setTimeout(function() {
+                window.print();
+            }, 800);
+        };
+    </script>
+    """
+    
     final_html = f"""
     <!DOCTYPE html>
     <html lang="th">
@@ -583,19 +594,17 @@ def generate_performance_report_html(person_data, all_person_history_df):
     </head>
     <body>
         {body_html}
-        <script>
-            window.onload = function() {{
-                setTimeout(function() {{
-                    window.print();
-                }}, 800);
-            }};
-        </script>
+        {print_script}
     </body>
     </html>
     """
     return final_html
 
 def generate_performance_report_html_for_main_report(person_data, all_person_history_df):
+    """
+    Generates a compact version of performance reports to be embedded
+    into the main health report.
+    """
     parts = []
     
     if has_vision_data(person_data):
