@@ -4,13 +4,33 @@ import numpy as np
 from datetime import datetime
 import base64
 import os
+import sqlite3
+import io
 
 @st.cache_data(ttl=3600)
 def load_data(file_path_or_buffer):
     """
-    โหลดข้อมูลจากไฟล์ Excel หรือ CSV
+    โหลดข้อมูลจากไฟล์ Excel, CSV หรือ SQLite Database
     """
     try:
+        # กรณีเป็น Database Path (String)
+        if isinstance(file_path_or_buffer, str):
+            if file_path_or_buffer.endswith('.db') or file_path_or_buffer.endswith('.sqlite'):
+                if not os.path.exists(file_path_or_buffer):
+                    return None
+                try:
+                    conn = sqlite3.connect(file_path_or_buffer)
+                    df = pd.read_sql("SELECT * FROM health_records", conn)
+                    conn.close()
+                    # แปลงคอลัมน์วันที่
+                    if 'Date' in df.columns:
+                        df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
+                    return df
+                except Exception as e:
+                    # ถ้าอ่าน DB ไม่ได้ อาจเป็นเพราะยังไม่มีตาราง
+                    return None
+
+        # กรณีเป็น File Buffer (Upload)
         # ตรวจสอบว่าเป็นไฟล์ Excel หรือ CSV
         if hasattr(file_path_or_buffer, 'name'):
             file_name = file_path_or_buffer.name
@@ -31,8 +51,75 @@ def load_data(file_path_or_buffer):
             
         return df
     except Exception as e:
-        st.error(f"Error loading data: {e}")
-        return pd.DataFrame()
+        # st.error(f"Error loading data: {e}") 
+        return None
+
+def safe_float(val):
+    """แปลงค่าเป็น float อย่างปลอดภัย (ใช้สำหรับการคำนวณ)"""
+    if pd.isna(val) or str(val).strip() == "":
+        return 0.0
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return 0.0
+
+def get_unique_years(df):
+    """ดึงรายการปีงบประมาณที่มีในข้อมูล"""
+    if df is None or df.empty:
+        return []
+    
+    years = []
+    if 'Year' in df.columns:
+        years = sorted(df['Year'].dropna().unique().tolist(), reverse=True)
+    elif 'Date' in df.columns:
+        years = sorted(df['Date'].dt.year.dropna().unique().tolist(), reverse=True)
+        
+    return years
+
+def filter_data_by_year(df, year):
+    """กรองข้อมูลตามปี"""
+    if df is None or df.empty or year is None:
+        return df
+        
+    if 'Year' in df.columns:
+        # ตรวจสอบประเภทข้อมูลของ Year ใน df ว่าเป็น int หรือ str เพื่อกรองให้ถูก
+        if pd.api.types.is_numeric_dtype(df['Year']):
+            try:
+                year = int(year)
+            except: pass
+        return df[df['Year'] == year]
+    elif 'Date' in df.columns:
+        return df[df['Date'].dt.year == int(year)]
+        
+    return df
+
+def process_uploaded_file(uploaded_file):
+    """ประมวลผลไฟล์ที่อัปโหลด (CSV/Excel) ให้เป็น DataFrame"""
+    try:
+        if uploaded_file.name.endswith('.csv'):
+            df = pd.read_csv(uploaded_file)
+        else:
+            df = pd.read_excel(uploaded_file)
+        
+        # Clean Columns
+        df.columns = df.columns.str.strip()
+        return df
+    except Exception as e:
+        st.error(f"Error reading file: {e}")
+        return None
+
+def sync_to_database(df, db_path='health_data.db'):
+    """บันทึก DataFrame ลง SQLite Database"""
+    try:
+        conn = sqlite3.connect(db_path)
+        df.to_sql('health_records', conn, if_exists='replace', index=False)
+        conn.close()
+        return True
+    except Exception as e:
+        st.error(f"Database Sync Error: {e}")
+        return False
+
+# --- Helper Functions for Data Cleaning & Search ---
 
 def clean_string(val):
     """ทำความสะอาดข้อมูลสตริง (ตัดช่องว่าง, จัดการ NaN)"""
@@ -70,13 +157,13 @@ def get_person_data(df, search_term, search_type="HN"):
     
     if search_type == "HN":
         col_name = 'HN'
-        # ทำความสะอาด search_term
         search_val = str(search_term).strip()
     elif search_type == "CID":
         col_name = 'เลขบัตรประชาชน'
         search_val = normalize_cid(search_term)
         # ทำความสะอาดคอลัมน์ใน df เพื่อเปรียบเทียบ
-        df[col_name] = df[col_name].apply(normalize_cid)
+        if col_name in df.columns:
+            df[col_name] = df[col_name].apply(normalize_cid)
     else:
         col_name = 'HN'
         search_val = str(search_term).strip()
@@ -116,7 +203,8 @@ def get_history_data(df, search_term, search_type="HN"):
     elif search_type == "CID":
         col_name = 'เลขบัตรประชาชน'
         search_val = normalize_cid(search_term)
-        df[col_name] = df[col_name].apply(normalize_cid)
+        if col_name in df.columns:
+            df[col_name] = df[col_name].apply(normalize_cid)
     else:
         col_name = 'HN'
         search_val = str(search_term).strip()
@@ -148,9 +236,12 @@ def calculate_age(dob):
             return 0
     else:
         birth_date = dob
-        
-    age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
-    return age
+    
+    try:
+        age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+        return age
+    except:
+        return 0
 
 def local_css(file_name):
     """
