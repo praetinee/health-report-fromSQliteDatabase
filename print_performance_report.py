@@ -3,16 +3,11 @@ import html
 from collections import OrderedDict
 from datetime import datetime
 
-# แก้ไข: import ฟังก์ชัน interpret_audiogram, interpret_lung_capacity, และ interpret_cxr
 from performance_tests import interpret_audiogram, interpret_lung_capacity, interpret_cxr
 
 # ==============================================================================
-# Module: print_performance_report.py
-# Purpose: Contains functions to generate HTML for performance test reports
-# (Vision, Hearing, Lung) for the standalone printable version.
-# Refactored for Batch Printing capability & Auto Fit.
+# Refactored for proper A4 full-width printing without excessive scaling.
 # ==============================================================================
-
 
 # --- Helper & Data Availability Functions ---
 
@@ -21,7 +16,6 @@ def is_empty(val):
     return pd.isna(val) or str(val).strip().lower() in ["", "-", "none", "nan", "null"]
 
 def has_vision_data(person_data):
-    """Check for any ACTUAL vision test data, ignoring summary/advice fields."""
     detailed_keys = [
         'ป.การรวมภาพ', 'ผ.การรวมภาพ',
         'ป.ความชัดของภาพระยะไกล', 'ผ.ความชัดของภาพระยะไกล',
@@ -41,19 +35,16 @@ def has_vision_data(person_data):
     return any(not is_empty(person_data.get(key)) for key in detailed_keys)
 
 def has_hearing_data(person_data):
-    """Check for detailed hearing (audiogram) data."""
     hearing_keys = ['R500', 'L500', 'R1k', 'L1k', 'R4k', 'L4k']
     return any(not is_empty(person_data.get(key)) for key in hearing_keys)
 
 def has_lung_data(person_data):
-    """Check for lung capacity test data."""
     key_indicators = ['FVC เปอร์เซ็นต์', 'FEV1เปอร์เซ็นต์', 'FEV1/FVC%']
     return any(not is_empty(person_data.get(key)) for key in key_indicators)
 
 # --- HTML Rendering Functions for Standalone Report ---
 
 def render_section_header(title, subtitle=None):
-    """Renders a styled section header for the print report."""
     full_title = f"{title} <span style='font-weight: normal;'>({subtitle})</span>" if subtitle else title
     return f"""
     <div class='section-header'>
@@ -62,7 +53,6 @@ def render_section_header(title, subtitle=None):
     """
 
 def render_html_header_and_personal_info(person):
-    """Renders the main header and personal info table for the print report."""
     check_date = person.get("วันที่ตรวจ", "-")
     name = person.get('ชื่อ-สกุล', '-')
     age = str(int(float(person.get('อายุ')))) if str(person.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')
@@ -118,7 +108,6 @@ def render_html_header_and_personal_info(person):
 
 
 def render_print_vision(person_data):
-    """Renders the Vision Test section for the print report with complete logic."""
     if not has_vision_data(person_data):
         return ""
 
@@ -221,7 +210,6 @@ def render_print_vision(person_data):
     """
 
 def render_print_hearing(person_data, all_person_history_df):
-    """Renders the Hearing Test (Audiometry) section for the print report."""
     if not has_hearing_data(person_data):
         return ""
         
@@ -347,7 +335,6 @@ def render_print_hearing(person_data, all_person_history_df):
     """
 
 def render_print_lung(person_data):
-    """Renders the Lung Capacity (Spirometry) section for the print report."""
     if not has_lung_data(person_data):
         return ""
         
@@ -418,8 +405,6 @@ def render_print_lung(person_data):
     </div>
     """
 
-# --- NEW FUNCTIONS FOR REFACTORING ---
-
 def get_performance_report_css():
     """Returns the CSS string for the performance report."""
     return """
@@ -428,14 +413,15 @@ def get_performance_report_css():
         
         @page {
             size: A4;
-            margin: 5mm;
+            margin: 10mm;
         }
 
         body {
             font-family: 'Sarabun', sans-serif !important;
-            font-size: 10px; /* ลดขนาดฟอนต์ให้เล็กลง */
+            font-size: 10px;
             margin: 0;
-            padding: 10px;
+            padding: 0;
+            width: 100%;
             color: #333;
             background-color: #fff;
         }
@@ -553,33 +539,6 @@ def get_performance_report_css():
     </style>
     """
 
-def get_auto_fit_script():
-    """
-    Returns the JavaScript code for Auto-Fit (Smart Scaling).
-    This ensures that even performance reports fit on a single page if possible.
-    """
-    return """
-    <script>
-    window.onload = function() {
-        const MAX_HEIGHT = 1060; // A4 height minus margins
-        
-        const reports = document.getElementsByClassName('report-container');
-        
-        for (let i = 0; i < reports.length; i++) {
-            const report = reports[i];
-            const actualHeight = report.scrollHeight;
-            
-            if (actualHeight > MAX_HEIGHT) {
-                let scale = MAX_HEIGHT / actualHeight;
-                if (scale < 0.65) scale = 0.65; // Don't scale too small
-                
-                report.style.zoom = scale;
-            }
-        }
-    };
-    </script>
-    """
-
 def render_performance_report_body(person_data, all_person_history_df):
     """Generates the HTML body content for the performance report."""
     header_html = render_html_header_and_personal_info(person_data)
@@ -613,7 +572,6 @@ def generate_performance_report_html(person_data, all_person_history_df):
     """
     css_html = get_performance_report_css()
     body_html = render_performance_report_body(person_data, all_person_history_df)
-    js_script = get_auto_fit_script()
     
     final_html = f"""
     <!DOCTYPE html>
@@ -625,17 +583,19 @@ def generate_performance_report_html(person_data, all_person_history_df):
     </head>
     <body>
         {body_html}
-        {js_script}
+        <script>
+            window.onload = function() {{
+                setTimeout(function() {{
+                    window.print();
+                }}, 800);
+            }};
+        </script>
     </body>
     </html>
     """
     return final_html
 
 def generate_performance_report_html_for_main_report(person_data, all_person_history_df):
-    """
-    Generates a compact version of performance reports to be embedded
-    into the main health report.
-    """
     parts = []
     
     if has_vision_data(person_data):
