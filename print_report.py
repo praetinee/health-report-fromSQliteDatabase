@@ -4,17 +4,13 @@ import html
 from collections import OrderedDict
 import json
 
-# --- Import a key function from performance_tests ---
 from performance_tests import generate_holistic_advice 
 from print_performance_report import generate_performance_report_html_for_main_report
 
 # ==============================================================================
-# NOTE: This file generates the printable health report.
-# Refactored to separate CSS and Body generation for Batch Printing.
-# Updated with Auto-Fit logic.
+# NOTE: ปรับปรุง CSS ให้พิมพ์เต็มหน้า A4 โดยไม่ต้องใช้ JS Scale ที่อาจทำให้เนื้อหาเล็กเกินไป
 # ==============================================================================
 
-# --- START OF CHANGE: Add CBC Recommendation Texts ---
 RECOMMENDATION_TEXTS_CBC = {
     "C2": "ให้รับประทานอาหารที่มีประโยชน์ เช่น นม ผักใบเขียว ถั่วเมล็ดแห้ง เนื้อสัตว์ ไข่ เป็นต้น พักผ่อนให้เพียงพอ ถ้ามีหน้ามืดวิงเวียน อ่อนเพลียหรือมีไข้ให้พบแพทย์",
     "C4": "ให้ดูแลสุขภาพให้แข็งแรง ออกกำลังกาย ทานอาหารที่มีประโยชน์ ระมัดระวังป้องกันการเกิดแผลเนื่องจากเลือดอาจออกได้ง่ายและหยุดยาก",
@@ -24,27 +20,20 @@ RECOMMENDATION_TEXTS_CBC = {
     "C10": "ให้นำผลตรวจพบแพทย์หาสาเหตุเกล็ดเลือดสูงกว่าปกติ หรือกรณีรู้สาเหตุให้รับการรักษาเดิม",
     "C13": "ให้รับประทานอาหารที่มีประโยชน์ เช่น นม ผักใบเขียว ถั่วเมล็ดแห้ง เนื้อสัตว์ ไข่ เป็นต้น พักผ่อนให้เพียงพอ หลีกเลี่ยงการอยู่ในที่ชุมชนที่มีโอกาสสัมผัสเชื้อโรคได้ง่าย ดูแลสุขภาพร่างกายให้แข็งแรง ถ้ามีหน้ามืดวิงเวียน อ่อนเพลียหรือมีไข้ให้พบแพทย์",
 }
-# --- END OF CHANGE ---
 
-# --- START OF CHANGE: Add Urine Recommendation Texts ---
 RECOMMENDATION_TEXTS_URINE = {
     "E11": "ให้หลีกเลี่ยงการทานอาหารที่มีน้ำตาลสูง",
     "E4": "แนะนำให้ตรวจปัสสาวะซ้ำ อาจมีการปนเปื้อนของประจำเดือน กรณีตรวจแล้วพบผิดปกติให้พบแพทย์เพื่อตรวจรักษาเพิ่มเติม",
     "E10": "แนะนำให้ตรวจปัสสาวะซ้ำ กรณีตรวจแล้วพบผิดปกติให้พบแพทย์เพื่อตรวจรักษาเพิ่มเติม",
-    "F3": "", # เป็นค่าว่างตามที่คุณแจ้ง
+    "F3": "",
     "E2": "อาจเกิดจากการปนเปื้อนในการเก็บปัสสาวะหรือมีการติดเชื้อในระบบทางเดินปัสสาวะให้ดื่มน้ำมากๆ ไม่ควรกลั้นปัสสาวะ ถ้ามีอาการ ผิดปกติ ปัสสาวะแสบขัด ขุ่น ปวดท้องน้อย ปวดบั้นเอว กลั้นปัสสาวะไม่อยู่ ไข้สูง หนาวสั่น ควรรีบไปพบแพทย์",
 }
-# --- END OF CHANGE ---
 
-
-# --- Helper Functions (adapted from app.py for printing) ---
-
+# --- Helper Functions ---
 def is_empty(val):
-    """Check if a value is empty, null, or whitespace."""
     return pd.isna(val) or str(val).strip().lower() in ["", "-", "none", "nan", "null"]
 
 def get_float(col, person_data):
-    """Safely gets a float value from person_data dictionary."""
     try:
         val = person_data.get(col, "")
         if is_empty(val): return None
@@ -52,7 +41,6 @@ def get_float(col, person_data):
     except: return None
 
 def flag(val, low=None, high=None, higher_is_better=False):
-    """Formats a lab value and flags it if it's abnormal for styling."""
     try:
         val_float = float(str(val).replace(",", "").strip())
     except (ValueError, TypeError):
@@ -149,8 +137,7 @@ def hepatitis_b_advice(hbsag, hbsab, hbcab):
     hbsag_logic = hbsag.lower()
     hbsab_logic = hbsab.lower()
     hbcab_logic = hbcab.lower()
-    if hbcab_logic == "-":
-        hbcab_logic = "negative" 
+    if hbcab_logic == "-": hbcab_logic = "negative" 
 
     if "positive" in hbsag_logic: return "ติดเชื้อไวรัสตับอักเสบบี", "infection"
     if "positive" in hbsab_logic and "positive" not in hbsag_logic: return "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี", "immune"
@@ -626,39 +613,39 @@ def render_other_results_html(person, sex, urine_statuses, doctor_opinion, all_p
     </table>
     """
 
-# --- NEW FUNCTIONS FOR REFACTORING ---
-
 def get_main_report_css():
-    """Returns the CSS string for the main report, optimized for single page fit."""
+    """Returns the CSS string for the main report, optimized for full-width print."""
     return """
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
         
         @page {
-            size: A4;
-            margin: 5mm; /* ขอบกระดาษเล็กที่สุดเพื่อให้พื้นที่เนื้อหามากที่สุด */
+            size: A4 portrait;
+            margin: 10mm; /* Standard A4 margin */
         }
 
         body { 
             font-family: 'Sarabun', sans-serif !important; 
-            font-size: 9px; /* ลดขนาดฟอนต์เริ่มต้นลงเล็กน้อย */
+            font-size: 10px; 
             margin: 0;
-            padding: 10px;
+            padding: 0;
+            width: 100%;
             color: #333; 
             background-color: #fff; 
         }
 
         .report-container {
             width: 100%;
-            margin: 0 auto;
-            /* Auto-fit magic happens in JS */
+            max-width: 100%;
+            margin: 0;
+            /* Remove fixed margins to allow full width */
         }
 
         p, div, span, td, th { line-height: 1.3; }
         table { border-collapse: collapse; width: 100%; }
         
         .print-lab-table td, .print-lab-table th { 
-            padding: 1px 3px; /* Compact padding */
+            padding: 2px 3px; 
             border: 1px solid #ccc; 
             text-align: center; 
             vertical-align: middle; 
@@ -668,11 +655,11 @@ def get_main_report_css():
         
         .print-lab-table tfoot .recommendation-row td {
             background-color: #fcf8e3;
-            font-size: 8.5px;
+            font-size: 9px;
             line-height: 1.2;
             border: 1px solid #ccc;
             text-align: left;
-            padding: 2px 4px;
+            padding: 3px 5px;
         }
         .print-lab-table tfoot ul {
             padding-left: 15px;
@@ -683,27 +670,24 @@ def get_main_report_css():
             margin-bottom: 1px;
         }
         
-        .header-grid { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 4px; }
+        .header-grid { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 5px; }
         .header-left { text-align: left; }
         .header-right { text-align: right; }
-        .info-table { font-size: 9px; text-align: left; }
-        .info-table td {{ padding: 0 4px; border: none; }}
+        .info-table { font-size: 10px; text-align: left; }
+        .info-table td {{ padding: 0 5px; border: none; }}
         
         .doctor-opinion-box {
             background-color: #e8f5e9;
             border-color: #a5d6a7;
             border: 1px solid #ddd;
-            padding: 2px 4px;
+            padding: 3px 5px;
             border-radius: 6px;
             line-height: 1.3;
             margin-top: 2px;
             page-break-inside: avoid;
-            font-size: 9px;
+            font-size: 10px;
             white-space: pre-wrap;
         }
-        
-        .perf-section { margin-top: 2px; page-break-inside: avoid; border: 1px solid #e0e0e0; border-radius: 4px; padding: 2px; }
-        .summary-box { background-color: #f8f9fa; border-radius: 4px; padding: 2px 4px; margin-top: 1px; font-size: 8.5px; }
         
         @media print { 
             body { -webkit-print-color-adjust: exact; margin: 0; } 
@@ -711,45 +695,6 @@ def get_main_report_css():
             .report-container:last-child { page-break-after: auto; }
         }
     </style>
-    """
-
-def get_auto_fit_script():
-    """
-    Returns the JavaScript code for Auto-Fit (Smart Scaling).
-    This script measures the content height and scales it down to fit A4 if needed.
-    """
-    return """
-    <script>
-    window.onload = function() {
-        // Target Height for A4 (approx pixels at 96dpi minus margins)
-        // A4 height ~1123px. Safety margin ~1050px.
-        const MAX_HEIGHT = 1060; 
-        
-        const reports = document.getElementsByClassName('report-container');
-        
-        for (let i = 0; i < reports.length; i++) {
-            const report = reports[i];
-            const actualHeight = report.scrollHeight;
-            
-            if (actualHeight > MAX_HEIGHT) {
-                // Calculate scale factor
-                let scale = MAX_HEIGHT / actualHeight;
-                
-                // Limit scale to prevent text becoming too small (e.g., 60%)
-                if (scale < 0.6) scale = 0.6;
-                
-                // Use zoom for better print layout handling in Chrome/Edge
-                report.style.zoom = scale;
-                
-                // Alternatively, use transform (uncomment if zoom fails in specific browsers)
-                // report.style.transform = "scale(" + scale + ")";
-                // report.style.transformOrigin = "top left";
-                // report.style.width = (100 / scale) + "%";
-                // report.style.marginBottom = "-" + (actualHeight * (1 - scale)) + "px";
-            }
-        }
-    };
-    </script>
     """
 
 def render_printable_report_body(person_data, all_person_history_df=None):
@@ -768,7 +713,7 @@ def render_printable_report_body(person_data, all_person_history_df=None):
     doctor_suggestion_html = ""
 
     signature_html = """
-    <div style="margin-top: 1.5rem; text-align: right; padding-right: 1rem; page-break-inside: avoid;">
+    <div style="margin-top: 2rem; text-align: right; padding-right: 1rem; page-break-inside: avoid;">
         <div style="display: inline-block; text-align: center; width: 250px;">
             <div style="border-bottom: 1px dotted #333; margin-bottom: 0.2rem; width: 100%;"></div>
             <div style="white-space: nowrap; font-size: 10px;">นายแพทย์นพรัตน์ รัชฎาพร</div>
@@ -777,7 +722,6 @@ def render_printable_report_body(person_data, all_person_history_df=None):
     </div>
     """
     
-    # Wrap in report-container for JS targeting
     return f"""
     <div class="report-container">
         {header_vitals_html}
@@ -792,7 +736,6 @@ def generate_printable_report(person_data, all_person_history_df=None):
     """Generates a full, self-contained HTML string for the health report."""
     css_html = get_main_report_css()
     body_html = render_printable_report_body(person_data, all_person_history_df)
-    js_script = get_auto_fit_script()
     
     final_html = f"""
     <!DOCTYPE html>
@@ -804,7 +747,13 @@ def generate_printable_report(person_data, all_person_history_df=None):
     </head>
     <body>
         {body_html}
-        {js_script}
+        <script>
+            window.onload = function() {{
+                setTimeout(function() {{
+                    window.print();
+                }}, 800);
+            }};
+        </script>
     </body>
     </html>
     """
