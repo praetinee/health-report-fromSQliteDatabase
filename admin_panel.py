@@ -2,8 +2,8 @@ import streamlit as st
 import pandas as pd
 from collections import OrderedDict
 import json
+import base64
 
-# --- Import Utils ---
 try:
     from utils import (
         is_empty,
@@ -23,7 +23,6 @@ except ImportError:
     def has_lung_data(row): return False
     def has_visualization_data(df): return False
 
-# --- Import Print Functions ---
 try:
     from print_report import generate_printable_report
     from print_performance_report import generate_performance_report_html
@@ -31,7 +30,6 @@ except ImportError:
     def generate_printable_report(*args): return ""
     def generate_performance_report_html(*args): return ""
 
-# --- Import Modules ---
 try:
     from batch_print import display_print_center_page
 except ImportError:
@@ -45,24 +43,60 @@ except ImportError:
 try:
     from shared_ui import (
         inject_custom_css,
-        display_common_header,
         display_main_report,
         display_performance_report
     )
 except Exception as e:
     def inject_custom_css(): pass
-    def display_common_header(data): st.write(f"**Reports for:** {data.get('ชื่อ-สกุล', 'Unknown')}")
     def display_main_report(p, a): st.error("Main Report Function Missing")
     def display_performance_report(p, r, a=None): st.error("Performance Report Function Missing")
 
+# Note: We duplicate the custom header function here to avoid circular imports with app.py
+def render_admin_header_with_actions(person_data, available_years):
+    name = person_data.get('ชื่อ-สกุล', '-')
+    age = str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person_data.get('อายุ', '-')
+    sex = person_data.get('เพศ', '-')
+    hn = str(int(float(person_data.get('HN')))) if str(person_data.get('HN')).replace('.', '', 1).isdigit() else person_data.get('HN', '-')
+    department = person_data.get('หน่วยงาน', '-')
+    check_date = person_data.get("วันที่ตรวจ", "-")
+    
+    icon_profile = """<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>"""
+    
+    # Simple container for header
+    st.markdown(f"""
+    <div style="background-color: white; padding: 20px; border-radius: 12px; border: 1px solid #ddd; margin-bottom: 20px;">
+        <div style="display: flex; gap: 15px; align-items: flex-start;">
+            <div style="min-width: 60px; height: 60px; background-color: rgba(0, 121, 107, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #00796B;">
+                {icon_profile}
+            </div>
+            <div style="flex: 1;">
+                <div style="font-size: 1.5rem; font-weight: bold; line-height: 1.2;">{name}</div>
+                <div style="font-size: 0.95rem; opacity: 0.8; margin-top: 4px;">
+                    HN: {hn} | เพศ: {sex} | อายุ: {age} ปี | หน่วยงาน: {department}
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-weight: bold; color: #00796B;">วันที่ตรวจ: {check_date}</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Action Buttons (Same as Main App)
+    cb1, cb2, cb3 = st.columns([1.5, 1.5, 4])
+    with cb1:
+        if st.button("🖨️ พิมพ์ผลสุขภาพ", key="adm_print_h", use_container_width=True):
+            st.session_state.admin_print_trigger = True
+    with cb2:
+        if st.button("🖨️ พิมพ์สมรรถภาพ", key="adm_print_p", use_container_width=True):
+            st.session_state.admin_print_performance_trigger = True
+
 def display_admin_panel(df):
     """แสดงหน้าจอหลักสำหรับ Admin (Search Panel)"""
-    # ⚠️ ชื่อฟังก์ชันต้องเป็น display_admin_panel เพื่อให้ตรงกับ app.py
     
     st.set_page_config(page_title="Admin Panel", layout="wide")
     inject_custom_css()
 
-    # Init Session State
     if 'admin_search_term' not in st.session_state: st.session_state.admin_search_term = ""
     if 'admin_search_results' not in st.session_state: st.session_state.admin_search_results = None 
     if 'admin_selected_hn' not in st.session_state: st.session_state.admin_selected_hn = None
@@ -71,7 +105,6 @@ def display_admin_panel(df):
     if 'admin_print_performance_trigger' not in st.session_state: st.session_state.admin_print_performance_trigger = False
     if "admin_person_row" not in st.session_state: st.session_state.admin_person_row = None
 
-    # Sidebar Logout
     with st.sidebar:
         st.title("Admin Panel")
         if st.button("ออกจากระบบ (Logout)", use_container_width=True):
@@ -86,7 +119,6 @@ def display_admin_panel(df):
                 if key in st.session_state: del st.session_state[key]
             st.rerun()
 
-    # Tabs (ตัดส่วนจัดการ LINE Users ออกแล้ว)
     tab_search, tab_print = st.tabs(["🔍 ค้นหาผู้ป่วย (Search)", "🖨️ ศูนย์พิมพ์รายงาน (Print Center)"])
 
     # --- TAB 1: Search ---
@@ -103,13 +135,11 @@ def display_admin_panel(df):
             st.session_state.admin_search_term = search_term
             if search_term:
                 nm_search = normalize_name(search_term)
-                # กรองข้อมูล
                 mask = (df['ชื่อ-สกุล'].apply(normalize_name).str.contains(nm_search, case=False, na=False) |
                         (df['HN'].astype(str) == search_term) |
                         (df['เลขบัตรประชาชน'].astype(str) == search_term))
                 results = df[mask]
                 st.session_state.admin_search_results = results if not results.empty else pd.DataFrame()
-                # Auto select ถ้าเจอคนเดียว
                 st.session_state.admin_selected_hn = results['HN'].iloc[0] if len(results['HN'].unique()) == 1 else None
             else:
                 st.session_state.admin_search_results = None
@@ -117,7 +147,6 @@ def display_admin_panel(df):
             st.session_state.admin_person_row = None
             st.rerun()
 
-        # Display Results
         if st.session_state.admin_search_results is not None:
             results = st.session_state.admin_search_results
             if results.empty:
@@ -127,7 +156,6 @@ def display_admin_panel(df):
                 options = {hn: f"{row['ชื่อ-สกุล']} (HN: {hn})" for hn, row in unique_results.iterrows()}
                 hn_list = list(options.keys())
                 
-                # Select Box
                 if len(hn_list) > 1 or st.session_state.admin_selected_hn is None:
                     curr = st.session_state.admin_selected_hn if st.session_state.admin_selected_hn in hn_list else hn_list[0]
                     sel_hn = st.selectbox("เลือกผู้ป่วย", hn_list, format_func=lambda x: options[x], index=hn_list.index(curr))
@@ -137,7 +165,6 @@ def display_admin_panel(df):
                         st.session_state.admin_person_row = None
                         st.rerun()
                 
-                # Show Patient Details
                 if st.session_state.admin_selected_hn:
                     hn = st.session_state.admin_selected_hn
                     history = df[df['HN'] == hn].copy()
@@ -159,7 +186,9 @@ def display_admin_panel(df):
                     
                     if st.session_state.admin_person_row:
                         p_row = st.session_state.admin_person_row
-                        display_common_header(p_row)
+                        
+                        # Use Custom Header with Print Actions
+                        render_admin_header_with_actions(p_row, years)
                         
                         tabs_map = OrderedDict()
                         if has_visualization_data(history): tabs_map['ภาพรวม (Graphs)'] = 'viz'
@@ -169,12 +198,6 @@ def display_admin_panel(df):
                         if has_lung_data(p_row): tabs_map['ปอด'] = 'lung'
 
                         if tabs_map:
-                            st.markdown("""
-                            <div style="background-color: #e3f2fd; padding: 15px; border-radius: 8px; border-left: 6px solid #2196f3; margin-bottom: 20px;">
-                                <h4 style="margin:0; color: #0d47a1; font-size: 18px;">👇 เลือกหัวข้อด้านล่างเพื่อดูผลตรวจ</h4>
-                            </div>
-                            """, unsafe_allow_html=True)
-                            
                             t_objs = st.tabs(list(tabs_map.keys()))
                             for i, (k, v) in enumerate(tabs_map.items()):
                                 with t_objs[i]:
@@ -186,18 +209,19 @@ def display_admin_panel(df):
                         else:
                             st.warning("ไม่พบข้อมูลการตรวจในปีนี้")
 
-                    # Hidden Print Triggers
+                    # Handle Print Triggers in Admin Panel
                     if st.session_state.admin_print_trigger:
                         h = generate_printable_report(st.session_state.admin_person_row, history)
-                        st.components.v1.html(f"<script>var w=window.open();w.document.write({json.dumps(h)});w.print();w.close();</script>", height=0)
+                        b64_html = base64.b64encode(h.encode('utf-8')).decode('utf-8')
+                        st.components.v1.html(f"<script>var w=window.open('','_blank');w.document.write(decodeURIComponent(escape(window.atob('{b64_html}'))));w.document.close();</script>", height=0)
                         st.session_state.admin_print_trigger = False
                     
                     if st.session_state.admin_print_performance_trigger:
                         h = generate_performance_report_html(st.session_state.admin_person_row, history)
-                        st.components.v1.html(f"<script>var w=window.open();w.document.write({json.dumps(h)});w.print();w.close();</script>", height=0)
+                        b64_html = base64.b64encode(h.encode('utf-8')).decode('utf-8')
+                        st.components.v1.html(f"<script>var w=window.open('','_blank');w.document.write(decodeURIComponent(escape(window.atob('{b64_html}'))));w.document.close();</script>", height=0)
                         st.session_state.admin_print_performance_trigger = False
 
     # --- TAB 2: Print Center ---
     with tab_print:
-        # เรียกใช้ฟังก์ชันเดิมที่มีอยู่แล้วใน batch_print.py
         display_print_center_page(df)
