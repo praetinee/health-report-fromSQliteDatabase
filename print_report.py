@@ -114,21 +114,21 @@ def is_urine_abnormal(test_name, value, normal_range):
     return False
 
 def interpret_stool_exam(val):
-    if is_empty(val): return "ไม่ได้เข้ารับการตรวจ"
+    if is_empty(val): return "ไม่ได้ตรวจ"
     val_lower = str(val).strip().lower()
     if val_lower == "normal": return "ไม่พบเม็ดเลือดขาวในอุจจาระ ถือว่าปกติ"
     if "wbc" in val_lower or "เม็ดเลือดขาว" in val_lower: return "พบเม็ดเลือดขาวในอุจจาระ นัดตรวจซ้ำ"
     return val
 
 def interpret_stool_cs(value):
-    if is_empty(value): return "ไม่ได้เข้ารับการตรวจ"
+    if is_empty(value): return "ไม่ได้ตรวจ"
     val_strip = str(value).strip()
     if "ไม่พบ" in val_strip or "ปกติ" in val_strip: return "ไม่พบการติดเชื้อ"
     return "พบการติดเชื้อในอุจจาระ ให้พบแพทย์เพื่อตรวจรักษาเพิ่มเติม"
 
 def interpret_cxr(val):
     val = str(val or "").strip()
-    if is_empty(val): return "ไม่ได้เข้ารับการตรวจเอกซเรย์"
+    if is_empty(val): return "ไม่ได้ตรวจ"
     if any(keyword in val.lower() for keyword in ["ผิดปกติ", "ฝ้า", "รอย", "abnormal", "infiltrate", "lesion"]):
         return f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
     return val
@@ -139,7 +139,7 @@ def get_ekg_col_name(year):
 
 def interpret_ekg(val):
     val = str(val or "").strip()
-    if is_empty(val): return "ไม่ได้เข้ารับการตรวจคลื่นไฟฟ้าหัวใจ"
+    if is_empty(val): return "ไม่ได้ตรวจ"
     if any(x in val.lower() for x in ["ผิดปกติ", "abnormal", "arrhythmia"]):
         return f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
     return val
@@ -554,7 +554,7 @@ def render_other_results_html(person, sex, urine_statuses, doctor_opinion, all_p
     </table>
     """
     hep_a_value = person.get("Hepatitis A")
-    hep_a_display_text = "ไม่ได้เข้ารับการตรวจไวรัสตับอักเสบเอ" if is_empty(hep_a_value) else safe_value(hep_a_value)
+    hep_a_display_text = "ไม่ได้ตรวจ" if is_empty(hep_a_value) else safe_value(hep_a_value)
 
     hbsag_current = person.get("HbsAg")
     hbsab_current = person.get("HbsAb")
