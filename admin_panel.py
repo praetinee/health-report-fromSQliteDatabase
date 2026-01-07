@@ -1,147 +1,203 @@
 import streamlit as st
 import pandas as pd
-import io
-import plotly.express as px
-from datetime import datetime
-from batch_print import render_batch_print_page
-from print_performance_report import render_print_performance_report_page
+from collections import OrderedDict
+import json
 
-def render_admin_dashboard(df):
-    """
-    ฟังก์ชันหลักสำหรับแสดงหน้า Dashboard ของผู้ดูแลระบบ
-    """
-    st.markdown("""
-    <style>
-        .admin-header {
-            color: #00B900;
-            font-weight: bold;
-            font-size: 24px;
-            margin-bottom: 20px;
-        }
-        .stat-card {
-            background-color: white;
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            text-align: center;
-        }
-        .stat-value {
-            font-size: 24px;
-            font-weight: bold;
-            color: #00B900;
-        }
-        .stat-label {
-            font-size: 14px;
-            color: #666;
-        }
-    </style>
-    """, unsafe_allow_html=True)
+# --- Import Utils ---
+try:
+    from utils import (
+        is_empty,
+        normalize_name,
+        has_basic_health_data,
+        has_vision_data,
+        has_hearing_data,
+        has_lung_data,
+        has_visualization_data
+    )
+except ImportError:
+    def is_empty(val): return pd.isna(val) or str(val).strip() == ""
+    def normalize_name(name): return str(name).strip()
+    def has_basic_health_data(row): return True
+    def has_vision_data(row): return False
+    def has_hearing_data(row): return False
+    def has_lung_data(row): return False
+    def has_visualization_data(df): return False
 
-    st.markdown("<h2 class='admin-header'>แผงควบคุมผู้ดูแลระบบ (Admin Dashboard)</h2>", unsafe_allow_html=True)
+# --- Import Print Functions ---
+try:
+    from print_report import generate_printable_report
+    from print_performance_report import generate_performance_report_html
+except ImportError:
+    def generate_printable_report(*args): return ""
+    def generate_performance_report_html(*args): return ""
+
+# --- Import Modules ---
+try:
+    from batch_print import display_print_center_page
+except ImportError:
+    def display_print_center_page(*args): st.info("Batch Print module not found")
+
+try:
+    from visualization import display_visualization_tab 
+except ImportError:
+    def display_visualization_tab(person_data, all_df): st.info("Visualization module not found")
+
+try:
+    from shared_ui import (
+        inject_custom_css,
+        display_common_header,
+        display_main_report,
+        display_performance_report
+    )
+except Exception as e:
+    def inject_custom_css(): pass
+    def display_common_header(data): st.write(f"**Reports for:** {data.get('ชื่อ-สกุล', 'Unknown')}")
+    def display_main_report(p, a): st.error("Main Report Function Missing")
+    def display_performance_report(p, r, a=None): st.error("Performance Report Function Missing")
+
+def display_admin_panel(df):
+    """แสดงหน้าจอหลักสำหรับ Admin (Search Panel)"""
+    # ⚠️ ชื่อฟังก์ชันต้องเป็น display_admin_panel เพื่อให้ตรงกับ app.py
     
-    # --- ส่วนสรุปข้อมูลสถิติ ---
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        total_records = len(df)
-        st.markdown(f"""
-        <div class="stat-card">
-            <div class="stat-value">{total_records:,}</div>
-            <div class="stat-label">จำนวนระเบียนทั้งหมด</div>
-        </div>
-        """, unsafe_allow_html=True)
+    st.set_page_config(page_title="Admin Panel", layout="wide")
+    inject_custom_css()
+
+    # Init Session State
+    if 'admin_search_term' not in st.session_state: st.session_state.admin_search_term = ""
+    if 'admin_search_results' not in st.session_state: st.session_state.admin_search_results = None 
+    if 'admin_selected_hn' not in st.session_state: st.session_state.admin_selected_hn = None
+    if 'admin_selected_year' not in st.session_state: st.session_state.admin_selected_year = None
+    if 'admin_print_trigger' not in st.session_state: st.session_state.admin_print_trigger = False
+    if 'admin_print_performance_trigger' not in st.session_state: st.session_state.admin_print_performance_trigger = False
+    if "admin_person_row" not in st.session_state: st.session_state.admin_person_row = None
+
+    # Sidebar Logout
+    with st.sidebar:
+        st.title("Admin Panel")
+        if st.button("ออกจากระบบ (Logout)", use_container_width=True):
+            keys_to_clear = [
+                'authenticated', 'pdpa_accepted', 'user_hn', 'user_name', 'is_admin',
+                'search_result', 'selected_year', 'person_row', 'selected_row_found',
+                'admin_search_term', 'admin_search_results', 'admin_selected_hn',
+                'admin_selected_year', 'admin_person_row', 'batch_print_ready', 'batch_print_html',
+                'bp_dept_filter', 'bp_date_filter', 'bp_report_type'
+            ]
+            for key in keys_to_clear:
+                if key in st.session_state: del st.session_state[key]
+            st.rerun()
+
+    # Tabs (ตัดส่วนจัดการ LINE Users ออกแล้ว)
+    tab_search, tab_print = st.tabs(["🔍 ค้นหาผู้ป่วย (Search)", "🖨️ ศูนย์พิมพ์รายงาน (Print Center)"])
+
+    # --- TAB 1: Search ---
+    with tab_search:
+        with st.form(key="admin_search_form"):
+            st.markdown("<b>ค้นหา (ระบุ ชื่อ, HN หรือเลขบัตรประชาชน)</b>", unsafe_allow_html=True)
+            c1, c2 = st.columns([4, 1])
+            with c1: 
+                search_term = st.text_input("Search Term", value=st.session_state.admin_search_term, label_visibility="collapsed", placeholder="กรอกข้อมูลที่ต้องการค้นหา...")
+            with c2: 
+                submitted = st.form_submit_button("ค้นหา", use_container_width=True)
         
-    with col2:
-        # นับจำนวนผู้รับบริการที่ไม่ซ้ำ (อ้างอิงจาก HN)
-        unique_patients = df['HN'].nunique() if 'HN' in df.columns else 0
-        st.markdown(f"""
-        <div class="stat-card">
-            <div class="stat-value">{unique_patients:,}</div>
-            <div class="stat-label">จำนวนผู้รับบริการ (คน)</div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-    with col3:
-        # สรุปผลการประเมิน (ตัวอย่าง: นับจำนวนที่มีความเสี่ยง)
-        # สมมติว่ามีคอลัมน์ 'CVD_Risk' หรือสรุปจากคอลัมน์อื่น
-        risk_count = 0
-        if 'ผลประเมิน' in df.columns:
-             # นับเฉพาะที่มีคำว่า 'เสี่ยง' หรือ 'สูง'
-            risk_count = df['ผลประเมิน'].astype(str).apply(lambda x: 1 if 'เสี่ยง' in x or 'สูง' in x else 0).sum()
-            
-        st.markdown(f"""
-        <div class="stat-card">
-            <div class="stat-value">{risk_count:,}</div>
-            <div class="stat-label">กลุ่มเสี่ยง/ผิดปกติ</div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-    with col4:
-        # ข้อมูลล่าสุด
-        last_update = "-"
-        if 'วันที่ตรวจ' in df.columns:
-            try:
-                # แปลงวันที่ให้เป็น datetime เพื่อหาค่าล่าสุด
-                dates = pd.to_datetime(df['วันที่ตรวจ'], errors='coerce')
-                last_date = dates.max()
-                if not pd.isna(last_date):
-                    # แปลงเป็นปี พ.ศ.
-                    thai_year = last_date.year + 543
-                    last_update = last_date.strftime(f"%d/%m/{thai_year}")
-            except:
-                pass
+        if submitted:
+            st.session_state.admin_search_term = search_term
+            if search_term:
+                nm_search = normalize_name(search_term)
+                # กรองข้อมูล
+                mask = (df['ชื่อ-สกุล'].apply(normalize_name).str.contains(nm_search, case=False, na=False) |
+                        (df['HN'].astype(str) == search_term) |
+                        (df['เลขบัตรประชาชน'].astype(str) == search_term))
+                results = df[mask]
+                st.session_state.admin_search_results = results if not results.empty else pd.DataFrame()
+                # Auto select ถ้าเจอคนเดียว
+                st.session_state.admin_selected_hn = results['HN'].iloc[0] if len(results['HN'].unique()) == 1 else None
+            else:
+                st.session_state.admin_search_results = None
+            st.session_state.admin_selected_year = None
+            st.session_state.admin_person_row = None
+            st.rerun()
+
+        # Display Results
+        if st.session_state.admin_search_results is not None:
+            results = st.session_state.admin_search_results
+            if results.empty:
+                st.warning("ไม่พบข้อมูล")
+            else:
+                unique_results = results.drop_duplicates(subset=['HN']).set_index('HN')
+                options = {hn: f"{row['ชื่อ-สกุล']} (HN: {hn})" for hn, row in unique_results.iterrows()}
+                hn_list = list(options.keys())
                 
-        st.markdown(f"""
-        <div class="stat-card">
-            <div class="stat-value">{last_update}</div>
-            <div class="stat-label">อัปเดตข้อมูลล่าสุด</div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-    st.markdown("---")
+                # Select Box
+                if len(hn_list) > 1 or st.session_state.admin_selected_hn is None:
+                    curr = st.session_state.admin_selected_hn if st.session_state.admin_selected_hn in hn_list else hn_list[0]
+                    sel_hn = st.selectbox("เลือกผู้ป่วย", hn_list, format_func=lambda x: options[x], index=hn_list.index(curr))
+                    if sel_hn != st.session_state.admin_selected_hn:
+                        st.session_state.admin_selected_hn = sel_hn
+                        st.session_state.admin_selected_year = None
+                        st.session_state.admin_person_row = None
+                        st.rerun()
+                
+                # Show Patient Details
+                if st.session_state.admin_selected_hn:
+                    hn = st.session_state.admin_selected_hn
+                    history = df[df['HN'] == hn].copy()
+                    years = sorted(history["Year"].dropna().unique().astype(int), reverse=True)
+                    
+                    if years:
+                        if st.session_state.admin_selected_year not in years: st.session_state.admin_selected_year = years[0]
+                        sel_year = st.selectbox("เลือกปี พ.ศ.", years, index=years.index(st.session_state.admin_selected_year), format_func=lambda y: f"พ.ศ. {y}")
+                        
+                        if sel_year != st.session_state.admin_selected_year:
+                            st.session_state.admin_selected_year = sel_year
+                            st.session_state.admin_person_row = None
+                            st.rerun()
 
-    # --- เมนูการทำงาน ---
-    tab1, tab2, tab3 = st.tabs(["📊 ภาพรวมข้อมูล", "🖨️ พิมพ์รายงานแบบกลุ่ม", "📑 รายงานสรุปผลการดำเนินงาน"])
-    
-    with tab1:
-        st.subheader("ภาพรวมข้อมูลสุขภาพ")
-        
-        # ตัวอย่างกราฟ 1: การกระจายตัวของ BMI (ถ้ามีข้อมูล)
-        if 'BMI' in df.columns:
-            try:
-                # แปลงข้อมูลเป็นตัวเลข
-                df['BMI_Val'] = pd.to_numeric(df['BMI'], errors='coerce')
-                fig_bmi = px.histogram(df, x='BMI_Val', nbins=20, title='การกระจายตัวของค่าดัชนีมวลกาย (BMI)',
-                                      labels={'BMI_Val': 'ค่า BMI', 'count': 'จำนวนคน'},
-                                      color_discrete_sequence=['#00B900'])
-                st.plotly_chart(fig_bmi, use_container_width=True)
-            except:
-                st.info("ไม่สามารถแสดงกราฟ BMI ได้ เนื่องจากรูปแบบข้อมูลไม่ถูกต้อง")
-        
-        # ตัวอย่างกราฟ 2: แยกตามเพศ (ถ้ามีข้อมูล)
-        if 'เพศ' in df.columns:
-            gender_counts = df['เพศ'].value_counts().reset_index()
-            gender_counts.columns = ['เพศ', 'จำนวน']
-            fig_gender = px.pie(gender_counts, values='จำนวน', names='เพศ', title='สัดส่วนผู้รับบริการแยกตามเพศ',
-                               color_discrete_sequence=px.colors.qualitative.Set2)
-            st.plotly_chart(fig_gender, use_container_width=True)
-            
-        # ตารางข้อมูลดิบ (แสดง 100 แถวแรก)
-        with st.expander("ดูข้อมูลดิบ (100 รายการล่าสุด)"):
-            st.dataframe(df.head(100))
-            
-            # ปุ่มดาวน์โหลด CSV
-            csv = df.to_csv(index=False).encode('utf-8-sig')
-            st.download_button(
-                "ดาวน์โหลดข้อมูลทั้งหมดเป็น CSV",
-                csv,
-                "health_data_export.csv",
-                "text/csv",
-                key='download-csv'
-            )
+                        if st.session_state.admin_person_row is None:
+                            yr_df = history[history["Year"] == sel_year]
+                            if not yr_df.empty:
+                                st.session_state.admin_person_row = yr_df.bfill().ffill().iloc[0].to_dict()
+                    
+                    if st.session_state.admin_person_row:
+                        p_row = st.session_state.admin_person_row
+                        display_common_header(p_row)
+                        
+                        tabs_map = OrderedDict()
+                        if has_visualization_data(history): tabs_map['ภาพรวม (Graphs)'] = 'viz'
+                        if has_basic_health_data(p_row): tabs_map['สุขภาพพื้นฐาน'] = 'main'
+                        if has_vision_data(p_row): tabs_map['การมองเห็น'] = 'vision'
+                        if has_hearing_data(p_row): tabs_map['การได้ยิน'] = 'hearing'
+                        if has_lung_data(p_row): tabs_map['ปอด'] = 'lung'
 
-    with tab2:
-        render_batch_print_page(df)
+                        if tabs_map:
+                            st.markdown("""
+                            <div style="background-color: #e3f2fd; padding: 15px; border-radius: 8px; border-left: 6px solid #2196f3; margin-bottom: 20px;">
+                                <h4 style="margin:0; color: #0d47a1; font-size: 18px;">👇 เลือกหัวข้อด้านล่างเพื่อดูผลตรวจ</h4>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
+                            t_objs = st.tabs(list(tabs_map.keys()))
+                            for i, (k, v) in enumerate(tabs_map.items()):
+                                with t_objs[i]:
+                                    if v == 'viz': display_visualization_tab(p_row, history)
+                                    elif v == 'main': display_main_report(p_row, history)
+                                    elif v == 'vision': display_performance_report(p_row, 'vision')
+                                    elif v == 'hearing': display_performance_report(p_row, 'hearing', all_person_history_df=history)
+                                    elif v == 'lung': display_performance_report(p_row, 'lung')
+                        else:
+                            st.warning("ไม่พบข้อมูลการตรวจในปีนี้")
 
-    with tab3:
-        render_print_performance_report_page(df)
+                    # Hidden Print Triggers
+                    if st.session_state.admin_print_trigger:
+                        h = generate_printable_report(st.session_state.admin_person_row, history)
+                        st.components.v1.html(f"<script>var w=window.open();w.document.write({json.dumps(h)});w.print();w.close();</script>", height=0)
+                        st.session_state.admin_print_trigger = False
+                    
+                    if st.session_state.admin_print_performance_trigger:
+                        h = generate_performance_report_html(st.session_state.admin_person_row, history)
+                        st.components.v1.html(f"<script>var w=window.open();w.document.write({json.dumps(h)});w.print();w.close();</script>", height=0)
+                        st.session_state.admin_print_performance_trigger = False
+
+    # --- TAB 2: Print Center ---
+    with tab_print:
+        # เรียกใช้ฟังก์ชันเดิมที่มีอยู่แล้วใน batch_print.py
+        display_print_center_page(df)
