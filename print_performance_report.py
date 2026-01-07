@@ -433,7 +433,7 @@ def get_performance_report_css():
             background-color: #fff;
         }
         hr { border: 0; border-top: 1px solid #e0e0e0; margin: 0.5rem 0; }
-        .info-table { width: 100%; font-size: 12px; text-align: left; border-collapse: collapse; }
+        .info-table { width: 100%; font-size: 13px; text-align: left; border-collapse: collapse; }
         .info-table td { padding: 1px 5px; }
         
         .header-grid { display: flex; align-items: flex-end; justify-content: space-between; }
@@ -447,7 +447,7 @@ def get_performance_report_css():
             color: white; text-align: center;
             padding: 0.4rem; font-weight: bold; border-radius: 8px;
             margin-bottom: 0.7rem;
-            font-size: 14.5px;
+            font-size: 15px;
         }
 
         .content-columns { display: flex; gap: 15px; align-items: flex-start; }
@@ -455,7 +455,7 @@ def get_performance_report_css():
         .side-content { flex: 1; min-width: 0; }
         .main-content-full { width: 100%; }
 
-        .data-table { width: 100%; font-size: 12px; border-collapse: collapse; }
+        .data-table { width: 100%; font-size: 13px; border-collapse: collapse; }
         .data-table.hearing-table { table-layout: fixed; }
         .data-table th, .data-table td {
             border: 1px solid #e0e0e0; padding: 4px; text-align: center;
@@ -475,7 +475,7 @@ def get_performance_report_css():
             background-color: #f9f9f9;
             border-radius: 6px;
             margin-bottom: 0.5rem;
-            font-size: 13.5px;
+            font-size: 14px;
             font-weight: bold;
             page-break-inside: avoid; 
         }
@@ -489,12 +489,12 @@ def get_performance_report_css():
         .summary-title-lung {
             text-align: center;
             font-weight: bold;
-            font-size: 12.5px;
+            font-size: 14px;
             margin-bottom: 8px;
             line-height: 1.2;
         }
         .advice-box {
-            border-radius: 6px; padding: 8px 12px; font-size: 12px;
+            border-radius: 6px; padding: 8px 12px; font-size: 13px;
             line-height: 1.5; border: 1px solid;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             margin-bottom: 5px; 
@@ -529,7 +529,7 @@ def get_performance_report_css():
         }
         .signature-line .name, .signature-line .title, .signature-line .license {
             white-space: nowrap;
-            font-size: 12.5px;
+            font-size: 14px;
         }
 
         @media print {
