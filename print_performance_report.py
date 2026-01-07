@@ -89,23 +89,23 @@ def render_html_header_and_personal_info(person):
     return f"""
     <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #00796B; padding-bottom: 10px; margin-bottom: 15px; font-family: 'Sarabun', sans-serif;">
         <div style="width: 40%;">
-            <h3 style="margin: 0; color: #00796B; font-size: 18px; line-height: 1.2;">รายงานผลการตรวจสมรรถภาพ</h3>
-            <p style="margin: 4px 0 0 0; font-size: 12px; font-weight: 600;">คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม</p>
-            <p style="margin: 0; font-size: 12px;">โรงพยาบาลสันทราย</p>
-            <p style="margin-top: 8px; font-size: 11px;"><b>วันที่ตรวจ:</b> {check_date}</p>
+            <h3 style="margin: 0; color: #00796B; font-size: 20px; line-height: 1.2;">รายงานผลการตรวจสมรรถภาพ</h3>
+            <p style="margin: 4px 0 0 0; font-size: 14px; font-weight: 600;">คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม</p>
+            <p style="margin: 0; font-size: 14px;">โรงพยาบาลสันทราย</p>
+            <p style="margin-top: 8px; font-size: 13px;"><b>วันที่ตรวจ:</b> {check_date}</p>
         </div>
         <div style="width: 60%; text-align: right;">
-            <h3 style="margin: 0; font-size: 20px; line-height: 1.2;">{name}</h3>
-            <p style="margin: 4px 0 0 0; font-size: 13px;">
+            <h3 style="margin: 0; font-size: 24px; line-height: 1.2;">{name}</h3>
+            <p style="margin: 4px 0 0 0; font-size: 16px;">
                 <b>HN:</b> {hn}
                 <span style="color: #ddd; margin: 0 8px;">|</span>
                 <b>เพศ:</b> {sex}
                 <span style="color: #ddd; margin: 0 8px;">|</span>
                 <b>อายุ:</b> {age} ปี
             </p>
-            <p style="margin: 2px 0 0 0; font-size: 13px;"><b>หน่วยงาน:</b> {department}</p>
+            <p style="margin: 2px 0 0 0; font-size: 16px;"><b>หน่วยงาน:</b> {department}</p>
             
-            <div style="margin-top: 8px; font-size: 12px; background-color: #f8f9fa; display: inline-block; padding: 4px 10px; border-radius: 4px; border: 1px solid #e0e0e0;">
+            <div style="margin-top: 8px; font-size: 14px; background-color: #f8f9fa; display: inline-block; padding: 4px 10px; border-radius: 4px; border: 1px solid #e0e0e0;">
                 <span style="white-space: nowrap;"><b>นน.</b> {weight}</span> <span style="color: #ccc; margin: 0 4px;">|</span>
                 <span style="white-space: nowrap;"><b>ส่วนสูง</b> {height}</span> <span style="color: #ccc; margin: 0 4px;">|</span>
                 <span style="white-space: nowrap;"><b>รอบเอว</b> {waist_display}</span> <span style="color: #ccc; margin: 0 8px; font-weight: 300;">/</span>
@@ -427,14 +427,14 @@ def get_performance_report_css():
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
         body {
             font-family: 'Sarabun', sans-serif !important;
-            font-size: 12px;
+            font-size: 14px;
             margin: 0.5cm 0.7cm; 
             color: #333;
             background-color: #fff;
         }
         hr { border: 0; border-top: 1px solid #e0e0e0; margin: 0.5rem 0; }
-        .info-table { width: 100%; font-size: 10.5px; text-align: left; border-collapse: collapse; }
-        .info-table td { padding: 1px 5px; }
+        .info-table { width: 100%; font-size: 14px; text-align: left; border-collapse: collapse; }
+        .info-table td { padding: 2px 6px; }
         
         .header-grid { display: flex; align-items: flex-end; justify-content: space-between; }
         .header-left { text-align: left; }
@@ -447,7 +447,7 @@ def get_performance_report_css():
             color: white; text-align: center;
             padding: 0.4rem; font-weight: bold; border-radius: 8px;
             margin-bottom: 0.7rem;
-            font-size: 13px;
+            font-size: 14px;
         }
 
         .content-columns { display: flex; gap: 15px; align-items: flex-start; }
@@ -455,10 +455,10 @@ def get_performance_report_css():
         .side-content { flex: 1; min-width: 0; }
         .main-content-full { width: 100%; }
 
-        .data-table { width: 100%; font-size: 10.5px; border-collapse: collapse; }
+        .data-table { width: 100%; font-size: 14px; border-collapse: collapse; }
         .data-table.hearing-table { table-layout: fixed; }
         .data-table th, .data-table td {
-            border: 1px solid #e0e0e0; padding: 4px; text-align: center;
+            border: 1px solid #e0e0e0; padding: 4px 6px; text-align: center;
             vertical-align: middle;
         }
         .data-table th { background-color: #f5f5f5; font-weight: bold; }
@@ -475,7 +475,7 @@ def get_performance_report_css():
             background-color: #f9f9f9;
             border-radius: 6px;
             margin-bottom: 0.5rem;
-            font-size: 12px;
+            font-size: 14px;
             font-weight: bold;
             page-break-inside: avoid; 
         }
@@ -489,12 +489,12 @@ def get_performance_report_css():
         .summary-title-lung {
             text-align: center;
             font-weight: bold;
-            font-size: 11px;
+            font-size: 14px;
             margin-bottom: 8px;
             line-height: 1.2;
         }
         .advice-box {
-            border-radius: 6px; padding: 8px 12px; font-size: 10.5px;
+            border-radius: 6px; padding: 8px 12px; font-size: 14px;
             line-height: 1.5; border: 1px solid;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             margin-bottom: 5px; 
@@ -529,7 +529,7 @@ def get_performance_report_css():
         }
         .signature-line .name, .signature-line .title, .signature-line .license {
             white-space: nowrap;
-            font-size: 11px;
+            font-size: 12px;
         }
 
         @media print {
