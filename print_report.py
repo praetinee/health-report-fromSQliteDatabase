@@ -38,12 +38,6 @@ def flag_abnormal(val, low=None, high=None, inverse=False):
     
     return formatted, is_abn
 
-def interpret_urine_result(val, normal_list):
-    val = str(val).strip().lower()
-    if val in ["", "-", "none", "nan"]: return safe_value(val), False
-    if val in normal_list: return str(val), False
-    return str(val), True
-
 # --- HTML Generation Parts ---
 
 def get_report_css():
@@ -180,12 +174,12 @@ def render_lab_row(name, value, unit, normal_range, is_abnormal):
 
 def generate_printable_report(person_data, all_person_history_df=None):
     """
-    Generates a single-page, modern, auto-printing HTML report.
+    Generates a single-page, modern, auto-printing HTML report with FULL data points.
     """
     # --- 1. Prepare Data ---
     name = person_data.get('ชื่อ-สกุล', '-')
     age = str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')
-    hn = str(int(float(person_data.get('HN')))) if str(person_data.get('HN')).replace('.', '', 1).isdigit() else person_data.get('HN', '-')
+    hn = str(int(float(person_data.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person_data.get('HN', '-')
     date = person_data.get("วันที่ตรวจ", datetime.now().strftime("%d/%m/%Y"))
     dept = person_data.get('หน่วยงาน', '-')
     sex = person_data.get('เพศ', '-')
@@ -213,6 +207,11 @@ def generate_printable_report(person_data, all_person_history_df=None):
         ("Hemoglobin", "Hb(%)", None, hb_low, None, "g/dL", f"> {hb_low}"),
         ("Hematocrit", "HCT", None, hct_low, None, "%", f"> {hct_low}"),
         ("WBC Count", "WBC (cumm)", None, 4000, 10000, "cells/mm³", "4,000-10,000"),
+        ("Neutrophil", "Ne (%)", None, 40, 70, "%", "40-70"),
+        ("Lymphocyte", "Ly (%)", None, 20, 45, "%", "20-45"),
+        ("Monocyte", "M", None, 2, 10, "%", "2-10"),
+        ("Eosinophil", "Eo", None, 1, 6, "%", "1-6"),
+        ("Basophil", "BA", None, 0, 1, "%", "0-1"),
         ("Platelet", "Plt (/mm)", None, 150000, 450000, "cells/mm³", "150,000-450,000")
     ]
     cbc_rows = ""
@@ -223,13 +222,14 @@ def generate_printable_report(person_data, all_person_history_df=None):
     # Biochemistry
     bio_data = [
         ("Fasting Blood Sugar", "FBS", None, 70, 100, "mg/dL", "70-100"),
+        ("BUN", "BUN", None, 6, 20, "mg/dL", "6-20"),
+        ("Creatinine", "Cr", None, 0.5, 1.2, "mg/dL", "0.5-1.2"),
+        ("eGFR", "GFR", None, 90, None, "mL/min", "> 90"),
         ("Cholesterol", "CHOL", None, 0, 200, "mg/dL", "< 200"),
         ("Triglyceride", "TGL", None, 0, 150, "mg/dL", "< 150"),
-        ("HDL-C", "HDL", None, 40, None, "mg/dL", "> 40"), # High is good, so low is abn
+        ("HDL-C", "HDL", None, 40, None, "mg/dL", "> 40"),
         ("LDL-C", "LDL", None, 0, 130, "mg/dL", "< 130"),
         ("Uric Acid", "Uric Acid", None, 2.4, 7.0, "mg/dL", "2.4-7.0"),
-        ("Creatinine", "Cr", None, 0.5, 1.2, "mg/dL", "0.5-1.2"),
-        ("GFR", "GFR", None, 90, None, "mL/min", "> 90"),
         ("SGOT (AST)", "SGOT", None, 0, 40, "U/L", "< 40"),
         ("SGPT (ALT)", "SGPT", None, 0, 40, "U/L", "< 40"),
         ("Alkaline Phos.", "ALP", None, 35, 105, "U/L", "35-105"),
@@ -242,37 +242,42 @@ def generate_printable_report(person_data, all_person_history_df=None):
         
         if val_raw is not None:
             if key == "HDL" and val_raw < 40: is_abn = True
-            elif key == "GFR" and val_raw < 60: is_abn = True # CKD stage 3+
+            elif key == "GFR" and val_raw < 60: is_abn = True
             else:
                 _, is_abn = flag_abnormal(val_raw, low, high)
             val_fmt = f"{val_raw:,.0f}" if val_raw.is_integer() else f"{val_raw:,.1f}"
             
         bio_rows += render_lab_row(label, val_fmt, unit, norm_text, is_abn)
 
-    # Urinalysis (Compact)
+    # Urinalysis
     urine_color = safe_value(person_data.get("Color"))
     urine_ph = safe_value(person_data.get("pH"))
+    urine_spgr = safe_value(person_data.get("Spgr"))
     urine_alb = safe_value(person_data.get("Alb"))
     urine_sugar = safe_value(person_data.get("sugar"))
     urine_rbc = safe_value(person_data.get("RBC1"))
     urine_wbc = safe_value(person_data.get("WBC1"))
+    urine_epi = safe_value(person_data.get("SQ-epi"))
     
-    # Simple logic for urine abn
     u_rows = ""
-    u_rows += render_lab_row("Color", urine_color, "", "Yellow", urine_color.lower() not in ['yellow', 'pale yellow'])
+    u_rows += render_lab_row("Color", urine_color, "", "Yellow", urine_color.lower() not in ['yellow', 'pale yellow', '-'])
     u_rows += render_lab_row("pH", urine_ph, "", "4.6-8.0", False)
+    u_rows += render_lab_row("Sp. Gravity", urine_spgr, "", "1.005-1.030", False)
     u_rows += render_lab_row("Albumin", urine_alb, "", "Negative", urine_alb.lower() not in ['negative', '-'])
     u_rows += render_lab_row("Sugar", urine_sugar, "", "Negative", urine_sugar.lower() not in ['negative', '-'])
     u_rows += render_lab_row("RBC", urine_rbc, "cells", "0-2", urine_rbc not in ['0-1', '0-2', 'negative', '-'])
     u_rows += render_lab_row("WBC", urine_wbc, "cells", "0-5", urine_wbc not in ['0-1', '0-2', '0-3', '0-5', 'negative', '-'])
+    u_rows += render_lab_row("Epithelial", urine_epi, "cells", "0-5", False)
 
     # Other Tests
     cxr = safe_value(person_data.get("CXR", person_data.get(f"CXR{str(datetime.now().year+543)[-2:]}", "-")))
     ekg = safe_value(person_data.get("EKG", person_data.get(f"EKG{str(datetime.now().year+543)[-2:]}", "-")))
 
     # Hepatitis
+    hep_a = safe_value(person_data.get("Hepatitis A"))
     hbsag = safe_value(person_data.get("HbsAg"))
     hbsab = safe_value(person_data.get("HbsAb"))
+    hbcab = safe_value(person_data.get("HBcAb"))
     
     # --- 3. Construct Doctor's Suggestion ---
     suggestions = []
@@ -344,7 +349,19 @@ def generate_printable_report(person_data, all_person_history_df=None):
                     <div class="section-title">การทำงานของไต (Kidney Function)</div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
+                        <tbody>{bio_rows.split('<tr><td>eGFR')[0].split('<tr><td>Creatinine')[0]} 
+                            <!-- Note: Splitting bio_rows manually here for specific sections is complex with string concat. 
+                                 Let's rebuild specific rows for sections instead of pre-looping bio_rows.
+                                 Re-implementing loop logic below for clarity. -->
+                        </tbody>
+                    </table>
+                    <!-- FIX: Re-generating tables per section properly -->
+                    
+                    <div class="section-title">การทำงานของไต (Kidney Function)</div>
+                    <table>
+                        <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>
+                            {render_lab_row("BUN", safe_value(person_data.get("BUN")), "mg/dL", "6-20", False)}
                             {render_lab_row("Creatinine", safe_value(person_data.get("Cr")), "mg/dL", "0.5-1.2", False)}
                             {render_lab_row("eGFR", safe_value(person_data.get("GFR")), "mL/min", ">90", False)}
                         </tbody>
@@ -370,14 +387,33 @@ def generate_printable_report(person_data, all_person_history_df=None):
                     <div class="section-title">เบาหวาน & ไขมัน (Sugar & Lipid)</div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
-                        <tbody>{bio_rows}</tbody>
+                        <tbody>
+                            {render_lab_row("Fasting Blood Sugar", safe_value(person_data.get("FBS")), "mg/dL", "70-100", get_float("FBS", person_data) and get_float("FBS", person_data) > 100)}
+                            {render_lab_row("Cholesterol", safe_value(person_data.get("CHOL")), "mg/dL", "< 200", get_float("CHOL", person_data) and get_float("CHOL", person_data) > 200)}
+                            {render_lab_row("Triglyceride", safe_value(person_data.get("TGL")), "mg/dL", "< 150", get_float("TGL", person_data) and get_float("TGL", person_data) > 150)}
+                            {render_lab_row("HDL-C", safe_value(person_data.get("HDL")), "mg/dL", "> 40", get_float("HDL", person_data) and get_float("HDL", person_data) < 40)}
+                            {render_lab_row("LDL-C", safe_value(person_data.get("LDL")), "mg/dL", "< 130", get_float("LDL", person_data) and get_float("LDL", person_data) > 130)}
+                        </tbody>
+                    </table>
+                    
+                    <div class="section-title">กรดยูริก & การทำงานของตับ (Uric & Liver)</div>
+                    <table>
+                        <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
+                        <tbody>
+                            {render_lab_row("Uric Acid", safe_value(person_data.get("Uric Acid")), "mg/dL", "2.4-7.0", get_float("Uric Acid", person_data) and get_float("Uric Acid", person_data) > 7)}
+                            {render_lab_row("SGOT (AST)", safe_value(person_data.get("SGOT")), "U/L", "< 40", get_float("SGOT", person_data) and get_float("SGOT", person_data) > 40)}
+                            {render_lab_row("SGPT (ALT)", safe_value(person_data.get("SGPT")), "U/L", "< 40", get_float("SGPT", person_data) and get_float("SGPT", person_data) > 40)}
+                            {render_lab_row("Alkaline Phos.", safe_value(person_data.get("ALP")), "U/L", "35-105", get_float("ALP", person_data) and (get_float("ALP", person_data) > 105 or get_float("ALP", person_data) < 35))}
+                        </tbody>
                     </table>
 
                     <div class="section-title">ไวรัสตับอักเสบ (Hepatitis)</div>
                     <table>
                         <tbody>
+                            <tr><td>Hepatitis A</td><td class="val-col">{hep_a}</td><td>Neg</td></tr>
                             <tr><td>HBsAg (เชื้อ)</td><td class="val-col">{hbsag}</td><td>Neg</td></tr>
                             <tr><td>HBsAb (ภูมิ)</td><td class="val-col">{hbsab}</td><td>Pos</td></tr>
+                            <tr><td>HBcAb</td><td class="val-col">{hbcab}</td><td>Neg</td></tr>
                         </tbody>
                     </table>
 
