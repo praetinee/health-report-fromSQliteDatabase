@@ -11,6 +11,7 @@ from performance_tests import interpret_audiogram, interpret_lung_capacity, inte
 # Purpose: Contains functions to generate HTML for performance test reports
 # (Vision, Hearing, Lung) for the standalone printable version.
 # Refactored for Batch Printing capability.
+# EDITED: Increased font sizes for Elder Friendly design.
 # ==============================================================================
 
 
@@ -89,23 +90,23 @@ def render_html_header_and_personal_info(person):
     return f"""
     <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #00796B; padding-bottom: 10px; margin-bottom: 15px; font-family: 'Sarabun', sans-serif;">
         <div style="width: 40%;">
-            <h3 style="margin: 0; color: #00796B; font-size: 18px; line-height: 1.2;">รายงานผลการตรวจสมรรถภาพ</h3>
-            <p style="margin: 4px 0 0 0; font-size: 12px; font-weight: 600;">คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม</p>
-            <p style="margin: 0; font-size: 12px;">โรงพยาบาลสันทราย</p>
-            <p style="margin-top: 8px; font-size: 11px;"><b>วันที่ตรวจ:</b> {check_date}</p>
+            <h3 style="margin: 0; color: #00796B; font-size: 20px; line-height: 1.2;">รายงานผลการตรวจสมรรถภาพ</h3>
+            <p style="margin: 4px 0 0 0; font-size: 14px; font-weight: 600;">คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม</p>
+            <p style="margin: 0; font-size: 14px;">โรงพยาบาลสันทราย</p>
+            <p style="margin-top: 8px; font-size: 13px;"><b>วันที่ตรวจ:</b> {check_date}</p>
         </div>
         <div style="width: 60%; text-align: right;">
-            <h3 style="margin: 0; font-size: 20px; line-height: 1.2;">{name}</h3>
-            <p style="margin: 4px 0 0 0; font-size: 13px;">
+            <h3 style="margin: 0; font-size: 22px; line-height: 1.2;">{name}</h3>
+            <p style="margin: 4px 0 0 0; font-size: 15px;">
                 <b>HN:</b> {hn}
                 <span style="color: #ddd; margin: 0 8px;">|</span>
                 <b>เพศ:</b> {sex}
                 <span style="color: #ddd; margin: 0 8px;">|</span>
                 <b>อายุ:</b> {age} ปี
             </p>
-            <p style="margin: 2px 0 0 0; font-size: 13px;"><b>หน่วยงาน:</b> {department}</p>
+            <p style="margin: 2px 0 0 0; font-size: 14px;"><b>หน่วยงาน:</b> {department}</p>
             
-            <div style="margin-top: 8px; font-size: 12px; background-color: #f8f9fa; display: inline-block; padding: 4px 10px; border-radius: 4px; border: 1px solid #e0e0e0;">
+            <div style="margin-top: 8px; font-size: 13px; background-color: #f8f9fa; display: inline-block; padding: 4px 10px; border-radius: 4px; border: 1px solid #e0e0e0;">
                 <span style="white-space: nowrap;"><b>นน.</b> {weight}</span> <span style="color: #ccc; margin: 0 4px;">|</span>
                 <span style="white-space: nowrap;"><b>ส่วนสูง</b> {height}</span> <span style="color: #ccc; margin: 0 4px;">|</span>
                 <span style="white-space: nowrap;"><b>รอบเอว</b> {waist_display}</span> <span style="color: #ccc; margin: 0 8px; font-weight: 300;">/</span>
@@ -427,13 +428,13 @@ def get_performance_report_css():
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
         body {
             font-family: 'Sarabun', sans-serif !important;
-            font-size: 12px;
+            font-size: 13px; /* Increased from 12px */
             margin: 0.5cm 0.7cm; 
             color: #333;
             background-color: #fff;
         }
         hr { border: 0; border-top: 1px solid #e0e0e0; margin: 0.5rem 0; }
-        .info-table { width: 100%; font-size: 10.5px; text-align: left; border-collapse: collapse; }
+        .info-table { width: 100%; font-size: 12px; text-align: left; border-collapse: collapse; } /* Increased from 10.5px */
         .info-table td { padding: 1px 5px; }
         
         .header-grid { display: flex; align-items: flex-end; justify-content: space-between; }
@@ -445,9 +446,9 @@ def get_performance_report_css():
         .section-header {
             background-color: #00796B; 
             color: white; text-align: center;
-            padding: 0.4rem; font-weight: bold; border-radius: 8px;
-            margin-bottom: 0.7rem;
-            font-size: 13px;
+            padding: 0.5rem; font-weight: bold; border-radius: 8px; /* Increased padding */
+            margin-bottom: 0.8rem;
+            font-size: 15px; /* Increased from 13px */
         }
 
         .content-columns { display: flex; gap: 15px; align-items: flex-start; }
@@ -455,10 +456,10 @@ def get_performance_report_css():
         .side-content { flex: 1; min-width: 0; }
         .main-content-full { width: 100%; }
 
-        .data-table { width: 100%; font-size: 10.5px; border-collapse: collapse; }
+        .data-table { width: 100%; font-size: 12px; border-collapse: collapse; } /* Increased from 10.5px */
         .data-table.hearing-table { table-layout: fixed; }
         .data-table th, .data-table td {
-            border: 1px solid #e0e0e0; padding: 4px; text-align: center;
+            border: 1px solid #e0e0e0; padding: 5px; text-align: center; /* Increased padding */
             vertical-align: middle;
         }
         .data-table th { background-color: #f5f5f5; font-weight: bold; }
@@ -470,12 +471,12 @@ def get_performance_report_css():
             align-items: center;
             flex-wrap: wrap;
             gap: 10px;
-            padding: 8px;
+            padding: 10px;
             border: 1px solid #e0e0e0;
             background-color: #f9f9f9;
             border-radius: 6px;
             margin-bottom: 0.5rem;
-            font-size: 12px;
+            font-size: 13px; /* Increased from 12px */
             font-weight: bold;
             page-break-inside: avoid; 
         }
@@ -489,13 +490,13 @@ def get_performance_report_css():
         .summary-title-lung {
             text-align: center;
             font-weight: bold;
-            font-size: 11px;
+            font-size: 13px; /* Increased from 11px */
             margin-bottom: 8px;
             line-height: 1.2;
         }
         .advice-box {
-            border-radius: 6px; padding: 8px 12px; font-size: 10.5px;
-            line-height: 1.5; border: 1px solid;
+            border-radius: 6px; padding: 10px 14px; font-size: 12px; /* Increased from 10.5px and padding */
+            line-height: 1.6; border: 1px solid;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             margin-bottom: 5px; 
             height: 100%;
@@ -529,7 +530,7 @@ def get_performance_report_css():
         }
         .signature-line .name, .signature-line .title, .signature-line .license {
             white-space: nowrap;
-            font-size: 11px;
+            font-size: 12px; /* Increased from 11px */
         }
 
         @media print {
