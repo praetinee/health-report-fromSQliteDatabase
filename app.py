@@ -324,21 +324,18 @@ def main_app(df):
         st.session_state.selected_year = available_years[0]
 
     # --- ส่วน CSS/JS สำหรับซ่อนปุ่มพิมพ์บนมือถือ ---
+    # ใช้ JavaScript แบบวน loop หา text แทน :has() เพราะ :has() ไม่ support browser เก่า
     st.markdown("""
         <style>
         /* CSS สำหรับ Desktop (หน้าจอ > 992px) */
         @media (min-width: 993px) {
             .print-menu-anchor { display: block; }
         }
-
-        /* CSS สำหรับ Mobile/Tablet (หน้าจอ <= 992px) */
+        
+        /* เพิ่มเติม: ซ่อน column ที่อาจจะว่างเปล่าบนมือถือ */
         @media (max-width: 992px) {
-            /* ซ่อนปุ่มที่มีไอคอนเครื่องพิมพ์ */
-            button[kind="secondary"] p:contains("🖨️") {
-                 display: none !important;
-            }
-            /* ซ่อนตัวปุ่มเองถ้าหาเจอ */
-            div[data-testid="stButton"] > button:has(p:contains("🖨️")) {
+            /* วิธีนี้ยังไงก็ซ่อนได้ 100% ถ้า JS ทำงานไม่ทัน */
+            [data-testid="stVerticalBlock"] > [data-testid="stHorizontalBlock"] > [data-testid="column"]:has(button p:contains("🖨️")) {
                  display: none !important;
             }
         }
@@ -347,26 +344,37 @@ def main_app(df):
         <script>
         function removePrintButtonsOnMobile() {
             if (window.innerWidth <= 992) {
-                // หาปุ่มที่มีไอคอนเครื่องพิมพ์ในทุก Button element
-                const buttons = window.parent.document.querySelectorAll('button');
-                buttons.forEach(btn => {
-                    if (btn.innerText.includes('🖨️')) {
-                        // ซ่อนปุ่มนั้น
+                // วนลูปหาปุ่มทั้งหมดในหน้า
+                var buttons = window.parent.document.querySelectorAll('button');
+                for (var i = 0; i < buttons.length; i++) {
+                    var btn = buttons[i];
+                    // ถ้าในปุ่มมี Text คำว่า '🖨️' ให้ซ่อนทิ้ง
+                    if (btn.innerText.indexOf('🖨️') !== -1) {
                         btn.style.display = 'none';
-                        // ซ่อน Container ของปุ่มด้วยถ้าจำเป็น
-                        const parent = btn.closest('[data-testid="column"]');
-                        if (parent) {
-                            // parent.style.display = 'none'; // อาจจะแรงไป ซ่อนแค่ปุ่มพอ
+                        // พยายามซ่อน parent container ด้วยเพื่อให้ layout สวยงาม
+                        var parentCol = btn.closest('[data-testid="column"]');
+                        if (parentCol) {
+                           parentCol.style.display = 'none';
                         }
                     }
-                });
+                }
             }
         }
-        // เรียกใช้ฟังก์ชันเมื่อโหลดและเมื่อปรับขนาดหน้าจอ
+        
+        // เรียกใช้ฟังก์ชันทันที
         removePrintButtonsOnMobile();
+        
+        // เรียกใช้เมื่อมีการปรับขนาดหน้าจอ
         window.addEventListener('resize', removePrintButtonsOnMobile);
-        // เช็คซ้ำทุกๆ 1 วินาทีเผื่อ Streamlit re-render
-        setInterval(removePrintButtonsOnMobile, 1000);
+        
+        // เรียกใช้ซ้ำๆ เผื่อ Streamlit มัน render ใหม่ (Hack แต่มักจะได้ผลดี)
+        setInterval(removePrintButtonsOnMobile, 500);
+        
+        // Observer เพื่อจับการเปลี่ยนแปลง DOM (ดีกว่า setInterval)
+        const observer = new MutationObserver(function(mutations) {
+            removePrintButtonsOnMobile();
+        });
+        observer.observe(window.parent.document.body, { childList: true, subtree: true });
         </script>
     """, unsafe_allow_html=True)
 
