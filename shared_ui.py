@@ -196,7 +196,13 @@ def inject_custom_css():
         .vision-abnormal { background-color: var(--danger-bg); color: var(--danger-text); }
         .vision-warning { background-color: var(--warning-bg); color: var(--warning-text); }
         .vision-not-tested { background-color: var(--header-bg); opacity: 0.5; }
+        
         @media (max-width: 768px) {
+            /* ซ่อนปุ่มหรือ Element ที่มี Class 'desktop-only' เมื่ออยู่บนมือถือ */
+            .desktop-only {
+                display: none !important;
+            }
+            
             .header-main { flex-direction: column; align-items: flex-start; gap: 15px; }
             .report-meta { text-align: left; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-color); width: 100%; }
             .vital-value { font-size: 1.2rem; }
