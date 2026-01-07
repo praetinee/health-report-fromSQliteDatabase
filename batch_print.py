@@ -70,13 +70,42 @@ def check_data_readiness(person_data, report_type):
 
     return is_ready, status_text, status_color
 
+def get_batch_auto_fit_script():
+    """
+    สคริปต์ Auto Fit สำหรับ Batch Print (ใช้ logic เดียวกับ print_report แต่รวมมาในฟังก์ชันเดียว)
+    """
+    return """
+    <script>
+    window.onload = function() {
+        const MAX_HEIGHT = 1060; // Approximate usable height of A4 at 96dpi minus margins
+        
+        // Find all report containers
+        const reports = document.getElementsByClassName('report-container');
+        
+        for (let i = 0; i < reports.length; i++) {
+            const report = reports[i];
+            const actualHeight = report.scrollHeight;
+            
+            if (actualHeight > MAX_HEIGHT) {
+                let scale = MAX_HEIGHT / actualHeight;
+                if (scale < 0.6) scale = 0.6; // Minimum readable scale
+                
+                // Use zoom property for consistent scaling in print layout
+                report.style.zoom = scale;
+            }
+        }
+    };
+    </script>
+    """
+
 def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข้อมูลปีล่าสุดของแต่ละคน"):
-    """สร้าง HTML สำหรับพิมพ์"""
+    """สร้าง HTML สำหรับพิมพ์ (Batch)"""
     report_bodies = []
-    page_break_div = "<div style='page-break-after: always;'></div>"
     
+    # CSS
     css_main = get_main_report_css()
     css_perf = get_performance_report_css()
+    # รวม CSS โดยระวังไม่ให้ทับซ้อนกันมากเกินไป (แต่ในที่นี้โครงสร้าง class แยกกันพอสมควรแล้ว)
     full_css = f"{css_main}\n{css_perf}" 
 
     progress_bar = st.progress(0)
@@ -99,6 +128,7 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
             
             need_main = report_type in ["รายงานสุขภาพ (Health Report)", "ทั้งรายงานสุขภาพและสมรรถภาพ"]
             if need_main and has_basic_health_data(person_data):
+                # สร้าง Body ของ Health Report
                 patient_bodies.append(render_printable_report_body(person_data, person_history_df))
             
             need_perf = report_type in ["รายงานสมรรถภาพ (Performance Report)", "ทั้งรายงานสุขภาพและสมรรถภาพ"]
@@ -106,13 +136,17 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
             has_hear = has_hearing_data(person_data)
             has_lung = has_lung_data(person_data)
             if need_perf and (has_vis or has_hear or has_lung):
+                # สร้าง Body ของ Performance Report
                 patient_bodies.append(render_performance_report_body(person_data, person_history_df))
 
             if not patient_bodies:
                 skipped_count += 1
                 continue
             
-            combined_patient_html = page_break_div.join(patient_bodies)
+            # รวมรายงานของคนเดียวเข้าด้วยกัน (ถ้าเลือกทั้งสองแบบ จะต่อกันในหน้าถัดไป)
+            # แต่เนื่องจากใน CSS เรากำหนด .report-container { page-break-after: always; }
+            # ดังนั้นแต่ละรายงานจะขึ้นหน้าใหม่โดยอัตโนมัติ
+            combined_patient_html = "".join(patient_bodies)
             report_bodies.append(combined_patient_html)
 
         except Exception as e:
@@ -124,7 +158,8 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
     if not report_bodies:
         return None, skipped_count
 
-    all_bodies = page_break_div.join(report_bodies)
+    all_bodies = "".join(report_bodies)
+    js_script = get_batch_auto_fit_script()
     
     full_html = f"""
     <!DOCTYPE html>
@@ -136,6 +171,7 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
     </head>
     <body>
         {all_bodies}
+        {js_script}
     </body>
     </html>
     """
