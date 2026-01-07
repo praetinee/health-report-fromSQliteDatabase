@@ -3,8 +3,8 @@ import html
 from collections import OrderedDict
 from datetime import datetime
 
-# แก้ไข: import ฟังก์ชัน interpret_audiogram, interpret_lung_capacity, และ interpret_cxr
-from performance_tests import interpret_audiogram, interpret_lung_capacity, interpret_cxr
+# แก้ไข: ตัด interpret_cxr ออกจาก import เพราะเราจะสร้างฟังก์ชันนี้ในไฟล์นี้เองเพื่อป้องกัน Error
+from performance_tests import interpret_audiogram, interpret_lung_capacity
 
 # ==============================================================================
 # Module: print_performance_report.py
@@ -19,6 +19,16 @@ from performance_tests import interpret_audiogram, interpret_lung_capacity, inte
 def is_empty(val):
     """Check if a value is empty, null, or whitespace."""
     return pd.isna(val) or str(val).strip().lower() in ["", "-", "none", "nan", "null"]
+
+# เพิ่มฟังก์ชันนี้เข้ามาใหม่เพื่อแก้ปัญหา Import Error
+def interpret_cxr(val):
+    val = str(val or "").strip()
+    if is_empty(val): return "ไม่ได้ตรวจ", False
+    is_abn = False
+    if any(keyword in val.lower() for keyword in ["ผิดปกติ", "ฝ้า", "รอย", "abnormal", "infiltrate", "lesion"]):
+        val = f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
+        is_abn = True
+    return val, is_abn
 
 def has_vision_data(person_data):
     """Check for any ACTUAL vision test data, ignoring summary/advice fields."""
@@ -56,7 +66,7 @@ def render_section_header(title, subtitle=None):
     """Renders a styled section header for the print report."""
     full_title = f"{title} <span style='font-weight: normal;'>({subtitle})</span>" if subtitle else title
     return f"""
-    <div class='section-header' style='font-family: "Sarabun", sans-serif; font-size: 16px;'>
+    <div class='section-header'>
         {full_title}
     </div>
     """
@@ -132,8 +142,8 @@ def render_print_vision(person_data):
         {'display': '7. ความสมดุลกล้ามเนื้อตาแนวดิ่ง (Far vertical phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง', 'related_keyword': 'แนวตั้งระยะไกล'},
         {'display': '8. ความสมดุลกล้ามเนื้อตาแนวนอน (Far lateral phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน', 'related_keyword': 'แนวนอนระยะไกล'},
         {'display': '9. การมองภาพระยะใกล้ด้วยสองตา (Near vision - Both)', 'type': 'paired_value', 'normal_col': 'ป.ความชัดของภาพระยะใกล้', 'abnormal_col': 'ผ.ความชัดของภาพระยะใกล้'},
-        {'display': '10. การมองภาพระยะใกล้ด้วยตาขวา (Near vision - Right)', 'type': 'value', 'col': 'การมองภาพระยะใกล้ด้วยตาขวา (Near vision – Right)'},
-        {'display': '11. การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision - Left)', 'type': 'value', 'col': 'การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision – Left)'},
+        {'display': '10. การมองภาพระยะใกล้ด้วยตาขวา (Near vision - Right)', 'type': 'value', 'col': 'การมองภาพระยะใกล้ด้วยตาขวา (Near vision - Right)'},
+        {'display': '11. การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision - Left)', 'type': 'value', 'col': 'การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision - Left)'},
         {'display': '12. ความสมดุลกล้ามเนื้อตาแนวนอน (Near lateral phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'related_keyword': 'แนวนอนระยะใกล้'},
         {'display': '13. ลานสายตา (Visual field)', 'type': 'paired_value', 'normal_col': 'ป.ลานสายตา', 'abnormal_col': 'ผ.ลานสายตา'}
     ]
@@ -576,6 +586,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
     css_html = get_performance_report_css()
     body_html = render_performance_report_body(person_data, all_person_history_df)
     
+    # เพิ่ม window.print() เพื่อให้หน้าต่างพิมพ์เด้งขึ้นมาอัตโนมัติเมื่อโหลดหน้าเสร็จ
     final_html = f"""
     <!DOCTYPE html>
     <html lang="th">
@@ -584,7 +595,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
         <title>รายงานผลการตรวจสมรรถภาพ - {html.escape(person_data.get('ชื่อ-สกุล', ''))}</title>
         {css_html}
     </head>
-    <body>
+    <body onload="window.print()">
         {body_html}
     </body>
     </html>
