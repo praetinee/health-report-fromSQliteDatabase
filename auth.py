@@ -207,3 +207,24 @@ def pdpa_consent_page():
     if st.button("ยอมรับและเข้าใช้งาน", type="primary", use_container_width=True, disabled=not agree):
         st.session_state['pdpa_accepted'] = True
         st.rerun()
+
+# --- NEW FUNCTIONS TO FIX IMPORT ERROR ---
+
+def check_password(username, password):
+    """
+    ตรวจสอบรหัสผ่าน (ใช้สำหรับ Admin Login ใน app.py)
+    """
+    # กำหนด Default password สำหรับ Admin (ควรเปลี่ยนใน Production)
+    if username == "admin" and password == "admin":
+        return True
+    return False
+
+def logout():
+    """
+    ออกจากระบบและเคลียร์ Session
+    """
+    keys_to_remove = ['authenticated', 'username', 'role', 'is_admin', 'user_hn', 'user_name']
+    for key in keys_to_remove:
+        if key in st.session_state:
+            del st.session_state[key]
+    st.session_state.authenticated = False
