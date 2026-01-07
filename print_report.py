@@ -11,6 +11,7 @@ from print_performance_report import generate_performance_report_html_for_main_r
 # ==============================================================================
 # NOTE: This file generates the printable health report.
 # Refactored to separate CSS and Body generation for Batch Printing.
+# IMPROVED: Optimized CSS for "Older Friendly" font size while fitting in A4
 # ==============================================================================
 
 # --- START OF CHANGE: Add CBC Recommendation Texts ---
@@ -424,16 +425,18 @@ def generate_doctor_opinion(person_data, sex, cbc_statuses, urine_statuses):
 # --- HTML Rendering Functions ---
 
 def render_section_header(title, subtitle=None):
+    """Renders a section header with optimized vertical spacing."""
     full_title = f"{title} <span style='font-weight: normal;'>({subtitle})</span>" if subtitle else title
     return f"""
-    <div style='background-color: #f0f2f6; color: #333; text-align: center; padding: 0.2rem 0.4rem; font-weight: bold; border-radius: 6px; margin-top: 0.5rem; margin-bottom: 0.2rem; font-size: 11px; border: 1px solid #ddd;'>
+    <div class='section-header-box'>
         {full_title}
     </div>
     """
 
 def render_lab_table_html(title, subtitle, headers, rows, table_class="print-lab-table", footer_html=None):
     header_html = render_section_header(title, subtitle)
-    html_content = f"{header_html}<table class='{table_class}'><colgroup><col style='width: 40%;'><col style='width: 20%;'><col style='width: 40%;'></colgroup><thead><tr>"
+    # Using fixed layout for better predictability in print
+    html_content = f"{header_html}<table class='{table_class}' style='table-layout: fixed;'><colgroup><col style='width: 45%;'><col style='width: 20%;'><col style='width: 35%;'></colgroup><thead><tr>"
     for i, h in enumerate(headers):
         align = "left" if i == 0 or i == 2 else "center"
         html_content += f"<th style='text-align: {align};'>{h}</th>"
@@ -468,9 +471,9 @@ def render_header_and_vitals(person_data):
     return f"""
     <div class="header-grid">
         <div class="header-left">
-            <h1 style="font-size: 1.5rem; margin:0;">รายงานผลการตรวจสุขภาพ</h1>
-            <p style="font-size: 0.8rem; margin:0;">คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย</p>
-            <p style="font-size: 0.8rem; margin:0;"><b>วันที่ตรวจ:</b> {check_date}</p>
+            <h1>รายงานผลการตรวจสุขภาพ</h1>
+            <p>คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย</p>
+            <p><b>วันที่ตรวจ:</b> {check_date}</p>
         </div>
         <div class="header-right">
             <table class="info-table">
@@ -493,7 +496,7 @@ def render_header_and_vitals(person_data):
             </table>
         </div>
     </div>
-    <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 0.5rem 0;">
+    <hr style="border: 0; border-top: 2px solid #000; margin: 2px 0 5px 0;">
     """
 
 def render_lab_section(person, sex, cbc_statuses):
@@ -628,30 +631,53 @@ def render_other_results_html(person, sex, urine_statuses, doctor_opinion, all_p
 # --- NEW FUNCTIONS FOR REFACTORING ---
 
 def get_main_report_css():
-    """Returns the CSS string for the main report."""
+    """
+    Returns the CSS string for the main report.
+    OPTIMIZED: Larger font size (11px), tighter padding/margins for A4 fit.
+    """
     return """
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
         
+        @page {
+            size: A4;
+            margin: 0.5cm; /* Small margins for print */
+        }
+
         body { 
             font-family: 'Sarabun', sans-serif !important; 
-            font-size: 9.5px; 
-            margin: 0.5cm;
-            color: #333; 
+            font-size: 11px; /* Increased from 9.5px for Older Friendly */
+            line-height: 1.25; /* Tighter line height */
+            margin: 0;
+            color: #000; /* Pure black for print contrast */
             background-color: #fff; 
         }
 
-        p, div, span, td, th { line-height: 1.4; }
-        table { border-collapse: collapse; width: 100%; }
-        .print-lab-table td, .print-lab-table th { padding: 2px 4px; border: 1px solid #ccc; text-align: center; vertical-align: middle; }
-        .print-lab-table th { background-color: #f2f2f2; font-weight: bold; }
-        .print-lab-table-abn { background-color: #fff1f0 !important; }
+        p, div, span, td, th { line-height: 1.3; }
         
+        table { border-collapse: collapse; width: 100%; }
+        
+        /* Table Styling - Compact but Readable */
+        .print-lab-table td, .print-lab-table th { 
+            padding: 2px 4px; /* Slightly tighter padding */
+            border: 1px solid #999; 
+            text-align: center; 
+            vertical-align: middle; 
+            font-size: 11px;
+        }
+        .print-lab-table th { 
+            background-color: #f0f0f0; 
+            font-weight: bold; 
+            font-size: 11px;
+        }
+        .print-lab-table-abn { background-color: #fff0f0 !important; }
+        
+        /* Recommendation Footer in Tables */
         .print-lab-table tfoot .recommendation-row td {
-            background-color: #fcf8e3; /* Light yellow */
-            font-size: 9px;
+            background-color: #f9f9f9; 
+            font-size: 10.5px; /* Slightly smaller for detailed text */
             line-height: 1.3;
-            border: 1px solid #ccc;
+            border: 1px solid #999;
             text-align: left;
             padding: 4px 6px;
         }
@@ -664,32 +690,44 @@ def get_main_report_css():
             margin-bottom: 2px;
         }
         
-        .header-grid { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 0.5rem; }
+        /* Header Optimization */
+        .header-grid { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 5px; }
         .header-left { text-align: left; }
+        .header-left h1 { font-size: 18px; margin: 0; line-height: 1.2; }
+        .header-left p { font-size: 11px; margin: 0; }
+        
         .header-right { text-align: right; }
-        .info-table { font-size: 9.5px; text-align: left; }
-        .info-table td {{ padding: 1px 5px; border: none; }}
+        .info-table { font-size: 11px; text-align: left; }
+        .info-table td { padding: 0px 5px; border: none; }
         
-        .advice-box { padding: 0.5rem 1rem; border-radius: 8px; line-height: 1.5; margin-top: 0.5rem; border: 1px solid #ddd; page-break-inside: avoid; }
-        .advice-title { font-weight: bold; margin-bottom: 0.3rem; font-size: 11px; }
-        .advice-content ul { padding-left: 20px; margin: 0; }
-        .advice-content ul li { margin-bottom: 4px; }
-        
+        /* Doctor Opinion Box */
         .doctor-opinion-box {
-            background-color: #e8f5e9; /* Light green */
-            border-color: #a5d6a7;
-            border: 1px solid #ddd;
-            padding: 0rem 0.5rem;
-            border-radius: 8px;
-            line-height: 1.5;
-            margin-top: 0.5rem;
+            background-color: #f0f8f0; 
+            border: 1px solid #ccc;
+            padding: 5px;
+            border-radius: 4px;
+            line-height: 1.4;
+            margin-top: 5px;
             page-break-inside: avoid;
-            font-size: 9.5px;
+            font-size: 11px;
             white-space: pre-wrap;
         }
         
-        .perf-section { margin-top: 0.5rem; page-break-inside: avoid; border: 1px solid #e0e0e0; border-radius: 8px; padding: 0.5rem; }
-        .summary-box { background-color: #f8f9fa; border-radius: 4px; padding: 4px 8px; margin-top: 2px; font-size: 9px; }
+        /* Section Headers */
+        .section-header-box {
+            background-color: #e8e8e8;
+            color: #000;
+            text-align: center;
+            padding: 3px;
+            font-weight: bold;
+            border-radius: 4px;
+            margin-top: 6px;
+            margin-bottom: 3px;
+            font-size: 11.5px;
+            border: 1px solid #ccc;
+        }
+        
+        .summary-box { background-color: #f8f9fa; border-radius: 4px; padding: 4px 8px; margin-top: 2px; font-size: 10px; }
         @media print { body { -webkit-print-color-adjust: exact; margin: 0; } }
     </style>
     """
@@ -710,7 +748,7 @@ def render_printable_report_body(person_data, all_person_history_df=None):
     doctor_suggestion_html = ""
 
     signature_html = """
-    <div style="margin-top: 2rem; text-align: right; padding-right: 1rem; page-break-inside: avoid;">
+    <div style="margin-top: 1rem; text-align: right; padding-right: 1rem; page-break-inside: avoid;">
         <div style="display: inline-block; text-align: center; width: 280px;">
             <div style="border-bottom: 1px dotted #333; margin-bottom: 0.4rem; width: 100%;"></div>
             <div style="white-space: nowrap;">นายแพทย์นพรัตน์ รัชฎาพร</div>
