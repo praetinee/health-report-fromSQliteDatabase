@@ -200,6 +200,7 @@ def render_custom_header_with_actions(person_data, available_years):
             
             # --- ส่วนแจ้งเตือนสำหรับมือถือ (Mobile Warning Message) ---
             # CSS: ซ่อนใน PC (display: none) แสดงในมือถือ (display: block)
+            # ปรับตำแหน่งให้อยู่ใต้ปุ่มพอดี
             st.markdown("""
             <div class="mobile-print-note-container">
                  <div class="mobile-print-note">
@@ -354,42 +355,6 @@ def main_app(df):
     available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
     if 'selected_year' not in st.session_state or st.session_state.selected_year not in available_years:
         st.session_state.selected_year = available_years[0]
-
-    # --- ส่วน CSS/JS สำหรับซ่อนปุ่มพิมพ์บนมือถือ ---
-    st.markdown("""
-        <style>
-        /* CSS สำหรับ Desktop (หน้าจอ > 992px) */
-        @media (min-width: 993px) {
-            .print-menu-anchor { display: block; }
-        }
-
-        /* CSS สำหรับ Mobile/Tablet (หน้าจอ <= 992px) */
-        @media (max-width: 992px) {
-            button[kind="secondary"]:has(div p:contains("🖨️")) {
-                 display: none !important;
-            }
-        }
-        </style>
-        
-        <script>
-        function removePrintButtonsOnMobile() {
-            if (window.innerWidth <= 992) {
-                // หาปุ่มที่มีไอคอนเครื่องพิมพ์
-                const buttons = window.parent.document.querySelectorAll('button');
-                buttons.forEach(btn => {
-                    if (btn.innerText.includes('🖨️')) {
-                        btn.style.display = 'none';
-                        const col = btn.closest('[data-testid="column"]');
-                        if (col) col.style.display = 'none';
-                    }
-                });
-            }
-        }
-        removePrintButtonsOnMobile();
-        window.addEventListener('resize', removePrintButtonsOnMobile);
-        setInterval(removePrintButtonsOnMobile, 500);
-        </script>
-    """, unsafe_allow_html=True)
 
     # --- ส่วนแสดงผลรายงาน ---
     yr_df = results_df[results_df["Year"] == st.session_state.selected_year]
