@@ -1,81 +1,146 @@
+import streamlit as st
 import pandas as pd
 import numpy as np
+from datetime import datetime
+import base64
 
-def is_empty(val):
-    if val is None: return True
-    if isinstance(val, str) and val.strip() == "": return True
-    if isinstance(val, (int, float)) and pd.isna(val): return True
-    val_str = str(val).strip().lower()
-    if val_str in ["-", "none", "nan", "null"]: return True
-    return False
+@st.cache_data(ttl=3600)
+def load_data(file_path_or_buffer):
+    """
+    โหลดข้อมูลจากไฟล์ Excel หรือ CSV
+    """
+    try:
+        # ตรวจสอบว่าเป็นไฟล์ Excel หรือ CSV
+        if hasattr(file_path_or_buffer, 'name'):
+            file_name = file_path_or_buffer.name
+        else:
+            file_name = str(file_path_or_buffer)
 
-def normalize_name(name):
-    if not isinstance(name, str): return str(name)
-    return " ".join(name.split())
-
-def has_basic_health_data(row):
-    columns = ['Weight', 'Height', 'BMI', 'Waist', 'SBP', 'DBP', 'Pulse', 
-               'น้ำหนัก', 'ส่วนสูง', 'รอบเอว']
-    return any(not is_empty(row.get(col)) for col in columns)
-
-def has_vision_data(row):
-    # เช็คทุก format ที่เป็นไปได้สำหรับ Vision
-    prefixes = ['V_R', 'V_L', 'R', 'L']
-    suffixes = ['Far', 'Near', 'Color', 'Blind']
-    
-    # สร้างรายการ key ที่เป็นไปได้ทั้งหมด
-    possible_keys = [
-        'V_R_Far', 'V_L_Far', 'V_R_Near', 'V_L_Near', 'Color_Blind',
-        'Color Blind', 'ColorBlind', 'ตาบอดสี',
-        'Vision Right', 'Vision Left'
-    ]
-    
-    # เช็คแบบ manual
-    for key in possible_keys:
-        if not is_empty(row.get(key)): return True
+        if file_name.endswith('.csv'):
+            df = pd.read_csv(file_path_or_buffer)
+        else:
+            df = pd.read_excel(file_path_or_buffer)
         
-    # เช็คแบบ contains (เผื่อชื่อแปลกๆ)
-    keys = row.keys() if hasattr(row, 'keys') else []
-    for k in keys:
-        k_lower = str(k).lower()
-        if 'vision' in k_lower or 'สายตา' in k_lower:
-            if not is_empty(row.get(k)): return True
-            
-    return False
-
-def has_hearing_data(row):
-    # สร้าง pattern ทั้งหมดที่เป็นไปได้: R250, R_250, R250Hz, Right 250, etc.
-    sides = ['R', 'L', 'R_', 'L_']
-    freqs = ['250', '500', '1000', '1k', '2000', '2k', '3000', '3k', '4000', '4k', '6000', '6k', '8000', '8k']
-    
-    # 1. เช็ค Exact Match ตาม Pattern
-    for s in sides:
-        for f in freqs:
-            key = f"{s}{f}"
-            if not is_empty(row.get(key)): return True
-            
-    # 2. เช็คกรณีชื่อเต็ม (Right_500, etc.) - เผื่อไว้
-    if any(not is_empty(row.get(k)) for k in ['Right_500', 'Left_500', 'Audiometry']):
-        return True
+        # แปลงชื่อคอลัมน์ให้เป็นมาตรฐาน (ตัดช่องว่าง)
+        df.columns = df.columns.str.strip()
         
-    return False
-
-def has_lung_data(row):
-    # เช็คชื่อคอลัมน์ปอดที่หลากหลาย
-    keywords = ['FVC', 'FEV1', 'PEF', 'Lung', 'Spirometry']
-    
-    # เช็ค Direct match
-    direct_keys = ['FVC', 'FVC predic', 'FVC %', 'FEV1', 'FEV1 predic', 'FEV1 %', 'FEV1/FVC', 'FEV1/FVC %']
-    if any(not is_empty(row.get(k)) for k in direct_keys): return True
-    
-    # เช็ค Partial match ใน keys
-    keys = row.keys() if hasattr(row, 'keys') else []
-    for k in keys:
-        k_str = str(k)
-        if any(kw in k_str for kw in keywords):
-            if not is_empty(row.get(k)): return True
+        # แปลงคอลัมน์วันที่ถ้ามี
+        if 'Date' in df.columns:
+            df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
             
-    return False
+        return df
+    except Exception as e:
+        st.error(f"Error loading data: {e}")
+        return pd.DataFrame()
 
-def has_visualization_data(df):
-    return df is not None and not df.empty
+def get_person_data(df, search_term, search_type="HN"):
+    """
+    ค้นหาข้อมูลล่าสุดของบุคคลตาม HN หรือ เลขบัตรประชาชน
+    """
+    if df.empty:
+        return None
+
+    # แปลงข้อมูลเป็น string เพื่อการค้นหาที่แม่นยำ
+    df = df.copy()
+    
+    if search_type == "HN":
+        col_name = 'HN'
+    elif search_type == "CID":
+        col_name = 'เลขบัตรประชาชน'
+    else:
+        # Default search by Name if needed, but usually HN/CID is unique
+        col_name = 'HN'
+
+    # ค้นหา
+    try:
+        person_rows = df[df[col_name].astype(str).str.strip() == str(search_term).strip()]
+    except KeyError:
+        return None
+
+    if person_rows.empty:
+        return None
+    
+    # ถ้ามีหลายปี ให้เอาปีล่าสุด (สมมติว่ามีคอลัมน์ Year หรือ Date)
+    if 'Year' in df.columns:
+        latest_row = person_rows.sort_values('Year', ascending=False).iloc[0]
+    elif 'Date' in df.columns:
+        latest_row = person_rows.sort_values('Date', ascending=False).iloc[0]
+    else:
+        latest_row = person_rows.iloc[0]
+
+    return latest_row.to_dict()
+
+def get_history_data(df, search_term, search_type="HN"):
+    """
+    ดึงข้อมูลประวัติย้อนหลังทั้งหมดของบุคคลนั้น
+    """
+    if df.empty:
+        return pd.DataFrame()
+
+    if search_type == "HN":
+        col_name = 'HN'
+    elif search_type == "CID":
+        col_name = 'เลขบัตรประชาชน'
+    else:
+        col_name = 'HN'
+
+    try:
+        history_df = df[df[col_name].astype(str).str.strip() == str(search_term).strip()]
+    except KeyError:
+        return pd.DataFrame()
+        
+    return history_df
+
+def calculate_age(dob):
+    """
+    คำนวณอายุจากวันเกิด (รูปแบบ datetime หรือ string)
+    """
+    if pd.isna(dob):
+        return 0
+    
+    today = datetime.today()
+    
+    if isinstance(dob, str):
+        try:
+            # พยายาม parse วันที่แบบต่างๆ
+            birth_date = pd.to_datetime(dob, dayfirst=True)
+        except:
+            return 0
+    else:
+        birth_date = dob
+        
+    age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+    return age
+
+def local_css(file_name):
+    """
+    โหลด CSS ไฟล์
+    """
+    try:
+        with open(file_name) as f:
+            st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+    except FileNotFoundError:
+        pass
+
+def get_base64_of_bin_file(bin_file):
+    """
+    แปลงไฟล์ binary เป็น base64 string
+    """
+    with open(bin_file, 'rb') as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
+
+def set_background(png_file):
+    """
+    ตั้งค่าพื้นหลังของแอพ
+    """
+    bin_str = get_base64_of_bin_file(png_file)
+    page_bg_img = '''
+    <style>
+    .stApp {
+    background-image: url("data:image/png;base64,%s");
+    background-size: cover;
+    }
+    </style>
+    ''' % bin_str
+    st.markdown(page_bg_img, unsafe_allow_html=True)
