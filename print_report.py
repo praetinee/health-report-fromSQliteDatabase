@@ -426,7 +426,7 @@ def generate_doctor_opinion(person_data, sex, cbc_statuses, urine_statuses):
 def render_section_header(title, subtitle=None):
     full_title = f"{title} <span style='font-weight: normal;'>({subtitle})</span>" if subtitle else title
     return f"""
-    <div style='background-color: #f0f2f6; color: #333; text-align: center; padding: 0.2rem 0.4rem; font-weight: bold; border-radius: 6px; margin-top: 0.5rem; margin-bottom: 0.2rem; font-size: 20px; border: 1px solid #ddd;'>
+    <div style='background-color: #f0f2f6; color: #333; text-align: center; padding: 0.2rem 0.4rem; font-weight: bold; border-radius: 6px; margin-top: 0.5rem; margin-bottom: 0.2rem; font-size: 16px; border: 1px solid #ddd; font-family: "Sarabun", sans-serif;'>
         {full_title}
     </div>
     """
@@ -454,7 +454,7 @@ def render_header_and_vitals(person_data):
     name = person_data.get('ชื่อ-สกุล', '-')
     age = str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person_data.get('อายุ', '-')
     sex = person_data.get('เพศ', '-')
-    hn = str(int(float(person_data.get('HN')))) if str(person_data.get('HN')).replace('.', '', 1).isdigit() else person.get('HN', '-')
+    hn = str(int(float(person_data.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person.get('HN', '-')
     department = person_data.get('หน่วยงาน', '-')
     check_date = person_data.get("วันที่ตรวจ", "-")
     sbp, dbp = get_float("SBP", person_data), get_float("DBP", person_data)
@@ -466,11 +466,11 @@ def render_header_and_vitals(person_data):
     height_val = f"{height} ซม." if height else "-"
     waist_val = f"{person_data.get('รอบเอว', '-')} ซม." if not is_empty(person_data.get('รอบเอว')) else "-"
     return f"""
-    <div class="header-grid">
+    <div class="header-grid" style="font-family: 'Sarabun', sans-serif;">
         <div class="header-left">
-            <h1 style="font-size: 2.0rem; margin:0;">รายงานผลการตรวจสุขภาพ</h1>
-            <p style="font-size: 1.1rem; margin:0;">คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย</p>
-            <p style="font-size: 1.1rem; margin:0;"><b>วันที่ตรวจ:</b> {check_date}</p>
+            <h1 style="font-size: 18px; margin:0;">รายงานผลการตรวจสุขภาพ</h1>
+            <p style="font-size: 16px; margin:0;">คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย</p>
+            <p style="font-size: 16px; margin:0;"><b>วันที่ตรวจ:</b> {check_date}</p>
         </div>
         <div class="header-right">
             <table class="info-table">
@@ -635,21 +635,21 @@ def get_main_report_css():
         
         body { 
             font-family: 'Sarabun', sans-serif !important; 
-            font-size: 18px; 
+            font-size: 16px; 
             margin: 0.5cm;
             color: #333; 
             background-color: #fff; 
         }
 
-        p, div, span, td, th { line-height: 1.4; }
+        p, div, span, td, th { line-height: 1.4; font-size: 16px; font-family: 'Sarabun', sans-serif; }
         table { border-collapse: collapse; width: 100%; }
-        .print-lab-table td, .print-lab-table th { padding: 2px 4px; border: 1px solid #ccc; text-align: center; vertical-align: middle; }
+        .print-lab-table td, .print-lab-table th { padding: 2px 4px; border: 1px solid #ccc; text-align: center; vertical-align: middle; font-size: 16px; }
         .print-lab-table th { background-color: #f2f2f2; font-weight: bold; }
         .print-lab-table-abn { background-color: #fff1f0 !important; }
         
         .print-lab-table tfoot .recommendation-row td {
             background-color: #fcf8e3; /* Light yellow */
-            font-size: 17px;
+            font-size: 16px;
             line-height: 1.3;
             border: 1px solid #ccc;
             text-align: left;
@@ -667,11 +667,11 @@ def get_main_report_css():
         .header-grid { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 0.5rem; }
         .header-left { text-align: left; }
         .header-right { text-align: right; }
-        .info-table { font-size: 16px; text-align: left; }
-        .info-table td {{ padding: 1px 5px; border: none; }}
+        .info-table { font-size: 16px; text-align: left; width: 100%; }
+        .info-table td { padding: 1px 5px; border: none; font-size: 16px; }
         
-        .advice-box { padding: 0.5rem 1rem; border-radius: 8px; line-height: 1.5; margin-top: 0.5rem; border: 1px solid #ddd; page-break-inside: avoid; }
-        .advice-title { font-weight: bold; margin-bottom: 0.3rem; font-size: 20px; }
+        .advice-box { padding: 0.5rem 1rem; border-radius: 8px; line-height: 1.5; margin-top: 0.5rem; border: 1px solid #ddd; page-break-inside: avoid; font-size: 16px; }
+        .advice-title { font-weight: bold; margin-bottom: 0.3rem; font-size: 16px; }
         .advice-content ul { padding-left: 20px; margin: 0; }
         .advice-content ul li { margin-bottom: 4px; }
         
@@ -684,11 +684,11 @@ def get_main_report_css():
             line-height: 1.5;
             margin-top: 0.5rem;
             page-break-inside: avoid;
-            font-size: 18px;
+            font-size: 16px;
             white-space: pre-wrap;
         }
         
-        .perf-section { margin-top: 0.5rem; page-break-inside: avoid; border: 1px solid #e0e0e0; border-radius: 8px; padding: 0.5rem; }
+        .perf-section { margin-top: 0.5rem; page-break-inside: avoid; border: 1px solid #e0e0e0; border-radius: 8px; padding: 0.5rem; font-size: 16px; }
         .summary-box { background-color: #f8f9fa; border-radius: 4px; padding: 4px 8px; margin-top: 2px; font-size: 16px; }
         @media print { body { -webkit-print-color-adjust: exact; margin: 0; } }
     </style>
@@ -710,12 +710,12 @@ def render_printable_report_body(person_data, all_person_history_df=None):
     doctor_suggestion_html = ""
 
     signature_html = """
-    <div style="margin-top: 2rem; text-align: right; padding-right: 1rem; page-break-inside: avoid;">
+    <div style="margin-top: 2rem; text-align: right; padding-right: 1rem; page-break-inside: avoid; font-family: 'Sarabun', sans-serif;">
         <div style="display: inline-block; text-align: center; width: 280px;">
             <div style="border-bottom: 1px dotted #333; margin-bottom: 0.4rem; width: 100%;"></div>
-            <div style="white-space: nowrap;">นายแพทย์นพรัตน์ รัชฎาพร</div>
-            <div style="white-space: nowrap;">แพทย์อาชีวเวชศาสตร์</div>
-            <div style="white-space: nowrap;">ว.26674</div>
+            <div style="white-space: nowrap; font-size: 16px;">นายแพทย์นพรัตน์ รัชฎาพร</div>
+            <div style="white-space: nowrap; font-size: 16px;">แพทย์อาชีวเวชศาสตร์</div>
+            <div style="white-space: nowrap; font-size: 16px;">ว.26674</div>
         </div>
     </div>
     """
