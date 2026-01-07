@@ -8,7 +8,7 @@ from performance_tests import generate_holistic_advice
 from print_performance_report import generate_performance_report_html_for_main_report
 
 # ==============================================================================
-# NOTE: ปรับปรุง CSS ให้พิมพ์เต็มหน้า A4 โดยไม่ต้องใช้ JS Scale ที่อาจทำให้เนื้อหาเล็กเกินไป
+# Refactored: ปรับปรุง CSS ให้ Auto-fit เต็มหน้ากระดาษ A4 จริงๆ
 # ==============================================================================
 
 RECOMMENDATION_TEXTS_CBC = {
@@ -414,7 +414,7 @@ def generate_doctor_opinion(person_data, sex, cbc_statuses, urine_statuses):
 def render_section_header(title, subtitle=None):
     full_title = f"{title} <span style='font-weight: normal;'>({subtitle})</span>" if subtitle else title
     return f"""
-    <div style='background-color: #f0f2f6; color: #333; text-align: center; padding: 2px 4px; font-weight: bold; border-radius: 4px; margin-top: 4px; margin-bottom: 2px; font-size: 10px; border: 1px solid #ddd;'>
+    <div style='background-color: #f0f2f6; color: #333; text-align: center; padding: 0.2rem 0.4rem; font-weight: bold; border-radius: 6px; margin-top: 0.5rem; margin-bottom: 0.2rem; font-size: 11px; border: 1px solid #ddd;'>
         {full_title}
     </div>
     """
@@ -456,9 +456,9 @@ def render_header_and_vitals(person_data):
     return f"""
     <div class="header-grid">
         <div class="header-left">
-            <h1 style="font-size: 16px; margin:0;">รายงานผลการตรวจสุขภาพ</h1>
-            <p style="font-size: 10px; margin:0;">คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย</p>
-            <p style="font-size: 10px; margin:0;"><b>วันที่ตรวจ:</b> {check_date}</p>
+            <h1 style="font-size: 1.5rem; margin:0;">รายงานผลการตรวจสุขภาพ</h1>
+            <p style="font-size: 0.8rem; margin:0;">คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย</p>
+            <p style="font-size: 0.8rem; margin:0;"><b>วันที่ตรวจ:</b> {check_date}</p>
         </div>
         <div class="header-right">
             <table class="info-table">
@@ -481,7 +481,7 @@ def render_header_and_vitals(person_data):
             </table>
         </div>
     </div>
-    <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 5px 0;">
+    <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 0.5rem 0;">
     """
 
 def render_lab_section(person, sex, cbc_statuses):
@@ -621,71 +621,69 @@ def get_main_report_css():
         
         @page {
             size: A4 portrait;
-            margin: 10mm; /* Standard A4 margin */
+            margin: 1cm; /* Standard margin */
         }
 
         body { 
             font-family: 'Sarabun', sans-serif !important; 
-            font-size: 10px; 
+            font-size: 10.5px; /* ปรับขนาดฟอนต์ให้อ่านง่าย */
             margin: 0;
             padding: 0;
             width: 100%;
-            color: #333; 
             background-color: #fff; 
+            color: #333; 
         }
 
         .report-container {
             width: 100%;
-            max-width: 100%;
-            margin: 0;
-            /* Remove fixed margins to allow full width */
+            box-sizing: border-box;
         }
 
         p, div, span, td, th { line-height: 1.3; }
         table { border-collapse: collapse; width: 100%; }
         
         .print-lab-table td, .print-lab-table th { 
-            padding: 2px 3px; 
+            padding: 3px 4px; 
             border: 1px solid #ccc; 
             text-align: center; 
             vertical-align: middle; 
         }
-        .print-lab-table th { background-color: #f2f2f2; font-weight: bold; font-size: 9px; }
+        .print-lab-table th { background-color: #f2f2f2; font-weight: bold; font-size: 10px; }
         .print-lab-table-abn { background-color: #fff1f0 !important; }
         
         .print-lab-table tfoot .recommendation-row td {
             background-color: #fcf8e3;
-            font-size: 9px;
-            line-height: 1.2;
+            font-size: 9.5px;
+            line-height: 1.3;
             border: 1px solid #ccc;
             text-align: left;
-            padding: 3px 5px;
+            padding: 4px 6px;
         }
         .print-lab-table tfoot ul {
             padding-left: 15px;
-            margin-top: 1px;
-            margin-bottom: 1px;
+            margin-top: 2px;
+            margin-bottom: 2px;
         }
         .print-lab-table tfoot li {
             margin-bottom: 1px;
         }
         
-        .header-grid { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 5px; }
+        .header-grid { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 10px; border-bottom: 2px solid #00796B; padding-bottom: 5px; }
         .header-left { text-align: left; }
         .header-right { text-align: right; }
-        .info-table { font-size: 10px; text-align: left; }
-        .info-table td {{ padding: 0 5px; border: none; }}
+        .info-table { font-size: 10.5px; text-align: left; }
+        .info-table td {{ padding: 1px 5px; border: none; }}
         
         .doctor-opinion-box {
             background-color: #e8f5e9;
             border-color: #a5d6a7;
             border: 1px solid #ddd;
-            padding: 3px 5px;
+            padding: 5px 8px;
             border-radius: 6px;
-            line-height: 1.3;
-            margin-top: 2px;
+            line-height: 1.4;
+            margin-top: 5px;
             page-break-inside: avoid;
-            font-size: 10px;
+            font-size: 10.5px;
             white-space: pre-wrap;
         }
         
@@ -713,11 +711,11 @@ def render_printable_report_body(person_data, all_person_history_df=None):
     doctor_suggestion_html = ""
 
     signature_html = """
-    <div style="margin-top: 2rem; text-align: right; padding-right: 1rem; page-break-inside: avoid;">
+    <div style="margin-top: 30px; text-align: right; padding-right: 20px; page-break-inside: avoid;">
         <div style="display: inline-block; text-align: center; width: 250px;">
-            <div style="border-bottom: 1px dotted #333; margin-bottom: 0.2rem; width: 100%;"></div>
-            <div style="white-space: nowrap; font-size: 10px;">นายแพทย์นพรัตน์ รัชฎาพร</div>
-            <div style="white-space: nowrap; font-size: 10px;">แพทย์อาชีวเวชศาสตร์ (ว.26674)</div>
+            <div style="border-bottom: 1px dotted #333; margin-bottom: 5px; width: 100%;"></div>
+            <div style="white-space: nowrap; font-size: 11px;">นายแพทย์นพรัตน์ รัชฎาพร</div>
+            <div style="white-space: nowrap; font-size: 11px;">แพทย์อาชีวเวชศาสตร์ (ว.26674)</div>
         </div>
     </div>
     """
@@ -737,6 +735,17 @@ def generate_printable_report(person_data, all_person_history_df=None):
     css_html = get_main_report_css()
     body_html = render_printable_report_body(person_data, all_person_history_df)
     
+    # JavaScript: Auto-print on load (เหมือน Ctrl+P)
+    print_script = """
+    <script>
+        window.onload = function() {
+            setTimeout(function() {
+                window.print();
+            }, 1000);
+        };
+    </script>
+    """
+    
     final_html = f"""
     <!DOCTYPE html>
     <html lang="th">
@@ -747,13 +756,7 @@ def generate_printable_report(person_data, all_person_history_df=None):
     </head>
     <body>
         {body_html}
-        <script>
-            window.onload = function() {{
-                setTimeout(function() {{
-                    window.print();
-                }}, 800);
-            }};
-        </script>
+        {print_script}
     </body>
     </html>
     """
