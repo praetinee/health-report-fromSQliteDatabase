@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import base64
+import os
 
 @st.cache_data(ttl=3600)
 def load_data(file_path_or_buffer):
@@ -33,6 +34,30 @@ def load_data(file_path_or_buffer):
         st.error(f"Error loading data: {e}")
         return pd.DataFrame()
 
+def clean_string(val):
+    """ทำความสะอาดข้อมูลสตริง (ตัดช่องว่าง, จัดการ NaN)"""
+    if pd.isna(val): return ""
+    return str(val).strip()
+
+def normalize_cid(val):
+    """ทำความสะอาดเลขบัตรประชาชน (13 หลักล้วน ตัดขีด/เว้นวรรค)"""
+    if pd.isna(val): return ""
+    s = str(val).strip().replace("-", "").replace(" ", "").replace("'", "").replace('"', "")
+    # กรณีเป็น Scientific notation (เช่น 1.23E+12)
+    if "E" in s or "e" in s:
+        try: s = str(int(float(s)))
+        except: pass
+    if s.endswith(".0"): s = s[:-2]
+    return s
+
+def normalize_db_name_field(full_name_str):
+    """แยกชื่อ-นามสกุลจากสตริงเดียว"""
+    clean_val = clean_string(full_name_str)
+    parts = clean_val.split()
+    if len(parts) >= 2: return parts[0], " ".join(parts[1:])
+    elif len(parts) == 1: return parts[0], ""
+    return "", ""
+
 def get_person_data(df, search_term, search_type="HN"):
     """
     ค้นหาข้อมูลล่าสุดของบุคคลตาม HN หรือ เลขบัตรประชาชน
@@ -45,22 +70,30 @@ def get_person_data(df, search_term, search_type="HN"):
     
     if search_type == "HN":
         col_name = 'HN'
+        # ทำความสะอาด search_term
+        search_val = str(search_term).strip()
     elif search_type == "CID":
         col_name = 'เลขบัตรประชาชน'
+        search_val = normalize_cid(search_term)
+        # ทำความสะอาดคอลัมน์ใน df เพื่อเปรียบเทียบ
+        df[col_name] = df[col_name].apply(normalize_cid)
     else:
-        # Default search by Name if needed, but usually HN/CID is unique
         col_name = 'HN'
+        search_val = str(search_term).strip()
 
     # ค้นหา
     try:
-        person_rows = df[df[col_name].astype(str).str.strip() == str(search_term).strip()]
+        if search_type == "CID":
+             person_rows = df[df[col_name] == search_val]
+        else:
+             person_rows = df[df[col_name].astype(str).str.strip() == search_val]
     except KeyError:
         return None
 
     if person_rows.empty:
         return None
     
-    # ถ้ามีหลายปี ให้เอาปีล่าสุด (สมมติว่ามีคอลัมน์ Year หรือ Date)
+    # ถ้ามีหลายปี ให้เอาปีล่าสุด
     if 'Year' in df.columns:
         latest_row = person_rows.sort_values('Year', ascending=False).iloc[0]
     elif 'Date' in df.columns:
@@ -79,13 +112,20 @@ def get_history_data(df, search_term, search_type="HN"):
 
     if search_type == "HN":
         col_name = 'HN'
+        search_val = str(search_term).strip()
     elif search_type == "CID":
         col_name = 'เลขบัตรประชาชน'
+        search_val = normalize_cid(search_term)
+        df[col_name] = df[col_name].apply(normalize_cid)
     else:
         col_name = 'HN'
+        search_val = str(search_term).strip()
 
     try:
-        history_df = df[df[col_name].astype(str).str.strip() == str(search_term).strip()]
+        if search_type == "CID":
+             history_df = df[df[col_name] == search_val]
+        else:
+             history_df = df[df[col_name].astype(str).str.strip() == search_val]
     except KeyError:
         return pd.DataFrame()
         
@@ -126,21 +166,25 @@ def get_base64_of_bin_file(bin_file):
     """
     แปลงไฟล์ binary เป็น base64 string
     """
-    with open(bin_file, 'rb') as f:
-        data = f.read()
-    return base64.b64encode(data).decode()
+    try:
+        with open(bin_file, 'rb') as f:
+            data = f.read()
+        return base64.b64encode(data).decode()
+    except Exception:
+        return None
 
 def set_background(png_file):
     """
     ตั้งค่าพื้นหลังของแอพ
     """
     bin_str = get_base64_of_bin_file(png_file)
-    page_bg_img = '''
-    <style>
-    .stApp {
-    background-image: url("data:image/png;base64,%s");
-    background-size: cover;
-    }
-    </style>
-    ''' % bin_str
-    st.markdown(page_bg_img, unsafe_allow_html=True)
+    if bin_str:
+        page_bg_img = '''
+        <style>
+        .stApp {
+        background-image: url("data:image/png;base64,%s");
+        background-size: cover;
+        }
+        </style>
+        ''' % bin_str
+        st.markdown(page_bg_img, unsafe_allow_html=True)
