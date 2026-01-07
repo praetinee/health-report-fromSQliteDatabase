@@ -11,6 +11,7 @@ from print_performance_report import generate_performance_report_html_for_main_r
 # ==============================================================================
 # NOTE: This file generates the printable health report.
 # Refactored to separate CSS and Body generation for Batch Printing.
+# Updated: Expanded font size and Auto-fit to 1 page layout.
 # ==============================================================================
 
 # --- START OF CHANGE: Add CBC Recommendation Texts ---
@@ -424,15 +425,19 @@ def generate_doctor_opinion(person_data, sex, cbc_statuses, urine_statuses):
 # --- HTML Rendering Functions ---
 
 def render_section_header(title, subtitle=None):
-    full_title = f"{title} <span style='font-weight: normal;'>({subtitle})</span>" if subtitle else title
-    return f"""
-    <div style='background-color: #f0f2f6; color: #333; text-align: center; padding: 0.2rem 0.4rem; font-weight: bold; border-radius: 6px; margin-top: 0.5rem; margin-bottom: 0.2rem; font-size: 11px; border: 1px solid #ddd;'>
-        {full_title}
-    </div>
     """
+    Revised to be a compact colored box with larger font.
+    """
+    full_title = f"{title} <span style='font-weight: normal; font-size: 0.9em;'>({subtitle})</span>" if subtitle else title
+    return f"<div class='section-header-box'>{full_title}</div>"
 
 def render_lab_table_html(title, subtitle, headers, rows, table_class="print-lab-table", footer_html=None):
+    # If subtitle is provided, append it to title or ignore based on preference. 
+    # Here we use the clean CSS box for headers so we can skip the extra div wrapper if needed, 
+    # but the old logic used a helper. Let's use the new section header helper.
+    
     header_html = render_section_header(title, subtitle)
+    
     html_content = f"{header_html}<table class='{table_class}'><colgroup><col style='width: 40%;'><col style='width: 20%;'><col style='width: 40%;'></colgroup><thead><tr>"
     for i, h in enumerate(headers):
         align = "left" if i == 0 or i == 2 else "center"
@@ -454,7 +459,7 @@ def render_header_and_vitals(person_data):
     name = person_data.get('ชื่อ-สกุล', '-')
     age = str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person_data.get('อายุ', '-')
     sex = person_data.get('เพศ', '-')
-    hn = str(int(float(person_data.get('HN')))) if str(person_data.get('HN')).replace('.', '', 1).isdigit() else person_data.get('HN', '-')
+    hn = str(int(float(person_data.get('HN')))) if str(person_data.get('HN')).replace('.', '', 1).isdigit() else person.get('HN', '-')
     department = person_data.get('หน่วยงาน', '-')
     check_date = person_data.get("วันที่ตรวจ", "-")
     sbp, dbp = get_float("SBP", person_data), get_float("DBP", person_data)
@@ -465,35 +470,34 @@ def render_header_and_vitals(person_data):
     weight_val = f"{weight} กก." if weight else "-"
     height_val = f"{height} ซม." if height else "-"
     waist_val = f"{person_data.get('รอบเอว', '-')} ซม." if not is_empty(person_data.get('รอบเอว')) else "-"
+    
+    # Updated HTML structure for compactness and bigger font
     return f"""
     <div class="header-grid">
         <div class="header-left">
-            <h1 style="font-size: 1.5rem; margin:0;">รายงานผลการตรวจสุขภาพ</h1>
-            <p style="font-size: 0.8rem; margin:0;">คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย</p>
-            <p style="font-size: 0.8rem; margin:0;"><b>วันที่ตรวจ:</b> {check_date}</p>
+            <h1 style="font-size: 20px; margin:0; line-height: 1.2;">รายงานผลการตรวจสุขภาพ</h1>
+            <p style="font-size: 13px; margin:0;">คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย</p>
+            <p style="font-size: 13px; margin:0;"><b>วันที่ตรวจ:</b> {check_date}</p>
         </div>
         <div class="header-right">
-            <table class="info-table">
+            <table class="info-table" style="width: auto;">
                 <tr>
                     <td><b>ชื่อ-สกุล:</b> {name}</td>
                     <td><b>อายุ:</b> {age} ปี</td>
                     <td><b>เพศ:</b> {sex}</td>
-                    <td><b>HN:</b> {hn}</td>
                 </tr>
                 <tr>
-                    <td><b>หน่วยงาน:</b> {department}</td>
-                    <td><b>น้ำหนัก:</b> {weight_val}</td>
-                    <td><b>ส่วนสูง:</b> {height_val}</td>
-                    <td><b>รอบเอว:</b> {waist_val}</td>
+                    <td><b>HN:</b> {hn}</td>
+                    <td colspan="2"><b>หน่วยงาน:</b> {department}</td>
                 </tr>
                  <tr>
-                    <td colspan="2"><b>ความดันโลหิต:</b> {bp_val}</td>
-                    <td colspan="2"><b>ชีพจร:</b> {pulse_val}</td>
+                    <td colspan="3">
+                        <b>นน.</b> {weight_val} | <b>สูง</b> {height_val} | <b>รอบเอว</b> {waist_val} | <b>BP:</b> {bp_val} | <b>P:</b> {pulse_val}
+                    </td>
                 </tr>
             </table>
         </div>
     </div>
-    <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 0.5rem 0;">
     """
 
 def render_lab_section(person, sex, cbc_statuses):
@@ -518,8 +522,8 @@ def render_lab_section(person, sex, cbc_statuses):
     return f"""
     <table style="width: 100%; border-collapse: collapse; page-break-inside: avoid;">
         <tr>
-            <td style="width: 50%; vertical-align: top; padding-right: 5px;">{cbc_html}</td>
-            <td style="width: 50%; vertical-align: top; padding-left: 5px;">{blood_html}</td>
+            <td style="width: 50%; vertical-align: top; padding-right: 5px; border: none;">{cbc_html}</td>
+            <td style="width: 50%; vertical-align: top; padding-left: 5px; border: none;">{blood_html}</td>
         </tr>
     </table>
     """
@@ -533,11 +537,13 @@ def render_other_results_html(person, sex, urine_statuses, doctor_opinion, all_p
     
     stool_exam_text = interpret_stool_exam(person.get("Stool exam", ""))
     stool_cs_text = interpret_stool_cs(person.get("Stool C/S", ""))
+    
+    stool_header = render_section_header("ผลตรวจอุจจาระ (Stool Examination)")
     stool_html = f"""
-    {render_section_header("ผลตรวจอุจจาระ (Stool Examination)")}
+    {stool_header}
     <table class="print-lab-table">
-        <tr><td style="text-align: left; width: 40%;"><b>ผลตรวจอุจจาระทั่วไป</b></td><td style="text-align: left;">{stool_exam_text}</td></tr>
-        <tr><td style="text-align: left; width: 40%;"><b>ผลตรวจอุจจาระเพาะเชื้อ</b></td><td style="text-align: left;">{stool_cs_text}</td></tr>
+        <tr><td style="text-align: left; width: 40%;"><b>ทั่วไป</b></td><td style="text-align: left;">{stool_exam_text}</td></tr>
+        <tr><td style="text-align: left; width: 40%;"><b>เพาะเชื้อ</b></td><td style="text-align: left;">{stool_cs_text}</td></tr>
     </table>
     """
     
@@ -546,11 +552,13 @@ def render_other_results_html(person, sex, urine_statuses, doctor_opinion, all_p
     
     cxr_result = interpret_cxr(person.get(f"CXR{str(current_year)[-2:]}" if current_year != (datetime.now().year+543) else "CXR", ""))
     ekg_result = interpret_ekg(person.get(get_ekg_col_name(current_year), ""))
+    
+    other_header = render_section_header("ผลตรวจอื่นๆ")
     other_tests_html = f"""
-    {render_section_header("ผลตรวจอื่นๆ")}
+    {other_header}
     <table class="print-lab-table">
-        <tr><td style="text-align: left; width: 40%;"><b>ผลเอกซเรย์ (Chest X-ray)</b></td><td style="text-align: left;">{cxr_result}</td></tr>
-        <tr><td style="text-align: left; width: 40%;"><b>ผลคลื่นไฟฟ้าหัวใจ (EKG)</b></td><td style="text-align: left;">{ekg_result}</td></tr>
+        <tr><td style="text-align: left; width: 40%;"><b>Chest X-ray</b></td><td style="text-align: left;">{cxr_result}</td></tr>
+        <tr><td style="text-align: left; width: 40%;"><b>EKG</b></td><td style="text-align: left;">{ekg_result}</td></tr>
     </table>
     """
     hep_a_value = person.get("Hepatitis A")
@@ -569,9 +577,9 @@ def render_other_results_html(person, sex, urine_statuses, doctor_opinion, all_p
     
     hep_test_date_str = str(person.get("ปีตรวจHEP", "")).strip()
     if not is_empty(hep_test_date_str):
-        hepatitis_header_text = f"ผลตรวจไวรัสตับอักเสบ (Viral Hepatitis) (ตรวจเมื่อ: {hep_test_date_str})"
+        hepatitis_header_text = f"ไวรัสตับอักเสบ (ตรวจเมื่อ: {hep_test_date_str})"
     else:
-        hepatitis_header_text = f"ผลตรวจไวรัสตับอักเสบ (Viral Hepatitis) (พ.ศ. {current_year})"
+        hepatitis_header_text = f"ไวรัสตับอักเสบ (พ.ศ. {current_year})"
         
     show_hep_b_advice_row = False
 
@@ -594,23 +602,25 @@ def render_other_results_html(person, sex, urine_statuses, doctor_opinion, all_p
          advice_bg_color = {'infection': '#ffdddd', 'no_immune': '#fff8e1', 'immune': '#e8f5e9'}.get(hep_b_status, '#f8f9fa')
 
     hep_b_rows_html = f"""
-        <tr><td style="text-align: left; width: 40%;"><b>ไวรัสตับอักเสบ เอ</b></td><td style="text-align: left;">{hep_a_display_text}</td></tr>
-        <tr><td style="text-align: left; width: 40%;"><b>ไวรัสตับอักเสบ บี (HBsAg)</b></td><td style="text-align: left;">{hbsag_display}</td></tr>
+        <tr><td style="text-align: left; width: 40%;"><b>ตับอักเสบ เอ</b></td><td style="text-align: left;">{hep_a_display_text}</td></tr>
+        <tr><td style="text-align: left; width: 40%;"><b>ตับอักเสบ บี (HBsAg)</b></td><td style="text-align: left;">{hbsag_display}</td></tr>
         <tr><td style="text-align: left; width: 40%;"><b>ภูมิคุ้มกัน (HBsAb)</b></td><td style="text-align: left;">{hbsab_display}</td></tr>
         <tr><td style="text-align: left; width: 40%;"><b>การติดเชื้อ (HBcAb)</b></td><td style="text-align: left;">{hbcab_display}</td></tr>
     """
     if show_hep_b_advice_row:
          hep_b_rows_html += f'<tr style="background-color: {advice_bg_color};"><td colspan="2" style="text-align: left;"><b>คำแนะนำ:</b> {hep_b_advice_display}</td></tr>'
 
+    hep_header = render_section_header(hepatitis_header_text)
     hepatitis_html = f"""
-    {render_section_header(hepatitis_header_text)}
+    {hep_header}
     <table class="print-lab-table">
         {hep_b_rows_html}
     </table>
     """
 
+    doc_header = render_section_header("สรุปความคิดเห็นของแพทย์")
     doctor_opinion_html = f"""
-    {render_section_header("สรุปความคิดเห็นของแพทย์")}
+    {doc_header}
     <div class="doctor-opinion-box">
         {html.escape(doctor_opinion)}
     </div>
@@ -619,8 +629,8 @@ def render_other_results_html(person, sex, urine_statuses, doctor_opinion, all_p
     return f"""
     <table style="width: 100%; border-collapse: collapse; page-break-inside: avoid;">
         <tr>
-            <td style="width: 50%; vertical-align: top; padding-right: 5px;">{urine_html}{stool_html}</td>
-            <td style="width: 50%; vertical-align: top; padding-left: 5px;">{other_tests_html}{hepatitis_html}{doctor_opinion_html}</td>
+            <td style="width: 50%; vertical-align: top; padding-right: 5px; border: none;">{urine_html}{stool_html}</td>
+            <td style="width: 50%; vertical-align: top; padding-left: 5px; border: none;">{other_tests_html}{hepatitis_html}{doctor_opinion_html}</td>
         </tr>
     </table>
     """
@@ -633,119 +643,31 @@ def get_main_report_css():
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
         
+        @page {
+            size: A4 portrait;
+            margin: 5mm; /* ขอบกระดาษบางลงเพื่อให้พื้นที่เนื้อหามากขึ้น */
+        }
+        
         body { 
             font-family: 'Sarabun', sans-serif !important; 
-            font-size: 9.5px; 
-            margin: 0.5cm;
-            color: #333; 
+            font-size: 13px; /* เพิ่มขนาดตัวอักษรจาก 9.5px เป็น 13px */
+            line-height: 1.15; /* ลดระยะห่างบรรทัดเพื่อให้พอดี 1 หน้า */
+            margin: 0;
+            padding: 10px;
+            color: #000; 
             background-color: #fff; 
+            width: 100%;
+            box-sizing: border-box;
         }
 
-        p, div, span, td, th { line-height: 1.4; }
-        table { border-collapse: collapse; width: 100%; }
-        .print-lab-table td, .print-lab-table th { padding: 2px 4px; border: 1px solid #ccc; text-align: center; vertical-align: middle; }
-        .print-lab-table th { background-color: #f2f2f2; font-weight: bold; }
-        .print-lab-table-abn { background-color: #fff1f0 !important; }
+        h1 { font-size: 20px; margin: 5px 0; font-weight: bold; }
+        p, div, span, td, th { word-wrap: break-word; }
         
-        .print-lab-table tfoot .recommendation-row td {
-            background-color: #fcf8e3; /* Light yellow */
-            font-size: 9px;
-            line-height: 1.3;
-            border: 1px solid #ccc;
-            text-align: left;
-            padding: 4px 6px;
-        }
-        .print-lab-table tfoot ul {
-            padding-left: 15px;
-            margin-top: 2px;
-            margin-bottom: 2px;
-        }
-        .print-lab-table tfoot li {
-            margin-bottom: 2px;
-        }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 2px; }
         
-        .header-grid { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 0.5rem; }
-        .header-left { text-align: left; }
-        .header-right { text-align: right; }
-        .info-table { font-size: 9.5px; text-align: left; }
-        .info-table td {{ padding: 1px 5px; border: none; }}
-        
-        .advice-box { padding: 0.5rem 1rem; border-radius: 8px; line-height: 1.5; margin-top: 0.5rem; border: 1px solid #ddd; page-break-inside: avoid; }
-        .advice-title { font-weight: bold; margin-bottom: 0.3rem; font-size: 11px; }
-        .advice-content ul { padding-left: 20px; margin: 0; }
-        .advice-content ul li { margin-bottom: 4px; }
-        
-        .doctor-opinion-box {
-            background-color: #e8f5e9; /* Light green */
-            border-color: #a5d6a7;
-            border: 1px solid #ddd;
-            padding: 0rem 0.5rem;
-            border-radius: 8px;
-            line-height: 1.5;
-            margin-top: 0.5rem;
-            page-break-inside: avoid;
-            font-size: 9.5px;
-            white-space: pre-wrap;
-        }
-        
-        .perf-section { margin-top: 0.5rem; page-break-inside: avoid; border: 1px solid #e0e0e0; border-radius: 8px; padding: 0.5rem; }
-        .summary-box { background-color: #f8f9fa; border-radius: 4px; padding: 4px 8px; margin-top: 2px; font-size: 9px; }
-        @media print { body { -webkit-print-color-adjust: exact; margin: 0; } }
-    </style>
-    """
-
-def render_printable_report_body(person_data, all_person_history_df=None):
-    """Generates the HTML body content (without <html><head>) for a single person."""
-    sex = str(person_data.get("เพศ", "")).strip()
-    if sex not in ["ชาย", "หญิง"]: sex = "ไม่ระบุ"
-    
-    cbc_results = generate_cbc_recommendations(person_data, sex)
-    urine_results = generate_urine_recommendations(person_data, sex)
-    doctor_opinion = generate_doctor_opinion(person_data, sex, cbc_results, urine_results)
-    
-    header_vitals_html = render_header_and_vitals(person_data)
-    lab_section_html = render_lab_section(person_data, sex, cbc_results)
-    other_results_html = render_other_results_html(person_data, sex, urine_results, doctor_opinion, all_person_history_df)
-    
-    doctor_suggestion_html = ""
-
-    signature_html = """
-    <div style="margin-top: 2rem; text-align: right; padding-right: 1rem; page-break-inside: avoid;">
-        <div style="display: inline-block; text-align: center; width: 280px;">
-            <div style="border-bottom: 1px dotted #333; margin-bottom: 0.4rem; width: 100%;"></div>
-            <div style="white-space: nowrap;">นายแพทย์นพรัตน์ รัชฎาพร</div>
-            <div style="white-space: nowrap;">แพทย์อาชีวเวชศาสตร์</div>
-            <div style="white-space: nowrap;">ว.26674</div>
-        </div>
-    </div>
-    """
-    
-    return f"""
-    <div class="report-container">
-        {header_vitals_html}
-        {lab_section_html}
-        {other_results_html}
-        {doctor_suggestion_html}
-        {signature_html}
-    </div>
-    """
-
-def generate_printable_report(person_data, all_person_history_df=None):
-    """Generates a full, self-contained HTML string for the health report."""
-    css_html = get_main_report_css()
-    body_html = render_printable_report_body(person_data, all_person_history_df)
-    
-    final_html = f"""
-    <!DOCTYPE html>
-    <html lang="th">
-    <head>
-        <meta charset="UTF-8">
-        <title>รายงานผลการตรวจสุขภาพ - {html.escape(person_data.get('ชื่อ-สกุล', ''))}</title>
-        {css_html}
-    </head>
-    <body>
-        {body_html}
-    </body>
-    </html>
-    """
-    return final_html
+        .print-lab-table td, .print-lab-table th { 
+            padding: 1px 3px; 
+            border: 1px solid #888; 
+            text-align: center; 
+            vertical-align: middle; 
+            font-size: 12px; /* ขนาดตัว
