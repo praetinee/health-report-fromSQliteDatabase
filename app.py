@@ -198,12 +198,12 @@ def render_custom_header_with_actions(person_data, available_years):
                 if st.button("🖨️ ผลสมรรถภาพ", key="hdr_print_p", use_container_width=True):
                     st.session_state.print_performance_trigger = True
             
-            # --- ส่วนแจ้งเตือนสำหรับมือถือ (Mobile Warning Message) ---
-            # ใช้ st.markdown แบบแยกชิ้น เพื่อไม่ให้ไปปนกับส่วนอื่นๆ
+            # --- ส่วนแจ้งเตือนสำหรับมือถือ (แสดงตลอดเวลา) ---
             st.markdown("""
             <style>
                 .mobile-print-note-container {
-                    display: none;
+                    /* แสดงผลตลอดเวลา ไม่ต้องมี Media Query ซ่อน */
+                    display: block !important;
                     width: 100%;
                     margin-top: 0px;
                 }
@@ -222,12 +222,7 @@ def render_custom_header_with_actions(person_data, available_years):
                     max-width: 300px;
                     margin-left: 2px;
                     line-height: 1.2;
-                    border-radius: 4px; /* เพิ่มความมนให้ขอบนิดหน่อย */
-                }
-                @media (max-width: 992px) {
-                    .mobile-print-note-container {
-                        display: block !important;
-                    }
+                    border-radius: 4px;
                 }
             </style>
             <div class="mobile-print-note-container">
@@ -353,42 +348,6 @@ def main_app(df):
     available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
     if 'selected_year' not in st.session_state or st.session_state.selected_year not in available_years:
         st.session_state.selected_year = available_years[0]
-
-    # --- ส่วน CSS/JS สำหรับซ่อนปุ่มพิมพ์บนมือถือ ---
-    st.markdown("""
-        <style>
-        /* CSS สำหรับ Desktop (หน้าจอ > 992px) */
-        @media (min-width: 993px) {
-            .print-menu-anchor { display: block; }
-        }
-
-        /* CSS สำหรับ Mobile/Tablet (หน้าจอ <= 992px) */
-        @media (max-width: 992px) {
-            button[kind="secondary"]:has(div p:contains("🖨️")) {
-                 display: none !important;
-            }
-        }
-        </style>
-        
-        <script>
-        function removePrintButtonsOnMobile() {
-            if (window.innerWidth <= 992) {
-                // หาปุ่มที่มีไอคอนเครื่องพิมพ์
-                const buttons = window.parent.document.querySelectorAll('button');
-                buttons.forEach(btn => {
-                    if (btn.innerText.includes('🖨️')) {
-                        btn.style.display = 'none';
-                        const col = btn.closest('[data-testid="column"]');
-                        if (col) col.style.display = 'none';
-                    }
-                });
-            }
-        }
-        removePrintButtonsOnMobile();
-        window.addEventListener('resize', removePrintButtonsOnMobile);
-        setInterval(removePrintButtonsOnMobile, 500);
-        </script>
-    """, unsafe_allow_html=True)
 
     # --- ส่วนแสดงผลรายงาน ---
     yr_df = results_df[results_df["Year"] == st.session_state.selected_year]
