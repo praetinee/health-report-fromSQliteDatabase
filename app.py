@@ -199,35 +199,38 @@ def render_custom_header_with_actions(person_data, available_years):
                     st.session_state.print_performance_trigger = True
             
             # --- ส่วนแจ้งเตือนสำหรับมือถือ (แสดงตลอดเวลา) ---
-            # ข้อความแจ้งเตือน: จัดรูปแบบชิดซ้ายเพื่อป้องกันการแสดงเป็น Code block
             st.markdown("""
-<style>
-.mobile-print-note-container {
-    display: block !important;
-    width: 100%;
-    margin-top: 0px;
-}
-.mobile-print-note {
-    background: linear-gradient(to right, #fff3cd, #ffffff) !important;
-    border: none !important;
-    border-left: 5px solid #ffc107 !important;
-    color: #856404;
-    font-size: 0.75rem;
-    font-weight: 400;
-    padding: 5px 10px;
-    width: 100%;
-    max-width: 300px;
-    margin-left: 2px;
-    line-height: 1.2;
-    border-radius: 4px;
-}
-</style>
-<div class="mobile-print-note-container">
-    <div class="mobile-print-note">
-    ฟังก์ชันพิมพ์ รองรับการใช้งานผ่านคอมพิวเตอร์ (PC) เท่านั้น
-    </div>
-</div>
-""", unsafe_allow_html=True)
+            <style>
+                .mobile-print-note-container {
+                    /* แสดงผลตลอดเวลา ไม่ต้องมี Media Query ซ่อน */
+                    display: block !important;
+                    width: 100%;
+                    margin-top: 0px;
+                }
+                .mobile-print-note {
+                    /* พื้นหลังไล่สีแบบเดิม */
+                    background: linear-gradient(to right, #fff3cd, #ffffff) !important;
+                    /* ไม่มีเส้นขอบ */
+                    border: none !important;
+                    /* แถบสีด้านซ้ายแบบเดิม */
+                    border-left: 5px solid #ffc107 !important;
+                    color: #856404;
+                    font-size: 0.75rem;
+                    font-weight: 400;
+                    padding: 5px 10px;
+                    width: 100%;
+                    max-width: 300px;
+                    margin-left: 2px;
+                    line-height: 1.2;
+                    border-radius: 4px;
+                }
+            </style>
+            <div class="mobile-print-note-container">
+                 <div class="mobile-print-note">
+                    ฟังก์ชันพิมพ์ รองรับการใช้งานผ่านคอมพิวเตอร์ (PC) เท่านั้น
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
             # --------------------------------------------------------
 
         with c2:
@@ -345,9 +348,6 @@ def main_app(df):
     available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
     if 'selected_year' not in st.session_state or st.session_state.selected_year not in available_years:
         st.session_state.selected_year = available_years[0]
-
-    # --- ส่วน CSS/JS สำหรับซ่อนปุ่มพิมพ์บนมือถือ ---
-    # ลบส่วนนี้ออกแล้วตามที่ต้องการ
 
     # --- ส่วนแสดงผลรายงาน ---
     yr_df = results_df[results_df["Year"] == st.session_state.selected_year]
