@@ -163,12 +163,17 @@ def get_report_css():
 def render_lab_row(name, value, unit, normal_range, is_abnormal):
     cls = "abnormal" if is_abnormal else ""
     val_display = value if value != "-" else "-"
-    unit_span = f'<span style="font-size:10px; color:#999;">{unit}</span>' if unit else ""
+    
+    # Logic change: Move unit to normal_range column
+    range_display = normal_range
+    if unit:
+        range_display = f"{normal_range} <span style='font-size:10px; color:#999;'>({unit})</span>"
+
     return f"""
     <tr>
         <td>{name}</td>
-        <td class="val-col {cls}">{val_display} {unit_span}</td>
-        <td class="range-col">{normal_range}</td>
+        <td class="val-col {cls}">{val_display}</td>
+        <td class="range-col">{range_display}</td>
     </tr>
     """
 
@@ -219,36 +224,9 @@ def generate_printable_report(person_data, all_person_history_df=None):
         val, is_abn = flag_abnormal(person_data.get(key), low, high)
         cbc_rows += render_lab_row(label, val, unit, norm_text, is_abn)
 
-    # Biochemistry
-    bio_data = [
-        ("Fasting Blood Sugar", "FBS", None, 70, 100, "mg/dL", "70-100"),
-        ("BUN", "BUN", None, 6, 20, "mg/dL", "6-20"),
-        ("Creatinine", "Cr", None, 0.5, 1.2, "mg/dL", "0.5-1.2"),
-        ("eGFR", "GFR", None, 90, None, "mL/min", "> 90"),
-        ("Cholesterol", "CHOL", None, 0, 200, "mg/dL", "< 200"),
-        ("Triglyceride", "TGL", None, 0, 150, "mg/dL", "< 150"),
-        ("HDL-C", "HDL", None, 40, None, "mg/dL", "> 40"),
-        ("LDL-C", "LDL", None, 0, 130, "mg/dL", "< 130"),
-        ("Uric Acid", "Uric Acid", None, 2.4, 7.0, "mg/dL", "2.4-7.0"),
-        ("SGOT (AST)", "SGOT", None, 0, 40, "U/L", "< 40"),
-        ("SGPT (ALT)", "SGPT", None, 0, 40, "U/L", "< 40"),
-        ("Alkaline Phos.", "ALP", None, 35, 105, "U/L", "35-105"),
-    ]
-    bio_rows = ""
-    for label, key, _, low, high, unit, norm_text in bio_data:
-        val_raw = get_float(key, person_data)
-        is_abn = False
-        val_fmt = safe_value(person_data.get(key))
-        
-        if val_raw is not None:
-            if key == "HDL" and val_raw < 40: is_abn = True
-            elif key == "GFR" and val_raw < 60: is_abn = True
-            else:
-                _, is_abn = flag_abnormal(val_raw, low, high)
-            val_fmt = f"{val_raw:,.0f}" if val_raw.is_integer() else f"{val_raw:,.1f}"
-            
-        bio_rows += render_lab_row(label, val_fmt, unit, norm_text, is_abn)
-
+    # Biochemistry (Helper Loop for sections not manually built)
+    # Note: We build sections manually below for flexibility
+    
     # Urinalysis
     urine_color = safe_value(person_data.get("Color"))
     urine_ph = safe_value(person_data.get("pH"))
@@ -349,17 +327,6 @@ def generate_printable_report(person_data, all_person_history_df=None):
                     <div class="section-title">การทำงานของไต (Kidney Function)</div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
-                        <tbody>{bio_rows.split('<tr><td>eGFR')[0].split('<tr><td>Creatinine')[0]} 
-                            <!-- Note: Splitting bio_rows manually here for specific sections is complex with string concat. 
-                                 Let's rebuild specific rows for sections instead of pre-looping bio_rows.
-                                 Re-implementing loop logic below for clarity. -->
-                        </tbody>
-                    </table>
-                    <!-- FIX: Re-generating tables per section properly -->
-                    
-                    <div class="section-title">การทำงานของไต (Kidney Function)</div>
-                    <table>
-                        <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>
                             {render_lab_row("BUN", safe_value(person_data.get("BUN")), "mg/dL", "6-20", False)}
                             {render_lab_row("Creatinine", safe_value(person_data.get("Cr")), "mg/dL", "0.5-1.2", False)}
@@ -376,8 +343,8 @@ def generate_printable_report(person_data, all_person_history_df=None):
                     <div class="section-title">อุจจาระ (Stool)</div>
                     <table>
                         <tbody>
-                            <tr><td>Stool Exam</td><td class="val-col">{safe_value(person_data.get("Stool exam"))}</td></tr>
-                            <tr><td>Stool Culture</td><td class="val-col">{safe_value(person_data.get("Stool C/S"))}</td></tr>
+                            <tr><td>Stool Exam</td><td class="val-col">{safe_value(person_data.get("Stool exam"))}</td><td class="range-col"></td></tr>
+                            <tr><td>Stool Culture</td><td class="val-col">{safe_value(person_data.get("Stool C/S"))}</td><td class="range-col"></td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -410,10 +377,10 @@ def generate_printable_report(person_data, all_person_history_df=None):
                     <div class="section-title">ไวรัสตับอักเสบ (Hepatitis)</div>
                     <table>
                         <tbody>
-                            <tr><td>Hepatitis A</td><td class="val-col">{hep_a}</td><td>Neg</td></tr>
-                            <tr><td>HBsAg (เชื้อ)</td><td class="val-col">{hbsag}</td><td>Neg</td></tr>
-                            <tr><td>HBsAb (ภูมิ)</td><td class="val-col">{hbsab}</td><td>Pos</td></tr>
-                            <tr><td>HBcAb</td><td class="val-col">{hbcab}</td><td>Neg</td></tr>
+                            <tr><td>Hepatitis A</td><td class="val-col">{hep_a}</td><td class="range-col">Neg</td></tr>
+                            <tr><td>HBsAg (เชื้อ)</td><td class="val-col">{hbsag}</td><td class="range-col">Neg</td></tr>
+                            <tr><td>HBsAb (ภูมิ)</td><td class="val-col">{hbsab}</td><td class="range-col">Pos</td></tr>
+                            <tr><td>HBcAb</td><td class="val-col">{hbcab}</td><td class="range-col">Neg</td></tr>
                         </tbody>
                     </table>
 
@@ -422,11 +389,11 @@ def generate_printable_report(person_data, all_person_history_df=None):
                         <tbody>
                             <tr>
                                 <td><b>Chest X-Ray</b></td>
-                                <td class="val-col" style="text-align:left; font-size:11px;">{cxr}</td>
+                                <td class="val-col" style="text-align:left; font-size:11px;" colspan="2">{cxr}</td>
                             </tr>
                             <tr>
                                 <td><b>EKG</b></td>
-                                <td class="val-col" style="text-align:left; font-size:11px;">{ekg}</td>
+                                <td class="val-col" style="text-align:left; font-size:11px;" colspan="2">{ekg}</td>
                             </tr>
                         </tbody>
                     </table>
