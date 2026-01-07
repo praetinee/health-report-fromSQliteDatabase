@@ -15,23 +15,23 @@ from print_performance_report import generate_performance_report_html_for_main_r
 
 # --- START OF CHANGE: Add CBC Recommendation Texts ---
 RECOMMENDATION_TEXTS_CBC = {
-    "C2": "ให้รับประทานอาหารที่มีประโยชน์ เช่น นม ผักใบเขียว ถั่วเมล็ดแห้ง เนื้อสัตว์ ไข่ เป็นต้น พักผ่อนให้เพียงพอ ถ้ามีหน้ามืดวิงเวียน อ่อนเพลียหรือมีไข้ให้พบแพทย์",
-    "C4": "ให้ดูแลสุขภาพให้แข็งแรง ออกกำลังกาย ทานอาหารที่มีประโยชน์ ระมัดระวังป้องกันการเกิดแผลเนื่องจากเลือดอาจออกได้ง่ายและหยุดยาก",
-    "C6": "ให้ดูแลสุขภาพร่างกายให้แข็งแรง หลีกเลี่ยงการอยู่ในที่ชุมชนที่มีโอกาสสัมผัสเชื้อโรคได้ง่าย และให้ทำการรักษาอย่างต่อเนื่องสม่ำเสมอ",
-    "C8": "ให้นำผลตรวจพบแพทย์หาสาเหตุภาวะโลหิตจาง หรือกรณีรู้สาเหตุให้รับการรักษาเดิม",
-    "C9": "ให้นำผลตรวจพบแพทย์หาสาเหตุภาวะโลหิตจาง หรือกรณีรู้สาเหตุให้รับการรักษาเดิมและดูแลสุขภาพให้แข็งแรงหลีกเลี่ยงการอยู่ในที่ชุมชนที่มีโอกาสสัมผัสเชื้อโรคได้ง่าย และทำการรักษาอย่างต่อเนื่อง",
-    "C10": "ให้นำผลตรวจพบแพทย์หาสาเหตุเกล็ดเลือดสูงกว่าปกติ หรือกรณีรู้สาเหตุให้รับการรักษาเดิม",
-    "C13": "ให้รับประทานอาหารที่มีประโยชน์ เช่น นม ผักใบเขียว ถั่วเมล็ดแห้ง เนื้อสัตว์ ไข่ เป็นต้น พักผ่อนให้เพียงพอ หลีกเลี่ยงการอยู่ในที่ชุมชนที่มีโอกาสสัมผัสเชื้อโรคได้ง่าย ดูแลสุขภาพร่างกายให้แข็งแรง ถ้ามีหน้ามืดวิงเวียน อ่อนเพลียหรือมีไข้ให้พบแพทย์",
+    "C2": "ให้รับประทานอาหารที่มีประโยชน์ เช่น นม ผักใบเขียว ถั่วเมล็ดแห้ง เน้นอาหารที่มีธาตุเหล็กสูง เช่น ตับ อาหารทะเล งดชา กาแฟ เพื่อเพิ่มธาตุเหล็กในร่างกาย",
+    "C4": "ให้ดูแลสุขภาพให้แข็งแรง ออกกำลังกาย ทานอาหารที่มีประโยชน์ ระมัดระวังการได้รับอุบัติเหตุหรืออาการเลือดออกผิดปกติ ให้รับประทานใบฝรั่งกระชาย เพิ่มวิตามินซีจากผลไม้",
+    "C6": "ให้ดูแลสุขภาพร่างกายให้แข็งแรง หลีกเลี่ยงการอยู่ในที่ชุมชนที่มีความเสี่ยง เช่น การอยู่ในที่ชุมชนที่มีคนป่วยเป็นไข้หวัด",
+    "C8": "ให้นำผลตรวจพบแพทย์หาสาเหตุภาวะโลหิตจาง หรือกรณีรู้สาเหตุให้รับการดูแลรักษากับแพทย์และตรวจติดตามเป็นระยะ",
+    "C9": "ให้นำผลตรวจพบแพทย์หาสาเหตุภาวะโลหิตจาง หรือกรณีรู้สาเหตุให้รับการดูแลรักษากับแพทย์และตรวจติดตามเป็นระยะ",
+    "C10": "ให้นำผลตรวจพบแพทย์หาสาเหตุเกล็ดเลือดสูงกว่าปกติ หรือกรณีรู้สาเหตุให้รับการดูแลรักษากับแพทย์และตรวจติดตามเป็นระยะ",
+    "C13": "ให้รับประทานอาหารที่มีประโยชน์ เช่น นม ผักใบเขียว ถั่วเมล็ดแห้ง เน้นอาหารที่มีธาตุเหล็กสูง เช่น ตับ อาหารทะเล งดชา กาแฟ เพื่อเพิ่มธาตุเหล็กในร่างกาย"
 }
 # --- END OF CHANGE ---
 
 # --- START OF CHANGE: Add Urine Recommendation Texts ---
 RECOMMENDATION_TEXTS_URINE = {
     "E11": "ให้หลีกเลี่ยงการทานอาหารที่มีน้ำตาลสูง",
-    "E4": "แนะนำให้ตรวจปัสสาวะซ้ำ อาจมีการปนเปื้อนของประจำเดือน กรณีตรวจแล้วพบผิดปกติให้พบแพทย์เพื่อตรวจรักษาเพิ่มเติม",
-    "E10": "แนะนำให้ตรวจปัสสาวะซ้ำ กรณีตรวจแล้วพบผิดปกติให้พบแพทย์เพื่อตรวจรักษาเพิ่มเติม",
+    "E4": "แนะนำให้ตรวจปัสสาวะซ้ำ อาจมีการปนเปื้อนของประจำเดือน กรณีตรวจแล้วพบผิดปกติให้พบแพทย์เพื่อประเมินรักษา",
+    "E10": "แนะนำให้ตรวจปัสสาวะซ้ำ กรณีตรวจแล้วพบผิดปกติให้พบแพทย์เพื่อตรวจรั��ษา",
     "F3": "", # เป็นค่าว่างตามที่คุณแจ้ง
-    "E2": "อาจเกิดจากการปนเปื้อนในการเก็บปัสสาวะหรือมีการติดเชื้อในระบบทางเดินปัสสาวะให้ดื่มน้ำมากๆ ไม่ควรกลั้นปัสสาวะ ถ้ามีอาการ ผิดปกติ ปัสสาวะแสบขัด ขุ่น ปวดท้องน้อย ปวดบั้นเอว กลั้นปัสสาวะไม่อยู่ ไข้สูง หนาวสั่น ควรรีบไปพบแพทย์",
+    "E2": "อาจเกิดจากการปนเปื้อนในการเก็บปัสสาวะหรือมีการติดเชื้อในระบบทางเดินปัสสาวะ ให้ตรวจปัสสาวะซ้ำและหากผิดปกติให้พบแพทย์"
 }
 # --- END OF CHANGE ---
 
@@ -153,8 +153,8 @@ def hepatitis_b_advice(hbsag, hbsab, hbcab):
 
     if "positive" in hbsag_logic: return "ติดเชื้อไวรัสตับอักเสบบี", "infection"
     if "positive" in hbsab_logic and "positive" not in hbsag_logic: return "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี", "immune"
-    if "positive" in hbcab_logic and "positive" not in hbsab_logic: return "เคยติดเชื้อแต่ไม่มีภูมิคุ้มกันในปัจจุบัน", "unclear"
-    if all(x == "negative" for x in [hbsag_logic, hbsab_logic, hbcab_logic]): return "ไม่มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี ควรปรึกษาแพทย์เพื่อรับวัคซีน", "no_immune"
+    if "positive" in hbcab_logic and "positive" not in hbsab_logic: return "เคยติดเชื้อแต่ไม่มีภูมิคุ้มกันในปัจจุบัน", "no_immune"
+    if all(x == "negative" for x in [hbsag_logic, hbsab_logic, hbcab_logic]): return "ไม่มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี ควรรับวัคซีนป้องกัน", "no_immune"
     return "ไม่สามารถสรุปผลชัดเจน แนะนำให้พบแพทย์เพื่อประเมินซ้ำ", "unclear"
 
 def generate_fixed_recommendations(person_data):
@@ -162,31 +162,31 @@ def generate_fixed_recommendations(person_data):
     try:
         fbs_val = get_float("FBS", person_data)
         if fbs_val is not None and fbs_val > 100:
-            recommendations.append("ตรวจพบน้ำตาลในเลือดสูงให้หลีกเลี่ยงการทานขนมหวาน /อาหารหวาน/ผลไม้รสหวานจัด เช่น ทุเรียน เงาะ ลำไย มะม่วงสุก ให้ทานอาหารที่มีเส้นใย เช่นผักต่างๆ ออกกำลังกายสม่ำเสมอ")
+            recommendations.append("ตรวจพบน้ำตาลในเลือดสูงให้หลีกเลี่ยงการทานขนมหวาน /อาหารหวาน /เครื่องดื่มหวาน  ออกกำลังกายสม่ำเสมอ หากมีอาการเหนื่อยง่าย ตาพร่ามัว ปัสสาวะบ่อย กระหายน้ำบ่อย ให้พบแพทย์")
     except Exception: pass
 
     try:
         lipid_str = str(person_data.get("ผลไขมันในเลือด", "")).strip()
         if lipid_str in ["ไขมันในเลือดสูง", "ไขมันในเลือดสูงเล็กน้อย"]:
-            recommendations.append("ตรวจพบไขมันในเลือดสูงให้ลดอาหารไขมันสูงเช่น อาหารทอด/ไข่แดง/เครื่องในสัตว์/อาหารทะเล งดสุรา ให้รับประทานผักผลไม้ ออกกำลังกาย ควบคุมน้ำหนักอย่าให้อ้วน")
+            recommendations.append("ตรวจพบไขมันในเลือดสูงให้ลดอาหารไขมันสูงเช่น อาหารทอด/ไข่แดง/ปาท่องโก๋/เนื้อสัตว์ติดมัน/แกงกะทิ รับประทานผักผลไม้ พืชผักใบเขียวเป็นประจำ ออกกำลังกาย")
     except Exception: pass
 
     try:
         liver_str = str(person_data.get("ผลเอ็มไซม์ตับ", "")).strip()
         if liver_str in ["การทำงานของตับสูงกว่าเกณฑ์ปกติเล็กน้อย", "การทำงานของตับสูงกว่าเกณฑ์ปกติ"]:
-            recommendations.append("ตรวจพบการทำงานของตับสูงเล็กน้อย งดสุรา/ลดอาหารไขมัน/อาหารที่ย่อยยาก/ใช้ยาในการดูแลของแพทย์ พักผ่อนให้เพียงพอ ถ้ามีอาการตัวเหลือง/ตาเหลือง/เหนื่อยเพลียผิดปกติควรไปพบแพทย์")
+            recommendations.append("ตรวจพบการทำงานของตับสูงเล็กน้อย งดสุรา/ลดอาหารไขมัน/อาหารสุกๆ ดิบๆ/อาหารปิ้งย่างที่ไหม้เกรียม/ให้พักผ่อนเพียงพอ")
     except Exception: pass
 
     try:
         uric_str = str(person_data.get("ผลยูริค", "")).strip()
         if uric_str in ["กรดยูริคสูงกว่าเกณฑ์ปกติเล็กน้อย", "กรดยูริคสูงกว่าเกณฑ์ปกติ"]:
-            recommendations.append("ตรวจพบกรดยูริคสูง(สาเหตุของโรคเก๊าท์) ลดอาหารเครื่องในสัตว์ หน่อไม้ หัวผักกาดขาว ยอดผัก สัตว์ปีกเช่น ไก่ เป็ด ดื่มน้ำมากๆ งดสุรา ถ้ามีปวดข้อ มีก้อนปุ่มตามข้อควรไปพบแพทย์")
+            recommendations.append("ตรวจพบกรดยูริคสูง(สาเหตุของโรคเก๊าท์) ลดอาหารเครื่องในสัตว์ สัตว์ปีก สัตว์ปีกขนาดเล็กป่น เบียร์ เครื่องดื่มแอลกอฮอล์ อาหารที่มีไขมันสูง")
     except Exception: pass
 
     try:
         gfr_str = str(person_data.get("แปลผล GFR", "")).strip()
         if gfr_str == "การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย":
-            recommendations.append("การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย ลดอาหารเค็ม อาหารโปรตีนสูงย่อยยาก ดื่มน้ำ 8-10 แก้วต่อวันและไม่ควรกลั้นปัสสาวะมีอาการบวมผิดปกติให้พบแพทย์")
+            recommendations.append("การทำงานของไตต่ำกว่าเกณฑ์ปกติเล็กน้อย ลดอาหารเค็ม อาหารโปรตีนสูง ดื่มน้ำเพียงพอ")
     except Exception: pass
 
     return recommendations
@@ -247,9 +247,9 @@ def generate_cbc_recommendations(person_data, sex):
         advice_text = RECOMMENDATION_TEXTS_CBC["C4"]
     elif status_cg == "เกร็ดเลือดสูงกว่าเกณฑ์ปกติ":
         advice_text = RECOMMENDATION_TEXTS_CBC["C10"]
-    elif status_ce == "พบภาวะโลหิตจางเล็กน้อย" and ("เม็ดเลือดขาวต่ำ" in status_cf or "เม็ดเลือดขาวสูง" in status_cf) and status_cg == "เกร็ดเลือดปกติ":
+    elif status_ce == "พบภาวะโลหิตจางเล็กน้อย" and ("เม็ดเลือดขาวต่ำ" in status_cf or "เม็ดเลือดขาวสูง" in status_cf):
         advice_text = RECOMMENDATION_TEXTS_CBC["C13"]
-    elif status_ce == "พบภาวะโลหิตจางเล็กน้อย" and status_cf == "เม็ดเลือดขาวปกติ" and status_cg == "เกร็ดเลือดสูงกว่าเกณฑ์ปกติเล็กน้อย":
+    elif status_ce == "พบภาวะโลหิตจางเล็กน้อย" and status_cf == "เม็ดเลือดขาวปกติ" and status_cg == "เกร็ดเลือดปกติ":
         advice_text = RECOMMENDATION_TEXTS_CBC["C2"]
 
     summary_parts = []
@@ -270,7 +270,7 @@ def generate_urine_recommendations(person_data, sex):
     status_ct = ""
     if is_empty(alb_raw): status_ct = ""
     elif alb_raw == "negative": status_ct = "ไม่พบโปรตีนในปัสสาวะ"
-    elif alb_raw in ["trace", "2+", "1+"]: status_ct = "พบโปรตีนในปัสสาวะเล็กน้อย"
+    elif alb_raw in ["trace", "2+", "1+"]: status_ct = "พบโปรตีนในปัสสาวะเ���็กน้อย"
     elif alb_raw == "3+": status_ct = "พบโปรตีนในปัสสาวะ"
         
     status_cu = ""
@@ -394,10 +394,10 @@ def generate_doctor_opinion(person_data, sex, cbc_statuses, urine_statuses):
     if cbc_statuses.get('status_ce') == "พบภาวะโลหิตจาง":
         opinion_parts.append("พบภาวะโลหิตจาง")
 
-    if cbc_statuses.get('status_cf') in ["เม็ดเลือดขาวสูงกว่าเกณฑ์ปกติ", "เม็ดเลือดขาวต่ำกว่าเกณฑ์ปกติ"]:
+    if cbc_statuses.get('status_cf') in ["เม็ดเลือดขาวสูงกว่าเกณฑ์ปกติ", "เม็ดเลือดขาวต่ำกว่าเกณฑ์ปกติเล็กน้อย", "เม็ดเลือดขาวต่ำกว่าเกณฑ์ปกติ", "เม็ดเลือดขาวสูงกว่าเกณฑ์ปกติเล็กน้อย"]:
         opinion_parts.append("เม็ดเลือดขาวผิดปกติ")
 
-    if cbc_statuses.get('status_cg') in ["เกร็ดเลือดสูงกว่าเกณฑ์ปกติ", "เกร็ดเลือดต่ำกว่าเกณฑ์ปกติ"]:
+    if cbc_statuses.get('status_cg') in ["เกร็ดเลือดสูงกว่าเกณฑ์ปกติ", "เกร็ดเลือดต่ำกว่าเกณฑ์ปกติเล็กน้อย", "เกร็ดเลือดต่ำกว่าเกณฑ์ปกติ", "เกร็ดเลือดสูงกว่าเกณฑ์ปกติเล็กน้อย"]:
         opinion_parts.append("เกร็ดเลือดผิดปกติ")
 
     if urine_statuses.get('status_ct') == "พบโปรตีนในปัสสาวะ":
@@ -426,7 +426,7 @@ def generate_doctor_opinion(person_data, sex, cbc_statuses, urine_statuses):
 def render_section_header(title, subtitle=None):
     full_title = f"{title} <span style='font-weight: normal;'>({subtitle})</span>" if subtitle else title
     return f"""
-    <div style='background-color: #f0f2f6; color: #333; text-align: center; padding: 0.2rem 0.4rem; font-weight: bold; border-radius: 6px; margin-top: 0.5rem; margin-bottom: 0.2rem; font-size: 11px; border: 1px solid #ddd;'>
+    <div style='background-color: #f0f2f6; color: #333; text-align: center; padding: 0.2rem 0.4rem; font-weight: bold; border-radius: 6px; margin-top: 0.5rem; margin-bottom: 0.2rem; font-size: 11px; box-shadow: inset 0 0 0 1px #d7dce5;'>
         {full_title}
     </div>
     """
@@ -469,7 +469,7 @@ def render_header_and_vitals(person_data):
     <div class="header-grid">
         <div class="header-left">
             <h1 style="font-size: 1.5rem; margin:0;">รายงานผลการตรวจสุขภาพ</h1>
-            <p style="font-size: 0.8rem; margin:0;">คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย</p>
+            <p style="font-size: 0.8rem; margin:0;">คลินิกตรวจสุขภ���พ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันป่าตอง</p>
             <p style="font-size: 0.8rem; margin:0;"><b>วันที่ตรวจ:</b> {check_date}</p>
         </div>
         <div class="header-right">
@@ -498,9 +498,9 @@ def render_header_and_vitals(person_data):
 
 def render_lab_section(person, sex, cbc_statuses):
     hb_low, hct_low = (12, 36) if sex == "หญิง" else (13, 39)
-    cbc_config = [("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None), ("ฮีมาโตคริต (Hct)", "HCT", "ชาย > 39%, หญิง > 36%", hct_low, None), ("เม็ดเลือดขาว (wbc)", "WBC (cumm)", "4,000 - 10,000 /cu.mm", 4000, 10000), ("นิวโทรฟิล (Neutrophil)", "Ne (%)", "43 - 70%", 43, 70), ("ลิมโฟไซต์ (Lymphocyte)", "Ly (%)", "20 - 44%", 20, 44), ("โมโนไซต์ (Monocyte)", "M", "3 - 9%", 3, 9), ("อีโอซิโนฟิล (Eosinophil)", "Eo", "0 - 9%", 0, 9), ("เบโซฟิล (Basophil)", "BA", "0 - 3%", 0, 3), ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150,000 - 500,000 /cu.mm", 150000, 500000)]
+    cbc_config = [("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None), ("ฮีมาโตคริต (Hct)", "HCT", "ชาย > 39%, หญิง > 36%", hct_low, None), ("เม็ดเลือดแดง (RBC)", "RBC", "ชาย 4.2 - 6.3, หญิง 4.0 - 5.4 ล้าน/มม.", 4.2 if sex == "ชาย" else 4.0, 6.3 if sex == "ชาย" else 5.4), ("เม็ดเลือดขาว (WBC)", "WBC (cumm)", "4,000 - 10,000 /cumm", 4000, 10000), ("เกร็ดเลือด (Platelet)", "Plt (/mm)", "150,000 - 500,000 /cumm", 150000, 500000)]
     cbc_rows = [[(label, is_abn), (result, is_abn), (norm, is_abn)] for label, col, norm, low, high in cbc_config for val in [get_float(col, person)] for result, is_abn in [flag(val, low, high)]]
-    blood_config = [("น้ำตาลในเลือด (FBS)", "FBS", "74 - 106 mg/dl", 74, 106), ("กรดยูริก (Uric Acid)", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2), ("การทำงานของเอนไซม์ตับ (ALK)", "ALP", "30 - 120 U/L", 30, 120), ("การทำงานของเอนไซม์ตับ (SGOT)", "SGOT", "< 37 U/L", None, 37), ("การทำงานของเอนไซม์ตับ (SGPT)", "SGPT", "< 41 U/L", None, 41), ("คลอเรสเตอรอล (CHOL)", "CHOL", "150 - 200 mg/dl", 150, 200), ("ไตรกลีเซอไรด์ (TGL)", "TGL", "35 - 150 mg/dl", 35, 150), ("ไขมันดี (HDL)", "HDL", "> 40 mg/dl", 40, None, True), ("ไขมันเลว (LDL)", "LDL", "0 - 160 mg/dl", 0, 160), ("การทำงานของไต (BUN)", "BUN", "7.9 - 20 mg/dl", 7.9, 20), ("การทำงานของไต (Cr)", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17), ("ประสิทธิภาพการกรองของไต (GFR)", "GFR", "> 60 mL/min", 60, None, True)]
+    blood_config = [("น้ำตาลในเลือด (FBS)", "FBS", "74 - 106 mg/dl", 74, 106), ("กรดยูริก (Uric Acid)", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2), ("การทำงานของตับ (SGOT)", "SGOT", "M: <= 36, F: <= 31 U/L", None, 36 if sex == "ชาย" else 31), ("การทำงานของตับ (SGPT)", "SGPT", "M: <= 40, F: <= 32 U/L", None, 40 if sex == "ชาย" else 32), ("การทำงานของตับ (ALP)", "ALP", "90 - 120 U/L", 90, 120), ("คอเลสเตอรอลรวม (Chol)", "CHOL", "<= 200 mg%", None, 200, False), ("ไตรกลีเซอไรด์ (TG)", "TGL", "<= 150 mg%", None, 150, False), ("แอลดีแอล (LDL)", "LDL", "<= 130 mg%", None, 130, False), ("เอชดีแอล (HDL)", "HDL", ">= 35 mg%", 35, None, True), ("ครีอะตินิน (Creatinine)", "Creatinine", "M: 0.7 - 1.3, F: 0.6 - 1.1 mg%", 0.7 if sex == "ชาย" else 0.6, 1.3 if sex == "ชาย" else 1.1), ("ค่าการทำงานของไต (GFR)", "GFR", ">= 60 ml/min/1.73m²", 60, None, True)]
     blood_rows = [[(label, is_abn), (result, is_abn), (norm, is_abn)] for label, col, norm, low, high, *opt in blood_config for higher in [opt[0] if opt else False] for val in [get_float(col, person)] for result, is_abn in [flag(val, low, high, higher)]]
 
     cbc_footer = cbc_statuses.get('summary', '[Error: CBC Status Missing]')
@@ -525,7 +525,7 @@ def render_lab_section(person, sex, cbc_statuses):
     """
 
 def render_other_results_html(person, sex, urine_statuses, doctor_opinion, all_person_history_df=None):
-    urine_data = [("สี (Colour)", "Color", "Yellow, Pale Yellow"), ("น้ำตาล (Sugar)", "sugar", "Negative"), ("โปรตีน (Albumin)", "Alb", "Negative, trace"), ("กรด-ด่าง (pH)", "pH", "5.0 - 8.0"), ("ความถ่วงจำเพาะ (Sp.gr)", "Spgr", "1.003 - 1.030"), ("เม็ดเลือดแดง (RBC)", "RBC1", "0 - 2 cell/HPF"), ("เม็ดเลือดขาว (WBC)", "WBC1", "0 - 5 cell/HPF"), ("เซลล์เยื่อบุผิว (Squam.epit.)", "SQ-epi", "0 - 10 cell/HPF"), ("อื่นๆ", "ORTER", "-")]
+    urine_data = [("สี (Colour)", "Color", "Yellow, Pale Yellow"), ("น้ำตาล (Sugar)", "sugar", "Negative"), ("โปรตีน (Albumin)", "Alb", "Negative, trace"), ("กรด-ด่าง (pH)", "pH", "5.0 - 8.0"), ("ความถ่วงจำเพาะ (Sp.gr)", "S.G", "1.003 - 1.030"), ("เม็ดเลือดแดง (RBC)", "RBC1", "0-1 cell/hpf"), ("เม็ดเลือดขาว (WBC)", "WBC1", "0-1 cell/hpf")]
     urine_rows = [[(label, is_abn), (safe_value(val), is_abn), (norm, is_abn)] for label, key, norm in urine_data for val in [person.get(key, "-")] for is_abn in [is_urine_abnormal(label, val, norm)]]
     
     urine_footer = urine_statuses.get('summary', '[Error: Urine Status Missing]')
@@ -635,21 +635,21 @@ def get_main_report_css():
         
         body { 
             font-family: 'Sarabun', sans-serif !important; 
-            font-size: 9.5px; 
+            font-size: 10.5px; 
             margin: 0.5cm;
             color: #333; 
             background-color: #fff; 
         }
 
-        p, div, span, td, th { line-height: 1.4; }
+        p, div, span, td, th { line-height: 1.4; font-size: 10.5px; }
         table { border-collapse: collapse; width: 100%; }
-        .print-lab-table td, .print-lab-table th { padding: 2px 4px; border: 1px solid #ccc; text-align: center; vertical-align: middle; }
+        .print-lab-table td, .print-lab-table th { padding: 2px 4px; border: 1px solid #ccc; text-align: center; vertical-align: middle; font-size: 10.5px; }
         .print-lab-table th { background-color: #f2f2f2; font-weight: bold; }
         .print-lab-table-abn { background-color: #fff1f0 !important; }
         
         .print-lab-table tfoot .recommendation-row td {
             background-color: #fcf8e3; /* Light yellow */
-            font-size: 9px;
+            font-size: 10px;
             line-height: 1.3;
             border: 1px solid #ccc;
             text-align: left;
@@ -667,11 +667,11 @@ def get_main_report_css():
         .header-grid { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 0.5rem; }
         .header-left { text-align: left; }
         .header-right { text-align: right; }
-        .info-table { font-size: 9.5px; text-align: left; }
+        .info-table { font-size: 10.5px; text-align: left; }
         .info-table td {{ padding: 1px 5px; border: none; }}
         
-        .advice-box { padding: 0.5rem 1rem; border-radius: 8px; line-height: 1.5; margin-top: 0.5rem; border: 1px solid #ddd; page-break-inside: avoid; }
-        .advice-title { font-weight: bold; margin-bottom: 0.3rem; font-size: 11px; }
+        .advice-box { padding: 0.5rem 1rem; border-radius: 8px; line-height: 1.5; margin-top: 0.5rem; border: 1px solid #ddd; page-break-inside: avoid; font-size: 10.5px; }
+        .advice-title { font-weight: bold; margin-bottom: 0.3rem; font-size: 12px; }
         .advice-content ul { padding-left: 20px; margin: 0; }
         .advice-content ul li { margin-bottom: 4px; }
         
@@ -684,12 +684,12 @@ def get_main_report_css():
             line-height: 1.5;
             margin-top: 0.5rem;
             page-break-inside: avoid;
-            font-size: 9.5px;
+            font-size: 10.5px;
             white-space: pre-wrap;
         }
         
         .perf-section { margin-top: 0.5rem; page-break-inside: avoid; border: 1px solid #e0e0e0; border-radius: 8px; padding: 0.5rem; }
-        .summary-box { background-color: #f8f9fa; border-radius: 4px; padding: 4px 8px; margin-top: 2px; font-size: 9px; }
+        .summary-box { background-color: #f8f9fa; border-radius: 4px; padding: 4px 8px; margin-top: 2px; font-size: 10px; }
         @media print { body { -webkit-print-color-adjust: exact; margin: 0; } }
     </style>
     """
