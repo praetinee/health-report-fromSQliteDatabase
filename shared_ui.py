@@ -47,6 +47,7 @@ def clean_html_string(html_str):
 
 def inject_custom_css():
     # แก้ไข: เพิ่ม Padding ให้แท็บเพื่อให้ข้อความไม่ชิดขอบเกินไป
+    # แก้ไข: ลบ text-transform: uppercase; ออกจาก .lab-table th เพื่อให้แสดง HBsAg ได้ถูกต้อง
     css_content = clean_html_string("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
@@ -138,7 +139,7 @@ def inject_custom_css():
         .lab-table, .info-detail-table { width: 100%; border-collapse: collapse; font-size: 14px; color: var(--main-text-color); }
         .lab-table th, .info-detail-table th {
             background-color: var(--header-bg); color: var(--main-text-color); opacity: 0.9;
-            font-weight: 600; padding: 12px 15px; text-transform: uppercase; font-size: 0.85rem; border-bottom: 2px solid var(--border-color);
+            font-weight: 600; padding: 12px 15px; font-size: 0.85rem; border-bottom: 2px solid var(--border-color);
         }
         .lab-table td, .info-detail-table td { padding: 12px 15px; border-bottom: 1px solid var(--border-color); }
         .lab-table tr:last-child td { border-bottom: 1px solid var(--border-color) !important; }
@@ -645,6 +646,7 @@ def display_main_report(person_data, all_person_history_df):
             hbsab = safe_text(person.get(hbsab_col))
             hbcab = safe_text(person.get(hbcab_col))
             
+            # แก้ไข: ตรงนี้หัวตารางจะแสดง HBsAg, HBsAb, HBcAb ตามที่ต้องการได้แล้ว เพราะลบ uppercase ออกจาก CSS
             st.markdown(clean_html_string(f"""
             <div class="table-container">
                 <table class='lab-table'>
