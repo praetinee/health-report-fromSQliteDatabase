@@ -163,16 +163,12 @@ def render_custom_header_with_actions(person_data, available_years):
         elif 25 <= bmi < 30: bmi_desc = "อ้วน"
         elif bmi >= 30: bmi_desc = "อ้วนอันตราย"
 
-    # --- Render Container (เอาสไตล์กรอบออกตามคำขอ) ---
+    # --- Render Container ---
     with st.container():
-        # ลบ div wrapper ที่สร้างกรอบออก
-        
-        # แบ่งคอลัมน์ บน (Profile + Meta)
         # c1 = ซ้าย (ข้อมูลส่วนตัว + ปุ่ม), c2 = ขวา (วันที่ + Dropdown)
         c1, c2 = st.columns([3, 1.3])
         
         with c1:
-            # 1. ข้อมูลส่วนตัว (HTML)
             st.markdown(f"""
             <div style="display: flex; gap: 15px; align-items: flex-start;">
                 <div style="min-width: 60px; height: 60px; background-color: rgba(0, 121, 107, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #00796B;">
@@ -190,12 +186,12 @@ def render_custom_header_with_actions(person_data, available_years):
             </div>
             """, unsafe_allow_html=True)
             
-            # 2. ปุ่มพิมพ์ (บรรทัดถัดจากหน่วยงาน)
             st.markdown('<div style="height: 12px;"></div>', unsafe_allow_html=True)
-            st.markdown('<div class="print-menu-anchor"></div>', unsafe_allow_html=True) # Anchor for JS hiding
             
-            # ใช้ Columns ย่อยเพื่อให้ปุ่มอยู่ชิดซ้ายและขนาดพอดี
-            # ใส่ class 'desktop-only' ที่ container ของปุ่ม
+            # --- ปุ่มพิมพ์ ---
+            # เราใช้ st.markdown เพื่อสร้าง div ที่มี class ชัดเจน เพื่อให้ JavaScript หาเจอได้ง่ายขึ้น
+            st.markdown('<div class="print-buttons-wrapper">', unsafe_allow_html=True)
+            
             cb1, cb2, cb_rest = st.columns([1.2, 1.2, 2.5])
             with cb1:
                 # เราใช้ st.button ปกติ แต่เราจะใช้ JS ซ่อนมันถ้ารันบนมือถือ
@@ -204,9 +200,10 @@ def render_custom_header_with_actions(person_data, available_years):
             with cb2:
                 if st.button("🖨️ ผลสมรรถภาพ", key="hdr_print_p", use_container_width=True):
                     st.session_state.print_performance_trigger = True
+            
+            st.markdown('</div>', unsafe_allow_html=True)
 
         with c2:
-            # 3. วันที่และสถานที่ (HTML ชิดขวา)
             st.markdown(f"""
             <div style="text-align: right; color: var(--text-color);">
                 <div style="font-size: 0.95rem; font-weight: bold; margin-bottom: 2px;">วันที่ตรวจ: {check_date}</div>
@@ -216,7 +213,6 @@ def render_custom_header_with_actions(person_data, available_years):
             </div>
             """, unsafe_allow_html=True)
             
-            # 4. Dropdown เลือกปี (บรรทัดถัดมา)
             st.markdown('<div style="height: 8px;"></div>', unsafe_allow_html=True)
             st.selectbox(
                 "เลือกปี พ.ศ.", 
@@ -225,14 +221,11 @@ def render_custom_header_with_actions(person_data, available_years):
                 format_func=lambda y: f"พ.ศ. {y}", 
                 key="year_select", 
                 on_change=lambda: st.session_state.update({"selected_year": st.session_state.year_select}),
-                label_visibility="collapsed" # ซ่อน Label เพื่อความสวยงาม (เพราะอยู่ใต้กลุ่มวันที่แล้ว)
+                label_visibility="collapsed" 
             )
 
-        # เส้นคั่นบางๆ ก่อนส่วน Vitals
         st.markdown('<hr style="margin: 15px 0; border: 0; border-top: 1px solid rgba(128,128,128,0.2);">', unsafe_allow_html=True)
 
-        # 5. Vitals Grid (ส่วนล่าง)
-        # ใช้ HTML/CSS Grid เพื่อความสวยงามเหมือนเดิม
         st.markdown(f"""
         <div class="vitals-grid-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px;">
             <div class="vital-card" style="background: var(--card-bg-color); border-radius: 8px; padding: 15px; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(128,128,128,0.2);">
@@ -324,58 +317,59 @@ def main_app(df):
         st.session_state.selected_year = available_years[0]
 
     # --- ส่วน CSS/JS สำหรับซ่อนปุ่มพิมพ์บนมือถือ ---
-    # ใช้ JavaScript แบบวน loop หา text แทน :has() เพราะ :has() ไม่ support browser เก่า
     st.markdown("""
-        <style>
-        /* CSS สำหรับ Desktop (หน้าจอ > 992px) */
-        @media (min-width: 993px) {
-            .print-menu-anchor { display: block; }
+        <script>
+        function hideMobilePrintButtons() {
+            // เช็คขนาดหน้าจอก่อนเลย (992px คือ breakpoint มาตรฐานของ Tablet/Mobile)
+            if (window.innerWidth <= 992) {
+                
+                // 1. หาปุ่มทั้งหมดในหน้า
+                const buttons = window.parent.document.querySelectorAll('button');
+                
+                buttons.forEach(btn => {
+                    // ตรวจสอบว่าปุ่มมีข้อความ "🖨️" หรือไม่ (ใช้ includes เพื่อความยืดหยุ่น)
+                    if (btn.innerText.includes("🖨️") || btn.innerText.includes("ผลสุขภาพ") || btn.innerText.includes("ผลสมรรถภาพ")) {
+                        
+                        // ซ่อนปุ่มทันที
+                        btn.style.display = 'none';
+                        
+                        // พยายามหา Parent Container ที่เราสร้างไว้ (class "print-buttons-wrapper" ไม่สามารถเข้าถึงโดยตรงจาก iframe ได้ง่ายๆ ในบางกรณี)
+                        // แต่เราสามารถหา Column ที่ปุ่มอยู่ได้
+                        const parentColumn = btn.closest('[data-testid="column"]');
+                        if (parentColumn) {
+                            parentColumn.style.display = 'none';
+                        }
+                    }
+                });
+
+                // 2. ซ่อน Element โดยใช้ class "print-buttons-wrapper" ถ้าหาเจอ (ผ่าน iframe parent)
+                // เนื่องจาก Streamlit รันใน iframe, การเข้าถึง element อาจจะซับซ้อน
+                // เราใช้ CSS Injection ร่วมด้วยด้านล่างเพื่อความชัวร์
+            }
         }
-        
-        /* เพิ่มเติม: ซ่อน column ที่อาจจะว่างเปล่าบนมือถือ */
+
+        // รันฟังก์ชันทันที
+        hideMobilePrintButtons();
+
+        // รันซ้ำๆ ทุก 0.5 วินาที เผื่อ Streamlit สร้างปุ่มใหม่ (Re-render)
+        setInterval(hideMobilePrintButtons, 500);
+
+        // ดักจับ Event การปรับขนาดหน้าจอ
+        window.addEventListener('resize', hideMobilePrintButtons);
+        </script>
+
+        <style>
+        /* CSS Fallback: ซ่อน Class นี้บน Mobile */
         @media (max-width: 992px) {
-            /* วิธีนี้ยังไงก็ซ่อนได้ 100% ถ้า JS ทำงานไม่ทัน */
-            [data-testid="stVerticalBlock"] > [data-testid="stHorizontalBlock"] > [data-testid="column"]:has(button p:contains("🖨️")) {
-                 display: none !important;
+            .print-buttons-wrapper {
+                display: none !important;
+            }
+            /* พยายามซ่อนปุ่มโดยใช้ Attribute Selector (อาจจะไม่ support ทุก browser) */
+            button p:contains("🖨️") {
+                display: none !important;
             }
         }
         </style>
-        
-        <script>
-        function removePrintButtonsOnMobile() {
-            if (window.innerWidth <= 992) {
-                // วนลูปหาปุ่มทั้งหมดในหน้า
-                var buttons = window.parent.document.querySelectorAll('button');
-                for (var i = 0; i < buttons.length; i++) {
-                    var btn = buttons[i];
-                    // ถ้าในปุ่มมี Text คำว่า '🖨️' ให้ซ่อนทิ้ง
-                    if (btn.innerText.indexOf('🖨️') !== -1) {
-                        btn.style.display = 'none';
-                        // พยายามซ่อน parent container ด้วยเพื่อให้ layout สวยงาม
-                        var parentCol = btn.closest('[data-testid="column"]');
-                        if (parentCol) {
-                           parentCol.style.display = 'none';
-                        }
-                    }
-                }
-            }
-        }
-        
-        // เรียกใช้ฟังก์ชันทันที
-        removePrintButtonsOnMobile();
-        
-        // เรียกใช้เมื่อมีการปรับขนาดหน้าจอ
-        window.addEventListener('resize', removePrintButtonsOnMobile);
-        
-        // เรียกใช้ซ้ำๆ เผื่อ Streamlit มัน render ใหม่ (Hack แต่มักจะได้ผลดี)
-        setInterval(removePrintButtonsOnMobile, 500);
-        
-        // Observer เพื่อจับการเปลี่ยนแปลง DOM (ดีกว่า setInterval)
-        const observer = new MutationObserver(function(mutations) {
-            removePrintButtonsOnMobile();
-        });
-        observer.observe(window.parent.document.body, { childList: true, subtree: true });
-        </script>
     """, unsafe_allow_html=True)
 
     # --- ส่วนแสดงผลรายงาน ---
