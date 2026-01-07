@@ -28,10 +28,6 @@ def has_basic_health_data(person_data):
     return any(not is_empty(person_data.get(key)) for key in key_indicators)
 
 def check_data_readiness(person_data, report_type):
-    """
-    ตรวจสอบสถานะความพร้อมของข้อมูลตามประเภทรายงาน
-    Returns: (is_ready: bool, status_text: str, status_color: str)
-    """
     has_main = has_basic_health_data(person_data)
     
     has_vis = has_vision_data(person_data)
@@ -71,39 +67,6 @@ def check_data_readiness(person_data, report_type):
 
     return is_ready, status_text, status_color
 
-def get_batch_auto_fit_script():
-    """
-    สคริปต์ Auto Fit สำหรับ Batch Print (ใช้ logic เดียวกับ print_report แต่รวมมาในฟังก์ชันเดียว)
-    """
-    return """
-    <script>
-    window.onload = function() {
-        const MAX_HEIGHT = 1060; // Approximate usable height of A4 at 96dpi minus margins
-        
-        // Find all report containers
-        const reports = document.getElementsByClassName('report-container');
-        
-        for (let i = 0; i < reports.length; i++) {
-            const report = reports[i];
-            const actualHeight = report.scrollHeight;
-            
-            if (actualHeight > MAX_HEIGHT) {
-                let scale = MAX_HEIGHT / actualHeight;
-                if (scale < 0.6) scale = 0.6; // Minimum readable scale
-                
-                // Use zoom property for consistent scaling in print layout
-                report.style.zoom = scale;
-            }
-        }
-        
-        // Auto print after a short delay to allow scaling to apply
-        setTimeout(function() {
-            window.print();
-        }, 1000);
-    };
-    </script>
-    """
-
 def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข้อมูลปีล่าสุดของแต่ละคน"):
     """สร้าง HTML สำหรับพิมพ์ (Batch)"""
     report_bodies = []
@@ -111,7 +74,6 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
     # CSS
     css_main = get_main_report_css()
     css_perf = get_performance_report_css()
-    # รวม CSS โดยระวังไม่ให้ทับซ้อนกันมากเกินไป (แต่ในที่นี้โครงสร้าง class แยกกันพอสมควรแล้ว)
     full_css = f"{css_main}\n{css_perf}" 
 
     progress_bar = st.progress(0)
@@ -134,7 +96,6 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
             
             need_main = report_type in ["รายงานสุขภาพ (Health Report)", "ทั้งรายงานสุขภาพและสมรรถภาพ"]
             if need_main and has_basic_health_data(person_data):
-                # สร้าง Body ของ Health Report
                 patient_bodies.append(render_printable_report_body(person_data, person_history_df))
             
             need_perf = report_type in ["รายงานสมรรถภาพ (Performance Report)", "ทั้งรายงานสุขภาพและสมรรถภาพ"]
@@ -142,16 +103,12 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
             has_hear = has_hearing_data(person_data)
             has_lung = has_lung_data(person_data)
             if need_perf and (has_vis or has_hear or has_lung):
-                # สร้าง Body ของ Performance Report
                 patient_bodies.append(render_performance_report_body(person_data, person_history_df))
 
             if not patient_bodies:
                 skipped_count += 1
                 continue
             
-            # รวมรายงานของคนเดียวเข้าด้วยกัน (ถ้าเลือกทั้งสองแบบ จะต่อกันในหน้าถัดไป)
-            # แต่เนื่องจากใน CSS เรากำหนด .report-container { page-break-after: always; }
-            # ดังนั้นแต่ละรายงานจะขึ้นหน้าใหม่โดยอัตโนมัติ
             combined_patient_html = "".join(patient_bodies)
             report_bodies.append(combined_patient_html)
 
@@ -165,7 +122,6 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
         return None, skipped_count
 
     all_bodies = "".join(report_bodies)
-    js_script = get_batch_auto_fit_script()
     
     full_html = f"""
     <!DOCTYPE html>
@@ -177,7 +133,13 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
     </head>
     <body>
         {all_bodies}
-        {js_script}
+        <script>
+            window.onload = function() {{
+                setTimeout(function() {{
+                    window.print();
+                }}, 1000);
+            }};
+        </script>
     </body>
     </html>
     """
@@ -186,7 +148,6 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
 # --- Callback Functions ---
 
 def add_patient_to_list_callback(df):
-    """Callback สำหรับปุ่มเพิ่มรายการ"""
     name = st.session_state.get("bp_name_search")
     hn = st.session_state.get("bp_hn_search")
     cid = st.session_state.get("bp_cid_search")
@@ -228,19 +189,15 @@ def add_patient_to_list_callback(df):
         st.session_state.bp_action_msg = {"type": "error", "text": "❌ ไม่พบข้อมูล หรือไม่ได้ระบุเงื่อนไขการค้นหา"}
 
 def remove_hn_callback(hn_to_remove):
-    """Callback ลบ HN"""
     if 'bp_manual_hns' in st.session_state and hn_to_remove in st.session_state.bp_manual_hns:
         st.session_state.bp_manual_hns.remove(hn_to_remove)
 
 def display_print_center_page(df):
-    """แสดงหน้าจอ Print Center"""
     st.title("🖨️ ศูนย์จัดการพิมพ์รายงาน (Print Center)")
     st.markdown("---")
     
-    # --- CSS Styling (Clean & Precise Alignment) ---
     st.markdown("""
     <style>
-        /* ปุ่มเพิ่มรายการ (Primary) */
         div[data-testid="stButton"] > button[kind="primary"] {
             background-color: #1B5E20 !important;
             color: #ffffff !important;
@@ -257,10 +214,6 @@ def display_print_center_page(df):
             background-color: #2E7D32 !important;
             box-shadow: 0 4px 8px rgba(0,0,0,0.15);
         }
-
-        /* --- Custom Grid Styling --- */
-        
-        /* Data Row Container */
         .grid-row {
             background-color: var(--secondary-background-color);
             border: 1px solid rgba(128,128,128,0.1);
@@ -268,11 +221,9 @@ def display_print_center_page(df):
             padding: 5px 0;
             margin-bottom: 8px;
             display: flex;
-            align-items: center; /* Vertical Center */
+            align-items: center;
             min-height: 50px;
         }
-        
-        /* Text Cell Content */
         .grid-cell-text {
             font-size: 0.95rem;
             color: var(--text-color);
@@ -282,8 +233,6 @@ def display_print_center_page(df):
             padding: 0 5px;
             line-height: 1.5;
         }
-        
-        /* Status Badge */
         .status-badge {
             display: inline-block;
             padding: 2px 8px;
@@ -297,14 +246,12 @@ def display_print_center_page(df):
         .status-red { background-color: rgba(244, 67, 54, 0.15); color: #c62828; }
         .status-blue { background-color: rgba(33, 150, 243, 0.15); color: #0d47a1; }
         .status-gray { background-color: rgba(158, 158, 158, 0.15); color: var(--text-color); }
-
-        /* ปุ่มลบ (Secondary) - Minimal Gray Style */
         div[data-testid="column"] button[kind="secondary"] {
             border: 1px solid transparent !important;
             background-color: transparent !important;
-            color: #757575 !important; /* สีเทา */
+            color: #757575 !important;
             padding: 0 !important;
-            font-size: 1.2rem !important; /* ไอคอนใหญ่ขึ้น */
+            font-size: 1.2rem !important;
             line-height: 1 !important;
             height: 40px !important;
             width: 40px !important;
@@ -312,15 +259,13 @@ def display_print_center_page(df):
             display: flex !important;
             justify-content: center !important;
             align-items: center !important;
-            margin: 0 auto !important; /* จัดกึ่งกลางแนวนอน */
+            margin: 0 auto !important;
         }
         div[data-testid="column"] button[kind="secondary"]:hover {
             background-color: rgba(0,0,0,0.05) !important;
             color: #333 !important;
             transform: scale(1.1);
         }
-        
-        /* บังคับให้ Column ของ Streamlit จัด Vertical Center */
         div[data-testid="column"] {
             display: flex;
             flex-direction: column;
@@ -329,7 +274,6 @@ def display_print_center_page(df):
     </style>
     """, unsafe_allow_html=True)
 
-    # --- Session State Init ---
     if 'bp_dept_filter' not in st.session_state: st.session_state.bp_dept_filter = []
     if 'bp_date_filter' not in st.session_state: st.session_state.bp_date_filter = "(ทั้งหมด)"
     if 'bp_report_type' not in st.session_state: st.session_state.bp_report_type = "รายงานสุขภาพ (Health Report)"
@@ -338,7 +282,6 @@ def display_print_center_page(df):
     if 'bp_cid_search' not in st.session_state: st.session_state.bp_cid_search = ""
     if 'bp_manual_hns' not in st.session_state: st.session_state.bp_manual_hns = set()
 
-    # --- 1. เลือกประเภทรายงาน ---
     st.subheader("1. เลือกประเภทรายงาน")
     report_type_options = [
         "รายงานสุขภาพ (Health Report)", 
@@ -358,7 +301,6 @@ def display_print_center_page(df):
     )
     st.markdown("---")
 
-    # --- 2. ค้นหาและเพิ่มผู้ป่วย ---
     st.subheader("2. ค้นหาและเพิ่มรายชื่อ (ทีละคน)")
     
     if 'bp_action_msg' in st.session_state:
@@ -369,7 +311,6 @@ def display_print_center_page(df):
             st.error(msg['text'])
         del st.session_state.bp_action_msg
     
-    # Input Row
     c1, c2, c3 = st.columns([2, 1.5, 1.5])
     with c1:
         all_names = sorted(df['ชื่อ-สกุล'].dropna().unique().tolist())
@@ -379,14 +320,12 @@ def display_print_center_page(df):
     with c3:
         st.text_input("ค้นหาด้วยเลขบัตรฯ", key="bp_cid_search", placeholder="พิมพ์เลขบัตร")
 
-    # Button Row: ใช้สัดส่วน 2:3 เพื่อให้ปุ่มตรงกับช่อง "ชื่อ-สกุล" ด้านบน
     col_add, _ = st.columns([2, 3])
     with col_add:
         st.button("➕ เพิ่มลงรายการ", use_container_width=True, on_click=add_patient_to_list_callback, args=(df,))
     
     st.markdown("---")
     
-    # Bulk Filter
     st.write("หรือเลือกเพิ่มจากกลุ่มหน่วยงาน (Bulk Selection)")
     c4, c5 = st.columns(2)
     with c4:
@@ -403,10 +342,8 @@ def display_print_center_page(df):
         if st.session_state.bp_date_filter in date_options: idx = date_options.index(st.session_state.bp_date_filter)
         selected_date = st.selectbox("กรองตามวันที่ตรวจ", options=date_options, index=idx, key="bp_date_filter")
 
-    # --- 3. รายชื่อที่เลือก (Custom Grid Table) ---
     st.subheader("3. รายชื่อที่เลือก (รอสั่งพิมพ์)")
     
-    # Data Preparation
     filtered_df = pd.DataFrame(columns=df.columns)
     filter_active = False
     if selected_depts or (selected_date != "(ทั้งหมด)"):
@@ -430,7 +367,6 @@ def display_print_center_page(df):
     
     selected_to_print_hns = []
     
-    # Limit rows
     ROW_LIMIT = 200
     if len(unique_patients_df) > ROW_LIMIT:
         st.warning(f"⚠️ แสดงผล {ROW_LIMIT} คนแรก จากทั้งหมด {len(unique_patients_df)} คน (เพื่อความรวดเร็ว)")
@@ -440,10 +376,8 @@ def display_print_center_page(df):
         if filter_active: st.info("ไม่พบข้อมูลตามเงื่อนไขหน่วยงาน/วันที่")
         else: st.info("ยังไม่มีรายชื่อในรายการ กรุณากดปุ่ม ➕ เพิ่มรายชื่อ")
     else:
-        # --- Config Ratio ---
         col_ratios = [0.6, 0.6, 1.2, 1.2, 2.5, 1.5, 1.2]
 
-        # --- Data Rows Loop ---
         for i, row in unique_patients_df.iterrows():
             hn = row['HN']
             full_data = row.to_dict()
@@ -452,48 +386,31 @@ def display_print_center_page(df):
             is_manual = hn in manual_hns
             default_chk = is_ready and is_manual
             
-            # Row Container (Styled by CSS .grid-row to be flex)
             with st.container():
-                # ใช้ vertical_alignment="center" ช่วยจัด widget ให้ตรงกลางแนวตั้ง
                 cols = st.columns(col_ratios, vertical_alignment="center")
-                
-                # 1. Delete Button
                 with cols[0]:
                     if st.button("🗑️", key=f"del_{hn}", help="ลบรายการนี้", type="secondary"):
                         remove_hn_callback(hn)
                         st.rerun()
-                
-                # 2. Checkbox
                 with cols[1]:
                     _, mid, _ = st.columns([1,1,1]) 
                     with mid:
                         is_selected = st.checkbox("เลือก", value=default_chk, key=f"sel_{hn}", label_visibility="collapsed")
                         if is_selected:
                             selected_to_print_hns.append(hn)
-
-                # 3. Status Badge (Use HTML for consistent height)
                 with cols[2]:
                     st.markdown(f"<div style='text-align:center;'><span class='status-badge status-{status_color}'>{status_text}</span></div>", unsafe_allow_html=True)
-
-                # 4. HN (Use HTML)
                 with cols[3]:
                     st.markdown(f"<div class='grid-cell-text' style='text-align:center; font-family:monospace;'>{hn}</div>", unsafe_allow_html=True)
-
-                # 5. Name (Use HTML)
                 with cols[4]:
                     st.markdown(f"<div class='grid-cell-text' style='text-align:left;'>{row['ชื่อ-สกุล']}</div>", unsafe_allow_html=True)
-
-                # 6. Dept (Use HTML)
                 with cols[5]:
                     st.markdown(f"<div class='grid-cell-text' style='text-align:left; color:#666;'>{row['หน่วยงาน']}</div>", unsafe_allow_html=True)
-
-                # 7. Date (Use HTML)
                 with cols[6]:
                     st.markdown(f"<div class='grid-cell-text' style='text-align:center;'>{str(row['วันที่ตรวจ']).split(' ')[0]}</div>", unsafe_allow_html=True)
                 
                 st.markdown("<hr style='margin:0; opacity:0.1; border-top:1px solid #ddd;'>", unsafe_allow_html=True)
 
-        # --- Footer Actions ---
         col_summary, col_clear_btn = st.columns([4, 1])
         with col_clear_btn:
              if manual_hns:
@@ -501,7 +418,6 @@ def display_print_center_page(df):
                     st.session_state.bp_manual_hns = set()
                     st.rerun()
 
-    # --- Print Button ---
     count_selected = len(selected_to_print_hns)
     st.markdown("")
     col_l, col_c, col_r = st.columns([1, 2, 1])
@@ -520,15 +436,11 @@ def display_print_center_page(df):
                 else:
                     st.error("ไม่สามารถสร้างรายงานได้")
 
-    # --- Hidden Print Trigger & Manual Link ---
     if st.session_state.get("batch_print_ready", False):
         html_content = st.session_state.batch_print_html
         
-        # 1. Open New Tab Method (More Reliable)
-        # Encode HTML to Base64 to avoid quote escaping issues
         b64_html = base64.b64encode(html_content.encode('utf-8')).decode('utf-8')
         
-        # Javascript to open a new window and write content
         print_script = f"""
         <script>
             (function() {{
@@ -538,7 +450,6 @@ def display_print_center_page(df):
                     printWindow.document.open();
                     printWindow.document.write(htmlContent);
                     printWindow.document.close();
-                    // Printing is triggered by window.onload inside the generated HTML
                 }} else {{
                     console.error("Popup blocked");
                     alert("โปรดอนุญาต Pop-up เพื่อพิมพ์รายงาน");
@@ -548,7 +459,9 @@ def display_print_center_page(df):
         """
         st.components.v1.html(print_script, height=0, width=0)
         
-        # 2. Provide a manual link if popup is blocked
+        # ⚠️ CRITICAL FIX: Clear the state immediately after generating the script
+        st.session_state.batch_print_ready = False
+        
         st.markdown(f"""
             <div style="text-align: center; margin-top: 20px; padding: 20px; background-color: #e8f5e9; border: 1px solid #4caf50; border-radius: 8px;">
                 <p style="color: #2e7d32; font-weight: bold;">หากหน้าต่างพิมพ์ไม่ปรากฏขึ้นอัตโนมัติ</p>
@@ -559,6 +472,3 @@ def display_print_center_page(df):
                 </a>
             </div>
         """, unsafe_allow_html=True)
-        
-        # Do not immediately set to False so the link remains available
-        # You might want to add a "Close" button or rely on user navigating away
