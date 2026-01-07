@@ -5,7 +5,6 @@ import plotly.express as px
 from datetime import datetime
 from batch_print import render_batch_print_page
 from print_performance_report import render_print_performance_report_page
-from line_register import render_line_register_page
 
 def render_admin_dashboard(df):
     """
