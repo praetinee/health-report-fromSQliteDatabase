@@ -24,9 +24,6 @@ def safe_value(val):
 def flag_abnormal(val, low=None, high=None, inverse=False):
     """
     Returns (formatted_value, is_abnormal_boolean)
-    inverse=True means lower is better (e.g. LDL should be low) - *Wait, usually ranges handle this*
-    Actually, let's stick to simple low/high logic.
-    If only high is provided (e.g. < 100), low is None.
     """
     try:
         val_float = float(str(val).replace(",", "").strip())
@@ -81,11 +78,8 @@ def get_report_css():
 
         /* Layout Utility */
         .container { width: 100%; max-width: 210mm; margin: 0 auto; }
-        .row { display: flex; flex-wrap: wrap; margin: 0 -5px; }
-        .col { flex: 1; padding: 0 5px; }
-        .col-40 { width: 40%; flex: none; padding: 0 5px; }
-        .col-60 { width: 60%; flex: none; padding: 0 5px; }
-        .col-50 { width: 50%; flex: none; padding: 0 5px; }
+        .row { display: flex; flex-wrap: wrap; margin: 0 -10px; }
+        .col-50 { width: 50%; flex: 0 0 50%; padding: 0 10px; box-sizing: border-box; }
 
         /* Header */
         .header {
@@ -112,7 +106,7 @@ def get_report_css():
             justify-content: space-between;
             font-size: 13px;
         }
-        .vital-item b { color: var(--accent-color); font-weight: 700; margin-right: 4px; }
+        .vital-item b { color: var(--primary-color); font-weight: 700; margin-right: 4px; }
 
         /* Section Styling */
         .section-title {
@@ -122,13 +116,14 @@ def get_report_css():
             background-color: var(--primary-color);
             padding: 4px 10px;
             border-radius: 4px;
-            margin-bottom: 5px;
-            margin-top: 10px;
+            margin-bottom: 8px;
+            margin-top: 15px;
         }
+        .col-50 .section-title:first-child { margin-top: 0; }
         
         /* Tables */
-        table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 5px; }
-        th, td { padding: 3px 6px; border-bottom: 1px solid #eee; text-align: left; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 10px; }
+        th, td { padding: 4px 6px; border-bottom: 1px solid #eee; text-align: left; }
         th { background-color: #f1f2f6; font-weight: 600; color: var(--secondary-color); text-align: center;}
         td.val-col { text-align: center; font-weight: 500; }
         td.range-col { text-align: center; color: #7f8c8d; font-size: 11px; }
@@ -174,10 +169,11 @@ def get_report_css():
 def render_lab_row(name, value, unit, normal_range, is_abnormal):
     cls = "abnormal" if is_abnormal else ""
     val_display = value if value != "-" else "-"
+    unit_span = f'<span style="font-size:10px; color:#999;">{unit}</span>' if unit else ""
     return f"""
     <tr>
         <td>{name}</td>
-        <td class="val-col {cls}">{val_display} <span style="font-size:10px; color:#999;">{unit}</span></td>
+        <td class="val-col {cls}">{val_display} {unit_span}</td>
         <td class="range-col">{normal_range}</td>
     </tr>
     """
@@ -188,7 +184,7 @@ def generate_printable_report(person_data, all_person_history_df=None):
     """
     # --- 1. Prepare Data ---
     name = person_data.get('ชื่อ-สกุล', '-')
-    age = str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person_data.get('อายุ', '-')
+    age = str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')
     hn = str(int(float(person_data.get('HN')))) if str(person_data.get('HN')).replace('.', '', 1).isdigit() else person_data.get('HN', '-')
     date = person_data.get("วันที่ตรวจ", datetime.now().strftime("%d/%m/%Y"))
     dept = person_data.get('หน่วยงาน', '-')
@@ -240,8 +236,6 @@ def generate_printable_report(person_data, all_person_history_df=None):
     ]
     bio_rows = ""
     for label, key, _, low, high, unit, norm_text in bio_data:
-        # Special handling for GFR/HDL where higher is better (sort of)
-        # Simplified: Just check limits
         val_raw = get_float(key, person_data)
         is_abn = False
         val_fmt = safe_value(person_data.get(key))
@@ -258,7 +252,6 @@ def generate_printable_report(person_data, all_person_history_df=None):
     # Urinalysis (Compact)
     urine_color = safe_value(person_data.get("Color"))
     urine_ph = safe_value(person_data.get("pH"))
-    urine_spgr = safe_value(person_data.get("Spgr"))
     urine_alb = safe_value(person_data.get("Alb"))
     urine_sugar = safe_value(person_data.get("sugar"))
     urine_rbc = safe_value(person_data.get("RBC1"))
@@ -267,7 +260,7 @@ def generate_printable_report(person_data, all_person_history_df=None):
     # Simple logic for urine abn
     u_rows = ""
     u_rows += render_lab_row("Color", urine_color, "", "Yellow", urine_color.lower() not in ['yellow', 'pale yellow'])
-    u_rows += render_lab_row("pH", urine_ph, "", "4.6-8.0", False) # Skipping strict ph check
+    u_rows += render_lab_row("pH", urine_ph, "", "4.6-8.0", False)
     u_rows += render_lab_row("Albumin", urine_alb, "", "Negative", urine_alb.lower() not in ['negative', '-'])
     u_rows += render_lab_row("Sugar", urine_sugar, "", "Negative", urine_sugar.lower() not in ['negative', '-'])
     u_rows += render_lab_row("RBC", urine_rbc, "cells", "0-2", urine_rbc not in ['0-1', '0-2', 'negative', '-'])
@@ -275,37 +268,26 @@ def generate_printable_report(person_data, all_person_history_df=None):
 
     # Other Tests
     cxr = safe_value(person_data.get("CXR", person_data.get(f"CXR{str(datetime.now().year+543)[-2:]}", "-")))
-    cxr_abn = "pid" in cxr.lower() or "abnormal" in cxr.lower() or "พบ" in cxr # Rough check
-    
     ekg = safe_value(person_data.get("EKG", person_data.get(f"EKG{str(datetime.now().year+543)[-2:]}", "-")))
-    ekg_abn = "abnormal" in ekg.lower() or "ischemia" in ekg.lower()
 
     # Hepatitis
     hbsag = safe_value(person_data.get("HbsAg"))
     hbsab = safe_value(person_data.get("HbsAb"))
     
     # --- 3. Construct Doctor's Suggestion ---
-    # Combine logic from previous helper
     suggestions = []
-    
-    # BP
     if sbp and sbp >= 140: suggestions.append("- ความดันโลหิตสูง ควรควบคุมอาหารเค็มและออกกำลังกาย")
-    # Sugar
     fbs = get_float("FBS", person_data)
     if fbs and fbs >= 100: suggestions.append("- ระดับน้ำตาลในเลือดสูง ควรควบคุมอาหารประเภทแป้งและน้ำตาล")
-    # Lipids
     chol = get_float("CHOL", person_data)
     ldl = get_float("LDL", person_data)
     if (chol and chol > 200) or (ldl and ldl > 130): suggestions.append("- ไขมันในเลือดสูง ควรหลีกเลี่ยงของทอด ของมัน และกะทิ")
-    # Uric
     uric = get_float("Uric Acid", person_data)
     if uric and uric > 7: suggestions.append("- กรดยูริกสูง ควรลดการทานเครื่องในสัตว์ ยอดผัก และสัตว์ปีก")
-    # Liver
     sgot = get_float("SGOT", person_data)
     sgpt = get_float("SGPT", person_data)
     if (sgot and sgot > 40) or (sgpt and sgpt > 40): suggestions.append("- ค่าเอนไซม์ตับสูงกว่าปกติ ควรลดแอลกอฮอล์และพักผ่อนให้เพียงพอ")
     
-    # Manual Doctor Input
     doc_note = str(person_data.get("DOCTER suggest", "")).strip()
     if doc_note and doc_note != "-":
         suggestions.append(f"- {doc_note}")
@@ -353,13 +335,13 @@ def generate_printable_report(person_data, all_person_history_df=None):
             <div class="row">
                 <!-- Left Column -->
                 <div class="col-50">
-                    <div class="section-title">🩸 ความสมบูรณ์ของเม็ดเลือด (CBC)</div>
+                    <div class="section-title">ความสมบูรณ์ของเม็ดเลือด (CBC)</div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>{cbc_rows}</tbody>
                     </table>
 
-                    <div class="section-title">🧪 การทำงานของไต (Kidney Function)</div>
+                    <div class="section-title">การทำงานของไต (Kidney Function)</div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>
@@ -368,13 +350,13 @@ def generate_printable_report(person_data, all_person_history_df=None):
                         </tbody>
                     </table>
 
-                    <div class="section-title">🚽 ปัสสาวะ (Urinalysis)</div>
+                    <div class="section-title">ปัสสาวะ (Urinalysis)</div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>{u_rows}</tbody>
                     </table>
                     
-                    <div class="section-title">💩 อุจจาระ (Stool)</div>
+                    <div class="section-title">อุจจาระ (Stool)</div>
                     <table>
                         <tbody>
                             <tr><td>Stool Exam</td><td class="val-col">{safe_value(person_data.get("Stool exam"))}</td></tr>
@@ -385,13 +367,13 @@ def generate_printable_report(person_data, all_person_history_df=None):
 
                 <!-- Right Column -->
                 <div class="col-50">
-                    <div class="section-title">🍬 เบาหวาน & ไขมัน (Sugar & Lipid)</div>
+                    <div class="section-title">เบาหวาน & ไขมัน (Sugar & Lipid)</div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>{bio_rows}</tbody>
                     </table>
 
-                    <div class="section-title">💉 ไวรัสตับอักเสบ (Hepatitis)</div>
+                    <div class="section-title">ไวรัสตับอักเสบ (Hepatitis)</div>
                     <table>
                         <tbody>
                             <tr><td>HBsAg (เชื้อ)</td><td class="val-col">{hbsag}</td><td>Neg</td></tr>
@@ -399,7 +381,7 @@ def generate_printable_report(person_data, all_person_history_df=None):
                         </tbody>
                     </table>
 
-                    <div class="section-title">🩻 เอกซเรย์ & คลื่นไฟฟ้าหัวใจ</div>
+                    <div class="section-title">เอกซเรย์ & คลื่นไฟฟ้าหัวใจ</div>
                     <table>
                         <tbody>
                             <tr>
@@ -417,7 +399,7 @@ def generate_printable_report(person_data, all_person_history_df=None):
 
             <!-- Summary Box -->
             <div class="summary-box">
-                <div class="summary-title">🩺 สรุปผลการตรวจและคำแนะนำแพทย์ (Doctor's Recommendation)</div>
+                <div class="summary-title">สรุปผลการตรวจและคำแนะนำแพทย์ (Doctor's Recommendation)</div>
                 <div class="summary-content">
                     {suggestion_html}
                 </div>
