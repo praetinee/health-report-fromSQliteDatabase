@@ -189,19 +189,48 @@ def render_custom_header_with_actions(person_data, available_years):
             st.markdown('<div style="height: 12px;"></div>', unsafe_allow_html=True)
             
             # --- ปุ่มพิมพ์ ---
-            # เราใช้ st.markdown เพื่อสร้าง div ที่มี class ชัดเจน เพื่อให้ JavaScript หาเจอได้ง่ายขึ้น
-            st.markdown('<div class="print-buttons-wrapper">', unsafe_allow_html=True)
-            
             cb1, cb2, cb_rest = st.columns([1.2, 1.2, 2.5])
             with cb1:
-                # เราใช้ st.button ปกติ แต่เราจะใช้ JS ซ่อนมันถ้ารันบนมือถือ
                 if st.button("🖨️ ผลสุขภาพ", key="hdr_print_h", use_container_width=True):
                     st.session_state.print_trigger = True
             with cb2:
                 if st.button("🖨️ ผลสมรรถภาพ", key="hdr_print_p", use_container_width=True):
                     st.session_state.print_performance_trigger = True
             
-            st.markdown('</div>', unsafe_allow_html=True)
+            # --- ส่วนแจ้งเตือนสำหรับมือถือ (Mobile Warning Message) ---
+            # CSS: ซ่อนใน PC (display: none) แสดงในมือถือ (display: flex)
+            st.markdown("""
+            <div class="mobile-print-note">
+                <span style="font-size: 1.2em;">🖥️</span>
+                <span>ฟังก์ชัน <b>พิมพ์รายงาน</b> รองรับการใช้งานผ่านคอมพิวเตอร์ (PC) เท่านั้น</span>
+            </div>
+            <style>
+            /* สไตล์สำหรับกล่องข้อความ */
+            .mobile-print-note {
+                display: none; /* ซ่อนไว้ก่อนในหน้าจอใหญ่ */
+                margin-top: 12px;
+                padding: 10px 15px;
+                background: linear-gradient(to right, #fff3cd, #ffffff);
+                border: 1px solid #ffeeba;
+                border-left: 5px solid #ffc107; /* แถบสีเหลืองด้านซ้าย */
+                border-radius: 8px;
+                color: #856404;
+                font-size: 0.85rem;
+                font-weight: 500;
+                align-items: center;
+                gap: 10px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            }
+            
+            /* แสดงเฉพาะเมื่อหน้าจอเล็กกว่า 992px (Mobile/Tablet) */
+            @media (max-width: 992px) {
+                .mobile-print-note {
+                    display: flex !important;
+                }
+            }
+            </style>
+            """, unsafe_allow_html=True)
+            # --------------------------------------------------------
 
         with c2:
             st.markdown(f"""
@@ -315,62 +344,6 @@ def main_app(df):
     available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
     if 'selected_year' not in st.session_state or st.session_state.selected_year not in available_years:
         st.session_state.selected_year = available_years[0]
-
-    # --- ส่วน CSS/JS สำหรับซ่อนปุ่มพิมพ์บนมือถือ ---
-    st.markdown("""
-        <script>
-        function hideMobilePrintButtons() {
-            // เช็คขนาดหน้าจอก่อนเลย (992px คือ breakpoint มาตรฐานของ Tablet/Mobile)
-            if (window.innerWidth <= 992) {
-                
-                // 1. หาปุ่มทั้งหมดในหน้า
-                const buttons = window.parent.document.querySelectorAll('button');
-                
-                buttons.forEach(btn => {
-                    // ตรวจสอบว่าปุ่มมีข้อความ "🖨️" หรือไม่ (ใช้ includes เพื่อความยืดหยุ่น)
-                    if (btn.innerText.includes("🖨️") || btn.innerText.includes("ผลสุขภาพ") || btn.innerText.includes("ผลสมรรถภาพ")) {
-                        
-                        // ซ่อนปุ่มทันที
-                        btn.style.display = 'none';
-                        
-                        // พยายามหา Parent Container ที่เราสร้างไว้ (class "print-buttons-wrapper" ไม่สามารถเข้าถึงโดยตรงจาก iframe ได้ง่ายๆ ในบางกรณี)
-                        // แต่เราสามารถหา Column ที่ปุ่มอยู่ได้
-                        const parentColumn = btn.closest('[data-testid="column"]');
-                        if (parentColumn) {
-                            parentColumn.style.display = 'none';
-                        }
-                    }
-                });
-
-                // 2. ซ่อน Element โดยใช้ class "print-buttons-wrapper" ถ้าหาเจอ (ผ่าน iframe parent)
-                // เนื่องจาก Streamlit รันใน iframe, การเข้าถึง element อาจจะซับซ้อน
-                // เราใช้ CSS Injection ร่วมด้วยด้านล่างเพื่อความชัวร์
-            }
-        }
-
-        // รันฟังก์ชันทันที
-        hideMobilePrintButtons();
-
-        // รันซ้ำๆ ทุก 0.5 วินาที เผื่อ Streamlit สร้างปุ่มใหม่ (Re-render)
-        setInterval(hideMobilePrintButtons, 500);
-
-        // ดักจับ Event การปรับขนาดหน้าจอ
-        window.addEventListener('resize', hideMobilePrintButtons);
-        </script>
-
-        <style>
-        /* CSS Fallback: ซ่อน Class นี้บน Mobile */
-        @media (max-width: 992px) {
-            .print-buttons-wrapper {
-                display: none !important;
-            }
-            /* พยายามซ่อนปุ่มโดยใช้ Attribute Selector (อาจจะไม่ support ทุก browser) */
-            button p:contains("🖨️") {
-                display: none !important;
-            }
-        }
-        </style>
-    """, unsafe_allow_html=True)
 
     # --- ส่วนแสดงผลรายงาน ---
     yr_df = results_df[results_df["Year"] == st.session_state.selected_year]
