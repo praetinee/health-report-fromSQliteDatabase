@@ -10,7 +10,7 @@ from performance_tests import interpret_audiogram, interpret_lung_capacity, inte
 # Module: print_performance_report.py
 # Purpose: Contains functions to generate HTML for performance test reports
 # (Vision, Hearing, Lung) for the standalone printable version.
-# Refactored for Batch Printing capability.
+# IMPROVED: Optimized CSS/Layout for better print scaling & readability
 # ==============================================================================
 
 
@@ -123,18 +123,18 @@ def render_print_vision(person_data):
         return ""
 
     vision_tests = [
-        {'display': '1. การมองด้วย 2 ตา (Binocular vision)', 'type': 'paired_value', 'normal_col': 'ป.การรวมภาพ', 'abnormal_col': 'ผ.การรวมภาพ'},
-        {'display': '2. การมองภาพระยะไกลด้วยสองตา (Far vision - Both)', 'type': 'paired_value', 'normal_col': 'ป.ความชัดของภาพระยะไกล', 'abnormal_col': 'ผ.ความชัดของภาพระยะไกล'},
-        {'display': '3. การมองภาพระยะไกลด้วยตาขวา (Far vision - Right)', 'type': 'value', 'col': 'การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)'},
-        {'display': '4. การมองภาพระยะไกลด้วยตาซ้าย (Far vision - Left)', 'type': 'value', 'col': 'การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)'},
-        {'display': '5. การมองภาพ 3 มิติ (Stereo depth)', 'type': 'paired_value', 'normal_col': 'ป.การกะระยะและมองความชัดลึกของภาพ', 'abnormal_col': 'ผ.การกะระยะและมองความชัดลึกของภาพ'},
-        {'display': '6. การมองจำแนกสี (Color discrimination)', 'type': 'paired_value', 'normal_col': 'ป.การจำแนกสี', 'abnormal_col': 'ผ.การจำแนกสี'},
-        {'display': '7. ความสมดุลกล้ามเนื้อตาแนวดิ่ง (Far vertical phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง', 'related_keyword': 'แนวตั้งระยะไกล'},
-        {'display': '8. ความสมดุลกล้ามเนื้อตาแนวนอน (Far lateral phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน', 'related_keyword': 'แนวนอนระยะไกล'},
-        {'display': '9. การมองภาพระยะใกล้ด้วยสองตา (Near vision - Both)', 'type': 'paired_value', 'normal_col': 'ป.ความชัดของภาพระยะใกล้', 'abnormal_col': 'ผ.ความชัดของภาพระยะใกล้'},
-        {'display': '10. การมองภาพระยะใกล้ด้วยตาขวา (Near vision - Right)', 'type': 'value', 'col': 'การมองภาพระยะใกล้ด้วยตาขวา (Near vision – Right)'},
-        {'display': '11. การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision - Left)', 'type': 'value', 'col': 'การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision – Left)'},
-        {'display': '12. ความสมดุลกล้ามเนื้อตาแนวนอน (Near lateral phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'related_keyword': 'แนวนอนระยะใกล้'},
+        {'display': '1. การมองด้วย 2 ตา (Binocular)', 'type': 'paired_value', 'normal_col': 'ป.การรวมภาพ', 'abnormal_col': 'ผ.การรวมภาพ'},
+        {'display': '2. ชัดระยะไกล-สองตา (Far Both)', 'type': 'paired_value', 'normal_col': 'ป.ความชัดของภาพระยะไกล', 'abnormal_col': 'ผ.ความชัดของภาพระยะไกล'},
+        {'display': '3. ชัดระยะไกล-ตาขวา (Far Right)', 'type': 'value', 'col': 'การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)'},
+        {'display': '4. ชัดระยะไกล-ตาซ้าย (Far Left)', 'type': 'value', 'col': 'การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)'},
+        {'display': '5. ภาพ 3 มิติ (Stereo depth)', 'type': 'paired_value', 'normal_col': 'ป.การกะระยะและมองความชัดลึกของภาพ', 'abnormal_col': 'ผ.การกะระยะและมองความชัดลึกของภาพ'},
+        {'display': '6. จำแนกสี (Color)', 'type': 'paired_value', 'normal_col': 'ป.การจำแนกสี', 'abnormal_col': 'ผ.การจำแนกสี'},
+        {'display': '7. สมดุลตาแนวดิ่ง (Far V-Phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง', 'related_keyword': 'แนวตั้งระยะไกล'},
+        {'display': '8. สมดุลตาแนวนอน (Far H-Phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน', 'related_keyword': 'แนวนอนระยะไกล'},
+        {'display': '9. ชัดระยะใกล้-สองตา (Near Both)', 'type': 'paired_value', 'normal_col': 'ป.ความชัดของภาพระยะใกล้', 'abnormal_col': 'ผ.ความชัดของภาพระยะใกล้'},
+        {'display': '10. ชัดระยะใกล้-ตาขวา (Near Right)', 'type': 'value', 'col': 'การมองภาพระยะใกล้ด้วยตาขวา (Near vision – Right)'},
+        {'display': '11. ชัดระยะใกล้-ตาซ้าย (Near Left)', 'type': 'value', 'col': 'การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision – Left)'},
+        {'display': '12. สมดุลตาแนวนอน (Near H-Phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'related_keyword': 'แนวนอนระยะใกล้'},
         {'display': '13. ลานสายตา (Visual field)', 'type': 'paired_value', 'normal_col': 'ป.ลานสายตา', 'abnormal_col': 'ผ.ลานสายตา'}
     ]
 
@@ -180,7 +180,7 @@ def render_print_vision(person_data):
             status_text = "ผิดปกติ"
             abnormal_details.append(test['display'].split('(')[0].strip())
         
-        rows_html += f"<tr><td>{test['display']}</td><td>{status_text}</td></tr>"
+        rows_html += f"<tr><td style='text-align:left;'>{test['display']}</td><td style='text-align:center;'>{status_text}</td></tr>"
 
     doctor_advice = person_data.get('แนะนำABN EYE', '')
     summary_advice = person_data.get('สรุปเหมาะสมกับงาน', '')
@@ -272,7 +272,7 @@ def render_print_hearing(person_data, all_person_history_df):
 
         rows_html += f"""
         <tr>
-            <td>{freq}</td>
+            <td style='text-align:left;'>{freq}</td>
             <td>{r_val}</td>
             <td>{l_val}</td>
             <td>{shift_r_text}</td>
@@ -280,20 +280,20 @@ def render_print_hearing(person_data, all_person_history_df):
         </tr>
         """
 
-    baseline_header_line1 = "การเปลี่ยนแปลงเทียบกับ Baseline"
-    baseline_header_line2 = f"(พ.ศ. {baseline_year})" if has_baseline else "(ไม่มี Baseline)"
-    baseline_header_html = f"{baseline_header_line1}<br>{baseline_header_line2}"
+    baseline_header_line1 = "เทียบ Baseline"
+    baseline_header_line2 = f"({baseline_year})" if has_baseline else "(ไม่มี)"
+    baseline_header_html = f"{baseline_header_line1} {baseline_header_line2}"
 
     table_header_html = f"""
     <thead>
         <tr>
             <th rowspan="2" style="vertical-align: middle;">ความถี่ (Hz)</th>
-            <th colspan="2">ผลการตรวจปัจจุบัน (dB)</th>
+            <th colspan="2">ผลตรวจปัจจุบัน (dB)</th>
             <th colspan="2" style="vertical-align: middle;">{baseline_header_html}</th>
         </tr>
         <tr>
-            <th>หูขวา</th>
-            <th>หูซ้าย</th>
+            <th>ขวา</th>
+            <th>ซ้าย</th>
             <th>Shift ขวา</th>
             <th>Shift ซ้าย</th>
         </tr>
@@ -322,8 +322,8 @@ def render_print_hearing(person_data, all_person_history_df):
     averages_html = f"""
     <div class="advice-box">
         <b>ค่าเฉลี่ยการได้ยิน (dB)</b>
-        <ul style="margin: 5px 0 0 0; padding-left: 20px; list-style-type: square;">
-            <li>ความถี่เสียงพูด (500-2k Hz): ขวา={avg_r_speech if avg_r_speech is not None else 'N/A'}, ซ้าย={avg_l_speech if avg_l_speech is not None else 'N/A'}</li>
+        <ul style="margin: 2px 0 0 0; padding-left: 20px; list-style-type: square;">
+            <li>เสียงพูด (500-2k Hz): ขวา={avg_r_speech if avg_r_speech is not None else 'N/A'}, ซ้าย={avg_l_speech if avg_l_speech is not None else 'N/A'}</li>
             <li>ความถี่สูง (3k-6k Hz): ขวา={avg_r_high if avg_r_high is not None else 'N/A'}, ซ้าย={avg_l_high if avg_l_high is not None else 'N/A'}</li>
         </ul>
     </div>
@@ -388,12 +388,12 @@ def render_print_lung(person_data):
     data_table_html = f"""
     <table class="data-table">
         <thead>
-            <tr><th>การทดสอบ</th><th>ค่าที่วัดได้ (Actual)</th><th>ค่ามาตรฐาน (Pred)</th><th>% เทียบค่ามาตรฐาน (%Pred)</th></tr>
+            <tr><th>การทดสอบ</th><th>ค่าจริง (Actual)</th><th>ค่ามาตรฐาน (Pred)</th><th>% เทียบ (%Pred)</th></tr>
         </thead>
         <tbody>
-            <tr><td>FVC (L)</td><td>{format_val('FVC', '.2f')}</td><td>{format_val('FVC predic', '.2f')}</td><td class='{get_status_class(raw.get("FVC %"), 80)}'>{format_val('FVC %')} %</td></tr>
-            <tr><td>FEV1 (L)</td><td>{format_val('FEV1', '.2f')}</td><td>{format_val('FEV1 predic', '.2f')}</td><td class='{get_status_class(raw.get("FEV1 %"), 80)}'>{format_val('FEV1 %')} %</td></tr>
-            <tr><td>FEV1/FVC (%)</td><td class='{get_status_class(raw.get("FEV1/FVC %"), 70)}'>{format_val('FEV1/FVC %')} %</td><td>{format_val('FEV1/FVC % pre')} %</td><td>-</td></tr>
+            <tr><td style='text-align:left;'>FVC (L)</td><td>{format_val('FVC', '.2f')}</td><td>{format_val('FVC predic', '.2f')}</td><td class='{get_status_class(raw.get("FVC %"), 80)}'>{format_val('FVC %')} %</td></tr>
+            <tr><td style='text-align:left;'>FEV1 (L)</td><td>{format_val('FEV1', '.2f')}</td><td>{format_val('FEV1 predic', '.2f')}</td><td class='{get_status_class(raw.get("FEV1 %"), 80)}'>{format_val('FEV1 %')} %</td></tr>
+            <tr><td style='text-align:left;'>FEV1/FVC (%)</td><td class='{get_status_class(raw.get("FEV1/FVC %"), 70)}'>{format_val('FEV1/FVC %')} %</td><td>{format_val('FEV1/FVC % pre')} %</td><td>-</td></tr>
         </tbody>
     </table>
     """
@@ -425,57 +425,64 @@ def get_performance_report_css():
     return """
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
+        
+        @page {
+            size: A4;
+            margin: 0.5cm; /* Reduced margin */
+        }
+        
         body {
             font-family: 'Sarabun', sans-serif !important;
-            font-size: 12px;
-            margin: 0.5cm 0.7cm; 
-            color: #333;
+            font-size: 11px; /* Older Friendly Size */
+            line-height: 1.3;
+            margin: 0; 
+            color: #000;
             background-color: #fff;
         }
-        hr { border: 0; border-top: 1px solid #e0e0e0; margin: 0.5rem 0; }
-        .info-table { width: 100%; font-size: 10.5px; text-align: left; border-collapse: collapse; }
+        
+        hr { border: 0; border-top: 1px solid #000; margin: 0.5rem 0; }
+        .info-table { width: 100%; font-size: 11px; text-align: left; border-collapse: collapse; }
         .info-table td { padding: 1px 5px; }
         
         .header-grid { display: flex; align-items: flex-end; justify-content: space-between; }
         .header-left { text-align: left; }
         .header-right { text-align: right; }
 
-        .report-section { margin-bottom: 0.5rem; page-break-inside: avoid; } 
+        .report-section { margin-bottom: 0.8rem; page-break-inside: avoid; } 
         
         .section-header {
             background-color: #00796B; 
             color: white; text-align: center;
-            padding: 0.4rem; font-weight: bold; border-radius: 8px;
-            margin-bottom: 0.7rem;
-            font-size: 13px;
+            padding: 3px; font-weight: bold; border-radius: 4px;
+            margin-bottom: 0.5rem;
+            font-size: 12px;
         }
 
-        .content-columns { display: flex; gap: 15px; align-items: flex-start; }
+        .content-columns { display: flex; gap: 10px; align-items: flex-start; }
         .main-content { flex: 2; min-width: 0; }
-        .side-content { flex: 1; min-width: 0; }
+        .side-content { flex: 1.2; min-width: 0; }
         .main-content-full { width: 100%; }
 
-        .data-table { width: 100%; font-size: 10.5px; border-collapse: collapse; }
+        .data-table { width: 100%; font-size: 11px; border-collapse: collapse; }
         .data-table.hearing-table { table-layout: fixed; }
         .data-table th, .data-table td {
-            border: 1px solid #e0e0e0; padding: 4px; text-align: center;
+            border: 1px solid #999; padding: 2px 4px; text-align: center;
             vertical-align: middle;
         }
-        .data-table th { background-color: #f5f5f5; font-weight: bold; }
-        .data-table td:first-child { text-align: left; }
-
+        .data-table th { background-color: #f0f0f0; font-weight: bold; }
+        
         .summary-single-line-box {
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 10px;
-            padding: 8px;
-            border: 1px solid #e0e0e0;
+            gap: 5px;
+            padding: 5px;
+            border: 1px solid #ccc;
             background-color: #f9f9f9;
-            border-radius: 6px;
-            margin-bottom: 0.5rem;
-            font-size: 12px;
+            border-radius: 4px;
+            margin-bottom: 0.3rem;
+            font-size: 11px;
             font-weight: bold;
             page-break-inside: avoid; 
         }
@@ -490,15 +497,15 @@ def get_performance_report_css():
             text-align: center;
             font-weight: bold;
             font-size: 11px;
-            margin-bottom: 8px;
+            margin-bottom: 5px;
             line-height: 1.2;
         }
         .advice-box {
-            border-radius: 6px; padding: 8px 12px; font-size: 10.5px;
-            line-height: 1.5; border: 1px solid;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-radius: 4px; padding: 5px 8px; font-size: 11px;
+            line-height: 1.4; border: 1px solid;
+            box-shadow: none;
             margin-bottom: 5px; 
-            height: 100%;
+            height: auto;
             box-sizing: border-box;
             background-color: #fff8e1; 
             border-color: #ffecb3;
@@ -512,7 +519,7 @@ def get_performance_report_css():
         .status-nt-text { color: #555; }
         
         .signature-section {
-            margin-top: 2rem;
+            margin-top: 1.5rem;
             text-align: right;
             padding-right: 1rem;
             page-break-inside: avoid;
@@ -520,10 +527,10 @@ def get_performance_report_css():
         .signature-line {
             display: inline-block;
             text-align: center;
-            width: 280px;
+            width: 250px;
         }
         .signature-line .line {
-            border-bottom: 1px dotted #333;
+            border-bottom: 1px dotted #000;
             margin-bottom: 0.4rem;
             width: 100%;
         }
