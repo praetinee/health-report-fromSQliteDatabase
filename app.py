@@ -1,8 +1,5 @@
 import streamlit as st
 
-# -----------------------------------------------------------------------------
-# ⚠️ 1. ต้องใส่ set_page_config เป็นบรรทัดแรกสุดเสมอ
-# -----------------------------------------------------------------------------
 st.set_page_config(page_title="Health Report System", layout="wide")
 
 import sqlite3
@@ -11,20 +8,17 @@ import pandas as pd
 import tempfile
 import os
 import json
+import base64 
 from collections import OrderedDict
 from datetime import datetime
 
-# --- Import Library สำหรับเช็คหน้าจอ ---
 try:
     from streamlit_js_eval import streamlit_js_eval
 except ImportError:
-    # Fallback ถ้าไม่มี library
-    def streamlit_js_eval(**kwargs): return 1200 # สมมติว่าเป็น Desktop ไว้ก่อน
+    def streamlit_js_eval(**kwargs): return 1200 
 
-# --- Import Authentication & Consent ---
 from auth import authentication_flow, pdpa_consent_page
 
-# --- Import Line Register (Modules) ---
 from line_register import (
     save_new_user_to_gsheet, 
     check_if_user_registered, 
@@ -33,7 +27,6 @@ from line_register import (
     render_admin_line_manager
 )
 
-# --- Import Print Functions ---
 try:
     from print_report import generate_printable_report
 except Exception:
@@ -44,7 +37,6 @@ try:
 except Exception:
     def generate_performance_report_html(*args): return ""
 
-# --- Import Utils ---
 try:
     from utils import (
         is_empty, has_basic_health_data, 
@@ -58,19 +50,16 @@ except Exception:
     def has_lung_data(r): return False
     def has_visualization_data(d): return False
 
-# --- Import Visualization ---
 try:
     from visualization import display_visualization_tab
 except Exception:
     def display_visualization_tab(d, a): st.info("No visualization module")
 
-# --- Import Shared UI ---
 try:
     from shared_ui import (
         inject_custom_css, 
         display_main_report, 
         display_performance_report,
-        # เราจะไม่ใช้ display_common_header ตัวเดิมแล้ว เพราะจะสร้างใหม่ในนี้เพื่อแทรกปุ่ม
         get_float 
     )
 except Exception:
@@ -79,7 +68,6 @@ except Exception:
     def display_performance_report(p, t, a=None): pass
     def get_float(c, p): return None
 
-# --- Import Admin Panel ---
 try:
     from admin_panel import display_admin_panel
 except Exception:
@@ -94,7 +82,6 @@ SQLITE_CITIZEN_ID_COL = "เลขบัตรประชาชน"
 SQLITE_NAME_COL = "ชื่อ-สกุล"           
 
 def normalize_cid(val):
-    """ฟังก์ชันทำความสะอาดเลขบัตรประชาชนให้เป็นตัวเลข 13 หลักล้วน"""
     if pd.isna(val): return ""
     s = str(val).strip().replace("-", "").replace(" ", "").replace("'", "").replace('"', "")
     if "E" in s or "e" in s:
@@ -104,7 +91,6 @@ def normalize_cid(val):
     return s
 
 def get_user_info_from_gas(line_user_id):
-    """ถาม Google Sheet ว่า UserID นี้คือใคร"""
     try:
         url = f"{GAS_URL}?action=get_user&line_id={line_user_id}"
         response = requests.get(url, timeout=15)
@@ -113,29 +99,24 @@ def get_user_info_from_gas(line_user_id):
     except Exception as e:
         return {"found": False, "error": str(e)}
 
-# --- Custom Header Function (เพื่อการจัดวางตามต้องการ) ---
+# --- Custom Header Function ---
 def render_custom_header_with_actions(person_data, available_years):
-    # เตรียมข้อมูล
     name = person_data.get('ชื่อ-สกุล', '-')
     age = str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person_data.get('อายุ', '-')
     sex = person_data.get('เพศ', '-')
-    # แก้ไข: เปลี่ยน person.get เป็น person_data.get เพื่อแก้ NameError
-    hn = str(int(float(person_data.get('HN')))) if str(person_data.get('HN')).replace('.', '', 1).isdigit() else person_data.get('HN', '-')
+    hn = str(int(float(person_data.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person_data.get('HN', '-')
     department = person_data.get('หน่วยงาน', '-')
     check_date = person_data.get("วันที่ตรวจ", "-")
     
-    # ไอคอน SVG (คัดลอกมาจาก shared_ui เพื่อความสวยงามเหมือนเดิม)
     icon_profile = """<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>"""
     icon_body = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>"""
     icon_waist = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 12h8"></path></svg>"""
     icon_heart = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>"""
     icon_pulse = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>"""
 
-    # Vitals Calculations
     try:
         sbp_int, dbp_int = int(float(person_data.get("SBP", 0))), int(float(person_data.get("DBP", 0)))
         bp_val = f"{sbp_int}/{dbp_int}"
-        # Simple Interpretation
         if sbp_int >= 140 or dbp_int >= 90: bp_desc = "ความดันสูง"
         elif sbp_int < 120 and dbp_int < 80: bp_desc = "ความดันปกติ"
         else: bp_desc = "ความดันค่อนข้างสูง"
@@ -163,9 +144,7 @@ def render_custom_header_with_actions(person_data, available_years):
         elif 25 <= bmi < 30: bmi_desc = "อ้วน"
         elif bmi >= 30: bmi_desc = "อ้วนอันตราย"
 
-    # --- Render Container ---
     with st.container():
-        # c1 = ซ้าย (ข้อมูลส่วนตัว + ปุ่ม), c2 = ขวา (วันที่ + Dropdown)
         c1, c2 = st.columns([3, 1.3])
         
         with c1:
@@ -188,8 +167,6 @@ def render_custom_header_with_actions(person_data, available_years):
             
             st.markdown('<div style="height: 12px;"></div>', unsafe_allow_html=True)
             
-            # --- ปุ่มพิมพ์ ---
-            # ใช้ st.columns เพื่อสร้าง Grid ให้ปุ่ม
             cb1, cb2, cb_rest = st.columns([1.2, 1.2, 2.5])
             with cb1:
                 if st.button("🖨️ ผลสุขภาพ", key="hdr_print_h", use_container_width=True):
@@ -198,32 +175,10 @@ def render_custom_header_with_actions(person_data, available_years):
                 if st.button("🖨️ ผลสมรรถภาพ", key="hdr_print_p", use_container_width=True):
                     st.session_state.print_performance_trigger = True
             
-            # --- ส่วนแจ้งเตือนสำหรับมือถือ (แสดงตลอดเวลา) ---
             st.markdown("""
             <style>
-                .mobile-print-note-container {
-                    /* แสดงผลตลอดเวลา ไม่ต้องมี Media Query ซ่อน */
-                    display: block !important;
-                    width: 100%;
-                    margin-top: 0px;
-                }
-                .mobile-print-note {
-                    /* พื้นหลังไล่สีแบบเดิม */
-                    background: linear-gradient(to right, #fff3cd, #ffffff) !important;
-                    /* ไม่มีเส้นขอบ */
-                    border: none !important;
-                    /* แถบสีด้านซ้ายแบบเดิม */
-                    border-left: 5px solid #ffc107 !important;
-                    color: #856404;
-                    font-size: 0.75rem;
-                    font-weight: 400;
-                    padding: 5px 10px;
-                    width: 100%;
-                    max-width: 300px;
-                    margin-left: 2px;
-                    line-height: 1.2;
-                    border-radius: 4px;
-                }
+                .mobile-print-note-container { display: block !important; width: 100%; margin-top: 0px; }
+                .mobile-print-note { background: linear-gradient(to right, #fff3cd, #ffffff) !important; border: none !important; border-left: 5px solid #ffc107 !important; color: #856404; font-size: 0.75rem; font-weight: 400; padding: 5px 10px; width: 100%; max-width: 300px; margin-left: 2px; line-height: 1.2; border-radius: 4px; }
             </style>
             <div class="mobile-print-note-container">
                  <div class="mobile-print-note">
@@ -231,7 +186,6 @@ def render_custom_header_with_actions(person_data, available_years):
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            # --------------------------------------------------------
 
         with c2:
             st.markdown(f"""
@@ -251,14 +205,11 @@ def render_custom_header_with_actions(person_data, available_years):
                 format_func=lambda y: f"พ.ศ. {y}", 
                 key="year_select", 
                 on_change=lambda: st.session_state.update({"selected_year": st.session_state.year_select}),
-                label_visibility="collapsed" # ซ่อน Label เพื่อความสวยงาม (เพราะอยู่ใต้กลุ่มวันที่แล้ว)
+                label_visibility="collapsed" 
             )
 
-        # เส้นคั่นบางๆ ก่อนส่วน Vitals
         st.markdown('<hr style="margin: 15px 0; border: 0; border-top: 1px solid rgba(128,128,128,0.2);">', unsafe_allow_html=True)
 
-        # 5. Vitals Grid (ส่วนล่าง)
-        # ใช้ HTML/CSS Grid เพื่อความสวยงามเหมือนเดิม
         st.markdown(f"""
         <div class="vitals-grid-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px;">
             <div class="vital-card" style="background: var(--card-bg-color); border-radius: 8px; padding: 15px; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(128,128,128,0.2);">
@@ -349,13 +300,11 @@ def main_app(df):
     if 'selected_year' not in st.session_state or st.session_state.selected_year not in available_years:
         st.session_state.selected_year = available_years[0]
 
-    # --- ส่วนแสดงผลรายงาน ---
     yr_df = results_df[results_df["Year"] == st.session_state.selected_year]
     person_row = yr_df.bfill().ffill().iloc[0].to_dict() if not yr_df.empty else None
     st.session_state.person_row = person_row
 
     if person_row:
-        # ใช้ Custom Header ที่เราสร้างขึ้นใหม่แทน display_common_header เดิม
         render_custom_header_with_actions(person_row, available_years)
         
         tabs_map = OrderedDict()
@@ -374,14 +323,31 @@ def main_app(df):
                 elif v == 'hearing': display_performance_report(person_row, 'hearing', all_person_history_df=results_df)
                 elif v == 'lung': display_performance_report(person_row, 'lung')
 
-        # Print Logic
+        # --- Trigger Printing using New Window Logic ---
         if st.session_state.get('print_trigger'):
             h = generate_printable_report(person_row, results_df)
-            st.components.v1.html(f"<script>var w=window.open();w.document.write({json.dumps(h)});w.print();w.close();</script>", height=0)
+            b64_html = base64.b64encode(h.encode('utf-8')).decode('utf-8')
+            print_script = f"""<script>
+                const w = window.open('', '_blank');
+                if (w) {{
+                    w.document.write(decodeURIComponent(escape(window.atob("{b64_html}"))));
+                    w.document.close();
+                }} else {{ alert("โปรดอนุญาต Pop-up เพื่อพิมพ์"); }}
+            </script>"""
+            st.components.v1.html(print_script, height=0)
             st.session_state.print_trigger = False
+            
         if st.session_state.get('print_performance_trigger'):
             h = generate_performance_report_html(person_row, results_df)
-            st.components.v1.html(f"<script>var w=window.open();w.document.write({json.dumps(h)});w.print();w.close();</script>", height=0)
+            b64_html = base64.b64encode(h.encode('utf-8')).decode('utf-8')
+            print_script = f"""<script>
+                const w = window.open('', '_blank');
+                if (w) {{
+                    w.document.write(decodeURIComponent(escape(window.atob("{b64_html}"))));
+                    w.document.close();
+                }} else {{ alert("โปรดอนุญาต Pop-up เพื่อพิมพ์"); }}
+            </script>"""
+            st.components.v1.html(print_script, height=0)
             st.session_state.print_performance_trigger = False
 
 # --------------------------------------------------------------------------------
@@ -394,7 +360,6 @@ if 'pdpa_accepted' not in st.session_state: st.session_state['pdpa_accepted'] = 
 df = load_sqlite_data()
 if df is None: st.stop()
 
-# --- Auto-Login Logic ---
 query_params = st.query_params
 line_user_id = query_params.get("userid")
 
@@ -409,7 +374,6 @@ if line_user_id and not st.session_state['authenticated']:
         fname = u_info.get('fname', '').strip()
         lname = u_info.get('lname', '').strip()
         
-        # ค้นหาในฐานข้อมูล
         match = df[df[SQLITE_CITIZEN_ID_COL] == cid]
         user_found = None
         if not match.empty:
@@ -433,7 +397,6 @@ if line_user_id and not st.session_state['authenticated']:
     else:
         st.session_state['login_error'] = "❌ ไม่พบข้อมูลการลงทะเบียนของคุณในระบบ LINE"
 
-# --- Final Decision ---
 if not st.session_state['authenticated']:
     if st.session_state.get('login_error'):
         st.error(st.session_state['login_error'])
