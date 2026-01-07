@@ -5,12 +5,13 @@ from collections import OrderedDict
 import json
 
 # --- Import a key function from performance_tests ---
-from performance_tests import generate_holistic_advice # (ยังคง import ไว้เผื่อใช้ในอนาคต แต่เราจะไม่เรียกใช้)
+from performance_tests import generate_holistic_advice 
 from print_performance_report import generate_performance_report_html_for_main_report
 
 # ==============================================================================
 # NOTE: This file generates the printable health report.
 # Refactored to separate CSS and Body generation for Batch Printing.
+# Updated with Auto-Fit logic.
 # ==============================================================================
 
 # --- START OF CHANGE: Add CBC Recommendation Texts ---
@@ -426,7 +427,7 @@ def generate_doctor_opinion(person_data, sex, cbc_statuses, urine_statuses):
 def render_section_header(title, subtitle=None):
     full_title = f"{title} <span style='font-weight: normal;'>({subtitle})</span>" if subtitle else title
     return f"""
-    <div style='background-color: #f0f2f6; color: #333; text-align: center; padding: 0.2rem 0.4rem; font-weight: bold; border-radius: 6px; margin-top: 0.5rem; margin-bottom: 0.2rem; font-size: 11px; border: 1px solid #ddd;'>
+    <div style='background-color: #f0f2f6; color: #333; text-align: center; padding: 2px 4px; font-weight: bold; border-radius: 4px; margin-top: 4px; margin-bottom: 2px; font-size: 10px; border: 1px solid #ddd;'>
         {full_title}
     </div>
     """
@@ -468,9 +469,9 @@ def render_header_and_vitals(person_data):
     return f"""
     <div class="header-grid">
         <div class="header-left">
-            <h1 style="font-size: 1.5rem; margin:0;">รายงานผลการตรวจสุขภาพ</h1>
-            <p style="font-size: 0.8rem; margin:0;">คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย</p>
-            <p style="font-size: 0.8rem; margin:0;"><b>วันที่ตรวจ:</b> {check_date}</p>
+            <h1 style="font-size: 16px; margin:0;">รายงานผลการตรวจสุขภาพ</h1>
+            <p style="font-size: 10px; margin:0;">คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม โรงพยาบาลสันทราย</p>
+            <p style="font-size: 10px; margin:0;"><b>วันที่ตรวจ:</b> {check_date}</p>
         </div>
         <div class="header-right">
             <table class="info-table">
@@ -493,7 +494,7 @@ def render_header_and_vitals(person_data):
             </table>
         </div>
     </div>
-    <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 0.5rem 0;">
+    <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 5px 0;">
     """
 
 def render_lab_section(person, sex, cbc_statuses):
@@ -628,70 +629,127 @@ def render_other_results_html(person, sex, urine_statuses, doctor_opinion, all_p
 # --- NEW FUNCTIONS FOR REFACTORING ---
 
 def get_main_report_css():
-    """Returns the CSS string for the main report."""
+    """Returns the CSS string for the main report, optimized for single page fit."""
     return """
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
         
+        @page {
+            size: A4;
+            margin: 5mm; /* ขอบกระดาษเล็กที่สุดเพื่อให้พื้นที่เนื้อหามากที่สุด */
+        }
+
         body { 
             font-family: 'Sarabun', sans-serif !important; 
-            font-size: 9.5px; 
-            margin: 0.5cm;
+            font-size: 9px; /* ลดขนาดฟอนต์เริ่มต้นลงเล็กน้อย */
+            margin: 0;
+            padding: 10px;
             color: #333; 
             background-color: #fff; 
         }
 
-        p, div, span, td, th { line-height: 1.4; }
+        .report-container {
+            width: 100%;
+            margin: 0 auto;
+            /* Auto-fit magic happens in JS */
+        }
+
+        p, div, span, td, th { line-height: 1.3; }
         table { border-collapse: collapse; width: 100%; }
-        .print-lab-table td, .print-lab-table th { padding: 2px 4px; border: 1px solid #ccc; text-align: center; vertical-align: middle; }
-        .print-lab-table th { background-color: #f2f2f2; font-weight: bold; }
+        
+        .print-lab-table td, .print-lab-table th { 
+            padding: 1px 3px; /* Compact padding */
+            border: 1px solid #ccc; 
+            text-align: center; 
+            vertical-align: middle; 
+        }
+        .print-lab-table th { background-color: #f2f2f2; font-weight: bold; font-size: 9px; }
         .print-lab-table-abn { background-color: #fff1f0 !important; }
         
         .print-lab-table tfoot .recommendation-row td {
-            background-color: #fcf8e3; /* Light yellow */
-            font-size: 9px;
-            line-height: 1.3;
+            background-color: #fcf8e3;
+            font-size: 8.5px;
+            line-height: 1.2;
             border: 1px solid #ccc;
             text-align: left;
-            padding: 4px 6px;
+            padding: 2px 4px;
         }
         .print-lab-table tfoot ul {
             padding-left: 15px;
-            margin-top: 2px;
-            margin-bottom: 2px;
+            margin-top: 1px;
+            margin-bottom: 1px;
         }
         .print-lab-table tfoot li {
-            margin-bottom: 2px;
+            margin-bottom: 1px;
         }
         
-        .header-grid { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 0.5rem; }
+        .header-grid { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 4px; }
         .header-left { text-align: left; }
         .header-right { text-align: right; }
-        .info-table { font-size: 9.5px; text-align: left; }
-        .info-table td {{ padding: 1px 5px; border: none; }}
-        
-        .advice-box { padding: 0.5rem 1rem; border-radius: 8px; line-height: 1.5; margin-top: 0.5rem; border: 1px solid #ddd; page-break-inside: avoid; }
-        .advice-title { font-weight: bold; margin-bottom: 0.3rem; font-size: 11px; }
-        .advice-content ul { padding-left: 20px; margin: 0; }
-        .advice-content ul li { margin-bottom: 4px; }
+        .info-table { font-size: 9px; text-align: left; }
+        .info-table td {{ padding: 0 4px; border: none; }}
         
         .doctor-opinion-box {
-            background-color: #e8f5e9; /* Light green */
+            background-color: #e8f5e9;
             border-color: #a5d6a7;
             border: 1px solid #ddd;
-            padding: 0rem 0.5rem;
-            border-radius: 8px;
-            line-height: 1.5;
-            margin-top: 0.5rem;
+            padding: 2px 4px;
+            border-radius: 6px;
+            line-height: 1.3;
+            margin-top: 2px;
             page-break-inside: avoid;
-            font-size: 9.5px;
+            font-size: 9px;
             white-space: pre-wrap;
         }
         
-        .perf-section { margin-top: 0.5rem; page-break-inside: avoid; border: 1px solid #e0e0e0; border-radius: 8px; padding: 0.5rem; }
-        .summary-box { background-color: #f8f9fa; border-radius: 4px; padding: 4px 8px; margin-top: 2px; font-size: 9px; }
-        @media print { body { -webkit-print-color-adjust: exact; margin: 0; } }
+        .perf-section { margin-top: 2px; page-break-inside: avoid; border: 1px solid #e0e0e0; border-radius: 4px; padding: 2px; }
+        .summary-box { background-color: #f8f9fa; border-radius: 4px; padding: 2px 4px; margin-top: 1px; font-size: 8.5px; }
+        
+        @media print { 
+            body { -webkit-print-color-adjust: exact; margin: 0; } 
+            .report-container { page-break-after: always; }
+            .report-container:last-child { page-break-after: auto; }
+        }
     </style>
+    """
+
+def get_auto_fit_script():
+    """
+    Returns the JavaScript code for Auto-Fit (Smart Scaling).
+    This script measures the content height and scales it down to fit A4 if needed.
+    """
+    return """
+    <script>
+    window.onload = function() {
+        // Target Height for A4 (approx pixels at 96dpi minus margins)
+        // A4 height ~1123px. Safety margin ~1050px.
+        const MAX_HEIGHT = 1060; 
+        
+        const reports = document.getElementsByClassName('report-container');
+        
+        for (let i = 0; i < reports.length; i++) {
+            const report = reports[i];
+            const actualHeight = report.scrollHeight;
+            
+            if (actualHeight > MAX_HEIGHT) {
+                // Calculate scale factor
+                let scale = MAX_HEIGHT / actualHeight;
+                
+                // Limit scale to prevent text becoming too small (e.g., 60%)
+                if (scale < 0.6) scale = 0.6;
+                
+                // Use zoom for better print layout handling in Chrome/Edge
+                report.style.zoom = scale;
+                
+                // Alternatively, use transform (uncomment if zoom fails in specific browsers)
+                // report.style.transform = "scale(" + scale + ")";
+                // report.style.transformOrigin = "top left";
+                // report.style.width = (100 / scale) + "%";
+                // report.style.marginBottom = "-" + (actualHeight * (1 - scale)) + "px";
+            }
+        }
+    };
+    </script>
     """
 
 def render_printable_report_body(person_data, all_person_history_df=None):
@@ -710,16 +768,16 @@ def render_printable_report_body(person_data, all_person_history_df=None):
     doctor_suggestion_html = ""
 
     signature_html = """
-    <div style="margin-top: 2rem; text-align: right; padding-right: 1rem; page-break-inside: avoid;">
-        <div style="display: inline-block; text-align: center; width: 280px;">
-            <div style="border-bottom: 1px dotted #333; margin-bottom: 0.4rem; width: 100%;"></div>
-            <div style="white-space: nowrap;">นายแพทย์นพรัตน์ รัชฎาพร</div>
-            <div style="white-space: nowrap;">แพทย์อาชีวเวชศาสตร์</div>
-            <div style="white-space: nowrap;">ว.26674</div>
+    <div style="margin-top: 1.5rem; text-align: right; padding-right: 1rem; page-break-inside: avoid;">
+        <div style="display: inline-block; text-align: center; width: 250px;">
+            <div style="border-bottom: 1px dotted #333; margin-bottom: 0.2rem; width: 100%;"></div>
+            <div style="white-space: nowrap; font-size: 10px;">นายแพทย์นพรัตน์ รัชฎาพร</div>
+            <div style="white-space: nowrap; font-size: 10px;">แพทย์อาชีวเวชศาสตร์ (ว.26674)</div>
         </div>
     </div>
     """
     
+    # Wrap in report-container for JS targeting
     return f"""
     <div class="report-container">
         {header_vitals_html}
@@ -734,6 +792,7 @@ def generate_printable_report(person_data, all_person_history_df=None):
     """Generates a full, self-contained HTML string for the health report."""
     css_html = get_main_report_css()
     body_html = render_printable_report_body(person_data, all_person_history_df)
+    js_script = get_auto_fit_script()
     
     final_html = f"""
     <!DOCTYPE html>
@@ -745,6 +804,7 @@ def generate_printable_report(person_data, all_person_history_df=None):
     </head>
     <body>
         {body_html}
+        {js_script}
     </body>
     </html>
     """
