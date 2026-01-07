@@ -38,6 +38,23 @@ def flag_abnormal(val, low=None, high=None, inverse=False):
     
     return formatted, is_abn
 
+def interpret_cxr(val):
+    val = str(val or "").strip()
+    if is_empty(val): return "-"
+    # คำค้นหาสำหรับผลผิดปกติ
+    abnormal_keywords = ["ผิดปกติ", "abnormal", "infiltrate", "lesion", "nodule", "opacity", "mass", "tb", "tuberculosis"]
+    if any(keyword in val.lower() for keyword in abnormal_keywords):
+        return f"<span style='color:#c0392b; font-weight:bold;'>{val} (ผิดปกติ)</span>"
+    return val
+
+def interpret_ekg(val):
+    val = str(val or "").strip()
+    if is_empty(val): return "-"
+    abnormal_keywords = ["ผิดปกติ", "abnormal", "arrhythmia", "ischemia", "infarction", "bradycardia", "tachycardia", "fibrillation"]
+    if any(keyword in val.lower() for keyword in abnormal_keywords):
+        return f"<span style='color:#c0392b; font-weight:bold;'>{val} (ผิดปกติ)</span>"
+    return val
+
 # --- HTML Generation Parts ---
 
 def get_report_css():
@@ -54,62 +71,68 @@ def get_report_css():
             --border-color: #bdc3c7;
         }
 
-        body {
-            font-family: 'Sarabun', sans-serif;
-            font-size: 13px;
-            line-height: 1.3;
-            color: #333;
-            margin: 0;
-            padding: 20px; /* Padding for screen view */
-            background-color: #eee; /* Grey background for screen view to distinguish paper */
-            -webkit-print-color-adjust: exact;
+        /* RESET ALL MARGINS */
+        * {
+            box-sizing: border-box;
         }
 
         @page {
             size: A4;
-            margin: 0; /* Set to 0 to override browser defaults */
+            margin: 0mm !important; /* Force 0 margin on page level */
         }
 
-        /* Layout Utility */
+        html, body {
+            width: 210mm;
+            height: 297mm;
+            margin: 0 !important;
+            padding: 0 !important;
+            background-color: #fff;
+            font-family: 'Sarabun', sans-serif;
+            font-size: 14px; /* Standard readable size */
+            line-height: 1.3;
+            color: #333;
+            -webkit-print-color-adjust: exact;
+        }
+
+        /* Container acts as the printable area with Padding */
         .container { 
-            width: 210mm; 
-            min-height: 297mm;
-            margin: 0 auto; 
-            background-color: white;
-            padding: 5mm; /* Reduced to 0.5cm (5mm) */
-            box-sizing: border-box;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1); /* Drop shadow for screen view */
+            width: 100%;
+            height: 100%;
+            padding: 5mm !important; /* EXACTLY 0.5cm PADDING */
+            position: relative;
         }
         
-        .row { display: flex; flex-wrap: wrap; margin: 0 -10px; }
-        .col-50 { width: 50%; flex: 0 0 50%; padding: 0 10px; box-sizing: border-box; }
+        /* Grid System */
+        .row { display: flex; flex-wrap: wrap; margin: 0 -5px; }
+        .col-50 { width: 50%; flex: 0 0 50%; padding: 0 5px; }
 
         /* Header */
         .header {
             border-bottom: 2px solid var(--primary-color);
-            padding-bottom: 10px;
-            margin-bottom: 15px;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
         }
-        .header h1 { font-size: 20px; font-weight: 700; color: var(--primary-color); margin: 0; }
-        .header p { margin: 2px 0 0; font-size: 12px; color: var(--secondary-color); }
-        .patient-info { font-size: 12px; text-align: right; }
+        .header h1 { font-size: 22px; font-weight: 700; color: var(--primary-color); margin: 0; }
+        .header p { margin: 0; font-size: 12px; color: var(--secondary-color); }
+        .patient-info { font-size: 13px; text-align: right; }
         .patient-info b { color: var(--primary-color); }
 
         /* Vitals Bar */
         .vitals-bar {
             background-color: var(--light-bg);
-            border-radius: 6px;
-            padding: 8px 15px;
-            margin-bottom: 15px;
+            border-radius: 4px;
+            padding: 6px 10px;
+            margin-bottom: 10px;
             border: 1px solid #e0e0e0;
             display: flex;
             justify-content: space-between;
             font-size: 13px;
+            flex-wrap: wrap;
         }
-        .vital-item b { color: var(--primary-color); font-weight: 700; margin-right: 4px; }
+        .vital-item b { color: var(--primary-color); font-weight: 700; margin-right: 3px; }
 
         /* Section Styling */
         .section-title {
@@ -117,17 +140,17 @@ def get_report_css():
             font-weight: 700;
             color: #fff;
             background-color: var(--primary-color);
-            padding: 4px 10px;
-            border-radius: 4px;
-            margin-bottom: 8px;
-            margin-top: 15px;
+            padding: 3px 8px;
+            border-radius: 3px;
+            margin-bottom: 5px;
+            margin-top: 10px;
         }
         .col-50 .section-title:first-child { margin-top: 0; }
         
         /* Tables */
-        table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 10px; }
-        th, td { padding: 4px 6px; border-bottom: 1px solid #eee; text-align: left; }
-        th { background-color: #f1f2f6; font-weight: 600; color: var(--secondary-color); text-align: center;}
+        table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 5px; }
+        th, td { padding: 2px 4px; border-bottom: 1px solid #eee; text-align: left; vertical-align: middle; }
+        th { background-color: #f1f2f6; font-weight: 600; color: var(--secondary-color); text-align: center; border-bottom: 2px solid #ddd; }
         td.val-col { text-align: center; font-weight: 500; }
         td.range-col { text-align: center; color: #7f8c8d; font-size: 11px; }
         
@@ -135,47 +158,48 @@ def get_report_css():
         
         /* Summary Box */
         .summary-box {
-            border: 1px solid var(--accent-color);
-            background-color: #e8f8f5;
-            border-radius: 6px;
-            padding: 10px;
-            margin-top: 15px;
+            border: 2px solid var(--accent-color);
+            background-color: #f0faf9;
+            border-radius: 5px;
+            padding: 8px;
+            margin-top: 10px;
             page-break-inside: avoid;
         }
-        .summary-title { font-weight: 700; color: var(--accent-color); margin-bottom: 5px; font-size: 14px; }
-        .summary-content { font-size: 13px; }
+        .summary-title { font-weight: 700; color: var(--accent-color); margin-bottom: 3px; font-size: 14px; border-bottom: 1px dashed var(--accent-color); padding-bottom: 3px; }
+        .summary-content { font-size: 13px; line-height: 1.4; }
         
         /* Footer */
         .footer {
-            margin-top: 20px;
+            margin-top: 10px;
             text-align: right;
             font-size: 12px;
             page-break-inside: avoid;
+            position: absolute;
+            bottom: 5mm;
+            right: 5mm;
+            width: 100%;
         }
         .signature-line {
             display: inline-block;
-            border-top: 1px dotted #999;
-            width: 200px;
-            margin-top: 30px;
-            padding-top: 5px;
             text-align: center;
+            margin-left: auto;
+        }
+        .signature-dash {
+            border-bottom: 1px dotted #333;
+            width: 200px;
+            margin-bottom: 5px;
+            display: inline-block;
         }
 
-        /* Print adjustments */
+        /* Screen Preview Adjustments */
+        @media screen {
+            body { background-color: #555; padding: 20px; display: flex; justify-content: center; }
+            .container { box-shadow: 0 0 15px rgba(0,0,0,0.3); }
+        }
+        
         @media print {
-            body { 
-                margin: 0; 
-                padding: 0; 
-                background-color: white; 
-            }
-            .container {
-                width: 100%;
-                margin: 0;
-                border: none;
-                box-shadow: none;
-                padding: 5mm; /* Enforce 5mm (0.5cm) margin on print */
-            }
-            .no-print { display: none; }
+            body { background-color: white; padding: 0; }
+            .container { box-shadow: none; margin: 0; }
         }
     </style>
     """
@@ -184,7 +208,6 @@ def render_lab_row(name, value, unit, normal_range, is_abnormal):
     cls = "abnormal" if is_abnormal else ""
     val_display = value if value != "-" else "-"
     
-    # Logic change: Move unit to normal_range column
     range_display = normal_range
     if unit:
         range_display = f"{normal_range} <span style='font-size:10px; color:#999;'>({unit})</span>"
@@ -204,7 +227,6 @@ def generate_printable_report(person_data, all_person_history_df=None):
     # --- 1. Prepare Data ---
     name = person_data.get('ชื่อ-สกุล', '-')
     age = str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')
-    # FIX: Changed 'person' to 'person_data'
     hn = str(int(float(person_data.get('HN')))) if str(person_data.get('HN')).replace('.', '', 1).isdigit() else person_data.get('HN', '-')
     date = person_data.get("วันที่ตรวจ", datetime.now().strftime("%d/%m/%Y"))
     dept = person_data.get('หน่วยงาน', '-')
@@ -245,9 +267,6 @@ def generate_printable_report(person_data, all_person_history_df=None):
         val, is_abn = flag_abnormal(person_data.get(key), low, high)
         cbc_rows += render_lab_row(label, val, unit, norm_text, is_abn)
 
-    # Biochemistry (Helper Loop for sections not manually built)
-    # Note: We build sections manually below for flexibility
-    
     # Urinalysis
     urine_color = safe_value(person_data.get("Color"))
     urine_ph = safe_value(person_data.get("pH"))
@@ -268,9 +287,12 @@ def generate_printable_report(person_data, all_person_history_df=None):
     u_rows += render_lab_row("WBC", urine_wbc, "cells", "0-5", urine_wbc not in ['0-1', '0-2', '0-3', '0-5', 'negative', '-'])
     u_rows += render_lab_row("Epithelial", urine_epi, "cells", "0-5", False)
 
-    # Other Tests
-    cxr = safe_value(person_data.get("CXR", person_data.get(f"CXR{str(datetime.now().year+543)[-2:]}", "-")))
-    ekg = safe_value(person_data.get("EKG", person_data.get(f"EKG{str(datetime.now().year+543)[-2:]}", "-")))
+    # Other Tests (Use Interpret Functions)
+    cxr_val = person_data.get("CXR", person_data.get(f"CXR{str(datetime.now().year+543)[-2:]}", "-"))
+    cxr_display = interpret_cxr(cxr_val)
+    
+    ekg_val = person_data.get("EKG", person_data.get(f"EKG{str(datetime.now().year+543)[-2:]}", "-"))
+    ekg_display = interpret_ekg(ekg_val)
 
     # Hepatitis
     hep_a = safe_value(person_data.get("Hepatitis A"))
@@ -414,11 +436,11 @@ def generate_printable_report(person_data, all_person_history_df=None):
                         <tbody>
                             <tr>
                                 <td><b>Chest X-Ray</b></td>
-                                <td class="val-col" style="text-align:left; font-size:11px;" colspan="2">{cxr}</td>
+                                <td class="val-col" style="text-align:left; font-size:11px;" colspan="2">{cxr_display}</td>
                             </tr>
                             <tr>
                                 <td><b>EKG</b></td>
-                                <td class="val-col" style="text-align:left; font-size:11px;" colspan="2">{ekg}</td>
+                                <td class="val-col" style="text-align:left; font-size:11px;" colspan="2">{ekg_display}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -436,6 +458,7 @@ def generate_printable_report(person_data, all_person_history_df=None):
             <!-- Footer -->
             <div class="footer">
                 <div class="signature-line">
+                    <div class="signature-dash"></div>
                     <b>นายแพทย์นพรัตน์ รัชฎาพร</b><br>
                     แพทย์อาชีวเวชศาสตร์ (ว.26674)<br>
                     ผู้ตรวจ (Attending Physician)
