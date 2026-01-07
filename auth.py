@@ -159,6 +159,27 @@ def pdpa_consent_page():
 
         .pdpa-card { background-color: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #dee2e6; margin: 10px 0; color: #333; }
         .pdpa-content { background-color: white; padding: 15px; border-radius: 5px; height: 300px; overflow-y: auto; border: 1px solid #dee2e6; margin-bottom: 15px; font-size: 14px; color: #333; }
+
+        /* ปรับสีปุ่มยอมรับให้เป็นสีเขียว */
+        div.stButton > button {
+            background-color: #00B900 !important;
+            color: white !important;
+            border: none !important;
+        }
+        div.stButton > button:hover {
+            background-color: #009900 !important;
+            color: white !important;
+        }
+        div.stButton > button:active {
+            background-color: #007900 !important;
+            color: white !important;
+        }
+        /* สำหรับปุ่มที่ Disabled (ยังไม่ติ๊กถูก) */
+        div.stButton > button:disabled {
+            background-color: #e0e0e0 !important;
+            color: #a0a0a0 !important;
+            cursor: not-allowed;
+        }
     </style>
     """, unsafe_allow_html=True)
 
