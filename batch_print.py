@@ -133,13 +133,6 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
     </head>
     <body>
         {all_bodies}
-        <script>
-            window.onload = function() {{
-                setTimeout(function() {{
-                    window.print();
-                }}, 1000);
-            }};
-        </script>
     </body>
     </html>
     """
@@ -441,25 +434,29 @@ def display_print_center_page(df):
         
         b64_html = base64.b64encode(html_content.encode('utf-8')).decode('utf-8')
         
+        # ใช้ Hidden Iframe แทน window.open
         print_script = f"""
         <script>
             (function() {{
-                const htmlContent = decodeURIComponent(escape(window.atob("{b64_html}")));
-                const printWindow = window.open('', '_blank');
-                if (printWindow) {{
-                    printWindow.document.open();
-                    printWindow.document.write(htmlContent);
-                    printWindow.document.close();
-                }} else {{
-                    console.error("Popup blocked");
-                    alert("โปรดอนุญาต Pop-up เพื่อพิมพ์รายงาน");
-                }}
+                var iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = "data:text/html;base64,{b64_html}";
+                document.body.appendChild(iframe);
+                
+                iframe.onload = function() {{
+                    setTimeout(function() {{
+                        iframe.contentWindow.focus();
+                        iframe.contentWindow.print();
+                        // Optional: remove iframe after printing
+                        // document.body.removeChild(iframe); 
+                    }}, 1000);
+                }};
             }})();
         </script>
         """
         st.components.v1.html(print_script, height=0, width=0)
         
-        # ⚠️ CRITICAL FIX: Clear the state immediately after generating the script
+        # ⚠️ CRITICAL FIX: Clear the state immediately
         st.session_state.batch_print_ready = False
         
         st.markdown(f"""
