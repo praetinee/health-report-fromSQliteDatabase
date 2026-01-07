@@ -31,12 +31,6 @@ except ImportError:
     def generate_printable_report(*args): return ""
     def generate_performance_report_html(*args): return ""
 
-# --- Import Modules ---
-try:
-    from batch_print import display_print_center_page
-except ImportError:
-    def display_print_center_page(*args): st.info("Batch Print module not found")
-
 try:
     from visualization import display_visualization_tab 
 except ImportError:
@@ -59,7 +53,7 @@ def display_admin_panel(df):
     """แสดงหน้าจอหลักสำหรับ Admin (Search Panel)"""
     # ⚠️ ชื่อฟังก์ชันต้องเป็น display_admin_panel เพื่อให้ตรงกับ app.py
     
-    st.set_page_config(page_title="Admin Panel", layout="wide")
+    # st.set_page_config ควรเรียกใช้แค่ครั้งเดียวใน app.py ไม่ควรเรียกซ้ำที่นี่
     inject_custom_css()
 
     # Init Session State
@@ -86,16 +80,13 @@ def display_admin_panel(df):
                 if key in st.session_state: del st.session_state[key]
             st.rerun()
 
-    # Tabs (ตัดส่วนจัดการ LINE Users ออกแล้ว)
-    tab_search, tab_print = st.tabs(["🔍 ค้นหาผู้ป่วย (Search)", "🖨️ ศูนย์พิมพ์รายงาน (Print Center)"])
-
-    # --- TAB 1: Search ---
-    with tab_search:
+    # --- Search Section (ไม่มี Tabs แล้ว) ---
+    with st.container():
+        st.subheader("🔍 ค้นหาผู้ป่วย")
         with st.form(key="admin_search_form"):
-            st.markdown("<b>ค้นหา (ระบุ ชื่อ, HN หรือเลขบัตรประชาชน)</b>", unsafe_allow_html=True)
             c1, c2 = st.columns([4, 1])
             with c1: 
-                search_term = st.text_input("Search Term", value=st.session_state.admin_search_term, label_visibility="collapsed", placeholder="กรอกข้อมูลที่ต้องการค้นหา...")
+                search_term = st.text_input("ค้นหา (ชื่อ, HN, เลขบัตร)", value=st.session_state.admin_search_term, label_visibility="collapsed", placeholder="กรอกข้อมูลที่ต้องการค้นหา...")
             with c2: 
                 submitted = st.form_submit_button("ค้นหา", use_container_width=True)
         
@@ -196,8 +187,3 @@ def display_admin_panel(df):
                         h = generate_performance_report_html(st.session_state.admin_person_row, history)
                         st.components.v1.html(f"<script>var w=window.open();w.document.write({json.dumps(h)});w.print();w.close();</script>", height=0)
                         st.session_state.admin_print_performance_trigger = False
-
-    # --- TAB 2: Print Center ---
-    with tab_print:
-        # เรียกใช้ฟังก์ชันเดิมที่มีอยู่แล้วใน batch_print.py
-        display_print_center_page(df)
