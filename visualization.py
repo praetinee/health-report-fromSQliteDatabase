@@ -345,3 +345,100 @@ def display_visualization_tab(person_data, history_df):
         with st.container(border=True): plot_audiogram(person_data)
     with c_lung:
         with st.container(border=True): plot_lung_comparison(person_data)
+
+# --- NEW DASHBOARD VISUALIZATION FUNCTIONS ---
+
+def render_gauge_chart(value, title, min_val, max_val, thresholds=None):
+    """Generic Gauge Chart Function"""
+    fig = go.Figure(go.Indicator(
+        mode = "gauge+number",
+        value = value,
+        domain = {'x': [0, 1], 'y': [0, 1]},
+        title = {'text': title},
+        gauge = {
+            'axis': {'range': [min_val, max_val]},
+            'bar': {'color': THEME['primary']},
+            'steps': thresholds if thresholds else []
+        }
+    ))
+    fig.update_layout(height=250, margin=dict(l=20, r=20, t=50, b=20), font={'family': FONT_FAMILY})
+    st.plotly_chart(fig, use_container_width=True)
+
+def render_bmi_gauge(df):
+    """Displays Average BMI Gauge for the population"""
+    # Calculate Average BMI
+    valid_bmi = pd.to_numeric(df['BMI'], errors='coerce').dropna()
+    if valid_bmi.empty:
+        st.info("No BMI Data")
+        return
+    
+    avg_bmi = valid_bmi.mean()
+    
+    steps = [
+        {'range': [0, 18.5], 'color': "lightblue"},
+        {'range': [18.5, 23], 'color': "lightgreen"}, # Normal
+        {'range': [23, 25], 'color': "yellow"},
+        {'range': [25, 30], 'color': "orange"},
+        {'range': [30, 40], 'color': "red"}
+    ]
+    
+    render_gauge_chart(avg_bmi, "Average BMI", 10, 40, steps)
+
+def render_blood_pressure_gauge(df):
+    """Displays Average SBP Gauge"""
+    valid_sbp = pd.to_numeric(df['SBP'], errors='coerce').dropna()
+    if valid_sbp.empty:
+        st.info("No BP Data")
+        return
+
+    avg_sbp = valid_sbp.mean()
+    
+    steps = [
+        {'range': [0, 120], 'color': "lightgreen"},
+        {'range': [120, 140], 'color': "yellow"},
+        {'range': [140, 160], 'color': "orange"},
+        {'range': [160, 200], 'color': "red"}
+    ]
+    render_gauge_chart(avg_sbp, "Average SBP (mmHg)", 90, 200, steps)
+
+def render_risk_factors_chart(df):
+    """Bar chart showing count of people with health risks"""
+    risks = {
+        'BMI >= 25': len(df[pd.to_numeric(df['BMI'], errors='coerce') >= 25]),
+        'BP >= 140/90': len(df[(pd.to_numeric(df['SBP'], errors='coerce') >= 140) | (pd.to_numeric(df['DBP'], errors='coerce') >= 90)]),
+        'FBS >= 100': len(df[pd.to_numeric(df['FBS'], errors='coerce') >= 100]),
+        'Chol >= 200': len(df[pd.to_numeric(df['CHOL'], errors='coerce') >= 200]),
+        'LDL >= 130': len(df[pd.to_numeric(df['LDL'], errors='coerce') >= 130]),
+    }
+    
+    names = list(risks.keys())
+    values = list(risks.values())
+    
+    fig = go.Figure(go.Bar(
+        x=values,
+        y=names,
+        orientation='h',
+        marker_color=THEME['danger'],
+        text=values,
+        textposition='auto'
+    ))
+    
+    fig.update_layout(
+        title="Population Risk Factors (Count)",
+        xaxis_title="Number of People",
+        height=300,
+        margin=dict(l=20, r=20, t=40, b=20),
+        font={'family': FONT_FAMILY}
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+def render_history_chart(history_df):
+    """Wrapper for plot_historical_trends to match app.py interface"""
+    if history_df.empty:
+        st.info("No historical data found.")
+        return
+    
+    # Get the latest person data to determine goals (e.g. sex for Hb)
+    latest_data = history_df.sort_values('Year').iloc[-1].to_dict()
+    
+    plot_historical_trends(history_df, latest_data)
