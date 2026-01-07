@@ -46,168 +46,321 @@ def clean_html_string(html_str):
     return "\n".join([line.strip() for line in html_str.split('\n') if line.strip()])
 
 def inject_custom_css():
-    # แก้ไข: เพิ่ม Padding ให้แท็บเพื่อให้ข้อความไม่ชิดขอบเกินไป
-    # แก้ไข: ลบ text-transform: uppercase; ออกจาก .lab-table th เพื่อให้แสดง HBsAg ได้ถูกต้อง
+    """
+    Inject CSS เพื่อปรับแต่งหน้าตาของแอปพลิเคชัน
+    เน้นการรองรับ Responsive (มือถือ/Desktop) และ Theme (Light/Dark Mode)
+    """
     css_content = clean_html_string("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
         
         :root {
-            --main-bg-color: var(--background-color);
-            --card-bg-color: var(--secondary-background-color);
-            --main-text-color: var(--text-color);
-            --border-color: rgba(128, 128, 128, 0.2);
+            /* ใช้ตัวแปรสีของ Streamlit เพื่อรองรับ Light/Dark Mode อัตโนมัติ */
+            --bg-color: var(--background-color);
+            --text-color: var(--text-color);
+            --card-bg: var(--secondary-background-color); /* ใช้สีพื้นหลังรองของ Streamlit */
+            --border-color: rgba(128, 128, 128, 0.2);     /* สีขอบแบบจางๆ */
+            
+            /* สีธีมหลัก */
             --primary: #00796B;
+            --primary-light: rgba(0, 121, 107, 0.1);
+            
+            /* สีสถานะ (ปรับให้ดูนุ่มนวลขึ้นใน Dark Mode ได้ถ้าต้องการ แต่สีพื้นฐานนี้ใช้ได้ดีทั้งคู่) */
             --danger-text: #FF5252;
             --warning-text: #FF9800;
             --success-text: #4CAF50;
+            
             --danger-bg: rgba(255, 82, 82, 0.1);
             --warning-bg: rgba(255, 152, 0, 0.1);
             --success-bg: rgba(76, 175, 80, 0.1);
-            --header-bg: rgba(128, 128, 128, 0.05);
+            
+            /* สี Header ตาราง (ปรับความเข้มให้เหมาะกับธีม) */
+            --header-bg: rgba(128, 128, 128, 0.1); 
         }
+
+        /* บังคับใช้ Font Sarabun ทั้งหมด */
         html, body, [class*="st-"], h1, h2, h3, h4, h5, h6, p, div, span, th, td {
             font-family: 'Sarabun', sans-serif !important;
         }
         
         /* --- Customized Tabs Style (Green Bar Theme) --- */
-        
-        /* พื้นหลังของแถบเมนูทั้งหมดเป็นสีเขียว */
         .stTabs [data-baseweb="tab-list"] {
-            gap: 10px; /* เพิ่มระยะห่างระหว่างแท็บ */
+            gap: 8px;
             background-color: var(--primary); 
             border-radius: 10px 10px 0px 0px;
-            padding: 12px 15px 0px 15px; /* เพิ่ม Padding รอบๆ แถบเมนู */
+            padding: 10px 10px 0px 10px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            flex-wrap: wrap; /* ให้แท็บขึ้นบรรทัดใหม่ได้ถ้าหน้าจอเล็กมาก */
         }
 
-        /* สไตล์ของแท็บปกติ (ยังไม่เลือก) */
         .stTabs [data-baseweb="tab"] {
             height: auto;
-            min-height: 50px; /* เพิ่มความสูงขั้นต่ำ */
             white-space: pre-wrap;
             background-color: transparent; 
             border-radius: 8px 8px 0px 0px;
             gap: 1px;
-            padding: 10px 25px; /* เพิ่ม Padding ภายในแท็บ (บนล่าง 10px, ซ้ายขวา 25px) */
+            padding: 8px 16px; /* ลด Padding เล็กน้อยเพื่อให้พอดีจอมือถือ */
             color: rgba(255, 255, 255, 0.85);
             font-weight: 600;
-            font-size: 1rem; /* เพิ่มขนาดตัวอักษรเล็กน้อย */
+            font-size: 0.95rem;
             border: none; 
             transition: all 0.2s ease;
+            flex-grow: 1; /* ให้แท็บขยายเต็มพื้นที่ที่มี */
+            text-align: center;
         }
 
-        /* เมื่อเอาเมาส์ชี้แท็บปกติ */
         .stTabs [data-baseweb="tab"]:hover {
             color: #ffffff;
             background-color: rgba(255, 255, 255, 0.15);
         }
 
-        /* สไตล์ของแท็บที่ 'ถูกเลือก' (Active Tab) */
         .stTabs [aria-selected="true"] {
-            background-color: #ffffff !important; 
+            background-color: var(--bg-color) !important; /* เปลี่ยนเป็นสีพื้นหลังตามธีม */
             color: var(--primary) !important;
-            border-radius: 10px 10px 0px 0px; /* ปรับความโค้งให้รับกับแถบ */
-            box-shadow: 0 -4px 12px rgba(0,0,0,0.2); 
-            padding: 12px 30px; /* เพิ่ม Padding ให้มากกว่าแท็บปกติเล็กน้อยเพื่อความโดดเด่น */
+            border-radius: 10px 10px 0px 0px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1); 
+            padding: 10px 20px;
             font-weight: 700;
             position: relative;
-            top: 1px; /* ดันลงมาปิดขอบล่าง */
+            top: 1px;
         }
         
-        /* ซ่อนเส้นขีดด้านล่างเดิมของ Streamlit */
-        .stTabs [data-baseweb="tab-border"] {
-            display: none;
-        }
+        .stTabs [data-baseweb="tab-border"] { display: none; }
 
         /* --------------------------- */
 
+        /* หัวข้อ Section */
         .section-header-styled {
-            font-size: 1.25rem; font-weight: 600; color: var(--primary);
-            border-left: 5px solid var(--primary); padding-left: 15px; margin-top: 30px; margin-bottom: 20px;
-            background: linear-gradient(90deg, rgba(0,121,107,0.1) 0%, rgba(0,0,0,0) 100%);
-            padding-top: 10px; padding-bottom: 10px; border-radius: 0 8px 8px 0;
+            font-size: 1.2rem; 
+            font-weight: 600; 
+            color: var(--primary);
+            border-left: 5px solid var(--primary); 
+            padding-left: 15px; 
+            margin-top: 25px; 
+            margin-bottom: 15px;
+            background: linear-gradient(90deg, var(--primary-light) 0%, rgba(0,0,0,0) 100%);
+            padding-top: 8px; 
+            padding-bottom: 8px; 
+            border-radius: 0 8px 8px 0;
         }
-        .section-subtitle { font-weight: 600; color: var(--main-text-color); opacity: 0.8; margin-top: 1rem; margin-bottom: 0.5rem; font-size: 1.1rem; }
+        
+        .section-subtitle { 
+            font-weight: 600; 
+            color: var(--text-color); 
+            opacity: 0.9; 
+            margin-top: 1rem; 
+            margin-bottom: 0.5rem; 
+            font-size: 1rem; 
+        }
+
+        /* Card Container (กล่องขาว/ดำ รองรับ Theme) */
         .card-container {
-            background-color: var(--card-bg-color); border-radius: 12px; padding: 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid var(--border-color);
-            margin-bottom: 20px; color: var(--main-text-color);
+            background-color: var(--card-bg); 
+            border-radius: 12px; 
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+            border: 1px solid var(--border-color);
+            margin-bottom: 15px; 
+            color: var(--text-color);
+            overflow: hidden; /* ป้องกันเนื้อหาล้น */
         }
-        .table-title { font-weight: 700; color: var(--main-text-color); margin-bottom: 15px; font-size: 1.1rem; border-bottom: 2px solid var(--border-color); padding-bottom: 10px; }
-        .table-responsive { overflow-x: auto; }
-        .lab-table, .info-detail-table { width: 100%; border-collapse: collapse; font-size: 14px; color: var(--main-text-color); }
+
+        /* ตาราง (Table) */
+        .table-title { 
+            font-weight: 700; 
+            color: var(--text-color); 
+            margin-bottom: 12px; 
+            font-size: 1rem; 
+            border-bottom: 2px solid var(--border-color); 
+            padding-bottom: 8px; 
+        }
+        
+        .table-responsive { 
+            width: 100%;
+            overflow-x: auto; /* เลื่อนแนวนอนได้ถ้าตารางกว้างเกินจอ */
+            -webkit-overflow-scrolling: touch; /* เลื่อนลื่นๆ บน iOS */
+        }
+        
+        .lab-table, .info-detail-table { 
+            width: 100%; 
+            min-width: 300px; /* กำหนดความกว้างขั้นต่ำป้องกันตารางบีบเกินไป */
+            border-collapse: collapse; 
+            font-size: 0.9rem; 
+            color: var(--text-color); 
+        }
+        
         .lab-table th, .info-detail-table th {
-            background-color: var(--header-bg); color: var(--main-text-color); opacity: 0.9;
-            font-weight: 600; padding: 12px 15px; font-size: 0.85rem; border-bottom: 2px solid var(--border-color);
+            background-color: var(--header-bg); 
+            color: var(--text-color); 
+            font-weight: 600; 
+            padding: 10px; 
+            font-size: 0.85rem; 
+            border-bottom: 2px solid var(--border-color);
+            text-align: left;
+            white-space: nowrap; /* ป้องกันหัวตารางตัดคำถ้าไม่จำเป็น */
         }
-        .lab-table td, .info-detail-table td { padding: 12px 15px; border-bottom: 1px solid var(--border-color); }
-        .lab-table tr:last-child td { border-bottom: 1px solid var(--border-color) !important; }
+        
+        .lab-table td, .info-detail-table td { 
+            padding: 10px; 
+            border-bottom: 1px solid var(--border-color); 
+            vertical-align: middle;
+        }
+        
+        .lab-table tr:last-child td { border-bottom: none; }
         .abnormal-row { background-color: var(--danger-bg) !important; }
         .text-danger { color: var(--danger-text) !important; font-weight: bold; }
+
+        /* Report Header (ส่วนหัวข้อมูลผู้ป่วย) */
         .report-header-container {
-            background-color: var(--card-bg-color); border-radius: 15px; padding: 25px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid var(--border-color); margin-bottom: 25px; color: var(--main-text-color);
+            background-color: var(--card-bg); 
+            border-radius: 12px; 
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+            border: 1px solid var(--border-color); 
+            margin-bottom: 20px; 
+            color: var(--text-color);
         }
-        .header-main { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; }
-        .patient-profile { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+        
+        .header-main { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: flex-start; 
+            flex-wrap: wrap; 
+            gap: 15px; 
+        }
+        
+        .patient-profile { 
+            display: flex; 
+            gap: 15px; 
+            align-items: center; 
+            flex: 1 1 300px; /* ยืดหยุ่นแต่มีความกว้างขั้นต่ำ */
+        }
+        
         .profile-icon {
-            width: 60px; height: 60px; background-color: rgba(0, 121, 107, 0.1); color: var(--primary);
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            width: 50px; height: 50px; 
+            background-color: var(--primary-light); 
+            color: var(--primary);
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            flex-shrink: 0; /* ไม่ให้ไอคอนหดตัว */
         }
-        .profile-icon svg { width: 32px; height: 32px; }
-        .patient-name { font-size: 1.5rem; font-weight: 700; line-height: 1.2; }
-        .patient-meta { opacity: 0.7; font-size: 0.95rem; margin-top: 5px; }
+        
+        .patient-name { font-size: 1.3rem; font-weight: 700; line-height: 1.2; margin-bottom: 4px; }
+        .patient-meta { opacity: 0.8; font-size: 0.9rem; }
         .patient-dept {
-            background-color: var(--header-bg); opacity: 0.9; display: inline-block; padding: 2px 10px;
-            border-radius: 4px; font-size: 0.85rem; margin-top: 5px; font-weight: 500;
+            background-color: var(--header-bg); 
+            display: inline-block; 
+            padding: 2px 8px;
+            border-radius: 4px; 
+            font-size: 0.8rem; 
+            margin-top: 6px; 
+            font-weight: 500;
         }
-        .report-meta { text-align: right; }
-        .hospital-brand .hosp-name { font-weight: 700; color: var(--primary); font-size: 1.1rem; line-height: 1.2; }
-        .hospital-brand .hosp-dept { font-size: 1rem; opacity: 0.8; font-weight: 600; line-height: 1.2; }
-        .hospital-brand .hosp-sub { font-size: 0.9rem; opacity: 0.6; line-height: 1.2; }
-        .vitals-grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        
+        .report-meta { 
+            text-align: right; 
+            flex: 1 1 200px;
+        }
+        
+        .hospital-brand .hosp-name { font-weight: 700; color: var(--primary); font-size: 1.1rem; }
+        .hospital-brand .hosp-dept { font-size: 0.95rem; opacity: 0.9; }
+        .hospital-brand .hosp-sub { font-size: 0.85rem; opacity: 0.7; }
+
+        /* Vitals Grid (ตารางค่าชีพจรต่างๆ) */
+        .vitals-grid-container { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); /* ปรับ minmax ให้เล็กลงเพื่อให้แสดงผลในมือถือได้ 2 คอลัมน์ */
+            gap: 15px; 
+            margin-bottom: 25px; 
+        }
+        
         .vital-card {
-            background: var(--card-bg-color); border-radius: 12px; padding: 20px; display: flex; align-items: center; gap: 15px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid var(--border-color); color: var(--main-text-color);
+            background: var(--card-bg); 
+            border-radius: 10px; 
+            padding: 15px; 
+            display: flex; 
+            align-items: center; 
+            gap: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
+            border: 1px solid var(--border-color); 
+            color: var(--text-color);
         }
-        .vital-icon-box { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; margin-right: 5px; }
-        .vital-icon-box svg { width: 36px; height: 36px; }
+        
+        .vital-icon-box { 
+            width: 40px; height: 40px; 
+            display: flex; align-items: center; justify-content: center; 
+            flex-shrink: 0;
+        }
+        .vital-icon-box svg { width: 28px; height: 28px; }
+        
         .color-blue { color: #2196F3; } .color-green { color: #4CAF50; } .color-red { color: #F44336; } .color-orange { color: #FF9800; }
-        .vital-content { flex: 1; }
-        .vital-label { font-size: 0.85rem; opacity: 0.7; font-weight: 500; }
-        .vital-value { font-size: 1.4rem; font-weight: 700; line-height: 1.2; }
-        .unit { font-size: 0.9rem; opacity: 0.6; font-weight: 400; }
-        .vital-sub { font-size: 0.8rem; opacity: 0.6; margin-top: 2px; }
-        .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
-        .badge-bmi { background-color: var(--header-bg); opacity: 0.8; }
+        
+        .vital-content { flex: 1; min-width: 0; /* ป้องกัน content ดันกล่องขยาย */ }
+        .vital-label { font-size: 0.8rem; opacity: 0.7; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .vital-value { font-size: 1.2rem; font-weight: 700; line-height: 1.2; }
+        .unit { font-size: 0.8rem; opacity: 0.6; font-weight: 400; }
+        .vital-sub { font-size: 0.75rem; opacity: 0.6; margin-top: 2px; }
+        
+        .badge { display: inline-block; padding: 2px 6px; border-radius: 10px; font-size: 0.7rem; font-weight: 600; }
+        .badge-bmi { background-color: var(--header-bg); }
+
+        /* Recommendation Box */
         .recommendation-container {
-            background-color: var(--card-bg-color); border-radius: 12px; padding: 25px; border-left: 6px solid var(--primary);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05); color: var(--main-text-color);
+            background-color: var(--card-bg); 
+            border-radius: 12px; 
+            padding: 20px; 
+            border-left: 6px solid var(--primary);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+            color: var(--text-color);
         }
-        .custom-advice-box { padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px solid transparent; font-weight: 500; display: flex; align-items: center; gap: 10px; }
-        .custom-advice-box::before { content: "💡"; font-size: 1.2rem; }
-        .immune-box { background-color: var(--success-bg); color: var(--success-text); border: 1px solid rgba(76, 175, 80, 0.2); }
-        .no-immune-box { background-color: var(--danger-bg); color: var(--danger-text); border: 1px solid rgba(255, 82, 82, 0.2); }
-        .warning-box { background-color: var(--warning-bg); color: var(--warning-text); border: 1px solid rgba(255, 152, 0, 0.2); }
-        .vision-table th { background-color: var(--header-bg); }
-        .vision-result { padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
+        
+        .custom-advice-box { 
+            padding: 15px; 
+            border-radius: 8px; 
+            margin-top: 15px; 
+            border: 1px solid transparent; 
+            font-weight: 500; 
+            display: flex; 
+            align-items: flex-start; /* จัดชิดบนเพื่อให้ไอคอนไม่ลอยถ้าข้อความยาว */
+            gap: 10px; 
+        }
+        .custom-advice-box::before { content: "💡"; font-size: 1.2rem; line-height: 1; }
+        
+        .immune-box { background-color: var(--success-bg); color: var(--success-text); border-color: rgba(76, 175, 80, 0.2); }
+        .no-immune-box { background-color: var(--danger-bg); color: var(--danger-text); border-color: rgba(255, 82, 82, 0.2); }
+        .warning-box { background-color: var(--warning-bg); color: var(--warning-text); border-color: rgba(255, 152, 0, 0.2); }
+
+        /* Vision Result Pills */
+        .vision-result { padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; white-space: nowrap; }
         .vision-normal { background-color: var(--success-bg); color: var(--success-text); }
         .vision-abnormal { background-color: var(--danger-bg); color: var(--danger-text); }
         .vision-warning { background-color: var(--warning-bg); color: var(--warning-text); }
-        .vision-not-tested { background-color: var(--header-bg); opacity: 0.5; }
-        
+        .vision-not-tested { background-color: var(--header-bg); opacity: 0.6; }
+
+        /* Mobile Adjustments (Responsive) */
         @media (max-width: 768px) {
-            /* ซ่อนปุ่มหรือ Element ที่มี Class 'desktop-only' เมื่ออยู่บนมือถือ */
-            .desktop-only {
-                display: none !important;
-            }
-            
             .header-main { flex-direction: column; align-items: flex-start; gap: 15px; }
             .report-meta { text-align: left; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-color); width: 100%; }
-            .vital-value { font-size: 1.2rem; }
-            .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-            .info-card-grid { grid-template-columns: 1fr; }
+            
+            .vitals-grid-container { grid-template-columns: 1fr 1fr; gap: 10px; } /* มือถือแสดง 2 คอลัมน์ */
+            .vital-value { font-size: 1.1rem; }
+            
+            .table-responsive { overflow-x: auto; }
+            
+            /* ลดขนาด Font บนมือถือเล็กน้อย */
+            .section-header-styled { font-size: 1.1rem; padding-left: 10px; margin-top: 20px; }
+            .patient-name { font-size: 1.2rem; }
+            
+            /* ปรับตารางให้เลื่อนได้ */
+            .lab-table th, .lab-table td { padding: 8px; font-size: 0.85rem; }
+        }
+        
+        @media (max-width: 480px) {
+            .vitals-grid-container { grid-template-columns: 1fr; } /* จอเล็กมากแสดง 1 คอลัมน์ */
+            .profile-icon { width: 40px; height: 40px; }
+            .profile-icon svg { width: 24px; height: 24px; }
         }
     </style>""")
     st.markdown(css_content, unsafe_allow_html=True)
@@ -339,88 +492,9 @@ def interpret_bmi(bmi):
     return ""
 
 def display_common_header(person_data):
-    name = person_data.get('ชื่อ-สกุล', '-')
-    age = str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person_data.get('อายุ', '-')
-    sex = person_data.get('เพศ', '-')
-    hn = str(int(float(person_data.get('HN')))) if str(person_data.get('HN')).replace('.', '', 1).isdigit() else person_data.get('HN', '-')
-    department = person_data.get('หน่วยงาน', '-')
-    check_date = person_data.get("วันที่ตรวจ", "-")
-    try:
-        sbp_int, dbp_int = int(float(person_data.get("SBP", ""))), int(float(person_data.get("DBP", "")))
-        bp_val = f"{sbp_int}/{dbp_int}"
-        bp_desc = interpret_bp(sbp_int, dbp_int)
-    except:
-        bp_val = "-"
-        bp_desc = "ไม่มีข้อมูล"
-    try: pulse_val = f"{int(float(person_data.get('pulse', '-')))}"
-    except: pulse_val = "-"
-    weight = get_float('น้ำหนัก', person_data)
-    height = get_float('ส่วนสูง', person_data)
-    weight_val = f"{weight}" if weight is not None else "-"
-    height_val = f"{height}" if height is not None else "-"
-    waist_val = f"{person_data.get('รอบเอว', '-')}"
-    bmi_val_str = "-"
-    bmi_desc = ""
-    if weight is not None and height is not None and height > 0:
-        bmi = weight / ((height / 100) ** 2)
-        bmi_val_str = f"{bmi:.1f}"
-        bmi_desc = interpret_bmi(bmi)
-
-    icon_profile = """<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>"""
-    icon_body = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>"""
-    icon_waist = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 12h8"></path></svg>"""
-    icon_heart = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>"""
-    icon_pulse = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>"""
-
-    html_content = clean_html_string(f"""
-    <div class="report-header-container">
-        <div class="header-main">
-            <div class="patient-profile">
-                <div class="profile-icon">{icon_profile}</div>
-                <div class="profile-details">
-                    <div class="patient-name">{name}</div>
-                    <div class="patient-meta"><span>HN: {hn}</span> | <span>เพศ: {sex}</span> | <span>อายุ: {age} ปี</span></div>
-                    <div class="patient-dept">หน่วยงาน: {department}</div>
-                </div>
-            </div>
-            <div class="report-meta">
-                <div class="meta-date">วันที่ตรวจ: {check_date}</div>
-                <div class="hospital-brand">
-                    <div class="hosp-name">คลินิกตรวจสุขภาพ</div>
-                    <div class="hosp-dept">อาชีวเวชกรรม</div>
-                    <div class="hosp-sub">รพ.สันทราย</div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="vitals-grid-container">
-        <div class="vital-card">
-            <div class="vital-icon-box color-blue">{icon_body}</div>
-            <div class="vital-content">
-                <div class="vital-label">สัดส่วนร่างกาย</div>
-                <div class="vital-value">{weight_val} <span class="unit">kg</span> / {height_val} <span class="unit">cm</span></div>
-                <div class="vital-sub">BMI: {bmi_val_str} <br><span class="badge badge-bmi">{bmi_desc}</span></div>
-            </div>
-        </div>
-        <div class="vital-card">
-            <div class="vital-icon-box color-green">{icon_waist}</div>
-            <div class="vital-content"><div class="vital-label">รอบเอว</div><div class="vital-value">{waist_val} <span class="unit">cm</span></div></div>
-        </div>
-        <div class="vital-card">
-            <div class="vital-icon-box color-red">{icon_heart}</div>
-            <div class="vital-content">
-                <div class="vital-label">ความดันโลหิต</div>
-                <div class="vital-value">{bp_val} <span class="unit">mmHg</span></div>
-                <div class="vital-sub">{bp_desc}</div>
-            </div>
-        </div>
-        <div class="vital-card">
-            <div class="vital-icon-box color-orange">{icon_pulse}</div>
-            <div class="vital-content"><div class="vital-label">ชีพจร</div><div class="vital-value">{pulse_val} <span class="unit">bpm</span></div></div>
-        </div>
-    </div>
-    """)
-    st.markdown(html_content, unsafe_allow_html=True)
+    # ฟังก์ชันนี้อาจจะไม่ได้ถูกเรียกใช้แล้วถ้าใช้ Custom Header ใน app.py 
+    # แต่เก็บไว้เป็น Fallback ได้
+    pass
 
 def render_vision_details_table(person_data):
     vision_config = [
@@ -473,16 +547,14 @@ def render_vision_details_table(person_data):
         if not is_empty(summary_advice): footer_html += f"<b>สรุปความเหมาะสมกับงาน:</b> {summary_advice}<br>"
         if not is_empty(doctor_advice): footer_html += f"<b>คำแนะนำแพทย์:</b> {doctor_advice}"
         footer_html += "</div>"
-    html_content = clean_html_string(f"""<div class='card-container'><div class='table-title'>ผลการตรวจสมรรถภาพการมองเห็น (Vision Test)</div><table class='vision-table'><thead><tr><th>รายการทดสอบ</th><th style='text-align: center; width: 150px;'>ผลการตรวจ</th></tr></thead><tbody>{html_rows}</tbody></table></div>{footer_html}""")
+    html_content = clean_html_string(f"""<div class='card-container'><div class='table-title'>ผลการตรวจสมรรถภาพการมองเห็น (Vision Test)</div><div class='table-responsive'><table class='lab-table'><thead><tr><th>รายการทดสอบ</th><th style='text-align: center; width: 150px;'>ผลการตรวจ</th></tr></thead><tbody>{html_rows}</tbody></table></div></div>{footer_html}""")
     if any_data_found: st.markdown(html_content, unsafe_allow_html=True)
     else: st.info("ไม่พบข้อมูลการตรวจสายตา")
 
 def display_performance_report_vision(person_data):
-    """Wrapper function to match calling convention"""
     render_vision_details_table(person_data)
 
 def display_performance_report_hearing(person_data, all_person_history_df):
-    # ย้าย import มาไว้ในฟังก์ชันเพื่อแก้ Circular Import
     from performance_tests import interpret_audiogram
     results = interpret_audiogram(person_data, all_person_history_df)
     freqs = [250, 500, 1000, 2000, 3000, 4000, 6000, 8000]
@@ -497,7 +569,7 @@ def display_performance_report_hearing(person_data, all_person_history_df):
         return "-"
     r_vals = [get_hearing_val('R', f) for f in freqs]
     l_vals = [get_hearing_val('L', f) for f in freqs]
-    st.markdown(clean_html_string("""<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px;"><div class="card-container" style="margin: 0; border-left: 4px solid #FF9800;"><div style="font-weight: bold; color: var(--main-text-color); margin-bottom: 5px;">🔊 ความถี่ (Hz)</div><div style="font-size: 0.85rem; opacity: 0.8;">คือ ระดับเสียงทุ้ม-แหลม (250=ทุ้มต่ำ, 8000=แหลมสูง)</div></div><div class="card-container" style="margin: 0; border-left: 4px solid #4CAF50;"><div style="font-weight: bold; color: var(--main-text-color); margin-bottom: 5px;">👂 ระดับการได้ยิน (dB)</div><div style="font-size: 0.85rem; opacity: 0.8;">คือ ความดังที่เริ่มได้ยิน <b>(ค่าปกติ ≤ 25 dB)</b> *ค่ายิ่งน้อย ยิ่งได้ยินดี</div></div></div>"""), unsafe_allow_html=True)
+    st.markdown(clean_html_string("""<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px;"><div class="card-container" style="margin: 0; border-left: 4px solid #FF9800;"><div style="font-weight: bold; color: var(--text-color); margin-bottom: 5px;">🔊 ความถี่ (Hz)</div><div style="font-size: 0.85rem; opacity: 0.8;">คือ ระดับเสียงทุ้ม-แหลม (250=ทุ้มต่ำ, 8000=แหลมสูง)</div></div><div class="card-container" style="margin: 0; border-left: 4px solid #4CAF50;"><div style="font-weight: bold; color: var(--text-color); margin-bottom: 5px;">👂 ระดับการได้ยิน (dB)</div><div style="font-size: 0.85rem; opacity: 0.8;">คือ ความดังที่เริ่มได้ยิน <b>(ค่าปกติ ≤ 25 dB)</b> *ค่ายิ่งน้อย ยิ่งได้ยินดี</div></div></div>"""), unsafe_allow_html=True)
     table_html = clean_html_string(f"""<div class='card-container'><div class='table-title'>ตารางระดับการได้ยิน (dB)</div><div class='table-responsive'><table class='lab-table'><thead><tr><th>ความถี่ (Hz)</th>{"".join([f"<th>{f}</th>" for f in freqs])}</tr></thead><tbody><tr><td><b>หูขวา (Right)</b></td>{"".join([f"<td style='text-align:center;'>{v}</td>" for v in r_vals])}</tr><tr><td><b>หูซ้าย (Left)</b></td>{"".join([f"<td style='text-align:center;'>{v}</td>" for v in l_vals])}</tr></tbody></table></div></div>""")
     st.markdown(table_html, unsafe_allow_html=True)
     col1, col2 = st.columns(2)
@@ -506,10 +578,9 @@ def display_performance_report_hearing(person_data, all_person_history_df):
     if results['advice']: st.warning(f"คำแนะนำ: {results['advice']}")
 
 def display_performance_report_lung(person_data):
-    # ย้าย import มาไว้ในฟังก์ชันเพื่อแก้ Circular Import
     from performance_tests import interpret_lung_capacity
     summary, advice, raw_data = interpret_lung_capacity(person_data)
-    st.markdown(clean_html_string("""<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px;"><div class="card-container" style="margin: 0; border-left: 4px solid #2196F3;"><div style="font-weight: bold; color: var(--main-text-color); margin-bottom: 5px;">🫁 FVC (ความจุปอด)</div><div style="font-size: 0.85rem; opacity: 0.8;">ปริมาตรอากาศทั้งหมดที่เป่าออกมาได้เต็มที่ (บอกขนาดปอด)</div></div><div class="card-container" style="margin: 0; border-left: 4px solid #00BCD4;"><div style="font-weight: bold; color: var(--main-text-color); margin-bottom: 5px;">💨 FEV1 (ปริมาตรลมเป่าเร็ว)</div><div style="font-size: 0.85rem; opacity: 0.8;">ปริมาตรอากาศที่เป่าออกได้ในวินาทีแรก (บอกความโล่งของหลอดลม)</div></div></div>"""), unsafe_allow_html=True)
+    st.markdown(clean_html_string("""<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px;"><div class="card-container" style="margin: 0; border-left: 4px solid #2196F3;"><div style="font-weight: bold; color: var(--text-color); margin-bottom: 5px;">🫁 FVC (ความจุปอด)</div><div style="font-size: 0.85rem; opacity: 0.8;">ปริมาตรอากาศทั้งหมดที่เป่าออกมาได้เต็มที่ (บอกขนาดปอด)</div></div><div class="card-container" style="margin: 0; border-left: 4px solid #00BCD4;"><div style="font-weight: bold; color: var(--text-color); margin-bottom: 5px;">💨 FEV1 (ปริมาตรลมเป่าเร็ว)</div><div style="font-size: 0.85rem; opacity: 0.8;">ปริมาตรอากาศที่เป่าออกได้ในวินาทีแรก (บอกความโล่งของหลอดลม)</div></div></div>"""), unsafe_allow_html=True)
     lung_items = [("FVC (ความจุปอด)", raw_data['FVC predic'], raw_data['FVC'], raw_data['FVC %']), ("FEV1 (ปริมาตรลมเป่าเร็ว)", raw_data['FEV1 predic'], raw_data['FEV1'], raw_data['FEV1 %']), ("FEV1/FVC Ratio (สัดส่วน)", "-", raw_data['FEV1/FVC %'], "-")]
     def make_bar(val):
         try:
@@ -517,11 +588,11 @@ def display_performance_report_lung(person_data):
             color = "var(--success-text)" if v >= 80 else "var(--warning-text)" if v >= 60 else "var(--danger-text)"
             return f"<div style='background:rgba(128,128,128,0.2);height:6px;border-radius:3px;width:100px;display:inline-block;vertical-align:middle;margin-right:8px;'><div style='width:{min(v,100)}%;background:{color};height:100%;border-radius:3px;'></div></div> {v}%"
         except: return str(val)
-    html_content = clean_html_string("""<div class='card-container'><div class='table-title'>ผลการตรวจสมรรถภาพปอด (Spirometry)</div><table class='lab-table'><thead><tr><th style='width: 30%;'>รายการ</th><th style='text-align: center;'>ค่ามาตรฐาน</th><th style='text-align: center;'>ค่าที่วัดได้</th><th style='width: 35%;'>ผลเทียบมาตรฐาน (%)</th></tr></thead><tbody>""")
+    html_content = clean_html_string("""<div class='card-container'><div class='table-title'>ผลการตรวจสมรรถภาพปอด (Spirometry)</div><div class='table-responsive'><table class='lab-table'><thead><tr><th style='width: 30%;'>รายการ</th><th style='text-align: center;'>ค่ามาตรฐาน</th><th style='text-align: center;'>ค่าที่วัดได้</th><th style='width: 35%;'>ผลเทียบมาตรฐาน (%)</th></tr></thead><tbody>""")
     for label, pred, act, per in lung_items:
         display_per = make_bar(per) if per != "-" else "-"
         html_content += f"<tr><td>{label}</td><td style='text-align:center;'>{pred}</td><td style='text-align:center;'>{act}</td><td>{display_per}</td></tr>"
-    html_content += "</tbody></table></div>"
+    html_content += "</tbody></table></div></div>"
     st.markdown(html_content, unsafe_allow_html=True)
     st.markdown(f"<div class='card-container'><b>สรุปผล:</b> {summary}<br><br><b>คำแนะนำ:</b> {advice}</div>", unsafe_allow_html=True)
 
@@ -537,7 +608,6 @@ def display_performance_report(person_data, report_type, all_person_history_df=N
         display_performance_report_hearing(person_data, all_person_history_df)
 
 def render_urine_section(person_data, sex, year):
-    # Config for Urine Tests
     urine_config = [
         ("สี (Colour)", "Color", "Yellow"),
         ("น้ำตาล (Sugar)", "sugar", "Negative"),
@@ -549,27 +619,18 @@ def render_urine_section(person_data, sex, year):
         ("เซลล์เยื่อบุผิว (Epit)", "SQ-epi", "0 - 10"),
         ("อื่นๆ", "ORTER", "-")
     ]
-    
     rows = []
     for label, col, norm in urine_config:
         val = person_data.get(col)
-        # Check abnormality
         is_abn = is_urine_abnormal(label, val, norm)
-        
-        # Format for table: (Text, Is_Abnormal)
-        label_tuple = (label, is_abn)
-        val_tuple = (safe_value(val), is_abn)
-        norm_tuple = (norm, is_abn)
-        
-        rows.append([label_tuple, val_tuple, norm_tuple])
-    
-    # Render table
+        rows.append([(label, is_abn), (safe_value(val), is_abn), (norm, is_abn)])
     st.markdown(render_lab_table_html("ผลการตรวจปัสสาวะ (Urinalysis)", ["รายการ", "ผลตรวจ", "ค่าปกติ"], rows), unsafe_allow_html=True)
 
 def render_stool_html_table(exam_result, cs_result):
     html = f"""
     <div class="card-container">
         <div class='table-title'>ผลการตรวจอุจจาระ (Stool Examination)</div>
+        <div class='table-responsive'>
         <table class="lab-table">
             <thead><tr><th>รายการ</th><th>ผลตรวจ</th></tr></thead>
             <tbody>
@@ -577,6 +638,7 @@ def render_stool_html_table(exam_result, cs_result):
                 <tr><td>Stool Culture</td><td>{cs_result}</td></tr>
             </tbody>
         </table>
+        </div>
     </div>
     """
     return clean_html_string(html)
@@ -605,8 +667,6 @@ def display_main_report(person_data, all_person_history_df):
         col_ua_left, col_ua_right = st.columns(2)
         with col_ua_left:
             render_urine_section(person, sex, selected_year)
-            # st.markdown("<h5 class='section-subtitle'>ผลตรวจอุจจาระ (Stool Examination)</h5>", unsafe_allow_html=True)
-            # Use new function
             st.markdown(render_stool_html_table(interpret_stool_exam(person.get("Stool exam", "")), interpret_stool_cs(person.get("Stool C/S", ""))), unsafe_allow_html=True)
 
         with col_ua_right:
@@ -617,7 +677,8 @@ def display_main_report(person_data, all_person_history_df):
             hep_a_display_text = "ไม่ได้ตรวจ" if is_empty(hep_a_value) else safe_text(hep_a_value)
 
             st.markdown(clean_html_string(f"""
-            <div class="table-container">
+            <div class="card-container">
+                <div class="table-responsive">
                 <table class="info-detail-table">
                     <tbody>
                         <tr><th>ผลเอกซเรย์ (Chest X-ray)</th><td>{interpret_cxr(person.get(cxr_col, ''))}</td></tr>
@@ -625,10 +686,10 @@ def display_main_report(person_data, all_person_history_df):
                         <tr><th>ไวรัสตับอักเสบเอ (Hepatitis A)</th><td>{hep_a_display_text}</td></tr>
                     </tbody>
                 </table>
+                </div>
             </div>
             """), unsafe_allow_html=True)
 
-            # --- Logic to get correct Hepatitis B columns based on year ---
             hbsag_col = "HbsAg"
             hbsab_col = "HbsAb"
             hbcab_col = "HBcAB"
@@ -641,10 +702,8 @@ def display_main_report(person_data, all_person_history_df):
 
             hep_year_rec = str(person.get("ปีตรวจHEP", "")).strip()
             header_suffix = ""
-            if not is_empty(hep_year_rec):
-                 header_suffix = f" (ตรวจเมื่อ: {hep_year_rec})"
-            elif selected_year and selected_year != current_thai_year:
-                 header_suffix = f" (พ.ศ. {selected_year})"
+            if not is_empty(hep_year_rec): header_suffix = f" (ตรวจเมื่อ: {hep_year_rec})"
+            elif selected_year and selected_year != current_thai_year: header_suffix = f" (พ.ศ. {selected_year})"
 
             st.markdown(f"<h5 class='section-subtitle'>ผลการตรวจไวรัสตับอักเสบบี (Viral hepatitis B){header_suffix}</h5>", unsafe_allow_html=True)
 
@@ -652,30 +711,26 @@ def display_main_report(person_data, all_person_history_df):
             hbsab = safe_text(person.get(hbsab_col))
             hbcab = safe_text(person.get(hbcab_col))
             
-            # แก้ไข: ตรงนี้หัวตารางจะแสดง HBsAg, HBsAb, HBcAb ตามที่ต้องการได้แล้ว เพราะลบ uppercase ออกจาก CSS
             st.markdown(clean_html_string(f"""
-            <div class="table-container">
+            <div class="card-container">
+                <div class="table-responsive">
                 <table class='lab-table'>
                     <thead><tr><th style='text-align: center;'>HBsAg</th><th style='text-align: center;'>HBsAb</th><th style='text-align: center;'>HBcAb</th></tr></thead>
                     <tbody><tr><td style='text-align: center;'>{hbsag}</td><td style='text-align: center;'>{hbsab}</td><td style='text-align: center;'>{hbcab}</td></tr></tbody>
                 </table>
+                </div>
             </div>
             """), unsafe_allow_html=True)
 
             if not (is_empty(hbsag) and is_empty(hbsab) and is_empty(hbcab)):
                 advice, status = hepatitis_b_advice(hbsag, hbsab, hbcab)
                 status_class = ""
-                if status == 'immune':
-                    status_class = 'immune-box'
-                elif status == 'no_immune':
-                    status_class = 'no-immune-box'
-                else:
-                    status_class = 'warning-box'
-                
+                if status == 'immune': status_class = 'immune-box'
+                elif status == 'no_immune': status_class = 'no-immune-box'
+                else: status_class = 'warning-box'
                 st.markdown(clean_html_string(f"""<div class='custom-advice-box {status_class}'>{advice}</div>"""), unsafe_allow_html=True)
 
     with st.container(border=True):
-        # ย้าย import มาไว้ในฟังก์ชันเพื่อแก้ Circular Import
         from performance_tests import generate_comprehensive_recommendations
         render_section_header("สรุปและคำแนะนำการปฏิบัติตัว (Summary & Recommendations)")
         recommendations_html = generate_comprehensive_recommendations(person_data)
