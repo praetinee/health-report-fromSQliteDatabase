@@ -199,44 +199,37 @@ def render_custom_header_with_actions(person_data, available_years):
                     st.session_state.print_performance_trigger = True
             
             # --- ส่วนแจ้งเตือนสำหรับมือถือ (Mobile Warning Message) ---
-            # CSS: ซ่อนใน PC (display: none) แสดงในมือถือ (display: block)
-            # ปรับตำแหน่งให้อยู่ใต้ปุ่มพอดี
+            # ใช้ st.markdown แบบแยกชิ้น เพื่อไม่ให้ไปปนกับส่วนอื่นๆ
             st.markdown("""
+            <style>
+                .mobile-print-note-container {
+                    display: none;
+                    width: 100%;
+                    margin-top: 0px;
+                }
+                .mobile-print-note {
+                    background: transparent !important;
+                    border: none !important;
+                    color: #b59f3b;
+                    font-size: 0.75rem;
+                    font-weight: 400;
+                    padding: 0;
+                    width: 100%;
+                    max-width: 300px;
+                    margin-left: 2px;
+                    line-height: 1.2;
+                }
+                @media (max-width: 992px) {
+                    .mobile-print-note-container {
+                        display: block !important;
+                    }
+                }
+            </style>
             <div class="mobile-print-note-container">
                  <div class="mobile-print-note">
                     ฟังก์ชัน <b>พิมพ์รายงาน</b> รองรับการใช้งานผ่านคอมพิวเตอร์ (PC) เท่านั้น
                 </div>
             </div>
-            <style>
-            /* Container สำหรับจัด layout ให้ตรงกับปุ่มด้านบน */
-            .mobile-print-note-container {
-                 display: none; /* ซ่อนใน PC */
-                 width: 100%;
-                 margin-top: 0px; /* ลด margin-top ให้ชิดปุ่ม */
-            }
-
-            /* สไตล์สำหรับข้อความ */
-            .mobile-print-note {
-                background: transparent !important; /* พื้นหลังโปร่งใส */
-                border: none !important; /* ไม่มีเส้นขอบ */
-                color: #b59f3b; /* สีน้ำตาลทองอ่อนๆ */
-                font-size: 0.75rem; /* ขนาดตัวอักษรเล็ก */
-                font-weight: 400;
-                padding: 0; /* ไม่ต้องมี padding */
-                /* จัดตำแหน่งให้อยู่ตรงกลางของ Grid ปุ่ม */
-                width: 100%;
-                max-width: 300px; /* จำกัดความกว้างไม่ให้ล้นขวา */
-                margin-left: 2px; /* ขยับซ้ายขวานิดหน่อย */
-                line-height: 1.2;
-            }
-            
-            /* แสดงเฉพาะเมื่อหน้าจอเล็กกว่า 992px (Mobile/Tablet) */
-            @media (max-width: 992px) {
-                .mobile-print-note-container {
-                    display: block !important;
-                }
-            }
-            </style>
             """, unsafe_allow_html=True)
             # --------------------------------------------------------
 
@@ -355,6 +348,9 @@ def main_app(df):
     available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
     if 'selected_year' not in st.session_state or st.session_state.selected_year not in available_years:
         st.session_state.selected_year = available_years[0]
+
+    # --- ลบโค้ดส่วน CSS/JS ที่ใช้ซ่อนปุ่มออกทั้งหมดแล้ว ---
+    # เหลือไว้เพียงการแสดงผลปุ่มปกติ และข้อความแจ้งเตือนด้านบน
 
     # --- ส่วนแสดงผลรายงาน ---
     yr_df = results_df[results_df["Year"] == st.session_state.selected_year]
