@@ -10,7 +10,7 @@ from performance_tests import interpret_audiogram, interpret_lung_capacity, inte
 # Module: print_performance_report.py
 # Purpose: Contains functions to generate HTML for performance test reports
 # (Vision, Hearing, Lung) for the standalone printable version.
-# Refactored for Batch Printing capability.
+# Refactored for Batch Printing capability & Auto Fit.
 # ==============================================================================
 
 
@@ -87,28 +87,28 @@ def render_html_header_and_personal_info(person):
     height = person.get("ส่วนสูง", "-")
 
     return f"""
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #00796B; padding-bottom: 10px; margin-bottom: 15px; font-family: 'Sarabun', sans-serif;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #00796B; padding-bottom: 8px; margin-bottom: 10px; font-family: 'Sarabun', sans-serif;">
         <div style="width: 40%;">
-            <h3 style="margin: 0; color: #00796B; font-size: 18px; line-height: 1.2;">รายงานผลการตรวจสมรรถภาพ</h3>
-            <p style="margin: 4px 0 0 0; font-size: 12px; font-weight: 600;">คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม</p>
-            <p style="margin: 0; font-size: 12px;">โรงพยาบาลสันทราย</p>
-            <p style="margin-top: 8px; font-size: 11px;"><b>วันที่ตรวจ:</b> {check_date}</p>
+            <h3 style="margin: 0; color: #00796B; font-size: 16px; line-height: 1.2;">รายงานผลการตรวจสมรรถภาพ</h3>
+            <p style="margin: 2px 0 0 0; font-size: 11px; font-weight: 600;">คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม</p>
+            <p style="margin: 0; font-size: 11px;">โรงพยาบาลสันทราย</p>
+            <p style="margin-top: 4px; font-size: 10px;"><b>วันที่ตรวจ:</b> {check_date}</p>
         </div>
         <div style="width: 60%; text-align: right;">
-            <h3 style="margin: 0; font-size: 20px; line-height: 1.2;">{name}</h3>
-            <p style="margin: 4px 0 0 0; font-size: 13px;">
+            <h3 style="margin: 0; font-size: 18px; line-height: 1.2;">{name}</h3>
+            <p style="margin: 2px 0 0 0; font-size: 12px;">
                 <b>HN:</b> {hn}
-                <span style="color: #ddd; margin: 0 8px;">|</span>
+                <span style="color: #ddd; margin: 0 6px;">|</span>
                 <b>เพศ:</b> {sex}
-                <span style="color: #ddd; margin: 0 8px;">|</span>
+                <span style="color: #ddd; margin: 0 6px;">|</span>
                 <b>อายุ:</b> {age} ปี
             </p>
-            <p style="margin: 2px 0 0 0; font-size: 13px;"><b>หน่วยงาน:</b> {department}</p>
+            <p style="margin: 2px 0 0 0; font-size: 12px;"><b>หน่วยงาน:</b> {department}</p>
             
-            <div style="margin-top: 8px; font-size: 12px; background-color: #f8f9fa; display: inline-block; padding: 4px 10px; border-radius: 4px; border: 1px solid #e0e0e0;">
+            <div style="margin-top: 6px; font-size: 11px; background-color: #f8f9fa; display: inline-block; padding: 2px 8px; border-radius: 4px; border: 1px solid #e0e0e0;">
                 <span style="white-space: nowrap;"><b>นน.</b> {weight}</span> <span style="color: #ccc; margin: 0 4px;">|</span>
                 <span style="white-space: nowrap;"><b>ส่วนสูง</b> {height}</span> <span style="color: #ccc; margin: 0 4px;">|</span>
-                <span style="white-space: nowrap;"><b>รอบเอว</b> {waist_display}</span> <span style="color: #ccc; margin: 0 8px; font-weight: 300;">/</span>
+                <span style="white-space: nowrap;"><b>รอบเอว</b> {waist_display}</span> <span style="color: #ccc; margin: 0 6px; font-weight: 300;">/</span>
                 <span style="white-space: nowrap;"><b>BP:</b> {bp_val}</span> <span style="color: #ccc; margin: 0 4px;">|</span>
                 <span style="white-space: nowrap;"><b>PR:</b> {pulse_val}</span>
             </div>
@@ -124,17 +124,17 @@ def render_print_vision(person_data):
 
     vision_tests = [
         {'display': '1. การมองด้วย 2 ตา (Binocular vision)', 'type': 'paired_value', 'normal_col': 'ป.การรวมภาพ', 'abnormal_col': 'ผ.การรวมภาพ'},
-        {'display': '2. การมองภาพระยะไกลด้วยสองตา (Far vision - Both)', 'type': 'paired_value', 'normal_col': 'ป.ความชัดของภาพระยะไกล', 'abnormal_col': 'ผ.ความชัดของภาพระยะไกล'},
-        {'display': '3. การมองภาพระยะไกลด้วยตาขวา (Far vision - Right)', 'type': 'value', 'col': 'การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)'},
-        {'display': '4. การมองภาพระยะไกลด้วยตาซ้าย (Far vision - Left)', 'type': 'value', 'col': 'การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)'},
+        {'display': '2. ความชัดระยะไกล - สองตา', 'type': 'paired_value', 'normal_col': 'ป.ความชัดของภาพระยะไกล', 'abnormal_col': 'ผ.ความชัดของภาพระยะไกล'},
+        {'display': '3. ความชัดระยะไกล - ตาขวา', 'type': 'value', 'col': 'การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)'},
+        {'display': '4. ความชัดระยะไกล - ตาซ้าย', 'type': 'value', 'col': 'การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)'},
         {'display': '5. การมองภาพ 3 มิติ (Stereo depth)', 'type': 'paired_value', 'normal_col': 'ป.การกะระยะและมองความชัดลึกของภาพ', 'abnormal_col': 'ผ.การกะระยะและมองความชัดลึกของภาพ'},
-        {'display': '6. การมองจำแนกสี (Color discrimination)', 'type': 'paired_value', 'normal_col': 'ป.การจำแนกสี', 'abnormal_col': 'ผ.การจำแนกสี'},
-        {'display': '7. ความสมดุลกล้ามเนื้อตาแนวดิ่ง (Far vertical phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง', 'related_keyword': 'แนวตั้งระยะไกล'},
-        {'display': '8. ความสมดุลกล้ามเนื้อตาแนวนอน (Far lateral phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน', 'related_keyword': 'แนวนอนระยะไกล'},
-        {'display': '9. การมองภาพระยะใกล้ด้วยสองตา (Near vision - Both)', 'type': 'paired_value', 'normal_col': 'ป.ความชัดของภาพระยะใกล้', 'abnormal_col': 'ผ.ความชัดของภาพระยะใกล้'},
-        {'display': '10. การมองภาพระยะใกล้ด้วยตาขวา (Near vision - Right)', 'type': 'value', 'col': 'การมองภาพระยะใกล้ด้วยตาขวา (Near vision – Right)'},
-        {'display': '11. การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision - Left)', 'type': 'value', 'col': 'การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision – Left)'},
-        {'display': '12. ความสมดุลกล้ามเนื้อตาแนวนอน (Near lateral phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'related_keyword': 'แนวนอนระยะใกล้'},
+        {'display': '6. การจำแนกสี (Color discrimination)', 'type': 'paired_value', 'normal_col': 'ป.การจำแนกสี', 'abnormal_col': 'ผ.การจำแนกสี'},
+        {'display': '7. สมดุลกล้ามเนื้อตาแนวดิ่ง-ไกล', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง', 'related_keyword': 'แนวตั้งระยะไกล'},
+        {'display': '8. สมดุลกล้ามเนื้อตาแนวนอน-ไกล', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน', 'related_keyword': 'แนวนอนระยะไกล'},
+        {'display': '9. ความชัดระยะใกล้ - สองตา', 'type': 'paired_value', 'normal_col': 'ป.ความชัดของภาพระยะใกล้', 'abnormal_col': 'ผ.ความชัดของภาพระยะใกล้'},
+        {'display': '10. ความชัดระยะใกล้ - ตาขวา', 'type': 'value', 'col': 'การมองภาพระยะใกล้ด้วยตาขวา (Near vision – Right)'},
+        {'display': '11. ความชัดระยะใกล้ - ตาซ้าย', 'type': 'value', 'col': 'การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision – Left)'},
+        {'display': '12. สมดุลกล้ามเนื้อตาแนวนอน-ใกล้', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'related_keyword': 'แนวนอนระยะใกล้'},
         {'display': '13. ลานสายตา (Visual field)', 'type': 'paired_value', 'normal_col': 'ป.ลานสายตา', 'abnormal_col': 'ผ.ลานสายตา'}
     ]
 
@@ -180,7 +180,7 @@ def render_print_vision(person_data):
             status_text = "ผิดปกติ"
             abnormal_details.append(test['display'].split('(')[0].strip())
         
-        rows_html += f"<tr><td>{test['display']}</td><td>{status_text}</td></tr>"
+        rows_html += f"<tr><td>{test['display']}</td><td style='text-align:center;'>{status_text}</td></tr>"
 
     doctor_advice = person_data.get('แนะนำABN EYE', '')
     summary_advice = person_data.get('สรุปเหมาะสมกับงาน', '')
@@ -209,7 +209,7 @@ def render_print_vision(person_data):
         <div class="content-columns">
             <div class="main-content">
                 <table class="data-table">
-                    <thead><tr><th>รายการตรวจ</th><th>ผลการตรวจ</th></tr></thead>
+                    <thead><tr><th>รายการตรวจ</th><th style='width:60px;'>ผลการตรวจ</th></tr></thead>
                     <tbody>{rows_html}</tbody>
                 </table>
             </div>
@@ -238,10 +238,10 @@ def render_print_hearing(person_data, all_person_history_df):
     summary_cards_html = f"""
     <div class="summary-single-line-box">
         <span class="{get_summary_class(summary_r_raw)}">
-            <b>หูขวา:</b> {html.escape(summary_r_raw)}
+            <b>ขวา:</b> {html.escape(summary_r_raw)}
         </span>
         <span class="{get_summary_class(summary_l_raw)}">
-            <b>หูซ้าย:</b> {html.escape(summary_l_raw)}
+            <b>ซ้าย:</b> {html.escape(summary_l_raw)}
         </span>
     </div>
     """
@@ -272,30 +272,30 @@ def render_print_hearing(person_data, all_person_history_df):
 
         rows_html += f"""
         <tr>
-            <td>{freq}</td>
-            <td>{r_val}</td>
-            <td>{l_val}</td>
-            <td>{shift_r_text}</td>
-            <td>{shift_l_text}</td>
+            <td style="padding:2px;">{freq}</td>
+            <td style="padding:2px;">{r_val}</td>
+            <td style="padding:2px;">{l_val}</td>
+            <td style="padding:2px;">{shift_r_text}</td>
+            <td style="padding:2px;">{shift_l_text}</td>
         </tr>
         """
 
-    baseline_header_line1 = "การเปลี่ยนแปลงเทียบกับ Baseline"
-    baseline_header_line2 = f"(พ.ศ. {baseline_year})" if has_baseline else "(ไม่มี Baseline)"
-    baseline_header_html = f"{baseline_header_line1}<br>{baseline_header_line2}"
+    baseline_header_line1 = "Shift เทียบ Baseline"
+    baseline_header_line2 = f"({baseline_year})" if has_baseline else ""
+    baseline_header_html = f"{baseline_header_line1} {baseline_header_line2}"
 
     table_header_html = f"""
     <thead>
         <tr>
-            <th rowspan="2" style="vertical-align: middle;">ความถี่ (Hz)</th>
-            <th colspan="2">ผลการตรวจปัจจุบัน (dB)</th>
+            <th rowspan="2" style="vertical-align: middle;">Hz</th>
+            <th colspan="2">ปัจจุบัน (dB)</th>
             <th colspan="2" style="vertical-align: middle;">{baseline_header_html}</th>
         </tr>
         <tr>
-            <th>หูขวา</th>
-            <th>หูซ้าย</th>
-            <th>Shift ขวา</th>
-            <th>Shift ซ้าย</th>
+            <th>ขวา</th>
+            <th>ซ้าย</th>
+            <th>ขวา</th>
+            <th>ซ้าย</th>
         </tr>
     </thead>
     """
@@ -321,10 +321,10 @@ def render_print_hearing(person_data, all_person_history_df):
     avg_l_high = averages.get('left_3000_6000')
     averages_html = f"""
     <div class="advice-box">
-        <b>ค่าเฉลี่ยการได้ยิน (dB)</b>
-        <ul style="margin: 5px 0 0 0; padding-left: 20px; list-style-type: square;">
-            <li>ความถี่เสียงพูด (500-2k Hz): ขวา={avg_r_speech if avg_r_speech is not None else 'N/A'}, ซ้าย={avg_l_speech if avg_l_speech is not None else 'N/A'}</li>
-            <li>ความถี่สูง (3k-6k Hz): ขวา={avg_r_high if avg_r_high is not None else 'N/A'}, ซ้าย={avg_l_high if avg_l_high is not None else 'N/A'}</li>
+        <b>ค่าเฉลี่ย (dB)</b>
+        <ul style="margin: 2px 0 0 0; padding-left: 15px; list-style-type: square;">
+            <li>เสียงพูด: R={avg_r_speech if avg_r_speech is not None else '-'}, L={avg_l_speech if avg_l_speech is not None else '-'}</li>
+            <li>ความถี่สูง: R={avg_r_high if avg_r_high is not None else '-'}, L={avg_l_high if avg_l_high is not None else '-'}</li>
         </ul>
     </div>
     """
@@ -381,19 +381,19 @@ def render_print_lung(person_data):
         cxr_result_text = cxr_result
     cxr_html = f"""
     <div class="advice-box" style="margin-bottom: 5px;">
-        <b>ผลเอกซเรย์ทรวงอก (CXR):</b><br>{html.escape(cxr_result_text)}
+        <b>ผลเอกซเรย์ปอด (CXR):</b><br>{html.escape(cxr_result_text)}
     </div>
     """
     
     data_table_html = f"""
     <table class="data-table">
         <thead>
-            <tr><th>การทดสอบ</th><th>ค่าที่วัดได้ (Actual)</th><th>ค่ามาตรฐาน (Pred)</th><th>% เทียบค่ามาตรฐาน (%Pred)</th></tr>
+            <tr><th>Test</th><th>Actual</th><th>Pred</th><th>%Pred</th></tr>
         </thead>
         <tbody>
             <tr><td>FVC (L)</td><td>{format_val('FVC', '.2f')}</td><td>{format_val('FVC predic', '.2f')}</td><td class='{get_status_class(raw.get("FVC %"), 80)}'>{format_val('FVC %')} %</td></tr>
             <tr><td>FEV1 (L)</td><td>{format_val('FEV1', '.2f')}</td><td>{format_val('FEV1 predic', '.2f')}</td><td class='{get_status_class(raw.get("FEV1 %"), 80)}'>{format_val('FEV1 %')} %</td></tr>
-            <tr><td>FEV1/FVC (%)</td><td class='{get_status_class(raw.get("FEV1/FVC %"), 70)}'>{format_val('FEV1/FVC %')} %</td><td>{format_val('FEV1/FVC % pre')} %</td><td>-</td></tr>
+            <tr><td>FEV1/FVC</td><td class='{get_status_class(raw.get("FEV1/FVC %"), 70)}'>{format_val('FEV1/FVC %')} %</td><td>{format_val('FEV1/FVC % pre')} %</td><td>-</td></tr>
         </tbody>
     </table>
     """
@@ -425,40 +425,53 @@ def get_performance_report_css():
     return """
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
+        
+        @page {
+            size: A4;
+            margin: 5mm;
+        }
+
         body {
             font-family: 'Sarabun', sans-serif !important;
-            font-size: 12px;
-            margin: 0.5cm 0.7cm; 
+            font-size: 10px; /* ลดขนาดฟอนต์ให้เล็กลง */
+            margin: 0;
+            padding: 10px;
             color: #333;
             background-color: #fff;
         }
-        hr { border: 0; border-top: 1px solid #e0e0e0; margin: 0.5rem 0; }
-        .info-table { width: 100%; font-size: 10.5px; text-align: left; border-collapse: collapse; }
-        .info-table td { padding: 1px 5px; }
+        
+        .report-container {
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        hr { border: 0; border-top: 1px solid #e0e0e0; margin: 0.3rem 0; }
+        .info-table { width: 100%; font-size: 10px; text-align: left; border-collapse: collapse; }
+        .info-table td { padding: 1px 4px; }
         
         .header-grid { display: flex; align-items: flex-end; justify-content: space-between; }
         .header-left { text-align: left; }
         .header-right { text-align: right; }
 
-        .report-section { margin-bottom: 0.5rem; page-break-inside: avoid; } 
+        .report-section { margin-bottom: 0.4rem; page-break-inside: avoid; } 
         
         .section-header {
             background-color: #00796B; 
             color: white; text-align: center;
-            padding: 0.4rem; font-weight: bold; border-radius: 8px;
-            margin-bottom: 0.7rem;
-            font-size: 13px;
+            padding: 2px; font-weight: bold; border-radius: 4px;
+            margin-bottom: 0.4rem;
+            font-size: 11px;
         }
 
-        .content-columns { display: flex; gap: 15px; align-items: flex-start; }
+        .content-columns { display: flex; gap: 10px; align-items: flex-start; }
         .main-content { flex: 2; min-width: 0; }
         .side-content { flex: 1; min-width: 0; }
         .main-content-full { width: 100%; }
 
-        .data-table { width: 100%; font-size: 10.5px; border-collapse: collapse; }
+        .data-table { width: 100%; font-size: 9.5px; border-collapse: collapse; }
         .data-table.hearing-table { table-layout: fixed; }
         .data-table th, .data-table td {
-            border: 1px solid #e0e0e0; padding: 4px; text-align: center;
+            border: 1px solid #e0e0e0; padding: 2px 4px; text-align: center;
             vertical-align: middle;
         }
         .data-table th { background-color: #f5f5f5; font-weight: bold; }
@@ -469,13 +482,13 @@ def get_performance_report_css():
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 10px;
-            padding: 8px;
+            gap: 5px;
+            padding: 4px;
             border: 1px solid #e0e0e0;
             background-color: #f9f9f9;
-            border-radius: 6px;
-            margin-bottom: 0.5rem;
-            font-size: 12px;
+            border-radius: 4px;
+            margin-bottom: 0.3rem;
+            font-size: 10px;
             font-weight: bold;
             page-break-inside: avoid; 
         }
@@ -485,19 +498,19 @@ def get_performance_report_css():
         }
 
         .summary-container { margin-top: 0; }
-        .summary-container-lung { margin-top: 10px; }
+        .summary-container-lung { margin-top: 5px; }
         .summary-title-lung {
             text-align: center;
             font-weight: bold;
-            font-size: 11px;
-            margin-bottom: 8px;
+            font-size: 10px;
+            margin-bottom: 4px;
             line-height: 1.2;
         }
         .advice-box {
-            border-radius: 6px; padding: 8px 12px; font-size: 10.5px;
-            line-height: 1.5; border: 1px solid;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            margin-bottom: 5px; 
+            border-radius: 4px; padding: 4px 8px; font-size: 9.5px;
+            line-height: 1.4; border: 1px solid;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            margin-bottom: 4px; 
             height: 100%;
             box-sizing: border-box;
             background-color: #fff8e1; 
@@ -512,7 +525,7 @@ def get_performance_report_css():
         .status-nt-text { color: #555; }
         
         .signature-section {
-            margin-top: 2rem;
+            margin-top: 1rem;
             text-align: right;
             padding-right: 1rem;
             page-break-inside: avoid;
@@ -520,22 +533,51 @@ def get_performance_report_css():
         .signature-line {
             display: inline-block;
             text-align: center;
-            width: 280px;
+            width: 250px;
         }
         .signature-line .line {
             border-bottom: 1px dotted #333;
-            margin-bottom: 0.4rem;
+            margin-bottom: 0.2rem;
             width: 100%;
         }
         .signature-line .name, .signature-line .title, .signature-line .license {
             white-space: nowrap;
-            font-size: 11px;
+            font-size: 10px;
         }
 
         @media print {
             body { -webkit-print-color-adjust: exact; margin: 0; }
+            .report-container { page-break-after: always; }
+            .report-container:last-child { page-break-after: auto; }
         }
     </style>
+    """
+
+def get_auto_fit_script():
+    """
+    Returns the JavaScript code for Auto-Fit (Smart Scaling).
+    This ensures that even performance reports fit on a single page if possible.
+    """
+    return """
+    <script>
+    window.onload = function() {
+        const MAX_HEIGHT = 1060; // A4 height minus margins
+        
+        const reports = document.getElementsByClassName('report-container');
+        
+        for (let i = 0; i < reports.length; i++) {
+            const report = reports[i];
+            const actualHeight = report.scrollHeight;
+            
+            if (actualHeight > MAX_HEIGHT) {
+                let scale = MAX_HEIGHT / actualHeight;
+                if (scale < 0.65) scale = 0.65; // Don't scale too small
+                
+                report.style.zoom = scale;
+            }
+        }
+    };
+    </script>
     """
 
 def render_performance_report_body(person_data, all_person_history_df):
@@ -550,8 +592,7 @@ def render_performance_report_body(person_data, all_person_history_df):
         <div class="signature-line">
             <div class="line"></div>
             <div class="name">นายแพทย์นพรัตน์ รัชฎาพร</div>
-            <div class="title">แพทย์อาชีวเวชศาสตร์</div>
-            <div class="license">ว.26674</div>
+            <div class="title">แพทย์อาชีวเวชศาสตร์ (ว.26674)</div>
         </div>
     </div>
     """
@@ -572,6 +613,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
     """
     css_html = get_performance_report_css()
     body_html = render_performance_report_body(person_data, all_person_history_df)
+    js_script = get_auto_fit_script()
     
     final_html = f"""
     <!DOCTYPE html>
@@ -583,6 +625,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
     </head>
     <body>
         {body_html}
+        {js_script}
     </body>
     </html>
     """
