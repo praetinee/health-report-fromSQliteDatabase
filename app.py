@@ -189,6 +189,7 @@ def render_custom_header_with_actions(person_data, available_years):
             st.markdown('<div style="height: 12px;"></div>', unsafe_allow_html=True)
             
             # --- ปุ่มพิมพ์ ---
+            # ใช้ st.columns เพื่อสร้าง Grid ให้ปุ่ม
             cb1, cb2, cb_rest = st.columns([1.2, 1.2, 2.5])
             with cb1:
                 if st.button("🖨️ ผลสุขภาพ", key="hdr_print_h", use_container_width=True):
@@ -198,34 +199,40 @@ def render_custom_header_with_actions(person_data, available_years):
                     st.session_state.print_performance_trigger = True
             
             # --- ส่วนแจ้งเตือนสำหรับมือถือ (Mobile Warning Message) ---
-            # CSS: ซ่อนใน PC (display: none) แสดงในมือถือ (display: flex)
+            # CSS: ซ่อนใน PC (display: none) แสดงในมือถือ (display: block)
             st.markdown("""
-            <div class="mobile-print-note">
-                <span style="font-size: 1.2em;">🖥️</span>
-                <span>ฟังก์ชัน <b>พิมพ์รายงาน</b> รองรับการใช้งานผ่านคอมพิวเตอร์ (PC) เท่านั้น</span>
+            <div class="mobile-print-note-container">
+                 <div class="mobile-print-note">
+                    ฟังก์ชัน <b>พิมพ์รายงาน</b> รองรับการใช้งานผ่านคอมพิวเตอร์ (PC) เท่านั้น
+                </div>
             </div>
             <style>
-            /* สไตล์สำหรับกล่องข้อความ */
+            /* Container สำหรับจัด layout ให้ตรงกับปุ่มด้านบน */
+            .mobile-print-note-container {
+                 display: none; /* ซ่อนใน PC */
+                 width: 100%;
+                 margin-top: 0px; /* ลด margin-top ให้ชิดปุ่ม */
+            }
+
+            /* สไตล์สำหรับข้อความ */
             .mobile-print-note {
-                display: none; /* ซ่อนไว้ก่อนในหน้าจอใหญ่ */
-                margin-top: 12px;
-                padding: 10px 15px;
-                background: linear-gradient(to right, #fff3cd, #ffffff);
-                border: 1px solid #ffeeba;
-                border-left: 5px solid #ffc107; /* แถบสีเหลืองด้านซ้าย */
-                border-radius: 8px;
-                color: #856404;
-                font-size: 0.85rem;
-                font-weight: 500;
-                align-items: center;
-                gap: 10px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                background: transparent !important; /* พื้นหลังโปร่งใส */
+                border: none !important; /* ไม่มีเส้นขอบ */
+                color: #b59f3b; /* สีน้ำตาลทองอ่อนๆ */
+                font-size: 0.75rem; /* ขนาดตัวอักษรเล็ก */
+                font-weight: 400;
+                padding: 0; /* ไม่ต้องมี padding */
+                /* จัดตำแหน่งให้อยู่ตรงกลางของ Grid ปุ่ม */
+                width: 100%;
+                max-width: 300px; /* จำกัดความกว้างไม่ให้ล้นขวา */
+                margin-left: 2px; /* ขยับซ้ายขวานิดหน่อย */
+                line-height: 1.2;
             }
             
             /* แสดงเฉพาะเมื่อหน้าจอเล็กกว่า 992px (Mobile/Tablet) */
             @media (max-width: 992px) {
-                .mobile-print-note {
-                    display: flex !important;
+                .mobile-print-note-container {
+                    display: block !important;
                 }
             }
             </style>
@@ -250,11 +257,14 @@ def render_custom_header_with_actions(person_data, available_years):
                 format_func=lambda y: f"พ.ศ. {y}", 
                 key="year_select", 
                 on_change=lambda: st.session_state.update({"selected_year": st.session_state.year_select}),
-                label_visibility="collapsed" 
+                label_visibility="collapsed" # ซ่อน Label เพื่อความสวยงาม (เพราะอยู่ใต้กลุ่มวันที่แล้ว)
             )
 
+        # เส้นคั่นบางๆ ก่อนส่วน Vitals
         st.markdown('<hr style="margin: 15px 0; border: 0; border-top: 1px solid rgba(128,128,128,0.2);">', unsafe_allow_html=True)
 
+        # 5. Vitals Grid (ส่วนล่าง)
+        # ใช้ HTML/CSS Grid เพื่อความสวยงามเหมือนเดิม
         st.markdown(f"""
         <div class="vitals-grid-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px;">
             <div class="vital-card" style="background: var(--card-bg-color); border-radius: 8px; padding: 15px; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(128,128,128,0.2);">
@@ -344,6 +354,42 @@ def main_app(df):
     available_years = sorted(results_df["Year"].dropna().unique().astype(int), reverse=True)
     if 'selected_year' not in st.session_state or st.session_state.selected_year not in available_years:
         st.session_state.selected_year = available_years[0]
+
+    # --- ส่วน CSS/JS สำหรับซ่อนปุ่มพิมพ์บนมือถือ ---
+    st.markdown("""
+        <style>
+        /* CSS สำหรับ Desktop (หน้าจอ > 992px) */
+        @media (min-width: 993px) {
+            .print-menu-anchor { display: block; }
+        }
+
+        /* CSS สำหรับ Mobile/Tablet (หน้าจอ <= 992px) */
+        @media (max-width: 992px) {
+            button[kind="secondary"]:has(div p:contains("🖨️")) {
+                 display: none !important;
+            }
+        }
+        </style>
+        
+        <script>
+        function removePrintButtonsOnMobile() {
+            if (window.innerWidth <= 992) {
+                // หาปุ่มที่มีไอคอนเครื่องพิมพ์
+                const buttons = window.parent.document.querySelectorAll('button');
+                buttons.forEach(btn => {
+                    if (btn.innerText.includes('🖨️')) {
+                        btn.style.display = 'none';
+                        const col = btn.closest('[data-testid="column"]');
+                        if (col) col.style.display = 'none';
+                    }
+                });
+            }
+        }
+        removePrintButtonsOnMobile();
+        window.addEventListener('resize', removePrintButtonsOnMobile);
+        setInterval(removePrintButtonsOnMobile, 500);
+        </script>
+    """, unsafe_allow_html=True)
 
     # --- ส่วนแสดงผลรายงาน ---
     yr_df = results_df[results_df["Year"] == st.session_state.selected_year]
