@@ -60,7 +60,7 @@ def interpret_ekg(val):
 def get_report_css():
     return """
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
         
         :root {
             --primary-color: #2c3e50;
@@ -116,9 +116,9 @@ def get_report_css():
             justify-content: space-between;
             align-items: flex-end;
         }
-        .header h1 { font-size: 22px; font-weight: 700; color: var(--primary-color); margin: 0; }
-        .header p { margin: 0; font-size: 12px; color: var(--secondary-color); }
-        .patient-info { font-size: 13px; text-align: right; }
+        .header h1 { font-family: 'Sarabun', sans-serif !important; font-size: 22px; font-weight: 700; color: var(--primary-color); margin: 0; }
+        .header p { font-family: 'Sarabun', sans-serif !important; margin: 0; font-size: 12px; color: var(--secondary-color); }
+        .patient-info { font-family: 'Sarabun', sans-serif !important; font-size: 13px; text-align: right; }
         .patient-info b { color: var(--primary-color); }
 
         /* Vitals Bar */
@@ -132,24 +132,40 @@ def get_report_css():
             justify-content: space-between;
             font-size: 13px;
             flex-wrap: wrap;
+            font-family: 'Sarabun', sans-serif !important;
         }
         .vital-item b { color: var(--primary-color); font-weight: 700; margin-right: 3px; }
 
-        /* Section Styling */
+        /* Section Styling - UPDATED FOR 2-LINE TITLE */
         .section-title {
-            font-size: 14px;
-            font-weight: 700;
-            color: #fff;
             background-color: var(--primary-color);
-            padding: 3px 8px;
+            padding: 5px 8px;
             border-radius: 3px;
             margin-bottom: 5px;
             margin-top: 10px;
+            color: #fff;
+            display: flex;
+            flex-direction: column; /* Stack vertically */
+            justify-content: center;
+            line-height: 1.2;
+        }
+        .section-title span.th {
+            font-family: 'Sarabun', sans-serif !important;
+            font-size: 14px;
+            font-weight: 700;
+            display: block;
+        }
+        .section-title span.en {
+            font-family: 'Sarabun', sans-serif !important;
+            font-size: 12px; /* Slightly smaller for English */
+            font-weight: 700; /* Bold as requested */
+            display: block;
+            opacity: 0.9;
         }
         .col-50 .section-title:first-child { margin-top: 0; }
         
         /* Tables */
-        table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 5px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 5px; font-family: 'Sarabun', sans-serif !important; }
         th, td { padding: 2px 4px; border-bottom: 1px solid #eee; text-align: left; vertical-align: middle; }
         th { background-color: #f1f2f6; font-weight: 600; color: var(--secondary-color); text-align: center; border-bottom: 2px solid #ddd; }
         td.val-col { text-align: center; font-weight: 500; }
@@ -165,6 +181,7 @@ def get_report_css():
             padding: 8px;
             margin-top: 10px;
             page-break-inside: avoid;
+            font-family: 'Sarabun', sans-serif !important;
         }
         .summary-title { font-weight: 700; color: var(--accent-color); margin-bottom: 3px; font-size: 14px; border-bottom: 1px dashed var(--accent-color); padding-bottom: 3px; }
         .summary-content { font-size: 13px; line-height: 1.4; }
@@ -179,6 +196,7 @@ def get_report_css():
             bottom: 5mm;
             right: 5mm;
             width: 100%;
+            font-family: 'Sarabun', sans-serif !important;
         }
         .signature-line {
             display: inline-block;
@@ -366,13 +384,19 @@ def generate_printable_report(person_data, all_person_history_df=None):
             <div class="row">
                 <!-- Left Column -->
                 <div class="col-50">
-                    <div class="section-title">ความสมบูรณ์ของเม็ดเลือด (CBC)</div>
+                    <div class="section-title">
+                        <span class="th">ความสมบูรณ์ของเม็ดเลือด</span>
+                        <span class="en">CBC</span>
+                    </div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>{cbc_rows}</tbody>
                     </table>
 
-                    <div class="section-title">การทำงานของไต และ กรดยูริก<br><span style="font-size:12px; font-weight:700;">(Kidney Function & Uric Acid)</span></div>
+                    <div class="section-title">
+                        <span class="th">การทำงานของไต และ กรดยูริก</span>
+                        <span class="en">Kidney Function & Uric Acid</span>
+                    </div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>
@@ -383,13 +407,19 @@ def generate_printable_report(person_data, all_person_history_df=None):
                         </tbody>
                     </table>
 
-                    <div class="section-title">ปัสสาวะ (Urinalysis)</div>
+                    <div class="section-title">
+                        <span class="th">ปัสสาวะ</span>
+                        <span class="en">Urinalysis</span>
+                    </div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>{u_rows}</tbody>
                     </table>
                     
-                    <div class="section-title">อุจจาระ (Stool)</div>
+                    <div class="section-title">
+                        <span class="th">อุจจาระ</span>
+                        <span class="en">Stool</span>
+                    </div>
                     <table>
                         <tbody>
                             <tr><td>Stool Exam</td><td class="val-col">{safe_value(person_data.get("Stool exam"))}</td><td class="range-col"></td></tr>
@@ -400,7 +430,10 @@ def generate_printable_report(person_data, all_person_history_df=None):
 
                 <!-- Right Column -->
                 <div class="col-50">
-                    <div class="section-title">น้ำตาล และ ไขมัน ในเลือด<br><span style="font-size:12px; font-weight:700;">(Blood Sugar & Lipid Profile)</span></div>
+                    <div class="section-title">
+                        <span class="th">น้ำตาล และ ไขมัน ในเลือด</span>
+                        <span class="en">Blood Sugar & Lipid Profile</span>
+                    </div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>
@@ -412,7 +445,10 @@ def generate_printable_report(person_data, all_person_history_df=None):
                         </tbody>
                     </table>
                     
-                    <div class="section-title">การทำงานของตับ (Liver Function)</div>
+                    <div class="section-title">
+                        <span class="th">การทำงานของตับ</span>
+                        <span class="en">Liver Function</span>
+                    </div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>
@@ -422,7 +458,10 @@ def generate_printable_report(person_data, all_person_history_df=None):
                         </tbody>
                     </table>
 
-                    <div class="section-title">ไวรัสตับอักเสบ (Hepatitis)</div>
+                    <div class="section-title">
+                        <span class="th">ไวรัสตับอักเสบ</span>
+                        <span class="en">Hepatitis</span>
+                    </div>
                     <table>
                         <tbody>
                             <tr><td>Hepatitis A</td><td class="val-col">{hep_a}</td><td class="range-col">Neg</td></tr>
@@ -432,7 +471,10 @@ def generate_printable_report(person_data, all_person_history_df=None):
                         </tbody>
                     </table>
 
-                    <div class="section-title">เอกซเรย์ปอด และ คลื่นไฟฟ้าหัวใจ<br><span style="font-size:12px; font-weight:700;">(Chest X-ray & EKG)</span></div>
+                    <div class="section-title">
+                        <span class="th">เอกซเรย์ปอด และ คลื่นไฟฟ้าหัวใจ</span>
+                        <span class="en">Chest X-ray & EKG</span>
+                    </div>
                     <table>
                         <tbody>
                             <tr>
