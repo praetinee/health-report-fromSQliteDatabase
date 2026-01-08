@@ -221,18 +221,18 @@ def get_main_report_css():
             font-style: italic;
         }
         
-        /* Footer - Updated for centering in right half */
+        /* Footer - Centered at Bottom */
         .footer {
-            /* Position absolute to stick to bottom right */
+            /* Position absolute to stick to bottom */
             position: absolute;
             bottom: 0.5cm;
-            right: 0; /* Align to the right edge of container */
-            width: 50%; /* Take up the right half */
-            text-align: center; /* Center the text within this 50% block */
+            left: 0; 
+            width: 100%;
+            text-align: center; /* Center the text horizontally */
             font-size: 14px;
             page-break-inside: avoid;
-            /* Adjust padding if needed to align perfectly with content */
-            padding-right: 0.5cm; 
+            padding-right: 0.5cm; /* Match container padding for symmetry */
+            padding-left: 0.5cm;
         }
         .signature-line {
             display: inline-block;
