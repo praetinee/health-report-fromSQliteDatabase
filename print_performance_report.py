@@ -96,7 +96,7 @@ def get_performance_report_css():
 
         @page {
             size: A4;
-            margin: 0.5cm !important; /* Force 0.5cm margin on page level as requested */
+            margin: 0.5cm !important; /* Force 0.5cm margin on page level */
         }
 
         html, body {
@@ -116,7 +116,7 @@ def get_performance_report_css():
         .container { 
             width: 100%;
             height: 100%;
-            padding: 0.5cm !important; /* Padding for screen display, consistent with print margin */
+            padding: 0.5cm !important; /* EXACTLY 0.5cm PADDING matched with health report */
             position: relative;
             page-break-after: always;
         }
@@ -167,7 +167,7 @@ def get_performance_report_css():
 
         .content-columns { display: flex; gap: 15px; align-items: flex-start; }
         .main-content { flex: 2; min-width: 0; }
-        .side-content { flex: 1; min-width: 0; }
+        .side-content { flex: 1; min-width: 0; display: flex; flex-direction: column; } /* Add flex column to side content */
         .main-content-full { width: 100%; }
 
         .data-table { width: 100%; font-size: 12px; border-collapse: collapse; margin-bottom: 5px; font-family: 'Sarabun', sans-serif !important; }
@@ -208,7 +208,7 @@ def get_performance_report_css():
             line-height: 1.4; border: 1px solid;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             margin-bottom: 5px; 
-            height: 100%;
+            height: auto; /* Changed from 100% to auto */
             box-sizing: border-box;
             background-color: #fff8e1; 
             border-color: #ffecb3;
@@ -219,17 +219,21 @@ def get_performance_report_css():
         .status-abn-text { color: #c0392b !important; font-weight: bold; }
         .status-nt-text { color: #555; }
         
-        /* Footer */
+        /* Footer - FIXED TO BOTTOM OF RIGHT COLUMN (or container bottom) */
         .footer {
-            margin-top: auto; 
-            padding-bottom: 0;
+            margin-top: 20px;
             font-size: 14px; 
             font-family: 'Sarabun', sans-serif !important;
-            text-align: center;
+            text-align: center; /* Center text within the footer block */
             width: 100%;
+            /* Removed absolute positioning to let it flow naturally in the column or use specific placement */
+        }
+        .footer-signature-container {
             position: absolute;
-            bottom: 0;
-            left: 0;
+            bottom: 0.5cm; /* ขอบล่าง 0.5cm */
+            right: 0.5cm;
+            width: 30%; /* Approximate width of the side column or enough for the signature */
+            text-align: center;
         }
         .signature-line {
             display: inline-block;
@@ -636,9 +640,9 @@ def render_performance_report_body(person_data, all_person_history_df):
     hearing_html = render_print_hearing(person_data, all_person_history_df)
     lung_html = render_print_lung(person_data)
     
-    # Footer with Signature
+    # Footer with Signature - Positioned absolute bottom right with 0.5cm margin
     footer_html = """
-    <div class="footer">
+    <div class="footer-signature-container">
         <div class="signature-line">
             <b>นายแพทย์นพรัตน์ รัชฎาพร</b><br>
             แพทย์อาชีวเวชศาสตร์ (ว.26674)<br>
