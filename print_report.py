@@ -136,7 +136,7 @@ def get_report_css():
         }
         .vital-item b { color: var(--primary-color); font-weight: 700; margin-right: 3px; }
 
-        /* Section Styling - UPDATED FOR 2-LINE TITLE */
+        /* Section Styling - UPDATED FOR SINGLE LINE */
         .section-title {
             background-color: var(--primary-color);
             padding: 5px 8px;
@@ -144,23 +144,10 @@ def get_report_css():
             margin-bottom: 5px;
             margin-top: 10px;
             color: #fff;
-            display: flex;
-            flex-direction: column; /* Stack vertically */
-            justify-content: center;
-            line-height: 1.2;
-        }
-        .section-title span.th {
-            font-family: 'Sarabun', sans-serif !important;
             font-size: 14px;
             font-weight: 700;
-            display: block;
-        }
-        .section-title span.en {
+            line-height: 1.4;
             font-family: 'Sarabun', sans-serif !important;
-            font-size: 12px; /* Slightly smaller for English */
-            font-weight: 700; /* Bold as requested */
-            display: block;
-            opacity: 0.9;
         }
         .col-50 .section-title:first-child { margin-top: 0; }
         
@@ -384,19 +371,13 @@ def generate_printable_report(person_data, all_person_history_df=None):
             <div class="row">
                 <!-- Left Column -->
                 <div class="col-50">
-                    <div class="section-title">
-                        <span class="th">ความสมบูรณ์ของเม็ดเลือด</span>
-                        <span class="en">CBC</span>
-                    </div>
+                    <div class="section-title">ความสมบูรณ์ของเม็ดเลือด (CBC)</div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>{cbc_rows}</tbody>
                     </table>
 
-                    <div class="section-title">
-                        <span class="th">การทำงานของไต และ กรดยูริก</span>
-                        <span class="en">Kidney Function & Uric Acid</span>
-                    </div>
+                    <div class="section-title">การทำงานของไต และ กรดยูริก (Kidney Function & Uric Acid)</div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>
@@ -407,19 +388,13 @@ def generate_printable_report(person_data, all_person_history_df=None):
                         </tbody>
                     </table>
 
-                    <div class="section-title">
-                        <span class="th">ปัสสาวะ</span>
-                        <span class="en">Urinalysis</span>
-                    </div>
+                    <div class="section-title">ปัสสาวะ (Urinalysis)</div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>{u_rows}</tbody>
                     </table>
                     
-                    <div class="section-title">
-                        <span class="th">อุจจาระ</span>
-                        <span class="en">Stool</span>
-                    </div>
+                    <div class="section-title">อุจจาระ (Stool)</div>
                     <table>
                         <tbody>
                             <tr><td>Stool Exam</td><td class="val-col">{safe_value(person_data.get("Stool exam"))}</td><td class="range-col"></td></tr>
@@ -430,10 +405,7 @@ def generate_printable_report(person_data, all_person_history_df=None):
 
                 <!-- Right Column -->
                 <div class="col-50">
-                    <div class="section-title">
-                        <span class="th">น้ำตาล และ ไขมัน ในเลือด</span>
-                        <span class="en">Blood Sugar & Lipid Profile</span>
-                    </div>
+                    <div class="section-title">น้ำตาล และ ไขมัน ในเลือด (Blood Sugar & Lipid Profile)</div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>
@@ -445,10 +417,7 @@ def generate_printable_report(person_data, all_person_history_df=None):
                         </tbody>
                     </table>
                     
-                    <div class="section-title">
-                        <span class="th">การทำงานของตับ</span>
-                        <span class="en">Liver Function</span>
-                    </div>
+                    <div class="section-title">การทำงานของตับ (Liver Function)</div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>
@@ -458,10 +427,7 @@ def generate_printable_report(person_data, all_person_history_df=None):
                         </tbody>
                     </table>
 
-                    <div class="section-title">
-                        <span class="th">ไวรัสตับอักเสบ</span>
-                        <span class="en">Hepatitis</span>
-                    </div>
+                    <div class="section-title">ไวรัสตับอักเสบ (Hepatitis)</div>
                     <table>
                         <tbody>
                             <tr><td>Hepatitis A</td><td class="val-col">{hep_a}</td><td class="range-col">Neg</td></tr>
@@ -471,10 +437,7 @@ def generate_printable_report(person_data, all_person_history_df=None):
                         </tbody>
                     </table>
 
-                    <div class="section-title">
-                        <span class="th">เอกซเรย์ปอด และ คลื่นไฟฟ้าหัวใจ</span>
-                        <span class="en">Chest X-ray & EKG</span>
-                    </div>
+                    <div class="section-title">เอกซเรย์ปอด และ คลื่นไฟฟ้าหัวใจ (Chest X-ray & EKG)</div>
                     <table>
                         <tbody>
                             <tr>
