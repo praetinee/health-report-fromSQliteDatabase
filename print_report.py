@@ -106,8 +106,8 @@ def get_report_css():
         }
         
         /* Grid System */
-        .row { display: flex; flex-wrap: wrap; margin: 0 -5px; }
-        .col-50 { width: 50%; flex: 0 0 50%; padding: 0 5px; }
+        .row { display: flex; flex-wrap: wrap; margin: 0 -5px; height: calc(100% - 150px); /* Adjust height to allow footer at bottom */ }
+        .col-50 { width: 50%; flex: 0 0 50%; padding: 0 5px; position: relative; display: flex; flex-direction: column; }
 
         /* Header */
         .header {
@@ -195,13 +195,17 @@ def get_report_css():
             font-style: italic;
         }
         
-        /* Footer - UPDATED TO CENTER SIGNATURE IN RIGHT COLUMN */
+        /* Footer - FIXED TO BOTTOM OF RIGHT COLUMN */
         .footer {
-            margin-top: 20px;
+            margin-top: auto; /* Push to bottom of flex container */
+            padding-bottom: 0;
             font-size: 14px; 
             font-family: 'Sarabun', sans-serif !important;
             text-align: center; /* Center the text */
             width: 100%;
+            position: absolute; /* Force absolute positioning to bottom of column */
+            bottom: 0;
+            left: 0;
         }
         .signature-line {
             display: inline-block;
