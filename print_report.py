@@ -221,18 +221,15 @@ def get_main_report_css():
             font-style: italic;
         }
         
-        /* Footer - Centered at Bottom */
+        /* Footer - Positioned bottom right center like Performance Report */
         .footer {
-            /* Position absolute to stick to bottom */
             position: absolute;
             bottom: 0.5cm;
-            left: 0; 
-            width: 100%;
-            text-align: center; /* Center the text horizontally */
+            right: 0.5cm;
+            width: 35%; /* กำหนดความกว้างประมาณ 1 ใน 3 ของหน้ากระดาษ เพื่อให้ข้อความอยู่กึ่งกลางของฝั่งขวา */
+            text-align: center;
             font-size: 14px;
             page-break-inside: avoid;
-            padding-right: 0.5cm; /* Match container padding for symmetry */
-            padding-left: 0.5cm;
         }
         .signature-line {
             display: inline-block;
@@ -443,11 +440,10 @@ def render_printable_report_body(person_data, all_person_history_df=None):
     ekg_display = interpret_ekg(ekg_val)
 
     # Hepatitis
-    hep_a_val = person_data.get("Hepatitis A")
-    hep_a = safe_value(hep_a_val)
-    hbsag = safe_value(hbsag_val)
-    hbsab = safe_value(hbsab_val)
-    hbcab = safe_value(hbcab_val)
+    hep_a = safe_value(person_data.get("Hepatitis A"))
+    hbsag = safe_value(person_data.get("HbsAg"))
+    hbsab = safe_value(person_data.get("HbsAb"))
+    hbcab = safe_value(person_data.get("HBcAb"))
     
     # --- 4. Main Doctor's Suggestion (Only Doc Note) ---
     doc_note = str(person_data.get("DOCTER suggest", "")).strip()
