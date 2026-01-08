@@ -1,20 +1,9 @@
 import pandas as pd
-import html
-from collections import OrderedDict
 from datetime import datetime
+import html
+import json
 
-# แก้ไข: ตัด interpret_cxr ออกจาก import เพราะเราจะสร้างฟังก์ชันนี้ในไฟล์นี้เองเพื่อป้องกัน Error
-from performance_tests import interpret_audiogram, interpret_lung_capacity
-
-# ==============================================================================
-# Module: print_performance_report.py
-# Purpose: Contains functions to generate HTML for performance test reports
-# (Vision, Hearing, Lung) for the standalone printable version.
-# Refactored for Batch Printing capability.
-# ==============================================================================
-
-
-# --- Helper & Data Availability Functions ---
+# --- Helper Functions for Data Interpretation ---
 
 def is_empty(val):
     """Check if a value is empty, null, or whitespace."""
@@ -28,51 +17,51 @@ def get_float(col, person_data):
         return float(str(val).replace(",", "").strip())
     except: return None
 
-# เพิ่มฟังก์ชันนี้เข้ามาใหม่เพื่อแก้ปัญหา Import Error
+def safe_value(val):
+    val = str(val or "").strip()
+    return "-" if val.lower() in ["", "nan", "none", "-", "null"] else val
+
+def flag_abnormal(val, low=None, high=None, inverse=False):
+    """
+    Returns (formatted_value, is_abnormal_boolean)
+    """
+    try:
+        val_float = float(str(val).replace(",", "").strip())
+    except (ValueError, TypeError):
+        return safe_value(val), False
+    
+    formatted = f"{int(val_float):,}" if val_float.is_integer() else f"{val_float:,.1f}"
+    is_abn = False
+    
+    if low is not None and val_float < low: is_abn = True
+    if high is not None and val_float > high: is_abn = True
+    
+    return formatted, is_abn
+
 def interpret_cxr(val):
     val = str(val or "").strip()
-    if is_empty(val): return "ไม่ได้ตรวจ", False
-    is_abn = False
-    if any(keyword in val.lower() for keyword in ["ผิดปกติ", "ฝ้า", "รอย", "abnormal", "infiltrate", "lesion"]):
-        # ถ้าผิดปกติ ให้ใส่สีแดง
-        val = f"<span class='status-abn-text'>{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม</span>"
-        is_abn = True
-    return val, is_abn
+    if is_empty(val): return "-"
+    # คำค้นหาสำหรับผลผิดปกติ
+    abnormal_keywords = ["ผิดปกติ", "abnormal", "infiltrate", "lesion", "nodule", "opacity", "mass", "tb", "tuberculosis"]
+    if any(keyword in val.lower() for keyword in abnormal_keywords):
+        return f"<span style='color:#c0392b; font-weight:bold;'>{val} (ผิดปกติ)</span>"
+    return val
 
-def has_vision_data(person_data):
-    """Check for any ACTUAL vision test data, ignoring summary/advice fields."""
-    detailed_keys = [
-        'ป.การรวมภาพ', 'ผ.การรวมภาพ',
-        'ป.ความชัดของภาพระยะไกล', 'ผ.ความชัดของภาพระยะไกล',
-        'การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)',
-        'การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)',
-        'ป.การกะระยะและมองความชัดลึกของภาพ', 'ผ.การกะระยะและมองความชัดลึกของภาพ',
-        'ป.การจำแนกสี', 'ผ.การจำแนกสี',
-        'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง',
-        'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน',
-        'ป.ความชัดของภาพระยะใกล้', 'ผ.ความชัดของภาพระยะใกล้',
-        'การมองภาพระยะใกล้ด้วยตาขวา (Near vision – Right)',
-        'การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision – Left)',
-        'ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน',
-        'ป.ลานสายตา', 'ผ.ลานสายตา',
-        'ผ.สายตาเขซ่อนเร้น'
-    ]
-    return any(not is_empty(person_data.get(key)) for key in detailed_keys)
+def interpret_ekg(val):
+    val = str(val or "").strip()
+    if is_empty(val): return "-"
+    abnormal_keywords = ["ผิดปกติ", "abnormal", "arrhythmia", "ischemia", "infarction", "bradycardia", "tachycardia", "fibrillation"]
+    if any(keyword in val.lower() for keyword in abnormal_keywords):
+        return f"<span style='color:#c0392b; font-weight:bold;'>{val} (ผิดปกติ)</span>"
+    return val
 
-def has_hearing_data(person_data):
-    """Check for detailed hearing (audiogram) data."""
-    hearing_keys = ['R500', 'L500', 'R1k', 'L1k', 'R4k', 'L4k']
-    return any(not is_empty(person_data.get(key)) for key in hearing_keys)
+# --- HTML Generation Parts ---
 
-def has_lung_data(person_data):
-    """Check for lung capacity test data."""
-    key_indicators = ['FVC เปอร์เซ็นต์', 'FEV1เปอร์เซ็นต์', 'FEV1/FVC%']
-    return any(not is_empty(person_data.get(key)) for key in key_indicators)
-
-# --- HTML Rendering Functions for Standalone Report ---
-
-def get_performance_report_css():
-    """Returns the CSS string for the performance report, matching print_report.py styles."""
+def get_main_report_css():
+    """
+    Returns the CSS string for the main health report.
+    Renamed from get_report_css to get_main_report_css to match batch_print.py requirements.
+    """
     return """
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
@@ -96,7 +85,7 @@ def get_performance_report_css():
 
         @page {
             size: A4;
-            margin: 0.5cm !important; /* Force 0.5cm margin on page level as requested */
+            margin: 0mm !important; /* Force 0 margin on page level */
         }
 
         html, body {
@@ -106,7 +95,7 @@ def get_performance_report_css():
             padding: 0 !important;
             background-color: #fff;
             font-family: 'Sarabun', sans-serif !important;
-            font-size: 14px; /* Standard readable size matched with health report */
+            font-size: 14px; /* Standard readable size */
             line-height: 1.3;
             color: #333;
             -webkit-print-color-adjust: exact;
@@ -116,12 +105,16 @@ def get_performance_report_css():
         .container { 
             width: 100%;
             height: 100%;
-            padding: 0.5cm !important; /* Padding for screen display, consistent with print margin */
+            padding: 5mm !important; /* EXACTLY 0.5cm PADDING */
             position: relative;
-            page-break-after: always;
+            page-break-after: always; /* Ensure page break for batch print */
         }
+        
+        /* Grid System */
+        .row { display: flex; flex-wrap: wrap; margin: 0 -5px; height: calc(100% - 150px); /* Adjust height to allow footer at bottom */ }
+        .col-50 { width: 50%; flex: 0 0 50%; padding: 0 5px; position: relative; display: flex; flex-direction: column; }
 
-        /* Header Styles (Matched with Health Report) */
+        /* Header */
         .header {
             border-bottom: 2px solid var(--primary-color);
             padding-bottom: 5px;
@@ -150,84 +143,72 @@ def get_performance_report_css():
         }
         .vital-item b { color: var(--primary-color); font-weight: 700; margin-right: 3px; }
 
-        /* Report Specific Styles */
-        .report-section { margin-bottom: 15px; page-break-inside: avoid; } 
-        
-        .section-header {
-            background-color: var(--primary-color); 
-            color: white; 
+        /* Section Styling */
+        .section-title {
+            background-color: var(--primary-color);
             padding: 5px 8px;
             border-radius: 3px;
             margin-bottom: 5px;
             margin-top: 10px;
+            color: #fff;
             font-size: 14px;
             font-weight: 700;
+            line-height: 1.4;
             font-family: 'Sarabun', sans-serif !important;
         }
-
-        .content-columns { display: flex; gap: 15px; align-items: flex-start; }
-        .main-content { flex: 2; min-width: 0; }
-        .side-content { flex: 1; min-width: 0; }
-        .main-content-full { width: 100%; }
-
-        .data-table { width: 100%; font-size: 12px; border-collapse: collapse; margin-bottom: 5px; font-family: 'Sarabun', sans-serif !important; }
-        .data-table th, .data-table td { padding: 4px; border-bottom: 1px solid #eee; text-align: left; vertical-align: middle; }
-        .data-table th { background-color: #f1f2f6; font-weight: 600; color: var(--secondary-color); text-align: center; border-bottom: 2px solid #ddd; }
-        .data-table td:first-child { text-align: left; }
+        .col-50 .section-title:first-child { margin-top: 0; }
         
-        /* Hearing Table specifics */
-        .data-table.hearing-table th, .data-table.hearing-table td { text-align: center; }
-        .data-table.hearing-table td:first-child { text-align: center; }
-
-        .summary-single-line-box {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-            padding: 8px;
-            border: 1px solid #e0e0e0;
-            background-color: #f9f9f9;
-            border-radius: 6px;
-            margin-bottom: 0.5rem;
-            font-size: 13px;
-            font-weight: bold;
-            page-break-inside: avoid; 
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 2px; font-family: 'Sarabun', sans-serif !important; }
+        th, td { padding: 2px 4px; border-bottom: 1px solid #eee; text-align: left; vertical-align: middle; }
+        th { background-color: #f1f2f6; font-weight: 600; color: var(--secondary-color); text-align: center; border-bottom: 2px solid #ddd; }
+        td.val-col { text-align: center; font-weight: 500; }
+        td.range-col { text-align: center; color: #7f8c8d; font-size: 11px; }
+        
+        .abnormal { color: var(--danger-color); font-weight: 700; }
+        
+        /* Summary Box - MOVED TO RIGHT COLUMN ONLY */
+        .summary-box {
+            border: 2px solid var(--accent-color);
+            background-color: #e8f8f5; /* Lighter Green Tone */
+            border-radius: 8px; /* Rounded corners */
+            padding: 10px;
+            margin-top: 15px;
+            page-break-inside: avoid;
+            font-family: 'Sarabun', sans-serif !important;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.05); /* Soft shadow */
         }
-        
-        .summary-title-lung {
-            text-align: center;
-            font-weight: bold;
-            font-size: 14px;
-            margin-bottom: 8px;
-            line-height: 1.2;
-        }
-        
-        .advice-box {
-            border-radius: 6px; padding: 8px 12px; font-size: 13px;
-            line-height: 1.4; border: 1px solid;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        .summary-title { 
+            font-weight: 700; 
+            color: var(--accent-color); 
             margin-bottom: 5px; 
-            height: 100%;
-            box-sizing: border-box;
-            background-color: #fff8e1; 
-            border-color: #ffecb3;
+            font-size: 14px; 
+            border-bottom: 1px dashed var(--accent-color); 
+            padding-bottom: 3px; 
+        }
+        .summary-content { font-size: 13px; line-height: 1.5; color: #2c3e50; }
+
+        /* Specific Recommendation Box (Under Tables) */
+        .rec-box {
+            background-color: var(--warning-bg);
+            border-left: 3px solid var(--warning-text);
+            color: #7d6608;
+            padding: 4px 8px;
+            font-size: 11px;
+            margin-bottom: 8px;
+            border-radius: 0 3px 3px 0;
+            font-style: italic;
         }
         
-        .status-ok-text { color: #1b5e20; }
-        /* กำหนดสีแดงเข้มสำหรับค่าผิดปกติ */
-        .status-abn-text { color: #c0392b !important; font-weight: bold; }
-        .status-nt-text { color: #555; }
-        
-        /* Footer */
+        /* Footer - FIXED TO BOTTOM OF RIGHT COLUMN */
         .footer {
-            margin-top: auto; 
+            margin-top: auto; /* Push to bottom of flex container */
             padding-bottom: 0;
             font-size: 14px; 
             font-family: 'Sarabun', sans-serif !important;
-            text-align: center;
+            text-align: center; /* Center the text */
             width: 100%;
-            position: absolute;
+            position: absolute; /* Force absolute positioning to bottom of column */
             bottom: 0;
             left: 0;
         }
@@ -236,386 +217,61 @@ def get_performance_report_css():
             text-align: center;
         }
 
-        @media print {
-            body { background-color: white; padding: 0; }
-            .container { box-shadow: none; margin: 0; }
-        }
-        
+        /* Screen Preview Adjustments */
         @media screen {
             body { background-color: #555; padding: 20px; display: flex; justify-content: center; }
             .container { box-shadow: 0 0 15px rgba(0,0,0,0.3); background-color: white; margin-bottom: 20px; }
         }
+        
+        @media print {
+            body { background-color: white; padding: 0; }
+            .container { box-shadow: none; margin: 0; }
+        }
     </style>
     """
 
-def render_section_header(title, subtitle=None):
-    """Renders a styled section header matching the theme."""
-    full_title = f"{title} <span style='font-weight: normal; font-size: 12px;'>({subtitle})</span>" if subtitle else title
-    return f"""
-    <div class='section-header'>
-        {full_title}
-    </div>
-    """
+# Alias for backward compatibility
+get_report_css = get_main_report_css
 
-def render_html_header_and_personal_info(person):
-    """Renders the main header matching print_report.py structure."""
-    check_date = person.get("วันที่ตรวจ", datetime.now().strftime("%d/%m/%Y"))
-    name = person.get('ชื่อ-สกุล', '-')
-    age = str(int(float(person.get('อายุ')))) if str(person.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')
-    sex = person.get('เพศ', '-')
-    hn = str(int(float(person.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person.get('HN', '-')
-    department = person.get('หน่วยงาน', '-')
+def render_lab_row(name, value, unit, normal_range, is_abnormal):
+    cls = "abnormal" if is_abnormal else ""
+    val_display = value if value != "-" else "-"
     
+    range_display = normal_range
+    if unit:
+        range_display = f"{normal_range} <span style='font-size:10px; color:#999;'>({unit})</span>"
+
     return f"""
-    <div class="header">
-        <div>
-            <h1>รายงานผลการตรวจสมรรถภาพ</h1>
-            <p>โรงพยาบาลสันทราย (San Sai Hospital)</p>
-            <p>คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม</p>
-        </div>
-        <div class="patient-info">
-            <p><b>ชื่อ-สกุล:</b> {name} &nbsp;|&nbsp; <b>อายุ:</b> {age} ปี &nbsp;|&nbsp; <b>เพศ:</b> {sex}</p>
-            <p><b>HN:</b> {hn} &nbsp;|&nbsp; <b>หน่วยงาน:</b> {department}</p>
-            <p><b>วันที่ตรวจ:</b> {check_date}</p>
-        </div>
-    </div>
+    <tr>
+        <td>{name}</td>
+        <td class="val-col {cls}">{val_display}</td>
+        <td class="range-col">{range_display}</td>
+    </tr>
     """
 
-def render_print_vision(person_data):
-    """Renders the Vision Test section for the print report."""
-    if not has_vision_data(person_data):
+def render_rec_box(suggestions):
+    """
+    Renders a small recommendation box if there are suggestions.
+    """
+    if not suggestions:
         return ""
+    content = "<br>".join([f"• {s}" for s in suggestions])
+    return f'<div class="rec-box">{content}</div>'
 
-    vision_tests = [
-        {'display': '1. การมองด้วย 2 ตา (Binocular vision)', 'type': 'paired_value', 'normal_col': 'ป.การรวมภาพ', 'abnormal_col': 'ผ.การรวมภาพ'},
-        {'display': '2. การมองภาพระยะไกลด้วยสองตา (Far vision - Both)', 'type': 'paired_value', 'normal_col': 'ป.ความชัดของภาพระยะไกล', 'abnormal_col': 'ผ.ความชัดของภาพระยะไกล'},
-        {'display': '3. การมองภาพระยะไกลด้วยตาขวา (Far vision - Right)', 'type': 'value', 'col': 'การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)'},
-        {'display': '4. การมองภาพระยะไกลด้วยตาซ้าย (Far vision - Left)', 'type': 'value', 'col': 'การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)'},
-        {'display': '5. การมองภาพ 3 มิติ (Stereo depth)', 'type': 'paired_value', 'normal_col': 'ป.การกะระยะและมองความชัดลึกของภาพ', 'abnormal_col': 'ผ.การกะระยะและมองความชัดลึกของภาพ'},
-        {'display': '6. การมองจำแนกสี (Color discrimination)', 'type': 'paired_value', 'normal_col': 'ป.การจำแนกสี', 'abnormal_col': 'ผ.การจำแนกสี'},
-        {'display': '7. ความสมดุลกล้ามเนื้อตาแนวดิ่ง (Far vertical phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง', 'related_keyword': 'แนวตั้งระยะไกล'},
-        {'display': '8. ความสมดุลกล้ามเนื้อตาแนวนอน (Far lateral phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน', 'related_keyword': 'แนวนอนระยะไกล'},
-        {'display': '9. การมองภาพระยะใกล้ด้วยสองตา (Near vision - Both)', 'type': 'paired_value', 'normal_col': 'ป.ความชัดของภาพระยะใกล้', 'abnormal_col': 'ผ.ความชัดของภาพระยะใกล้'},
-        {'display': '10. การมองภาพระยะใกล้ด้วยตาขวา (Near vision - Right)', 'type': 'value', 'col': 'การมองภาพระยะใกล้ด้วยตาขวา (Near vision - Right)'},
-        {'display': '11. การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision - Left)', 'type': 'value', 'col': 'การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision - Left)'},
-        {'display': '12. ความสมดุลกล้ามเนื้อตาแนวนอน (Near lateral phoria)', 'type': 'phoria', 'normal_col': 'ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'related_keyword': 'แนวนอนระยะใกล้'},
-        {'display': '13. ลานสายตา (Visual field)', 'type': 'paired_value', 'normal_col': 'ป.ลานสายตา', 'abnormal_col': 'ผ.ลานสายตา'}
-    ]
-
-    rows_html = ""
-    abnormal_details = []
-    strabismus_val = str(person_data.get('ผ.สายตาเขซ่อนเร้น', '')).strip()
-
-    for test in vision_tests:
-        is_normal, is_abnormal = False, False
-        result_text = ""
-        status_text = "ไม่ได้ตรวจ"
-        status_class = ""
-
-        if test['type'] == 'value':
-            val = str(person_data.get(test['col'], '')).strip()
-            if not is_empty(val):
-                is_abnormal = True 
-                if any(k in val.lower() for k in ['ปกติ', 'ชัดเจน']):
-                    is_abnormal = False
-                result_text = val
-        
-        elif test['type'] == 'paired_value':
-            normal_val = str(person_data.get(test['normal_col'], '')).strip()
-            abnormal_val = str(person_data.get(test['abnormal_col'], '')).strip()
-            if not is_empty(normal_val):
-                is_normal = True
-                result_text = normal_val
-            elif not is_empty(abnormal_val):
-                is_abnormal = True
-                result_text = abnormal_val
-
-        elif test['type'] == 'phoria':
-            normal_val = str(person_data.get(test['normal_col'], '')).strip()
-            if not is_empty(normal_val):
-                is_normal = True
-                result_text = normal_val
-            elif not is_empty(strabismus_val) and test['related_keyword'] in strabismus_val:
-                is_abnormal = True
-                result_text = f"สายตาเขซ่อนเร้น ({test['related_keyword']})"
-
-        if is_normal or (result_text and not is_abnormal):
-            status_text = "ปกติ"
-            status_class = "status-ok-text"
-        elif is_abnormal:
-            status_text = "ผิดปกติ"
-            status_class = "status-abn-text" # สีแดง
-            abnormal_details.append(test['display'].split('(')[0].strip())
-        
-        rows_html += f"<tr><td>{test['display']}</td><td class='{status_class}'>{status_text}</td></tr>"
-
-    doctor_advice = person_data.get('แนะนำABN EYE', '')
-    summary_advice = person_data.get('สรุปเหมาะสมกับงาน', '')
-    
-    summary_section_html = ""
-    advice_parts = []
-    if not is_empty(summary_advice):
-        advice_parts.append(f"<div class='advice-box'><b>สรุปความเหมาะสมกับงาน:</b> {html.escape(summary_advice)}</div>")
-
-    if abnormal_details or not is_empty(doctor_advice):
-        abnormal_summary_parts = []
-        if abnormal_details:
-            abnormal_summary_parts.append(f"<b>พบความผิดปกติ:</b> {', '.join(sorted(list(set(abnormal_details))))}")
-        if not is_empty(doctor_advice):
-            abnormal_summary_parts.append(f"<b>คำแนะนำแพทย์:</b> {html.escape(doctor_advice)}")
-        advice_parts.append("<div class='advice-box'>" + "<br>".join(abnormal_summary_parts) + "</div>")
-    
-    if not advice_parts:
-        advice_parts.append("<div class='advice-box'>ผลการตรวจโดยรวมปกติ ไม่มีคำแนะนำเพิ่มเติม</div>")
-
-    summary_section_html = "<div class='summary-container'>" + "".join(advice_parts) + "</div>"
-
-    return f"""
-    <div class="report-section">
-        {render_section_header("ผลการตรวจสมรรถภาพการมองเห็น (Vision Test)")}
-        <div class="content-columns">
-            <div class="main-content">
-                <table class="data-table">
-                    <thead><tr><th>รายการตรวจ</th><th>ผลการตรวจ</th></tr></thead>
-                    <tbody>{rows_html}</tbody>
-                </table>
-            </div>
-            <div class="side-content">
-                {summary_section_html}
-            </div>
-        </div>
-    </div>
+def render_printable_report_body(person_data, all_person_history_df=None):
     """
-
-def render_print_hearing(person_data, all_person_history_df):
-    """Renders the Hearing Test (Audiometry) section for the print report."""
-    if not has_hearing_data(person_data):
-        return ""
-        
-    results = interpret_audiogram(person_data, all_person_history_df)
-    
-    summary_r_raw = person_data.get('ผลตรวจการได้ยินหูขวา', 'N/A')
-    summary_l_raw = person_data.get('ผลตรวจการได้ยินหูซ้าย', 'N/A')
-    
-    def get_summary_class(summary_text):
-        if "ปกติ" in summary_text: return "status-ok-text"
-        if "N/A" in summary_text or "ไม่ได้" in summary_text: return "status-nt-text"
-        return "status-abn-text"
-
-    # Helper function to highlight abnormal dB values (> 25)
-    def format_db_cell(val):
-        try:
-            float_val = float(val)
-            if float_val > 25:
-                return f"<span class='status-abn-text'>{val}</span>"
-        except (ValueError, TypeError):
-            pass
-        return val
-
-    # Helper function to highlight abnormal shift values (>= 15 dB is standard STS concern, using 15 to be safe)
-    def format_shift_cell(val):
-        try:
-            # Remove '+' if present
-            clean_val = str(val).replace('+', '')
-            float_val = float(clean_val)
-            if float_val >= 15:
-                return f"<span class='status-abn-text'>{val}</span>"
-        except (ValueError, TypeError):
-            pass
-        return val
-
-    summary_cards_html = f"""
-    <div class="summary-single-line-box">
-        <span class="{get_summary_class(summary_r_raw)}">
-            <b>หูขวา:</b> {html.escape(summary_r_raw)}
-        </span>
-        <span class="{get_summary_class(summary_l_raw)}">
-            <b>หูซ้าย:</b> {html.escape(summary_l_raw)}
-        </span>
-    </div>
+    Generates the HTML body content for the main health report.
+    Separated from generate_printable_report to allow batch printing.
     """
-    
-    advice = results.get('advice', '') or 'ไม่มีคำแนะนำเพิ่มเติม'
-    advice_box_html = f"<div class='advice-box'><b>คำแนะนำ:</b> {html.escape(advice)}</div>"
-    if results.get('sts_detected'):
-        advice_box_html = f"<div class='advice-box'><b>⚠️ พบการเปลี่ยนแปลงระดับการได้ยินอย่างมีนัยสำคัญ (STS)</b><br>{html.escape(advice)}</div>"
+    # --- 1. Prepare Data ---
+    name = person_data.get('ชื่อ-สกุล', '-')
+    age = str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person_data.get('อายุ', '-')
+    hn = str(int(float(person_data.get('HN')))) if str(person_data.get('HN')).replace('.', '', 1).isdigit() else person_data.get('HN', '-')
+    date = person_data.get("วันที่ตรวจ", datetime.now().strftime("%d/%m/%Y"))
+    dept = person_data.get('หน่วยงาน', '-')
+    sex = person_data.get('เพศ', '-')
 
-    rows_html = ""
-    has_baseline = results.get('baseline_source') != 'none'
-    baseline_year = results.get('baseline_year')
-    freq_order = ['500 Hz', '1000 Hz', '2000 Hz', '3000 Hz', '4000 Hz', '6000 Hz', '8000 Hz']
-    
-    for freq in freq_order:
-        current_vals = results.get('raw_values', {}).get(freq, {})
-        r_val = current_vals.get('right', '-')
-        l_val = current_vals.get('left', '-')
-        
-        shift_r_text = "-"
-        shift_l_text = "-"
-        if has_baseline:
-            shift_vals = results.get('shift_values', {}).get(freq, {})
-            shift_r = shift_vals.get('right')
-            shift_l = shift_vals.get('left')
-            shift_r_text = f"+{shift_r}" if shift_r is not None and shift_r > 0 else (str(shift_r) if shift_r is not None else "-")
-            shift_l_text = f"+{shift_l}" if shift_l is not None and shift_l > 0 else (str(shift_l) if shift_l is not None else "-")
-
-        rows_html += f"""
-        <tr>
-            <td>{freq}</td>
-            <td>{format_db_cell(r_val)}</td>
-            <td>{format_db_cell(l_val)}</td>
-            <td>{format_shift_cell(shift_r_text)}</td>
-            <td>{format_shift_cell(shift_l_text)}</td>
-        </tr>
-        """
-
-    baseline_header_line1 = "การเปลี่ยนแปลงเทียบกับ Baseline"
-    baseline_header_line2 = f"(พ.ศ. {baseline_year})" if has_baseline else "(ไม่มี Baseline)"
-    baseline_header_html = f"{baseline_header_line1}<br>{baseline_header_line2}"
-
-    table_header_html = f"""
-    <thead>
-        <tr>
-            <th rowspan="2" style="vertical-align: middle;">ความถี่ (Hz)</th>
-            <th colspan="2">ผลการตรวจปัจจุบัน (dB)</th>
-            <th colspan="2" style="vertical-align: middle;">{baseline_header_html}</th>
-        </tr>
-        <tr>
-            <th>หูขวา</th>
-            <th>หูซ้าย</th>
-            <th>Shift ขวา</th>
-            <th>Shift ซ้าย</th>
-        </tr>
-    </thead>
-    """
-    
-    data_table_html = f"""
-    <table class="data-table hearing-table">
-        <colgroup>
-            <col style="width: 20%;">
-            <col style="width: 20%;">
-            <col style="width: 20%;">
-            <col style="width: 20%;">
-            <col style="width: 20%;">
-        </colgroup>
-        {table_header_html}
-        <tbody>{rows_html}</tbody>
-    </table>
-    """
-    
-    averages = results.get('averages', {})
-    avg_r_speech = averages.get('right_500_2000')
-    avg_l_speech = averages.get('left_500_2000')
-    avg_r_high = averages.get('right_3000_6000')
-    avg_l_high = averages.get('left_3000_6000')
-    averages_html = f"""
-    <div class="advice-box">
-        <b>ค่าเฉลี่ยการได้ยิน (dB)</b>
-        <ul style="margin: 5px 0 0 0; padding-left: 20px; list-style-type: square;">
-            <li>ความถี่เสียงพูด (500-2k Hz): ขวา={avg_r_speech if avg_r_speech is not None else 'N/A'}, ซ้าย={avg_l_speech if avg_l_speech is not None else 'N/A'}</li>
-            <li>ความถี่สูง (3k-6k Hz): ขวา={avg_r_high if avg_r_high is not None else 'N/A'}, ซ้าย={avg_l_high if avg_l_high is not None else 'N/A'}</li>
-        </ul>
-    </div>
-    """
-    
-    return f"""
-    <div class="report-section">
-        {render_section_header("ผลการตรวจสมรรถภาพการได้ยิน (Audiometry)")}
-        
-        <div class="content-columns">
-            <div class="main-content">
-                {data_table_html}
-            </div>
-            <div class="side-content">
-                {summary_cards_html} 
-                {averages_html}
-                {advice_box_html}
-            </div>
-        </div>
-    </div>
-    """
-
-def render_print_lung(person_data):
-    """Renders the Lung Capacity (Spirometry) section for the print report."""
-    if not has_lung_data(person_data):
-        return ""
-        
-    summary, advice, raw = interpret_lung_capacity(person_data)
-
-    def format_val(key, spec='.1f'):
-        val = raw.get(key)
-        return f"{val:{spec}}" if val is not None else "-"
-
-    def get_status_class(val, low_threshold):
-        if val is None: return "" 
-        # ถ้าค่าต่ำกว่าเกณฑ์ ให้เป็นสีแดง (abnormal)
-        return "status-ok-text" if val >= low_threshold else "status-abn-text"
-    
-    summary_class = "status-ok-text" if "ปกติ" in summary else "status-abn-text"
-    if "ไม่ได้" in summary or "คลาดเคลื่อน" in summary:
-        summary_class = ""
-
-    summary_title_html = f"""
-    <div class="summary-title-lung {summary_class}">
-        {html.escape(summary)}
-    </div>
-    """
-    
-    advice_box_html = f"<div class='advice-box'><b>คำแนะนำ:</b> {html.escape(advice)}</div>"
-    
-    year = person_data.get("Year")
-    cxr_result_text = "ไม่มีข้อมูล"
-    if year:
-        cxr_col = f"CXR{str(year)[-2:]}" if year != (datetime.now().year + 543) else "CXR"
-        # ใช้ interpret_cxr ที่แก้ใหม่ให้มีสีแดงถ้าผิดปกติ
-        cxr_result, cxr_status = interpret_cxr(person_data.get(cxr_col, ''))
-        cxr_result_text = cxr_result
-    
-    # ไม่ต้อง escape cxr_result_text อีกรอบเพราะ interpret_cxr ใส่ HTML tag มาแล้ว
-    cxr_html = f"""
-    <div class="advice-box" style="margin-bottom: 5px;">
-        <b>ผลเอกซเรย์ทรวงอก (CXR):</b><br>{cxr_result_text}
-    </div>
-    """
-    
-    data_table_html = f"""
-    <table class="data-table">
-        <thead>
-            <tr><th>การทดสอบ</th><th>ค่าที่วัดได้ (Actual)</th><th>ค่ามาตรฐาน (Pred)</th><th>% เทียบค่ามาตรฐาน (%Pred)</th></tr>
-        </thead>
-        <tbody>
-            <tr><td>FVC (L)</td><td>{format_val('FVC', '.2f')}</td><td>{format_val('FVC predic', '.2f')}</td><td class='{get_status_class(raw.get("FVC %"), 80)}'>{format_val('FVC %')} %</td></tr>
-            <tr><td>FEV1 (L)</td><td>{format_val('FEV1', '.2f')}</td><td>{format_val('FEV1 predic', '.2f')}</td><td class='{get_status_class(raw.get("FEV1 %"), 80)}'>{format_val('FEV1 %')} %</td></tr>
-            <tr><td>FEV1/FVC (%)</td><td class='{get_status_class(raw.get("FEV1/FVC %"), 70)}'>{format_val('FEV1/FVC %')} %</td><td>{format_val('FEV1/FVC % pre')} %</td><td>-</td></tr>
-        </tbody>
-    </table>
-    """
-
-    side_content_html = f"""
-    {cxr_html}
-    {advice_box_html}
-    """
-
-    return f"""
-    <div class="report-section">
-        {render_section_header("ผลการตรวจสมรรถภาพปอด (Spirometry)")}
-        {summary_title_html}
-        <div class="content-columns">
-            <div class="main-content">
-                {data_table_html}
-            </div>
-            <div class="side-content">
-                {side_content_html}
-            </div>
-        </div>
-    </div>
-    """
-
-def render_performance_report_body(person_data, all_person_history_df):
-    """Generates the HTML body content for the performance report."""
-    header_html = render_html_header_and_personal_info(person_data)
-    
-    # --- Add Vitals Bar ---
+    # Vitals
     weight = get_float('น้ำหนัก', person_data)
     height = get_float('ส่วนสูง', person_data)
     bmi = "-"
@@ -628,7 +284,115 @@ def render_performance_report_body(person_data, all_person_history_df):
     pulse = f"{int(get_float('pulse', person_data))}" if get_float('pulse', person_data) else "-"
     waist = person_data.get('รอบเอว', '-')
 
-    vitals_html = f"""
+    # --- 2. Calculate Specific Recommendations ---
+    rec_kidney = []
+    uric = get_float("Uric Acid", person_data)
+    if uric and uric > 7: rec_kidney.append("กรดยูริกสูง ควรลดการทานเครื่องในสัตว์ ยอดผัก และสัตว์ปีก")
+    
+    rec_sugar_lipid = []
+    fbs = get_float("FBS", person_data)
+    if fbs and fbs >= 100: rec_sugar_lipid.append("ระดับน้ำตาลสูง ควรควบคุมอาหารประเภทแป้ง/น้ำตาล")
+    chol = get_float("CHOL", person_data)
+    ldl = get_float("LDL", person_data)
+    tgl = get_float("TGL", person_data)
+    if (chol and chol > 200) or (ldl and ldl > 130) or (tgl and tgl > 150): rec_sugar_lipid.append("ไขมันในเลือดสูง เลี่ยงของทอด/มัน/กะทิ")
+    
+    rec_liver = []
+    sgot = get_float("SGOT", person_data)
+    sgpt = get_float("SGPT", person_data)
+    alp = get_float("ALP", person_data)
+    if (sgot and sgot > 40) or (sgpt and sgpt > 40) or (alp and (alp > 105 or alp < 35)): rec_liver.append("ค่าตับสูงกว่าปกติ งดแอลกอฮอล์/ยาไม่จำเป็น")
+
+    rec_vitals = [] # Use for BP
+    if sbp and sbp >= 140: rec_vitals.append("ความดันโลหิตสูง ลดเค็ม/ออกกำลังกาย")
+
+    # --- 3. Build Lab Blocks ---
+    
+    # Hematology
+    hb_low = 12 if sex == "หญิง" else 13
+    hct_low = 36 if sex == "หญิง" else 39
+    
+    cbc_data = [
+        ("Hemoglobin", "Hb(%)", None, hb_low, None, "g/dL", f"> {hb_low}"),
+        ("Hematocrit", "HCT", None, hct_low, None, "%", f"> {hct_low}"),
+        ("WBC Count", "WBC (cumm)", None, 4000, 10000, "cells/mm³", "4,000-10,000"),
+        ("Neutrophil", "Ne (%)", None, 40, 70, "%", "40-70"),
+        ("Lymphocyte", "Ly (%)", None, 20, 45, "%", "20-45"),
+        ("Monocyte", "M", None, 2, 10, "%", "2-10"),
+        ("Eosinophil", "Eo", None, 1, 6, "%", "1-6"),
+        ("Basophil", "BA", None, 0, 1, "%", "0-1"),
+        ("Platelet", "Plt (/mm)", None, 150000, 450000, "cells/mm³", "150,000-450,000")
+    ]
+    cbc_rows = ""
+    for label, key, _, low, high, unit, norm_text in cbc_data:
+        val, is_abn = flag_abnormal(person_data.get(key), low, high)
+        cbc_rows += render_lab_row(label, val, unit, norm_text, is_abn)
+
+    # Urinalysis
+    urine_color = safe_value(person_data.get("Color"))
+    urine_ph = safe_value(person_data.get("pH"))
+    urine_spgr = safe_value(person_data.get("Spgr"))
+    urine_alb = safe_value(person_data.get("Alb"))
+    urine_sugar = safe_value(person_data.get("sugar"))
+    urine_rbc = safe_value(person_data.get("RBC1"))
+    urine_wbc = safe_value(person_data.get("WBC1"))
+    urine_epi = safe_value(person_data.get("SQ-epi"))
+    
+    u_rows = ""
+    u_rows += render_lab_row("Color", urine_color, "", "Yellow", urine_color.lower() not in ['yellow', 'pale yellow', '-'])
+    u_rows += render_lab_row("pH", urine_ph, "", "4.6-8.0", False)
+    u_rows += render_lab_row("Sp. Gravity", urine_spgr, "", "1.005-1.030", False)
+    u_rows += render_lab_row("Albumin", urine_alb, "", "Negative", urine_alb.lower() not in ['negative', '-'])
+    u_rows += render_lab_row("Sugar", urine_sugar, "", "Negative", urine_sugar.lower() not in ['negative', '-'])
+    u_rows += render_lab_row("RBC", urine_rbc, "cells", "0-2", urine_rbc not in ['0-1', '0-2', 'negative', '-'])
+    u_rows += render_lab_row("WBC", urine_wbc, "cells", "0-5", urine_wbc not in ['0-1', '0-2', '0-3', '0-5', 'negative', '-'])
+    u_rows += render_lab_row("Epithelial", urine_epi, "cells", "0-5", False)
+
+    # Other Tests (Use Interpret Functions)
+    cxr_val = person_data.get("CXR", person_data.get(f"CXR{str(datetime.now().year+543)[-2:]}", "-"))
+    cxr_display = interpret_cxr(cxr_val)
+    
+    ekg_val = person_data.get("EKG", person_data.get(f"EKG{str(datetime.now().year+543)[-2:]}", "-"))
+    ekg_display = interpret_ekg(ekg_val)
+
+    # Hepatitis
+    hep_a = safe_value(person_data.get("Hepatitis A"))
+    hbsag = safe_value(person_data.get("HbsAg"))
+    hbsab = safe_value(person_data.get("HbsAb"))
+    hbcab = safe_value(person_data.get("HBcAb"))
+    
+    # --- 4. Main Doctor's Suggestion (Generic + Doctor Note) ---
+    main_suggestions = []
+    
+    # Insert Vitals Recommendation here if exists (since Vitals is top bar)
+    if rec_vitals: main_suggestions.extend(rec_vitals)
+
+    doc_note = str(person_data.get("DOCTER suggest", "")).strip()
+    if doc_note and doc_note != "-":
+        main_suggestions.append(f"{doc_note}")
+        
+    suggestion_html = "<br>".join([f"- {s}" for s in main_suggestions]) if main_suggestions else "สุขภาพโดยรวมอยู่ในเกณฑ์ดี โปรดรักษาสุขภาพให้แข็งแรงอยู่เสมอ"
+
+    # --- 5. Assemble Final HTML Body ---
+    
+    return f"""
+        <div class="container">
+            
+            <!-- Header -->
+            <div class="header">
+                <div>
+                    <h1>ใบรายงานผลการตรวจสุขภาพ</h1>
+                    <p>โรงพยาบาลสันทราย (San Sai Hospital)</p>
+                    <p>คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม</p>
+                </div>
+                <div class="patient-info">
+                    <p><b>ชื่อ-สกุล:</b> {name} &nbsp;|&nbsp; <b>อายุ:</b> {age} ปี &nbsp;|&nbsp; <b>เพศ:</b> {sex}</p>
+                    <p><b>HN:</b> {hn} &nbsp;|&nbsp; <b>หน่วยงาน:</b> {dept}</p>
+                    <p><b>วันที่ตรวจ:</b> {date}</p>
+                </div>
+            </div>
+
+            <!-- Vitals -->
             <div class="vitals-bar">
                 <span class="vital-item"><b>น้ำหนัก:</b> {weight} กก.</span>
                 <span class="vital-item"><b>ส่วนสูง:</b> {height} ซม.</span>
@@ -637,90 +401,135 @@ def render_performance_report_body(person_data, all_person_history_df):
                 <span class="vital-item"><b>ชีพจร:</b> {pulse} /นาที</span>
                 <span class="vital-item"><b>รอบเอว:</b> {waist} ซม.</span>
             </div>
-    """
-    
-    vision_html = render_print_vision(person_data)
-    hearing_html = render_print_hearing(person_data, all_person_history_df)
-    lung_html = render_print_lung(person_data)
-    
-    # Footer with Signature
-    footer_html = """
-    <div class="footer">
-        <div class="signature-line">
-            <b>นายแพทย์นพรัตน์ รัชฎาพร</b><br>
-            แพทย์อาชีวเวชศาสตร์ (ว.26674)<br>
-        </div>
-    </div>
-    """
-    
-    return f"""
-    <div class="container">
-        {header_html}
-        {vitals_html}
-        {vision_html}
-        {hearing_html}
-        {lung_html}
-        {footer_html}
-    </div>
+
+            <!-- Main Content Grid -->
+            <div class="row">
+                <!-- Left Column -->
+                <div class="col-50">
+                    <div class="section-title">ความสมบูรณ์ของเลือด (CBC)</div>
+                    <table>
+                        <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
+                        <tbody>{cbc_rows}</tbody>
+                    </table>
+
+                    <div class="section-title">ไตและกรดยูริก (Kidney Function & Uric Acid)</div>
+                    <table>
+                        <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
+                        <tbody>
+                            {render_lab_row("BUN", safe_value(person_data.get("BUN")), "mg/dL", "6-20", False)}
+                            {render_lab_row("Creatinine", safe_value(person_data.get("Cr")), "mg/dL", "0.5-1.2", False)}
+                            {render_lab_row("eGFR", safe_value(person_data.get("GFR")), "mL/min", ">90", False)}
+                            {render_lab_row("Uric Acid", safe_value(person_data.get("Uric Acid")), "mg/dL", "2.4-7.0", get_float("Uric Acid", person_data) and get_float("Uric Acid", person_data) > 7)}
+                        </tbody>
+                    </table>
+                    {render_rec_box(rec_kidney)}
+
+                    <div class="section-title">ปัสสาวะ (Urinalysis)</div>
+                    <table>
+                        <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
+                        <tbody>{u_rows}</tbody>
+                    </table>
+                    
+                    <div class="section-title">อุจจาระ (Stool)</div>
+                    <table>
+                        <tbody>
+                            <tr><td>Stool Exam</td><td class="val-col">{safe_value(person_data.get("Stool exam"))}</td><td class="range-col"></td></tr>
+                            <tr><td>Stool Culture</td><td class="val-col">{safe_value(person_data.get("Stool C/S"))}</td><td class="range-col"></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Right Column -->
+                <div class="col-50">
+                    <div class="section-title">น้ำตาลและไขมันในเลือด (Blood Sugar & Lipid Profile)</div>
+                    <table>
+                        <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
+                        <tbody>
+                            {render_lab_row("Fasting Blood Sugar", safe_value(person_data.get("FBS")), "mg/dL", "70-100", get_float("FBS", person_data) and get_float("FBS", person_data) > 100)}
+                            {render_lab_row("Cholesterol", safe_value(person_data.get("CHOL")), "mg/dL", "< 200", get_float("CHOL", person_data) and get_float("CHOL", person_data) > 200)}
+                            {render_lab_row("Triglyceride", safe_value(person_data.get("TGL")), "mg/dL", "< 150", get_float("TGL", person_data) and get_float("TGL", person_data) > 150)}
+                            {render_lab_row("HDL-C", safe_value(person_data.get("HDL")), "mg/dL", "> 40", get_float("HDL", person_data) and get_float("HDL", person_data) < 40)}
+                            {render_lab_row("LDL-C", safe_value(person_data.get("LDL")), "mg/dL", "< 130", get_float("LDL", person_data) and get_float("LDL", person_data) > 130)}
+                        </tbody>
+                    </table>
+                    {render_rec_box(rec_sugar_lipid)}
+                    
+                    <div class="section-title">การทำงานของตับ (Liver Function)</div>
+                    <table>
+                        <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
+                        <tbody>
+                            {render_lab_row("SGOT (AST)", safe_value(person_data.get("SGOT")), "U/L", "< 40", get_float("SGOT", person_data) and get_float("SGOT", person_data) > 40)}
+                            {render_lab_row("SGPT (ALT)", safe_value(person_data.get("SGPT")), "U/L", "< 40", get_float("SGPT", person_data) and get_float("SGPT", person_data) > 40)}
+                            {render_lab_row("Alkaline Phos.", safe_value(person_data.get("ALP")), "U/L", "35-105", get_float("ALP", person_data) and (get_float("ALP", person_data) > 105 or get_float("ALP", person_data) < 35))}
+                        </tbody>
+                    </table>
+                    {render_rec_box(rec_liver)}
+
+                    <div class="section-title">ไวรัสตับอักเสบ (Hepatitis)</div>
+                    <table>
+                        <tbody>
+                            <tr><td>Hepatitis A</td><td class="val-col">{hep_a}</td><td class="range-col">Neg</td></tr>
+                            <tr><td>HBsAg (เชื้อ)</td><td class="val-col">{hbsag}</td><td class="range-col">Neg</td></tr>
+                            <tr><td>HBsAb (ภูมิ)</td><td class="val-col">{hbsab}</td><td class="range-col">Pos</td></tr>
+                            <tr><td>HBcAb</td><td class="val-col">{hbcab}</td><td class="range-col">Neg</td></tr>
+                        </tbody>
+                    </table>
+
+                    <div class="section-title">เอกซเรย์ปอด และ คลื่นไฟฟ้าหัวใจ (Chest X-ray & EKG)</div>
+                    <table>
+                        <tbody>
+                            <tr>
+                                <td><b>Chest X-Ray</b></td>
+                                <td class="val-col" style="text-align:left; font-size:11px;" colspan="2">{cxr_display}</td>
+                            </tr>
+                            <tr>
+                                <td><b>EKG</b></td>
+                                <td class="val-col" style="text-align:left; font-size:11px;" colspan="2">{ekg_display}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <!-- Summary Box in Right Column -->
+                    <div class="summary-box">
+                        <div class="summary-title">สรุปผลการตรวจและคำแนะนำแพทย์ (Doctor's Recommendation)</div>
+                        <div class="summary-content">
+                            {suggestion_html}
+                        </div>
+                    </div>
+
+                    <!-- Moved Footer Signature inside Right Column to center it relative to the right column content -->
+                    <div class="footer">
+                        <div class="signature-line">
+                            <b>นายแพทย์นพรัตน์ รัชฎาพร</b><br>
+                            แพทย์อาชีวเวชศาสตร์ (ว.26674)<br>
+                        </div>
+                    </div>
+                </div>
+            </div>
     """
 
-def generate_performance_report_html(person_data, all_person_history_df):
+def generate_printable_report(person_data, all_person_history_df=None):
     """
-    Checks for available performance tests and generates the combined HTML for the standalone performance report.
+    Generates a single-page, modern, auto-printing HTML report with FULL data points.
+    Wrapper for single-patient printing.
     """
-    css_html = get_performance_report_css()
-    body_html = render_performance_report_body(person_data, all_person_history_df)
-    
-    # เพิ่ม window.print() เพื่อให้หน้าต่างพิมพ์เด้งขึ้นมาอัตโนมัติเมื่อโหลดหน้าเสร็จ
-    final_html = f"""
+    # Create unique identifier to force re-render in Streamlit/Browser
+    unique_id = datetime.now().strftime("%Y%m%d%H%M%S%f")
+    css = get_main_report_css()
+    body = render_printable_report_body(person_data, all_person_history_df)
+    name = person_data.get('ชื่อ-สกุล', '-')
+
+    return f"""
     <!DOCTYPE html>
     <html lang="th">
     <head>
         <meta charset="UTF-8">
-        <title>รายงานผลการตรวจสมรรถภาพ - {html.escape(person_data.get('ชื่อ-สกุล', ''))}</title>
-        {css_html}
+        <title>Health Report - {name}</title>
+        {css}
     </head>
     <body onload="setTimeout(function(){{window.print();}}, 500)">
-        {body_html}
+        <!-- Force Reload ID: {unique_id} -->
+        {body}
     </body>
     </html>
     """
-    return final_html
-
-def generate_performance_report_html_for_main_report(person_data, all_person_history_df):
-    """
-    Generates a compact version of performance reports to be embedded
-    into the main health report.
-    """
-    parts = []
-    
-    if has_vision_data(person_data):
-        vision_advice = person_data.get('สรุปเหมาะสมกับงาน', 'ไม่มีข้อมูลสรุป')
-        parts.append(f"""
-        <div class="perf-section">
-            <b>การมองเห็น:</b> <span class="summary-box">{html.escape(vision_advice)}</span>
-        </div>
-        """)
-
-    if has_hearing_data(person_data):
-        results = interpret_audiogram(person_data, all_person_history_df)
-        summary = results['summary'].get('overall', 'N/A')
-        advice = results.get('advice', 'ไม่มีคำแนะนำ')
-        parts.append(f"""
-        <div class="perf-section">
-            <b>การได้ยิน:</b> <span class="summary-box">สรุป: {html.escape(summary)} | คำแนะนำ: {html.escape(advice)}</span>
-        </div>
-        """)
-
-    if has_lung_data(person_data):
-        summary, advice, _ = interpret_lung_capacity(person_data)
-        parts.append(f"""
-        <div class="perf-section">
-            <b>สมรรถภาพปอด:</b> <span class="summary-box">สรุป: {html.escape(summary)} | คำแนะนำ: {html.escape(advice)}</span>
-        </div>
-        """)
-
-    if not parts:
-        return ""
-
-    return render_section_header("ผลการตรวจสมรรถภาพพิเศษ (Performance Tests)") + "".join(parts)
