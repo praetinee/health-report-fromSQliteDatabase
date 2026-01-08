@@ -221,18 +221,25 @@ def get_main_report_css():
             font-style: italic;
         }
         
-        /* Footer - Positioned absolute bottom right */
-        .footer {
+        /* Footer - Completely Redesigned to force right alignment */
+        .footer-container {
             position: absolute;
             bottom: 0.5cm;
-            right: 0.5cm; /* ชิดขอบขวา */
-            width: 20%; /* ปรับเหลือ 20% เพื่อให้ชิดขวามากขึ้น */
-            text-align: center;
-            font-size: 14px;
+            left: 0;
+            right: 0;
+            width: 100%;
+            height: 2.5cm;
+            /* background-color: rgba(255,0,0,0.1); Debugging */
+            display: flex;
+            justify-content: flex-end; /* Push to right flex-end */
+            align-items: flex-end; /* Align bottom */
+            padding-right: 0.5cm; /* Ensure padding from right edge */
             page-break-inside: avoid;
         }
-        .signature-line {
-            display: inline-block;
+
+        .doctor-signature {
+            text-align: right; /* Text align inside the box */
+            width: 300px; /* Fixed width to contain text */
         }
 
         /* Screen Preview Adjustments */
@@ -579,8 +586,8 @@ def render_printable_report_body(person_data, all_person_history_df=None):
             </div>
 
             <!-- Footer -->
-            <div class="footer">
-                <div class="signature-line">
+            <div class="footer-container">
+                <div class="doctor-signature">
                     <b>นายแพทย์นพรัตน์ รัชฎาพร</b><br>
                     แพทย์อาชีวเวชศาสตร์ (ว.26674)
                 </div>
