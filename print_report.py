@@ -60,7 +60,6 @@ def interpret_ekg(val):
 def get_main_report_css():
     """
     Returns the CSS string for the main health report.
-    Renamed from get_report_css to get_main_report_css to match batch_print.py requirements.
     """
     return """
     <style>
@@ -73,11 +72,9 @@ def get_main_report_css():
             --danger-color: #c0392b;
             --light-bg: #f8f9fa;
             --border-color: #bdc3c7;
-            --warning-bg: #fef9e7;
-            --warning-text: #b7950b;
         }
 
-        /* RESET ALL MARGINS & FORCE SARABUN FONT */
+        /* RESET ALL MARGINS */
         * {
             box-sizing: border-box;
             font-family: 'Sarabun', sans-serif !important;
@@ -85,34 +82,39 @@ def get_main_report_css():
 
         @page {
             size: A4;
-            margin: 0mm !important; /* Force 0 margin on page level */
+            margin: 0.5cm !important; /* Force margin on page level */
         }
 
         html, body {
             width: 210mm;
-            height: 297mm;
+            min-height: 297mm; /* Changed from fixed height to min-height */
             margin: 0 !important;
             padding: 0 !important;
             background-color: #fff;
-            font-family: 'Sarabun', sans-serif !important;
-            font-size: 14px; /* Standard readable size */
+            font-size: 14px;
             line-height: 1.3;
             color: #333;
             -webkit-print-color-adjust: exact;
         }
 
-        /* Container acts as the printable area with Padding */
+        /* Container using Flexbox to manage layout */
         .container { 
             width: 100%;
-            height: 100%;
-            padding: 5mm !important; /* EXACTLY 0.5cm PADDING */
+            min-height: 297mm; /* Full A4 height minimum */
+            padding: 0.5cm !important;
             position: relative;
-            page-break-after: always; /* Ensure page break for batch print */
+            display: flex;          /* Use Flexbox */
+            flex-direction: column; /* Stack vertically */
         }
         
         /* Grid System */
-        .row { display: flex; flex-wrap: wrap; margin: 0 -5px; height: calc(100% - 150px); /* Adjust height to allow footer at bottom */ }
-        .col-50 { width: 50%; flex: 0 0 50%; padding: 0 5px; position: relative; display: flex; flex-direction: column; }
+        .row { 
+            display: flex; 
+            flex-wrap: wrap; 
+            margin: 0 -5px; 
+            flex: 1; /* Allow content to grow and fill available space */
+        }
+        .col-50 { width: 50%; flex: 0 0 50%; padding: 0 5px; }
 
         /* Header */
         .header {
@@ -123,9 +125,9 @@ def get_main_report_css():
             justify-content: space-between;
             align-items: flex-end;
         }
-        .header h1 { font-family: 'Sarabun', sans-serif !important; font-size: 22px; font-weight: 700; color: var(--primary-color); margin: 0; }
-        .header p { font-family: 'Sarabun', sans-serif !important; margin: 0; font-size: 12px; color: var(--secondary-color); }
-        .patient-info { font-family: 'Sarabun', sans-serif !important; font-size: 13px; text-align: right; }
+        .header h1 { font-size: 22px; font-weight: 700; color: var(--primary-color); margin: 0; }
+        .header p { margin: 0; font-size: 12px; color: var(--secondary-color); }
+        .patient-info { font-size: 13px; text-align: right; }
         .patient-info b { color: var(--primary-color); }
 
         /* Vitals Bar */
@@ -139,27 +141,24 @@ def get_main_report_css():
             justify-content: space-between;
             font-size: 13px;
             flex-wrap: wrap;
-            font-family: 'Sarabun', sans-serif !important;
         }
         .vital-item b { color: var(--primary-color); font-weight: 700; margin-right: 3px; }
 
         /* Section Styling */
         .section-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #fff;
             background-color: var(--primary-color);
-            padding: 5px 8px;
+            padding: 3px 8px;
             border-radius: 3px;
             margin-bottom: 5px;
             margin-top: 10px;
-            color: #fff;
-            font-size: 14px;
-            font-weight: 700;
-            line-height: 1.4;
-            font-family: 'Sarabun', sans-serif !important;
         }
         .col-50 .section-title:first-child { margin-top: 0; }
         
         /* Tables */
-        table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 2px; font-family: 'Sarabun', sans-serif !important; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 5px; }
         th, td { padding: 2px 4px; border-bottom: 1px solid #eee; text-align: left; vertical-align: middle; }
         th { background-color: #f1f2f6; font-weight: 600; color: var(--secondary-color); text-align: center; border-bottom: 2px solid #ddd; }
         td.val-col { text-align: center; font-weight: 500; }
@@ -167,60 +166,44 @@ def get_main_report_css():
         
         .abnormal { color: var(--danger-color); font-weight: 700; }
         
-        /* Summary Box - MOVED TO RIGHT COLUMN ONLY */
+        /* Summary Box */
         .summary-box {
             border: 2px solid var(--accent-color);
-            background-color: #e8f8f5; /* Lighter Green Tone */
-            border-radius: 8px; /* Rounded corners */
-            padding: 10px;
-            margin-top: 15px;
+            background-color: #f0faf9;
+            border-radius: 5px;
+            padding: 8px;
+            margin-top: 10px;
             page-break-inside: avoid;
-            font-family: 'Sarabun', sans-serif !important;
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.05); /* Soft shadow */
         }
-        .summary-title { 
-            font-weight: 700; 
-            color: var(--accent-color); 
-            margin-bottom: 5px; 
-            font-size: 14px; 
-            border-bottom: 1px dashed var(--accent-color); 
-            padding-bottom: 3px; 
-        }
-        .summary-content { font-size: 13px; line-height: 1.5; color: #2c3e50; }
-
-        /* Specific Recommendation Box (Under Tables) */
-        .rec-box {
-            background-color: var(--warning-bg);
-            border-left: 3px solid var(--warning-text);
-            color: #7d6608;
-            padding: 4px 8px;
-            font-size: 11px;
-            margin-bottom: 8px;
-            border-radius: 0 3px 3px 0;
-            font-style: italic;
-        }
+        .summary-title { font-weight: 700; color: var(--accent-color); margin-bottom: 3px; font-size: 14px; border-bottom: 1px dashed var(--accent-color); padding-bottom: 3px; }
+        .summary-content { font-size: 13px; line-height: 1.4; }
         
-        /* Footer - FIXED TO BOTTOM OF RIGHT COLUMN */
+        /* Footer */
         .footer {
-            margin-top: auto; /* Push to bottom of flex container */
-            padding-bottom: 0;
-            font-size: 14px; 
-            font-family: 'Sarabun', sans-serif !important;
-            text-align: center; /* Center the text */
+            margin-top: auto; /* Push footer to the bottom */
+            text-align: right;
+            font-size: 12px;
+            page-break-inside: avoid;
+            position: relative; /* Changed from absolute to relative */
             width: 100%;
-            position: absolute; /* Force absolute positioning to bottom of column */
-            bottom: 0;
-            left: 0;
+            padding-top: 10px;
         }
         .signature-line {
             display: inline-block;
             text-align: center;
+            margin-left: auto;
+        }
+        .signature-dash {
+            border-bottom: 1px dotted #333;
+            width: 200px;
+            margin-bottom: 5px;
+            display: inline-block;
         }
 
         /* Screen Preview Adjustments */
         @media screen {
             body { background-color: #555; padding: 20px; display: flex; justify-content: center; }
-            .container { box-shadow: 0 0 15px rgba(0,0,0,0.3); background-color: white; margin-bottom: 20px; }
+            .container { box-shadow: 0 0 15px rgba(0,0,0,0.3); background-color: white; }
         }
         
         @media print {
@@ -249,15 +232,6 @@ def render_lab_row(name, value, unit, normal_range, is_abnormal):
     </tr>
     """
 
-def render_rec_box(suggestions):
-    """
-    Renders a small recommendation box if there are suggestions.
-    """
-    if not suggestions:
-        return ""
-    content = "<br>".join([f"• {s}" for s in suggestions])
-    return f'<div class="rec-box">{content}</div>'
-
 def render_printable_report_body(person_data, all_person_history_df=None):
     """
     Generates the HTML body content for the main health report.
@@ -284,29 +258,7 @@ def render_printable_report_body(person_data, all_person_history_df=None):
     pulse = f"{int(get_float('pulse', person_data))}" if get_float('pulse', person_data) else "-"
     waist = person_data.get('รอบเอว', '-')
 
-    # --- 2. Calculate Specific Recommendations ---
-    rec_kidney = []
-    uric = get_float("Uric Acid", person_data)
-    if uric and uric > 7: rec_kidney.append("กรดยูริกสูง ควรลดการทานเครื่องในสัตว์ ยอดผัก และสัตว์ปีก")
-    
-    rec_sugar_lipid = []
-    fbs = get_float("FBS", person_data)
-    if fbs and fbs >= 100: rec_sugar_lipid.append("ระดับน้ำตาลสูง ควรควบคุมอาหารประเภทแป้ง/น้ำตาล")
-    chol = get_float("CHOL", person_data)
-    ldl = get_float("LDL", person_data)
-    tgl = get_float("TGL", person_data)
-    if (chol and chol > 200) or (ldl and ldl > 130) or (tgl and tgl > 150): rec_sugar_lipid.append("ไขมันในเลือดสูง เลี่ยงของทอด/มัน/กะทิ")
-    
-    rec_liver = []
-    sgot = get_float("SGOT", person_data)
-    sgpt = get_float("SGPT", person_data)
-    alp = get_float("ALP", person_data)
-    if (sgot and sgot > 40) or (sgpt and sgpt > 40) or (alp and (alp > 105 or alp < 35)): rec_liver.append("ค่าตับสูงกว่าปกติ งดแอลกอฮอล์/ยาไม่จำเป็น")
-
-    rec_vitals = [] # Use for BP
-    if sbp and sbp >= 140: rec_vitals.append("ความดันโลหิตสูง ลดเค็ม/ออกกำลังกาย")
-
-    # --- 3. Build Lab Blocks ---
+    # --- 2. Build Lab Blocks ---
     
     # Hematology
     hb_low = 12 if sex == "หญิง" else 13
@@ -361,20 +313,27 @@ def render_printable_report_body(person_data, all_person_history_df=None):
     hbsab = safe_value(person_data.get("HbsAb"))
     hbcab = safe_value(person_data.get("HBcAb"))
     
-    # --- 4. Main Doctor's Suggestion (Generic + Doctor Note) ---
-    main_suggestions = []
+    # --- 3. Construct Doctor's Suggestion ---
+    suggestions = []
+    if sbp and sbp >= 140: suggestions.append("- ความดันโลหิตสูง ควรควบคุมอาหารเค็มและออกกำลังกาย")
+    fbs = get_float("FBS", person_data)
+    if fbs and fbs >= 100: suggestions.append("- ระดับน้ำตาลในเลือดสูง ควรควบคุมอาหารประเภทแป้งและน้ำตาล")
+    chol = get_float("CHOL", person_data)
+    ldl = get_float("LDL", person_data)
+    if (chol and chol > 200) or (ldl and ldl > 130): suggestions.append("- ไขมันในเลือดสูง ควรหลีกเลี่ยงของทอด ของมัน และกะทิ")
+    uric = get_float("Uric Acid", person_data)
+    if uric and uric > 7: suggestions.append("- กรดยูริกสูง ควรลดการทานเครื่องในสัตว์ ยอดผัก และสัตว์ปีก")
+    sgot = get_float("SGOT", person_data)
+    sgpt = get_float("SGPT", person_data)
+    if (sgot and sgot > 40) or (sgpt and sgpt > 40): suggestions.append("- ค่าเอนไซม์ตับสูงกว่าปกติ ควรลดแอลกอฮอล์และพักผ่อนให้เพียงพอ")
     
-    # Insert Vitals Recommendation here if exists (since Vitals is top bar)
-    if rec_vitals: main_suggestions.extend(rec_vitals)
-
     doc_note = str(person_data.get("DOCTER suggest", "")).strip()
     if doc_note and doc_note != "-":
-        main_suggestions.append(f"{doc_note}")
+        suggestions.append(f"- {doc_note}")
         
-    suggestion_html = "<br>".join([f"- {s}" for s in main_suggestions]) if main_suggestions else "สุขภาพโดยรวมอยู่ในเกณฑ์ดี โปรดรักษาสุขภาพให้แข็งแรงอยู่เสมอ"
+    suggestion_html = "<br>".join(suggestions) if suggestions else "สุขภาพโดยรวมอยู่ในเกณฑ์ดี โปรดรักษาสุขภาพให้แข็งแรงอยู่เสมอ"
 
-    # --- 5. Assemble Final HTML Body ---
-    
+    # --- 4. Assemble Final HTML Body ---
     return f"""
         <div class="container">
             
@@ -406,23 +365,21 @@ def render_printable_report_body(person_data, all_person_history_df=None):
             <div class="row">
                 <!-- Left Column -->
                 <div class="col-50">
-                    <div class="section-title">ความสมบูรณ์ของเลือด (CBC)</div>
+                    <div class="section-title">ความสมบูรณ์ของเม็ดเลือด (CBC)</div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>{cbc_rows}</tbody>
                     </table>
 
-                    <div class="section-title">ไตและกรดยูริก (Kidney Function & Uric Acid)</div>
+                    <div class="section-title">การทำงานของไต (Kidney Function)</div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>
                             {render_lab_row("BUN", safe_value(person_data.get("BUN")), "mg/dL", "6-20", False)}
                             {render_lab_row("Creatinine", safe_value(person_data.get("Cr")), "mg/dL", "0.5-1.2", False)}
                             {render_lab_row("eGFR", safe_value(person_data.get("GFR")), "mL/min", ">90", False)}
-                            {render_lab_row("Uric Acid", safe_value(person_data.get("Uric Acid")), "mg/dL", "2.4-7.0", get_float("Uric Acid", person_data) and get_float("Uric Acid", person_data) > 7)}
                         </tbody>
                     </table>
-                    {render_rec_box(rec_kidney)}
 
                     <div class="section-title">ปัสสาวะ (Urinalysis)</div>
                     <table>
@@ -441,7 +398,7 @@ def render_printable_report_body(person_data, all_person_history_df=None):
 
                 <!-- Right Column -->
                 <div class="col-50">
-                    <div class="section-title">น้ำตาลและไขมันในเลือด (Blood Sugar & Lipid Profile)</div>
+                    <div class="section-title">เบาหวาน & ไขมัน (Sugar & Lipid)</div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>
@@ -452,18 +409,17 @@ def render_printable_report_body(person_data, all_person_history_df=None):
                             {render_lab_row("LDL-C", safe_value(person_data.get("LDL")), "mg/dL", "< 130", get_float("LDL", person_data) and get_float("LDL", person_data) > 130)}
                         </tbody>
                     </table>
-                    {render_rec_box(rec_sugar_lipid)}
                     
-                    <div class="section-title">การทำงานของตับ (Liver Function)</div>
+                    <div class="section-title">กรดยูริก & การทำงานของตับ (Uric & Liver)</div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>
+                            {render_lab_row("Uric Acid", safe_value(person_data.get("Uric Acid")), "mg/dL", "2.4-7.0", get_float("Uric Acid", person_data) and get_float("Uric Acid", person_data) > 7)}
                             {render_lab_row("SGOT (AST)", safe_value(person_data.get("SGOT")), "U/L", "< 40", get_float("SGOT", person_data) and get_float("SGOT", person_data) > 40)}
                             {render_lab_row("SGPT (ALT)", safe_value(person_data.get("SGPT")), "U/L", "< 40", get_float("SGPT", person_data) and get_float("SGPT", person_data) > 40)}
                             {render_lab_row("Alkaline Phos.", safe_value(person_data.get("ALP")), "U/L", "35-105", get_float("ALP", person_data) and (get_float("ALP", person_data) > 105 or get_float("ALP", person_data) < 35))}
                         </tbody>
                     </table>
-                    {render_rec_box(rec_liver)}
 
                     <div class="section-title">ไวรัสตับอักเสบ (Hepatitis)</div>
                     <table>
@@ -475,7 +431,7 @@ def render_printable_report_body(person_data, all_person_history_df=None):
                         </tbody>
                     </table>
 
-                    <div class="section-title">เอกซเรย์ปอด และ คลื่นไฟฟ้าหัวใจ (Chest X-ray & EKG)</div>
+                    <div class="section-title">เอกซเรย์ & คลื่นไฟฟ้าหัวใจ</div>
                     <table>
                         <tbody>
                             <tr>
@@ -488,24 +444,28 @@ def render_printable_report_body(person_data, all_person_history_df=None):
                             </tr>
                         </tbody>
                     </table>
-                    
-                    <!-- Summary Box in Right Column -->
-                    <div class="summary-box">
-                        <div class="summary-title">สรุปผลการตรวจและคำแนะนำแพทย์ (Doctor's Recommendation)</div>
-                        <div class="summary-content">
-                            {suggestion_html}
-                        </div>
-                    </div>
-
-                    <!-- Moved Footer Signature inside Right Column to center it relative to the right column content -->
-                    <div class="footer">
-                        <div class="signature-line">
-                            <b>นายแพทย์นพรัตน์ รัชฎาพร</b><br>
-                            แพทย์อาชีวเวชศาสตร์ (ว.26674)<br>
-                        </div>
-                    </div>
                 </div>
             </div>
+
+            <!-- Summary Box -->
+            <div class="summary-box">
+                <div class="summary-title">สรุปผลการตรวจและคำแนะนำแพทย์ (Doctor's Recommendation)</div>
+                <div class="summary-content">
+                    {suggestion_html}
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="footer">
+                <div class="signature-line">
+                    <div class="signature-dash"></div>
+                    <b>นายแพทย์นพรัตน์ รัชฎาพร</b><br>
+                    แพทย์อาชีวเวชศาสตร์ (ว.26674)<br>
+                    ผู้ตรวจ (Attending Physician)
+                </div>
+            </div>
+
+        </div>
     """
 
 def generate_printable_report(person_data, all_person_history_df=None):
