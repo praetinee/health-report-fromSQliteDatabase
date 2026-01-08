@@ -212,12 +212,7 @@ def get_report_css():
             text-align: center;
             margin-left: auto;
         }
-        .signature-dash {
-            border-bottom: 1px dotted #333;
-            width: 200px;
-            margin-bottom: 5px;
-            display: inline-block;
-        }
+        /* REMOVED signature-dash */
 
         /* Screen Preview Adjustments */
         @media screen {
@@ -512,7 +507,7 @@ def generate_printable_report(person_data, all_person_history_df=None):
             <!-- Footer -->
             <div class="footer">
                 <div class="signature-line">
-                    <div class="signature-dash"></div>
+                    <!-- Dash Removed -->
                     <b>นายแพทย์นพรัตน์ รัชฎาพร</b><br>
                     แพทย์อาชีวเวชศาสตร์ (ว.26674)<br>
                 </div>
