@@ -226,7 +226,7 @@ def get_main_report_css():
             position: absolute;
             bottom: 0.5cm;
             right: 0.5cm; /* ชิดขอบขวา */
-            width: 40%; /* ลดความกว้างเพื่อให้กึ่งกลางของกล่องนี้อยู่ทางขวามากขึ้น */
+            width: 20%; /* ปรับเหลือ 20% เพื่อให้ชิดขวามากขึ้น */
             text-align: center;
             font-size: 14px;
             page-break-inside: avoid;
