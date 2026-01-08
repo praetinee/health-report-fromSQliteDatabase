@@ -221,25 +221,21 @@ def get_performance_report_css():
         .status-abn-text { color: #c0392b !important; font-weight: bold; }
         .status-nt-text { color: #555; }
         
-        /* Footer - FIXED TO BOTTOM OF RIGHT COLUMN (or container bottom) */
-        .footer {
-            margin-top: 20px;
-            font-size: 14px; 
-            font-family: 'Sarabun', sans-serif !important;
-            text-align: center; /* Center text within the footer block */
-            width: 100%;
-            /* Removed absolute positioning to let it flow naturally in the column or use specific placement */
-        }
-        .footer-signature-container {
+        /* Footer - Centered within the right half of the page */
+        .footer-container {
             position: absolute;
-            bottom: 0.5cm; /* ขอบล่าง 0.5cm (padding) */
-            right: 0.5cm; /* ขอบขวา 0.5cm (padding) */
-            width: 30%; /* Approximate width of the side column or enough for the signature */
-            text-align: center;
+            bottom: 0.5cm;
+            right: 0;
+            width: 50%; /* Occupy the right half */
+            height: 2.5cm;
+            display: flex;
+            justify-content: center; /* Center horizontally within the 50% width */
+            align-items: flex-end; /* Align bottom */
+            page-break-inside: avoid;
         }
-        .signature-line {
-            display: inline-block;
-            text-align: center;
+
+        .doctor-signature {
+            text-align: center; /* Center text within its box */
         }
 
         @media print {
@@ -652,12 +648,12 @@ def render_performance_report_body(person_data, all_person_history_df):
     hearing_html = render_print_hearing(person_data, all_person_history_df)
     lung_html = render_print_lung(person_data)
     
-    # Footer with Signature - Positioned absolute bottom right with 0.5cm margin
+    # Footer with Signature - Matched with print_report.py
     footer_html = """
-    <div class="footer-signature-container">
-        <div class="signature-line">
+    <div class="footer-container">
+        <div class="doctor-signature">
             <b>นายแพทย์นพรัตน์ รัชฎาพร</b><br>
-            แพทย์อาชีวเวชศาสตร์ (ว.26674)<br>
+            แพทย์อาชีวเวชศาสตร์ (ว.26674)
         </div>
     </div>
     """
