@@ -221,23 +221,24 @@ def get_main_report_css():
             font-style: italic;
         }
         
-        /* Footer - Positioned bottom right center */
+        /* Footer - Updated for centering in right half */
         .footer {
+            /* Position absolute to stick to bottom right */
             position: absolute;
             bottom: 0.5cm;
-            right: 0;
-            width: 50%; /* กินพื้นที่ครึ่งขวาของหน้ากระดาษ */
-            text-align: center; /* จัดข้อความกึ่งกลางในพื้นที่ 50% นั้น */
-            font-size: 12px;
+            right: 0; /* Align to the right edge of container */
+            width: 50%; /* Take up the right half */
+            text-align: center; /* Center the text within this 50% block */
+            font-size: 14px;
             page-break-inside: avoid;
-            padding-right: 0.5cm; /* เผื่อระยะขอบกระดาษขวา */
+            /* Adjust padding if needed to align perfectly with content */
+            padding-right: 0.5cm; 
         }
         .signature-line {
             display: inline-block;
-            text-align: center;
-            /* ลบ margin-left: auto เพื่อให้ text-align: center ของ .footer ทำงานเต็มที่ */
+            /* text-align center is inherited from .footer */
         }
-        /* ลบ signature-dash ออกแล้ว */
+        /* signature-dash removed */
 
         /* Screen Preview Adjustments */
         @media screen {
@@ -355,6 +356,44 @@ def render_printable_report_body(person_data, all_person_history_df=None):
     alp = get_float("ALP", person_data)
     if (sgot and sgot > 40) or (sgpt and sgpt > 40) or (alp and (alp > 105 or alp < 35)): rec_liver.append("ค่าตับสูงกว่าปกติ งดแอลกอฮอล์/ยาไม่จำเป็น")
 
+    # 2.6 Hepatitis Recommendations
+    rec_hep = []
+    def hepatitis_b_advice(hbsag, hbsab, hbcab):
+        hbsag, hbsab, hbcab = str(hbsag).lower(), str(hbsab).lower(), str(hbcab).lower()
+        if "positive" in hbsag: return "ติดเชื้อไวรัสตับอักเสบบี ควรพบแพทย์เพื่อรับการรักษา"
+        if "positive" in hbsab and "positive" not in hbsag: return "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี"
+        if "positive" in hbcab and "positive" not in hbsab: return "เคยติดเชื้อแต่ไม่มีภูมิคุ้มกันในปัจจุบัน"
+        if all(x in ["negative", "neg", "-"] for x in [hbsag, hbsab, hbcab]): return "ไม่มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี ควรปรึกษาแพทย์เพื่อรับวัคซีน"
+        return ""
+
+    # Hepatitis column names might vary, try to get current year's
+    selected_year = person_data.get("Year", datetime.now().year + 543)
+    current_thai_year = datetime.now().year + 543
+    
+    hbsag_col = "HbsAg"
+    hbsab_col = "HbsAb"
+    hbcab_col = "HBcAB"
+
+    # Try to find specific year column first
+    suffix = str(selected_year)[-2:]
+    if f"HbsAg{suffix}" in person_data and not is_empty(person_data.get(f"HbsAg{suffix}")): hbsag_col = f"HbsAg{suffix}"
+    if f"HbsAb{suffix}" in person_data and not is_empty(person_data.get(f"HbsAb{suffix}")): hbsab_col = f"HbsAb{suffix}"
+    if f"HBcAB{suffix}" in person_data and not is_empty(person_data.get(f"HBcAB{suffix}")): hbcab_col = f"HBcAB{suffix}"
+    
+    hbsag_val = person_data.get(hbsag_col)
+    hbsab_val = person_data.get(hbsab_col)
+    hbcab_val = person_data.get(hbcab_col)
+
+    if not (is_empty(hbsag_val) and is_empty(hbsab_val) and is_empty(hbcab_val)):
+        hep_advice = hepatitis_b_advice(hbsag_val, hbsab_val, hbcab_val)
+        if hep_advice:
+            rec_hep.append(hep_advice)
+
+    # Hepatitis Date
+    hep_check_date = str(person_data.get("ปีตรวจHEP", "")).strip()
+    if is_empty(hep_check_date):
+        hep_check_date = str(selected_year)
+
     # --- 3. Build Lab Blocks ---
     
     # Hematology
@@ -404,10 +443,11 @@ def render_printable_report_body(person_data, all_person_history_df=None):
     ekg_display = interpret_ekg(ekg_val)
 
     # Hepatitis
-    hep_a = safe_value(person_data.get("Hepatitis A"))
-    hbsag = safe_value(person_data.get("HbsAg"))
-    hbsab = safe_value(person_data.get("HbsAb"))
-    hbcab = safe_value(person_data.get("HBcAb"))
+    hep_a_val = person_data.get("Hepatitis A")
+    hep_a = safe_value(hep_a_val)
+    hbsag = safe_value(hbsag_val)
+    hbsab = safe_value(hbsab_val)
+    hbcab = safe_value(hbcab_val)
     
     # --- 4. Main Doctor's Suggestion (Only Doc Note) ---
     doc_note = str(person_data.get("DOCTER suggest", "")).strip()
@@ -509,7 +549,7 @@ def render_printable_report_body(person_data, all_person_history_df=None):
                     </table>
                     {render_rec_box(rec_liver)}
 
-                    <div class="section-title">ไวรัสตับอักเสบ (Hepatitis)</div>
+                    <div class="section-title">ไวรัสตับอักเสบ (Hepatitis) ตรวจเมื่อ {hep_check_date}</div>
                     <table>
                         <tbody>
                             <tr><td>Hepatitis A</td><td class="val-col">{hep_a}</td><td class="range-col">Neg</td></tr>
@@ -518,6 +558,7 @@ def render_printable_report_body(person_data, all_person_history_df=None):
                             <tr><td>HBcAb</td><td class="val-col">{hbcab}</td><td class="range-col">Neg</td></tr>
                         </tbody>
                     </table>
+                    {render_rec_box(rec_hep)}
 
                     <div class="section-title">เอกซเรย์ปอดและคลื่นไฟฟ้าหัวใจ (Chest X-ray & EKG)</div>
                     <table>
