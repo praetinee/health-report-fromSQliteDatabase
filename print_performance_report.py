@@ -412,16 +412,9 @@ def render_print_hearing(person_data, all_person_history_df):
             pass
         return val
 
-    # Helper function to highlight abnormal shift values (>= 15 dB is standard STS concern, using 15 to be safe)
+    # Helper function to format shift values but NOT highlight them in red
     def format_shift_cell(val):
-        try:
-            # Remove '+' if present
-            clean_val = str(val).replace('+', '')
-            float_val = float(clean_val)
-            if float_val >= 15:
-                return f"<span class='status-abn-text'>{val}</span>"
-        except (ValueError, TypeError):
-            pass
+        # We purposely do not apply status-abn-text here to avoid confusion
         return val
 
     summary_cards_html = f"""
