@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit.components.v1 as components # เพิ่ม import components
 import pandas as pd
 import re
 import html
@@ -8,6 +7,7 @@ import textwrap
 from collections import OrderedDict
 from datetime import datetime
 import json
+import streamlit.components.v1 as components
 
 # --- Helper Functions ---
 def is_empty(val):
@@ -801,17 +801,39 @@ def display_main_report(person_data, all_person_history_df):
 
         with col_ua_right:
             st.markdown("<h5 class='section-subtitle'>ผลตรวจพิเศษ</h5>", unsafe_allow_html=True)
-            cxr_col = f"CXR{str(selected_year)[-2:]}" if selected_year != (datetime.now().year + 543) else "CXR"
-            ekg_col_name = get_ekg_col_name(selected_year)
-            hep_a_value = person.get("Hepatitis A")
-            hep_a_display_text = "ไม่ได้ตรวจ" if is_empty(hep_a_value) else safe_text(hep_a_value)
+            
+            # --- CXR Logic: Check "CXR" column first ---
+            cxr_val = person.get("CXR")
+            if is_empty(cxr_val):
+                # Fallback logic: Try to find year-specific column e.g. CXR66
+                cxr_col = f"CXR{str(selected_year)[-2:]}"
+                cxr_val = person.get(cxr_col)
+            # ------------------------------------------
+
+            # --- EKG Logic: Check "EKG" column first ---
+            ekg_val = person.get("EKG")
+            if is_empty(ekg_val):
+                ekg_col = f"EKG{str(selected_year)[-2:]}"
+                ekg_val = person.get(ekg_col)
+            # ------------------------------------------
+
+            # --- Hepatitis A Logic: Check "Hepatitis A" column first ---
+            # NOTE: Assuming year specific columns might exist like Hepatitis A66
+            # If not, this logic will just fallback to None and display "ไม่ได้ตรวจ"
+            hep_a_val = person.get("Hepatitis A")
+            if is_empty(hep_a_val):
+                hep_a_col = f"Hepatitis A{str(selected_year)[-2:]}"
+                hep_a_val = person.get(hep_a_col)
+            
+            hep_a_display_text = "ไม่ได้ตรวจ" if is_empty(hep_a_val) else safe_text(hep_a_val)
+            # -----------------------------------------------------------
 
             st.markdown(clean_html_string(f"""
             <div class="table-container">
                 <table class="info-detail-table">
                     <tbody>
-                        <tr><th>ผลเอกซเรย์ (Chest X-ray)</th><td>{interpret_cxr(person.get(cxr_col, ''))}</td></tr>
-                        <tr><th>ผลคลื่นไฟฟ้าหัวใจ (EKG)</th><td>{interpret_ekg(person.get(ekg_col_name, ''))}</td></tr>
+                        <tr><th>ผลเอกซเรย์ (Chest X-ray)</th><td>{interpret_cxr(cxr_val)}</td></tr>
+                        <tr><th>ผลคลื่นไฟฟ้าหัวใจ (EKG)</th><td>{interpret_ekg(ekg_val)}</td></tr>
                         <tr><th>ไวรัสตับอักเสบเอ (Hepatitis A)</th><td>{hep_a_display_text}</td></tr>
                     </tbody>
                 </table>
