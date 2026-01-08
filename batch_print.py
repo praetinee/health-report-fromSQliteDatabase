@@ -100,37 +100,47 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
                 padding: 0; 
                 background-color: white;
                 width: 210mm; /* A4 Width */
+                -webkit-print-color-adjust: exact; /* Ensure colors print */
+                print-color-adjust: exact;
             }}
             
             /* Wrapper ของคนไข้แต่ละคน */
             .patient-wrapper {{
                 display: block;
                 width: 100%;
+                /* เมื่อจบคนนึง ให้ขึ้นหน้าใหม่เสมอ */
+                page-break-after: always;
+                break-after: page;
+            }}
+            
+            /* หน้าสุดท้ายของคนสุดท้ายไม่ต้อง break */
+            .patient-wrapper:last-child {{
+                page-break-after: auto;
+                break-after: auto;
             }}
 
             /* Container ของแต่ละรายงาน (สุขภาพ/สมรรถภาพ) */
             .container {{
-                page-break-inside: avoid; /* ห้ามตัดกลางหน้ารายงาน */
                 margin: 0 !important;
                 padding: 0.5cm !important; /* ระยะขอบ 0.5cm */
                 width: 100% !important;
                 
                 /* บังคับความสูงเต็มหน้า A4 เพื่อกันไม่ให้เนื้อหาคนอื่นไหลขึ้นมา */
                 min-height: 297mm; 
-                
-                /* สำคัญ: บังคับตัดหน้าหลังจากจบแต่ละ Container เสมอ */
-                page-break-after: always !important; 
-                break-after: page;
+                height: auto; /* ปล่อยให้ยืดตามเนื้อหาถ้าเกิน */
                 
                 position: relative;
-                overflow: hidden;
+                /* เอา overflow hidden ออก เพื่อแก้ปัญหาเนื้อหาหาย */
+                /* overflow: hidden; */ 
+                
+                background-color: white;
             }}
-            
-            /* ป้องกันหน้าว่างท้ายสุด: ลบ page-break ของ container สุดท้าย ใน wrapper สุดท้าย */
-            .patient-wrapper:last-child .container:last-child {{
-                page-break-after: auto !important;
-                break-after: auto;
-                min-height: 0; /* ปล่อยความสูงอิสระในหน้าสุดท้ายถ้าจำเป็น */
+
+            /* กฎสำคัญ: ถ้าใน 1 wrapper มี 2 container (สุขภาพ + สมรรถภาพ) */
+            /* ให้ container ตัวที่ 2 ขึ้นหน้าใหม่เสมอ */
+            .container + .container {{
+                page-break-before: always;
+                break-before: page;
             }}
         }}
         
