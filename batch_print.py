@@ -73,11 +73,74 @@ def check_data_readiness(person_data, report_type):
 def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข้อมูลปีล่าสุดของแต่ละคน"):
     """สร้าง HTML สำหรับพิมพ์"""
     report_bodies = []
-    page_break_div = "<div style='page-break-after: always;'></div>"
     
+    # CSS: ใช้ CSS หลักจาก Health Report และเสริมส่วนที่จำเป็น
     css_main = get_main_report_css()
+    # เพิ่ม CSS ของ Performance Report ด้วยถ้าจำเป็น
     css_perf = get_performance_report_css()
-    full_css = f"{css_main}\n{css_perf}" 
+    
+    # รวม CSS โดยให้แน่ใจว่าครอบคลุมทั้งสองแบบ (และป้องกัน style ตีกันถ้าทำได้)
+    # แต่เนื่องจากเราปรับโครงสร้างให้คล้ายกันแล้ว การรวมกันน่าจะโอเค
+    # โดยเฉพาะส่วน container, header, footer
+    
+    # ดึงเฉพาะส่วน style content จาก css_perf (ตัด <style> tags ออก)
+    import re
+    style_content_perf = re.search(r'<style>(.*?)</style>', css_perf, re.DOTALL)
+    extra_css = style_content_perf.group(1) if style_content_perf else ""
+
+    # สร้าง CSS รวม และเพิ่ม style สำหรับการแบ่งหน้า (Batch Print Specific)
+    full_css = f"""
+    <style>
+        /* Main Report CSS */
+        {re.search(r'<style>(.*?)</style>', css_main, re.DOTALL).group(1)}
+        
+        /* Performance Report CSS (Merged) */
+        {extra_css}
+
+        /* --- BATCH PRINT SPECIFIC STYLES --- */
+        @media print {{
+            body {{ 
+                margin: 0; 
+                padding: 0; 
+                background-color: white;
+            }}
+            
+            /* บังคับขึ้นหน้าใหม่สำหรับ wrapper ของแต่ละคน */
+            .patient-wrapper {{
+                page-break-after: always;
+                display: block;
+                width: 100%;
+                height: auto;
+                position: relative;
+            }}
+            
+            /* หน้าสุดท้ายไม่ต้อง break */
+            .patient-wrapper:last-child {{
+                page-break-after: auto;
+            }}
+
+            /* Container ภายใน wrapper ต้องไม่ break เองมั่วๆ */
+            .container {{
+                page-break-inside: avoid;
+                margin: 0 !important;
+                padding: 0.5cm !important; /* ย้ำระยะขอบ */
+                width: 100% !important;
+                box-shadow: none !important;
+                /* height: 297mm;  <-- ลองเปิดใช้ถ้าต้องการ fix ความสูง */
+                min-height: 297mm;
+            }}
+        }}
+        
+        /* Screen view adjustments for batch list */
+        @media screen {{
+            .patient-wrapper {{
+                border-bottom: 5px solid #ccc;
+                margin-bottom: 20px;
+                padding-bottom: 20px;
+            }}
+        }}
+    </style>
+    """
 
     progress_bar = st.progress(0)
     total_patients = len(selected_hns)
@@ -95,25 +158,34 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
             latest_year_series = person_history_df.sort_values(by='Year', ascending=False).iloc[0]
             person_data = latest_year_series.to_dict()
 
-            patient_bodies = []
+            # เริ่มสร้างเนื้อหาของคนนี้
+            current_person_html = ""
             
+            # 1. Health Report Part
             need_main = report_type in ["รายงานสุขภาพ (Health Report)", "ทั้งรายงานสุขภาพและสมรรถภาพ"]
             if need_main and has_basic_health_data(person_data):
-                patient_bodies.append(render_printable_report_body(person_data, person_history_df))
+                # render_printable_report_body คืนค่า <div class="container">...</div>
+                current_person_html += render_printable_report_body(person_data, person_history_df)
             
+            # 2. Performance Report Part
             need_perf = report_type in ["รายงานสมรรถภาพ (Performance Report)", "ทั้งรายงานสุขภาพและสมรรถภาพ"]
             has_vis = has_vision_data(person_data)
             has_hear = has_hearing_data(person_data)
             has_lung = has_lung_data(person_data)
+            
             if need_perf and (has_vis or has_hear or has_lung):
-                patient_bodies.append(render_performance_report_body(person_data, person_history_df))
+                # render_performance_report_body คืนค่า <div class="container">...</div>
+                # ถ้ามีทั้ง 2 รายงาน มันจะเป็น <div container>...</div> <div container>...</div>
+                # ซึ่ง CSS .container มี page-break-after: always อยู่แล้ว (จากไฟล์ต้นฉบับ)
+                # แต่อาจจะตีกับ .patient-wrapper
+                current_person_html += render_performance_report_body(person_data, person_history_df)
 
-            if not patient_bodies:
+            if not current_person_html:
                 skipped_count += 1
                 continue
             
-            combined_patient_html = page_break_div.join(patient_bodies)
-            report_bodies.append(combined_patient_html)
+            # Wrap เนื้อหาของคนนี้ไว้ใน wrapper เพื่อคุม page break ระหว่างคน
+            report_bodies.append(f'<div class="patient-wrapper">{current_person_html}</div>')
 
         except Exception as e:
             st.error(f"เกิดข้อผิดพลาด HN: {hn} - {e}")
@@ -124,7 +196,7 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
     if not report_bodies:
         return None, skipped_count
 
-    all_bodies = page_break_div.join(report_bodies)
+    all_bodies = "".join(report_bodies)
     
     full_html = f"""
     <!DOCTYPE html>
