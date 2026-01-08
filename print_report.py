@@ -85,13 +85,12 @@ def get_main_report_css():
 
         @page {
             size: A4;
-            margin: 0.5cm !important; /* Force 0.5cm margin on page level */
+            margin: 0mm !important; /* Force 0 margin on page level */
         }
 
         html, body {
             width: 210mm;
-            /* height: 297mm;  <-- REMOVED THIS LINE: It causes issues in batch printing */
-            min-height: 297mm; /* Use min-height instead */
+            height: 297mm;
             margin: 0 !important;
             padding: 0 !important;
             background-color: #fff;
@@ -105,16 +104,14 @@ def get_main_report_css():
         /* Container acts as the printable area with Padding */
         .container { 
             width: 100%;
-            /* height: 297mm; REMOVE fixed height to prevent blank page issues if content is slightly less */
-            min-height: 297mm; 
-            padding: 0.5cm !important; /* EXACTLY 0.5cm PADDING (matching Performance Report) */
+            height: 100%;
+            padding: 5mm !important; /* EXACTLY 0.5cm PADDING */
             position: relative;
             page-break-after: always; /* Ensure page break for batch print */
-            overflow: hidden; /* Prevent content overflow */
         }
         
         /* Grid System */
-        .row { display: flex; flex-wrap: wrap; margin: 0 -5px; }
+        .row { display: flex; flex-wrap: wrap; margin: 0 -5px; height: calc(100% - 150px); /* Adjust height to allow footer at bottom */ }
         .col-50 { width: 50%; flex: 0 0 50%; padding: 0 5px; position: relative; display: flex; flex-direction: column; }
 
         /* Header */
@@ -409,7 +406,7 @@ def render_printable_report_body(person_data, all_person_history_df=None):
             <div class="row">
                 <!-- Left Column -->
                 <div class="col-50">
-                    <div class="section-title">ความสมบูรณ์ของเม็ดเลือด (CBC)</div>
+                    <div class="section-title">ความสมบูรณ์ของเลือด (CBC)</div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>{cbc_rows}</tbody>
