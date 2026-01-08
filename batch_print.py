@@ -73,11 +73,20 @@ def check_data_readiness(person_data, report_type):
 def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข้อมูลปีล่าสุดของแต่ละคน"):
     """สร้าง HTML สำหรับพิมพ์"""
     report_bodies = []
-    page_break_div = "<div style='page-break-after: always;'></div>"
+    # ใช้ class page-break แทน inline style เพื่อความแน่นอน และจัดการ margin
+    # page-break-after: always; จะบังคับขึ้นหน้าใหม่หลังจบ content ของแต่ละคน
+    
+    # CSS: เราจะใช้ CSS หลักจาก Health Report เป็นตัวตั้ง และเสริมด้วยส่วนที่จำเป็นจาก Performance Report
+    # เนื่องจากเราปรับให้ทั้งคู่ใช้ Margin/Padding เท่ากันแล้ว (0.5cm) จึงใช้ CSS ตัวใดตัวหนึ่งเป็นหลักได้
+    # แต่เพื่อความชัวร์ ให้รวมกัน โดยระวังเรื่องทับซ้อน
     
     css_main = get_main_report_css()
-    css_perf = get_performance_report_css()
-    full_css = f"{css_main}\n{css_perf}" 
+    # css_perf อาจจะมี conflict เรื่อง body/page margin ถ้านำมาต่อกันตรงๆ
+    # ดังนั้นเราจะใช้ css_main เป็นหลัก และดึงเฉพาะ style ที่จำเป็นจาก perf (เช่น table specific) มาถ้าจำเป็น
+    # แต่ในกรณีนี้ ทั้งสองไฟล์ใช้ class พื้นฐานเหมือนกัน (container, header)
+    # เราจึงใช้ css_main เป็น Core CSS ได้เลย เพราะ setting หน้ากระดาษเหมือนกันแล้ว
+    
+    full_css = css_main 
 
     progress_bar = st.progress(0)
     total_patients = len(selected_hns)
@@ -95,25 +104,26 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
             latest_year_series = person_history_df.sort_values(by='Year', ascending=False).iloc[0]
             person_data = latest_year_series.to_dict()
 
-            patient_bodies = []
+            patient_content = ""
             
             need_main = report_type in ["รายงานสุขภาพ (Health Report)", "ทั้งรายงานสุขภาพและสมรรถภาพ"]
             if need_main and has_basic_health_data(person_data):
-                patient_bodies.append(render_printable_report_body(person_data, person_history_df))
+                patient_content += render_printable_report_body(person_data, person_history_df)
             
             need_perf = report_type in ["รายงานสมรรถภาพ (Performance Report)", "ทั้งรายงานสุขภาพและสมรรถภาพ"]
             has_vis = has_vision_data(person_data)
             has_hear = has_hearing_data(person_data)
             has_lung = has_lung_data(person_data)
+            
             if need_perf and (has_vis or has_hear or has_lung):
-                patient_bodies.append(render_performance_report_body(person_data, person_history_df))
+                # ถ้ามีทั้งสองรายงาน ให้ต่อกันเลย (HTML body ของแต่ละ report มี container ที่มี page-break-after อยู่แล้ว)
+                patient_content += render_performance_report_body(person_data, person_history_df)
 
-            if not patient_bodies:
+            if not patient_content:
                 skipped_count += 1
                 continue
             
-            combined_patient_html = page_break_div.join(patient_bodies)
-            report_bodies.append(combined_patient_html)
+            report_bodies.append(patient_content)
 
         except Exception as e:
             st.error(f"เกิดข้อผิดพลาด HN: {hn} - {e}")
@@ -124,7 +134,8 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
     if not report_bodies:
         return None, skipped_count
 
-    all_bodies = page_break_div.join(report_bodies)
+    # รวมเนื้อหาทั้งหมด (แต่ละ body มี container ที่ page-break-after: always อยู่แล้ว)
+    all_bodies = "".join(report_bodies)
     
     full_html = f"""
     <!DOCTYPE html>
@@ -133,6 +144,14 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
         <meta charset="UTF-8">
         <title>รายงานผลการตรวจสุขภาพ (Batch Print)</title>
         {full_css}
+        <style>
+            /* Additional Batch Print Styles to ensure clean breaks */
+            @media print {{
+                body {{ margin: 0; padding: 0; }}
+                /* ป้องกันหน้าว่างหน้าสุดท้าย */
+                .container:last-child {{ page-break-after: auto; }} 
+            }}
+        </style>
     </head>
     <body>
         {all_bodies}
