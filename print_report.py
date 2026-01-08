@@ -221,15 +221,16 @@ def get_main_report_css():
             font-style: italic;
         }
         
-        /* Footer - Positioned absolute bottom right, text-align center within that box */
+        /* Footer - Positioned absolute bottom right, text-align center within right half */
         .footer {
             position: absolute;
             bottom: 0.5cm;
-            right: 0.5cm; /* Stick to the right edge */
-            width: 40%;   /* Use 40% width to confine it to the right side nicely */
-            text-align: center; /* Center the text inside this 40% box */
+            right: 0;
+            width: 50%; /* Covers the right half of the page */
+            text-align: center; /* Centers the text within this 50% width */
             font-size: 14px;
             page-break-inside: avoid;
+            padding-right: 0.5cm; /* Ensure it aligns with content margin */
         }
         .signature-line {
             display: inline-block;
