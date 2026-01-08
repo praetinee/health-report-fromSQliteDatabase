@@ -199,7 +199,7 @@ def get_report_css():
         .footer {
             margin-top: 10px;
             text-align: right;
-            font-size: 12px;
+            font-size: 14px; /* Adjusted font size to match standard readable size */
             page-break-inside: avoid;
             position: absolute;
             bottom: 5mm;
@@ -515,7 +515,6 @@ def generate_printable_report(person_data, all_person_history_df=None):
                     <div class="signature-dash"></div>
                     <b>นายแพทย์นพรัตน์ รัชฎาพร</b><br>
                     แพทย์อาชีวเวชศาสตร์ (ว.26674)<br>
-                    ผู้ตรวจ (Attending Physician)
                 </div>
             </div>
 
