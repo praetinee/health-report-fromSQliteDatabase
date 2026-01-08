@@ -34,7 +34,8 @@ def interpret_cxr(val):
     if is_empty(val): return "ไม่ได้ตรวจ", False
     is_abn = False
     if any(keyword in val.lower() for keyword in ["ผิดปกติ", "ฝ้า", "รอย", "abnormal", "infiltrate", "lesion"]):
-        val = f"{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม"
+        # ถ้าผิดปกติ ให้ใส่สีแดง
+        val = f"<span class='status-abn-text'>{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม</span>"
         is_abn = True
     return val, is_abn
 
@@ -95,7 +96,7 @@ def get_performance_report_css():
 
         @page {
             size: A4;
-            margin: 0mm !important; /* Force 0 margin on page level */
+            margin: 0.5cm !important; /* Force 0.5cm margin on page level as requested */
         }
 
         html, body {
@@ -115,7 +116,7 @@ def get_performance_report_css():
         .container { 
             width: 100%;
             height: 100%;
-            padding: 5mm !important; /* EXACTLY 0.5cm PADDING matched with health report */
+            padding: 0.5cm !important; /* Padding for screen display, consistent with print margin */
             position: relative;
             page-break-after: always;
         }
@@ -214,7 +215,8 @@ def get_performance_report_css():
         }
         
         .status-ok-text { color: #1b5e20; }
-        .status-abn-text { color: #b71c1c; }
+        /* กำหนดสีแดงเข้มสำหรับค่าผิดปกติ */
+        .status-abn-text { color: #c0392b !important; font-weight: bold; }
         .status-nt-text { color: #555; }
         
         /* Footer */
@@ -308,6 +310,7 @@ def render_print_vision(person_data):
         is_normal, is_abnormal = False, False
         result_text = ""
         status_text = "ไม่ได้ตรวจ"
+        status_class = ""
 
         if test['type'] == 'value':
             val = str(person_data.get(test['col'], '')).strip()
@@ -338,11 +341,13 @@ def render_print_vision(person_data):
 
         if is_normal or (result_text and not is_abnormal):
             status_text = "ปกติ"
+            status_class = "status-ok-text"
         elif is_abnormal:
             status_text = "ผิดปกติ"
+            status_class = "status-abn-text" # สีแดง
             abnormal_details.append(test['display'].split('(')[0].strip())
         
-        rows_html += f"<tr><td>{test['display']}</td><td>{status_text}</td></tr>"
+        rows_html += f"<tr><td>{test['display']}</td><td class='{status_class}'>{status_text}</td></tr>"
 
     doctor_advice = person_data.get('แนะนำABN EYE', '')
     summary_advice = person_data.get('สรุปเหมาะสมกับงาน', '')
@@ -397,6 +402,28 @@ def render_print_hearing(person_data, all_person_history_df):
         if "N/A" in summary_text or "ไม่ได้" in summary_text: return "status-nt-text"
         return "status-abn-text"
 
+    # Helper function to highlight abnormal dB values (> 25)
+    def format_db_cell(val):
+        try:
+            float_val = float(val)
+            if float_val > 25:
+                return f"<span class='status-abn-text'>{val}</span>"
+        except (ValueError, TypeError):
+            pass
+        return val
+
+    # Helper function to highlight abnormal shift values (>= 15 dB is standard STS concern, using 15 to be safe)
+    def format_shift_cell(val):
+        try:
+            # Remove '+' if present
+            clean_val = str(val).replace('+', '')
+            float_val = float(clean_val)
+            if float_val >= 15:
+                return f"<span class='status-abn-text'>{val}</span>"
+        except (ValueError, TypeError):
+            pass
+        return val
+
     summary_cards_html = f"""
     <div class="summary-single-line-box">
         <span class="{get_summary_class(summary_r_raw)}">
@@ -435,10 +462,10 @@ def render_print_hearing(person_data, all_person_history_df):
         rows_html += f"""
         <tr>
             <td>{freq}</td>
-            <td>{r_val}</td>
-            <td>{l_val}</td>
-            <td>{shift_r_text}</td>
-            <td>{shift_l_text}</td>
+            <td>{format_db_cell(r_val)}</td>
+            <td>{format_db_cell(l_val)}</td>
+            <td>{format_shift_cell(shift_r_text)}</td>
+            <td>{format_shift_cell(shift_l_text)}</td>
         </tr>
         """
 
@@ -521,6 +548,7 @@ def render_print_lung(person_data):
 
     def get_status_class(val, low_threshold):
         if val is None: return "" 
+        # ถ้าค่าต่ำกว่าเกณฑ์ ให้เป็นสีแดง (abnormal)
         return "status-ok-text" if val >= low_threshold else "status-abn-text"
     
     summary_class = "status-ok-text" if "ปกติ" in summary else "status-abn-text"
@@ -539,11 +567,14 @@ def render_print_lung(person_data):
     cxr_result_text = "ไม่มีข้อมูล"
     if year:
         cxr_col = f"CXR{str(year)[-2:]}" if year != (datetime.now().year + 543) else "CXR"
+        # ใช้ interpret_cxr ที่แก้ใหม่ให้มีสีแดงถ้าผิดปกติ
         cxr_result, cxr_status = interpret_cxr(person_data.get(cxr_col, ''))
         cxr_result_text = cxr_result
+    
+    # ไม่ต้อง escape cxr_result_text อีกรอบเพราะ interpret_cxr ใส่ HTML tag มาแล้ว
     cxr_html = f"""
     <div class="advice-box" style="margin-bottom: 5px;">
-        <b>ผลเอกซเรย์ทรวงอก (CXR):</b><br>{html.escape(cxr_result_text)}
+        <b>ผลเอกซเรย์ทรวงอก (CXR):</b><br>{cxr_result_text}
     </div>
     """
     
