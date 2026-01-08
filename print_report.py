@@ -361,7 +361,7 @@ def render_printable_report_body(person_data, all_person_history_df=None):
         if "positive" in hbsag: return "ติดเชื้อไวรัสตับอักเสบบี ควรพบแพทย์เพื่อรับการรักษา"
         if "positive" in hbsab and "positive" not in hbsag: return "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี"
         if "positive" in hbcab and "positive" not in hbsab: return "เคยติดเชื้อแต่ไม่มีภูมิคุ้มกันในปัจจุบัน"
-        if all(x in ["negative", "neg", "-"] for x in [hbsag, hbsab, hbcab]): return "ไม่มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี ควรปรึกษาแพทย์เพื่อรับวัคซีน"
+        if all(x == "negative" for x in [hbsag, hbsab, hbcab]): return "ไม่มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี ควรปรึกษาแพทย์เพื่อรับวัคซีน"
         return ""
 
     # Hepatitis column names might vary, try to get current year's
@@ -434,16 +434,37 @@ def render_printable_report_body(person_data, all_person_history_df=None):
     u_rows += render_lab_row("Epithelial", urine_epi, "cells", "0-5", False)
 
     # Other Tests (Use Interpret Functions)
-    cxr_val = person_data.get("CXR", person_data.get(f"CXR{str(datetime.now().year+543)[-2:]}", "-"))
+    
+    # --- CXR Logic: Check "CXR" column first ---
+    cxr_val = person_data.get("CXR")
+    if is_empty(cxr_val):
+        # Fallback logic: Try to find year-specific column e.g. CXR66
+        data_year = person_data.get("Year")
+        if data_year:
+            suffix = str(data_year)[-2:]
+            cxr_val = person_data.get(f"CXR{suffix}")
+            
     cxr_display = interpret_cxr(cxr_val)
     
-    ekg_val = person_data.get("EKG", person_data.get(f"EKG{str(datetime.now().year+543)[-2:]}", "-"))
+    # --- EKG Logic: Check "EKG" column first ---
+    ekg_val = person_data.get("EKG")
+    if is_empty(ekg_val):
+        data_year = person_data.get("Year")
+        if data_year:
+            suffix = str(data_year)[-2:]
+            ekg_val = person_data.get(f"EKG{suffix}")
     ekg_display = interpret_ekg(ekg_val)
 
-    # Hepatitis Display Logic
-    hep_a = safe_value(person_data.get("Hepatitis A"))
-    
-    # ใช้ Column ที่ detect ได้จากปี เพื่อให้ข้อมูลตรงกับส่วน Advice
+    # --- Hepatitis A Logic ---
+    hep_a_val = person_data.get("Hepatitis A")
+    if is_empty(hep_a_val):
+        data_year = person_data.get("Year")
+        if data_year:
+            suffix = str(data_year)[-2:]
+            hep_a_val = person_data.get(f"Hepatitis A{suffix}")
+    hep_a_display = safe_value(hep_a_val)
+
+    # Hepatitis B columns logic (already present, keeping it consistent)
     hbsag = safe_value(person_data.get(hbsag_col))
     hbsab = safe_value(person_data.get(hbsab_col))
     hbcab = safe_value(person_data.get(hbcab_col))
@@ -555,7 +576,7 @@ def render_printable_report_body(person_data, all_person_history_df=None):
                     <div class="section-title">ไวรัสตับอักเสบ (Hepatitis) ตรวจเมื่อ {hep_check_date}</div>
                     <table>
                         <tbody>
-                            <tr><td>Hepatitis A</td><td class="val-col">{hep_a}</td><td class="range-col">Neg</td></tr>
+                            <tr><td>Hepatitis A</td><td class="val-col">{hep_a_display}</td><td class="range-col">Neg</td></tr>
                             <tr><td>HBsAg (เชื้อ)</td><td class="val-col">{hbsag}</td><td class="range-col">Neg</td></tr>
                             <tr><td>HBsAb (ภูมิ)</td><td class="val-col">{hbsab}</td><td class="range-col">Pos</td></tr>
                             <tr><td>HBcAb</td><td class="val-col">{hbcab}</td><td class="range-col">Neg</td></tr>
