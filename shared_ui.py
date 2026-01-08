@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components # เพิ่ม import components
 import pandas as pd
 import re
 import html
@@ -44,6 +45,41 @@ def clean_html_string(html_str):
     """
     if not html_str: return ""
     return "\n".join([line.strip() for line in html_str.split('\n') if line.strip()])
+
+def inject_keep_awake():
+    """
+    ฝัง JavaScript เพื่อป้องกันหน้าจอ Sleep (Wake Lock API)
+    เหมาะสำหรับแพทย์ที่เปิดหน้าจอทิ้งไว้ดูผลตรวจ
+    """
+    js_code = """
+    <script>
+    (async () => {
+        try {
+            let wakeLock = null;
+            const requestWakeLock = async () => {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    console.log('✅ Wake Lock is active!');
+                }
+            };
+            
+            // เรียกขอสิทธิ์ทันทีที่โหลด
+            await requestWakeLock();
+            
+            // ขอสิทธิ์ใหม่เมื่อกลับมาที่แท็บเดิม (เผื่อหลุด)
+            document.addEventListener('visibilitychange', async () => {
+                if (document.visibilityState === 'visible') {
+                    await requestWakeLock();
+                }
+            });
+        } catch (err) {
+            console.log('Wake Lock Error:', err);
+        }
+    })();
+    </script>
+    """
+    # ใช้ height=0 เพื่อซ่อน component ไม่ให้รกหน้าจอ
+    components.html(js_code, height=0, width=0)
 
 def inject_custom_css():
     """
