@@ -97,14 +97,15 @@ def get_main_report_css():
             -webkit-print-color-adjust: exact;
         }
 
-        /* Container using Flexbox to manage layout */
+        /* Container - Reverted to Block layout but added padding-bottom for footer */
         .container { 
             width: 100%;
             min-height: 297mm; /* Full A4 height minimum */
             padding: 0.5cm !important;
+            /* เพิ่ม Padding ด้านล่าง 3cm เพื่อกันที่ให้ Footer ไม่ให้เนื้อหาทับ */
+            padding-bottom: 3.5cm !important; 
             position: relative;
-            display: flex;          /* Use Flexbox */
-            flex-direction: column; /* Stack vertically */
+            display: block; /* กลับมาใช้ Block ตามเดิม */
         }
         
         /* Grid System */
@@ -112,7 +113,7 @@ def get_main_report_css():
             display: flex; 
             flex-wrap: wrap; 
             margin: 0 -5px; 
-            flex: 1; /* Allow content to grow and fill available space */
+            /* เอา flex: 1 ออก เพื่อไม่ให้ยืดขยายช่องว่าง */
         }
         .col-50 { width: 50%; flex: 0 0 50%; padding: 0 5px; }
 
@@ -178,15 +179,16 @@ def get_main_report_css():
         .summary-title { font-weight: 700; color: var(--accent-color); margin-bottom: 3px; font-size: 14px; border-bottom: 1px dashed var(--accent-color); padding-bottom: 3px; }
         .summary-content { font-size: 13px; line-height: 1.4; }
         
-        /* Footer */
+        /* Footer - Reverted to Absolute Bottom */
         .footer {
-            margin-top: auto; /* Push footer to the bottom */
+            /* กลับมาใช้ Absolute Position เพื่อให้ติดขอบล่างเหมือนเดิม */
+            position: absolute;
+            bottom: 0.5cm;
+            right: 0.5cm;
+            width: 100%;
             text-align: right;
             font-size: 12px;
             page-break-inside: avoid;
-            position: relative; /* Changed from absolute to relative */
-            width: 100%;
-            padding-top: 10px;
         }
         .signature-line {
             display: inline-block;
