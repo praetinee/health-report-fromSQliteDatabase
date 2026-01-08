@@ -406,7 +406,7 @@ def render_printable_report_body(person_data, all_person_history_df=None):
             <div class="row">
                 <!-- Left Column -->
                 <div class="col-50">
-                    <div class="section-title">ความสมบูรณ์ของเม็ดเลือด (CBC)</div>
+                    <div class="section-title">ความสมบูรณ์ของเลือด (CBC)</div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>{cbc_rows}</tbody>
