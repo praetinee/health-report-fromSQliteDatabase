@@ -221,15 +221,16 @@ def get_main_report_css():
             font-style: italic;
         }
         
-        /* Footer - Positioned bottom right center like Performance Report */
+        /* Footer - Positioned absolute bottom right, text-align center within right half */
         .footer {
             position: absolute;
             bottom: 0.5cm;
-            right: 0.5cm;
-            width: 35%; /* กำหนดความกว้างประมาณ 1 ใน 3 ของหน้ากระดาษ เพื่อให้ข้อความอยู่กึ่งกลางของฝั่งขวา */
-            text-align: center;
+            right: 0;
+            width: 50%; /* Covers the right half of the page */
+            text-align: center; /* Centers the text within this 50% width */
             font-size: 14px;
             page-break-inside: avoid;
+            padding-right: 0.5cm; /* Ensure it aligns with content margin */
         }
         .signature-line {
             display: inline-block;
