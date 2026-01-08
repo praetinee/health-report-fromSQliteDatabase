@@ -460,7 +460,7 @@ def render_printable_report_body(person_data, all_person_history_df=None):
                     </table>
                     {render_rec_box(rec_cbc)}
 
-                    <div class="section-title">การทำงานของไตและกรดยูริก (Kidney Function & Uric Acid)</div>
+                    <div class="section-title">ไตและกรดยูริก (Kidney Function & Uric Acid)</div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>
@@ -490,7 +490,7 @@ def render_printable_report_body(person_data, all_person_history_df=None):
 
                 <!-- Right Column -->
                 <div class="col-50">
-                    <div class="section-title">ระดับน้ำตาลและไขมันในเลือด (Blood Sugar & Lipid Profile)</div>
+                    <div class="section-title">น้ำตาลและไขมันในเลือด (Blood Sugar & Lipid Profile)</div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>
