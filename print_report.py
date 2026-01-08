@@ -221,25 +221,21 @@ def get_main_report_css():
             font-style: italic;
         }
         
-        /* Footer - Completely Redesigned to force right alignment */
+        /* Footer - Centered within the right half of the page */
         .footer-container {
             position: absolute;
             bottom: 0.5cm;
-            left: 0;
             right: 0;
-            width: 100%;
+            width: 50%; /* Occupy the right half */
             height: 2.5cm;
-            /* background-color: rgba(255,0,0,0.1); Debugging */
             display: flex;
-            justify-content: flex-end; /* Push to right flex-end */
+            justify-content: center; /* Center horizontally within the 50% width */
             align-items: flex-end; /* Align bottom */
-            padding-right: 0.5cm; /* Ensure padding from right edge */
             page-break-inside: avoid;
         }
 
         .doctor-signature {
-            text-align: right; /* Text align inside the box */
-            width: 300px; /* Fixed width to contain text */
+            text-align: center; /* Center text within its box */
         }
 
         /* Screen Preview Adjustments */
