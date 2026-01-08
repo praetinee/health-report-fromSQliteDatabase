@@ -284,13 +284,25 @@ def generate_comprehensive_recommendations(person_data):
         issues[level].append(f"<b>{issue}:</b> {text}")
 
     year = person_data.get("Year", "")
-    cxr_col = f"CXR{str(year)[-2:]}" if str(year) != "" and str(year) != str(np.datetime64('now', 'Y').astype(int) + 1970 + 543) else "CXR"
-    cxr_result, cxr_status = interpret_cxr(person_data.get(cxr_col, ''))
+    
+    # --- CXR Logic: Check "CXR" column first ---
+    cxr_val = person_data.get("CXR")
+    if is_empty(cxr_val) and year:
+        # Fallback logic: Try to find year-specific column e.g. CXR66
+        cxr_col = f"CXR{str(year)[-2:]}"
+        cxr_val = person_data.get(cxr_col, '')
+    
+    cxr_result, cxr_status = interpret_cxr(cxr_val)
     if cxr_status == 'abnormal':
         issues['high'].append(f"<b>ผลเอกซเรย์ทรวงอกผิดปกติ ({cxr_result}):</b> ควรพบแพทย์เพื่อตรวจวินิจฉัยเพิ่มเติม")
 
-    ekg_col = f"EKG{str(year)[-2:]}" if str(year) != "" and str(year) != str(np.datetime64('now', 'Y').astype(int) + 1970 + 543) else "EKG"
-    ekg_result, ekg_status = interpret_ekg(person_data.get(ekg_col, ''))
+    # --- EKG Logic ---
+    ekg_val = person_data.get("EKG")
+    if is_empty(ekg_val) and year:
+        ekg_col = f"EKG{str(year)[-2:]}"
+        ekg_val = person_data.get(ekg_col, '')
+
+    ekg_result, ekg_status = interpret_ekg(ekg_val)
     if ekg_status == 'abnormal':
         issues['high'].append(f"<b>ผลคลื่นไฟฟ้าหัวใจผิดปกติ ({ekg_result}):</b> ควรพบแพทย์โรคหัวใจ")
 
