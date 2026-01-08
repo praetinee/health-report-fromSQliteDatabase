@@ -96,12 +96,11 @@ def get_performance_report_css():
 
         @page {
             size: A4;
-            margin: 0mm !important; /* Force 0 margin on page level to allow container padding to control it */
+            margin: 0.5cm !important; /* Force 0.5cm margin on page level */
         }
 
         html, body {
             width: 210mm;
-            /* height: 297mm; REMOVED FIXED HEIGHT to allow batch printing */
             min-height: 297mm;
             margin: 0 !important;
             padding: 0 !important;
@@ -116,11 +115,12 @@ def get_performance_report_css():
         /* Container acts as the printable area with Padding */
         .container { 
             width: 100%;
-            height: 297mm; /* Set fixed height PER PAGE here */
-            padding: 5mm !important; /* EXACTLY 0.5cm PADDING matched with health report */
+            /* height: 297mm;  REMOVED FIXED HEIGHT to prevent extra blank pages */
+            min-height: 297mm;
+            padding: 0.5cm !important; /* EXACTLY 0.5cm PADDING matched with health report */
             position: relative;
             page-break-after: always;
-            overflow: hidden; /* Prevent overflow */
+            overflow: hidden;
         }
 
         /* Header Styles (Matched with Health Report) */
