@@ -196,11 +196,10 @@ def get_main_report_css():
             align-items: center;
         }
         
-        /* Optional icon before title */
+        /* Removed Icon */
         .summary-title::before {
-            content: "⚕"; /* Medical symbol or simple bullet */
-            margin-right: 6px;
-            font-size: 16px;
+            content: "";
+            margin-right: 0;
         }
 
         .summary-content {
@@ -454,24 +453,26 @@ def render_printable_report_body(person_data, all_person_history_df=None):
             <div class="row">
                 <!-- Left Column -->
                 <div class="col-50">
-                    <div class="section-title">ความสมบูรณ์ของเม็ดเลือด (CBC)</div>
+                    <div class="section-title">ความสมบูรณ์ของเลือด (CBC)</div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>{cbc_rows}</tbody>
                     </table>
                     {render_rec_box(rec_cbc)}
 
-                    <div class="section-title">การทำงานของไต (Kidney Function)</div>
+                    <div class="section-title">การทำงานของไตและกรดยูริก (Kidney Function & Uric Acid)</div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>
                             {render_lab_row("BUN", safe_value(person_data.get("BUN")), "mg/dL", "6-20", False)}
                             {render_lab_row("Creatinine", safe_value(person_data.get("Cr")), "mg/dL", "0.5-1.2", False)}
                             {render_lab_row("eGFR", safe_value(person_data.get("GFR")), "mL/min", ">90", False)}
+                            {render_lab_row("Uric Acid", safe_value(person_data.get("Uric Acid")), "mg/dL", "2.4-7.0", get_float("Uric Acid", person_data) and get_float("Uric Acid", person_data) > 7)}
                         </tbody>
                     </table>
+                    {render_rec_box(rec_kidney)}
 
-                    <div class="section-title">ปัสสาวะ (Urinalysis)</div>
+                    <div class="section-title">การตรวจปัสสาวะ (Urinalysis)</div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>{u_rows}</tbody>
@@ -489,7 +490,7 @@ def render_printable_report_body(person_data, all_person_history_df=None):
 
                 <!-- Right Column -->
                 <div class="col-50">
-                    <div class="section-title">เบาหวาน & ไขมัน (Sugar & Lipid)</div>
+                    <div class="section-title">ระดับน้ำตาลและไขมันในเลือด (Blood Sugar & Lipid Profile)</div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>
@@ -502,17 +503,15 @@ def render_printable_report_body(person_data, all_person_history_df=None):
                     </table>
                     {render_rec_box(rec_sugar_lipid)}
                     
-                    <div class="section-title">กรดยูริก & การทำงานของตับ (Uric & Liver)</div>
+                    <div class="section-title">การทำงานของตับ (Liver Function)</div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>
-                            {render_lab_row("Uric Acid", safe_value(person_data.get("Uric Acid")), "mg/dL", "2.4-7.0", get_float("Uric Acid", person_data) and get_float("Uric Acid", person_data) > 7)}
                             {render_lab_row("SGOT (AST)", safe_value(person_data.get("SGOT")), "U/L", "< 40", get_float("SGOT", person_data) and get_float("SGOT", person_data) > 40)}
                             {render_lab_row("SGPT (ALT)", safe_value(person_data.get("SGPT")), "U/L", "< 40", get_float("SGPT", person_data) and get_float("SGPT", person_data) > 40)}
                             {render_lab_row("Alkaline Phos.", safe_value(person_data.get("ALP")), "U/L", "35-105", get_float("ALP", person_data) and (get_float("ALP", person_data) > 105 or get_float("ALP", person_data) < 35))}
                         </tbody>
                     </table>
-                    {render_rec_box(rec_kidney)}
                     {render_rec_box(rec_liver)}
 
                     <div class="section-title">ไวรัสตับอักเสบ (Hepatitis)</div>
@@ -525,7 +524,7 @@ def render_printable_report_body(person_data, all_person_history_df=None):
                         </tbody>
                     </table>
 
-                    <div class="section-title">เอกซเรย์ & คลื่นไฟฟ้าหัวใจ</div>
+                    <div class="section-title">เอกซเรย์ปอดและคลื่นไฟฟ้าหัวใจ (Chest X-ray & EKG)</div>
                     <table>
                         <tbody>
                             <tr>
