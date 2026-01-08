@@ -221,12 +221,12 @@ def get_main_report_css():
             font-style: italic;
         }
         
-        /* Footer - Centered within the right half of the page */
+        /* Footer - Positioned absolute bottom right, text-align center within right half */
         .footer-container {
             position: absolute;
             bottom: 0.5cm;
             right: 0;
-            width: 50%; /* Occupy the right half */
+            width: 50%; /* Covers the right half of the page */
             height: 2.5cm;
             display: flex;
             justify-content: center; /* Center horizontally within the 50% width */
@@ -440,11 +440,17 @@ def render_printable_report_body(person_data, all_person_history_df=None):
     ekg_val = person_data.get("EKG", person_data.get(f"EKG{str(datetime.now().year+543)[-2:]}", "-"))
     ekg_display = interpret_ekg(ekg_val)
 
-    # Hepatitis
+    # Hepatitis Display Logic
     hep_a = safe_value(person_data.get("Hepatitis A"))
-    hbsag = safe_value(person_data.get("HbsAg"))
-    hbsab = safe_value(person_data.get("HbsAb"))
-    hbcab = safe_value(person_data.get("HBcAb"))
+    
+    # ใช้ Column ที่ detect ได้จากปี เพื่อให้ข้อมูลตรงกับส่วน Advice
+    hbsag = safe_value(person_data.get(hbsag_col))
+    hbsab = safe_value(person_data.get(hbsab_col))
+    hbcab = safe_value(person_data.get(hbcab_col))
+    
+    # Custom Logic: ถ้า HBcAb เป็น "-" แต่ HBsAg และ HBsAb มีผลตรวจ ให้แสดงเป็น Negative
+    if hbcab == "-" and hbsag != "-" and hbsab != "-":
+        hbcab = "Negative"
     
     # --- 4. Main Doctor's Suggestion (Only Doc Note) ---
     doc_note = str(person_data.get("DOCTER suggest", "")).strip()
