@@ -79,10 +79,6 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
     # เพิ่ม CSS ของ Performance Report ด้วยถ้าจำเป็น
     css_perf = get_performance_report_css()
     
-    # รวม CSS โดยให้แน่ใจว่าครอบคลุมทั้งสองแบบ (และป้องกัน style ตีกันถ้าทำได้)
-    # แต่เนื่องจากเราปรับโครงสร้างให้คล้ายกันแล้ว การรวมกันน่าจะโอเค
-    # โดยเฉพาะส่วน container, header, footer
-    
     # ดึงเฉพาะส่วน style content จาก css_perf (ตัด <style> tags ออก)
     import re
     style_content_perf = re.search(r'<style>(.*?)</style>', css_perf, re.DOTALL)
@@ -99,39 +95,46 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
 
         /* --- BATCH PRINT SPECIFIC STYLES --- */
         @media print {{
-            body {{ 
+            html, body {{ 
                 margin: 0; 
                 padding: 0; 
                 background-color: white;
+                width: 210mm; /* A4 Width */
             }}
             
-            /* บังคับขึ้นหน้าใหม่สำหรับ wrapper ของแต่ละคน */
+            /* Wrapper ของคนไข้แต่ละคน */
             .patient-wrapper {{
-                page-break-after: always;
                 display: block;
                 width: 100%;
-                height: auto;
-                position: relative;
-            }}
-            
-            /* หน้าสุดท้ายไม่ต้อง break */
-            .patient-wrapper:last-child {{
-                page-break-after: auto;
             }}
 
-            /* Container ภายใน wrapper ต้องไม่ break เองมั่วๆ */
+            /* Container ของแต่ละรายงาน (สุขภาพ/สมรรถภาพ) */
             .container {{
-                page-break-inside: avoid;
+                page-break-inside: avoid; /* ห้ามตัดกลางหน้ารายงาน */
                 margin: 0 !important;
-                padding: 0.5cm !important; /* ย้ำระยะขอบ */
+                padding: 0.5cm !important; /* ระยะขอบ 0.5cm */
                 width: 100% !important;
-                box-shadow: none !important;
-                /* height: 297mm;  <-- ลองเปิดใช้ถ้าต้องการ fix ความสูง */
-                min-height: 297mm;
+                
+                /* บังคับความสูงเต็มหน้า A4 เพื่อกันไม่ให้เนื้อหาคนอื่นไหลขึ้นมา */
+                min-height: 297mm; 
+                
+                /* สำคัญ: บังคับตัดหน้าหลังจากจบแต่ละ Container เสมอ */
+                page-break-after: always !important; 
+                break-after: page;
+                
+                position: relative;
+                overflow: hidden;
+            }}
+            
+            /* ป้องกันหน้าว่างท้ายสุด: ลบ page-break ของ container สุดท้าย ใน wrapper สุดท้าย */
+            .patient-wrapper:last-child .container:last-child {{
+                page-break-after: auto !important;
+                break-after: auto;
+                min-height: 0; /* ปล่อยความสูงอิสระในหน้าสุดท้ายถ้าจำเป็น */
             }}
         }}
         
-        /* Screen view adjustments for batch list */
+        /* Screen view adjustments for batch list preview if needed */
         @media screen {{
             .patient-wrapper {{
                 border-bottom: 5px solid #ccc;
@@ -175,16 +178,13 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
             
             if need_perf and (has_vis or has_hear or has_lung):
                 # render_performance_report_body คืนค่า <div class="container">...</div>
-                # ถ้ามีทั้ง 2 รายงาน มันจะเป็น <div container>...</div> <div container>...</div>
-                # ซึ่ง CSS .container มี page-break-after: always อยู่แล้ว (จากไฟล์ต้นฉบับ)
-                # แต่อาจจะตีกับ .patient-wrapper
                 current_person_html += render_performance_report_body(person_data, person_history_df)
 
             if not current_person_html:
                 skipped_count += 1
                 continue
             
-            # Wrap เนื้อหาของคนนี้ไว้ใน wrapper เพื่อคุม page break ระหว่างคน
+            # Wrap เนื้อหาของคนนี้ไว้ใน wrapper
             report_bodies.append(f'<div class="patient-wrapper">{current_person_html}</div>')
 
         except Exception as e:
