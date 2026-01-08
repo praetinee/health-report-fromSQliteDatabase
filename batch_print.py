@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import html
 import json
+import re
 from datetime import datetime
 
 # --- Import ฟังก์ชันสำหรับการสร้างรายงาน (Report Generation) ---
@@ -74,82 +75,120 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
     """สร้าง HTML สำหรับพิมพ์"""
     report_bodies = []
     
-    # CSS: ใช้ CSS หลักจาก Health Report และเสริมส่วนที่จำเป็น
+    # ดึง CSS จากไฟล์ต้นฉบับ
     css_main = get_main_report_css()
-    # เพิ่ม CSS ของ Performance Report ด้วยถ้าจำเป็น
     css_perf = get_performance_report_css()
     
-    # ดึงเฉพาะส่วน style content จาก css_perf (ตัด <style> tags ออก)
-    import re
-    style_content_perf = re.search(r'<style>(.*?)</style>', css_perf, re.DOTALL)
-    extra_css = style_content_perf.group(1) if style_content_perf else ""
+    # สกัดเฉพาะเนื้อหาใน <style>...</style>
+    main_style_match = re.search(r'<style>(.*?)</style>', css_main, re.DOTALL)
+    perf_style_match = re.search(r'<style>(.*?)</style>', css_perf, re.DOTALL)
+    
+    main_css_content = main_style_match.group(1) if main_style_match else ""
+    perf_css_content = perf_style_match.group(1) if perf_style_match else ""
 
     # สร้าง CSS รวม และเพิ่ม style สำหรับการแบ่งหน้า (Batch Print Specific)
+    # เราใช้ !important เพื่อทับค่าที่อาจจะติดมาจากไฟล์ต้นฉบับ
     full_css = f"""
     <style>
-        /* Main Report CSS */
-        {re.search(r'<style>(.*?)</style>', css_main, re.DOTALL).group(1)}
-        
-        /* Performance Report CSS (Merged) */
-        {extra_css}
+        /* --- Base Styles from Files --- */
+        {main_css_content}
+        {perf_css_content}
 
-        /* --- BATCH PRINT SPECIFIC STYLES --- */
+        /* --- BATCH PRINT OVERRIDES --- */
         @media print {{
+            @page {{
+                size: A4;
+                margin: 0 !important; /* Reset page margins, let container padding handle it */
+            }}
+
             html, body {{ 
-                margin: 0; 
-                padding: 0; 
-                background-color: white;
-                width: 210mm; /* A4 Width */
-                -webkit-print-color-adjust: exact; /* Ensure colors print */
-                print-color-adjust: exact;
+                margin: 0 !important; 
+                padding: 0 !important; 
+                width: 210mm !important;
+                height: auto !important; /* Allow growing height for multiple pages */
+                min-height: 100vh !important;
+                background-color: white !important;
+                -webkit-print-color-adjust: exact !important; 
+                print-color-adjust: exact !important;
+                overflow: visible !important; /* Ensure no clipping */
             }}
             
             /* Wrapper ของคนไข้แต่ละคน */
             .patient-wrapper {{
                 display: block;
                 width: 100%;
-                /* เมื่อจบคนนึง ให้ขึ้นหน้าใหม่เสมอ */
-                page-break-after: always;
-                break-after: page;
+                margin: 0;
+                padding: 0;
+                page-break-after: always !important; /* จบคนนึงขึ้นหน้าใหม่ */
+                break-after: page !important;
             }}
             
             /* หน้าสุดท้ายของคนสุดท้ายไม่ต้อง break */
             .patient-wrapper:last-child {{
-                page-break-after: auto;
-                break-after: auto;
+                page-break-after: auto !important;
+                break-after: auto !important;
             }}
 
             /* Container ของแต่ละรายงาน (สุขภาพ/สมรรถภาพ) */
             .container {{
+                box-sizing: border-box !important;
                 margin: 0 !important;
-                padding: 0.5cm !important; /* ระยะขอบ 0.5cm */
-                width: 100% !important;
+                padding: 0.5cm !important; /* ขอบ 0.5cm */
+                width: 210mm !important;
                 
-                /* บังคับความสูงเต็มหน้า A4 เพื่อกันไม่ให้เนื้อหาคนอื่นไหลขึ้นมา */
-                min-height: 297mm; 
-                height: auto; /* ปล่อยให้ยืดตามเนื้อหาถ้าเกิน */
+                /* ใช้ min-height A4 เพื่อดัน Footer ไปล่างสุดถ้าเนื้อหาน้อย */
+                min-height: 297mm !important; 
+                height: auto !important; 
                 
-                position: relative;
-                /* เอา overflow hidden ออก เพื่อแก้ปัญหาเนื้อหาหาย */
-                /* overflow: hidden; */ 
+                position: relative !important;
+                background-color: white !important;
+                overflow: visible !important; /* ห้ามซ่อนเนื้อหา */
                 
-                background-color: white;
+                /* ห้าม break ในตัว container เองโดยไม่จำเป็น */
+                page-break-inside: avoid;
             }}
 
-            /* กฎสำคัญ: ถ้าใน 1 wrapper มี 2 container (สุขภาพ + สมรรถภาพ) */
-            /* ให้ container ตัวที่ 2 ขึ้นหน้าใหม่เสมอ */
-            .container + .container {{
-                page-break-before: always;
-                break-before: page;
+            /* ตัวคั่นระหว่างรายงานสุขภาพและสมรรถภาพ */
+            .report-separator {{
+                display: block;
+                height: 0;
+                margin: 0;
+                padding: 0;
+                page-break-before: always !important; /* ขึ้นหน้าใหม่เสมอ */
+                break-before: page !important;
+            }}
+            
+            /* Footer Fix */
+            .footer {{
+                position: absolute !important;
+                bottom: 0.5cm !important; /* ติดขอบล่าง 0.5cm */
+                left: 0 !important;
+                width: 100% !important;
             }}
         }}
         
-        /* Screen view adjustments for batch list preview if needed */
+        /* Screen view adjustments */
         @media screen {{
             .patient-wrapper {{
                 border-bottom: 5px solid #ccc;
                 margin-bottom: 20px;
                 padding-bottom: 20px;
+            }}
+            .report-separator {{
+                border-top: 2px dashed #999;
+                margin: 20px 0;
+                position: relative;
+            }}
+            .report-separator::after {{
+                content: "--- Page Break (Next Report) ---";
+                position: absolute;
+                top: -12px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: white;
+                padding: 0 10px;
+                color: #666;
+                font-size: 12px;
             }}
         }}
     </style>
@@ -171,14 +210,12 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
             latest_year_series = person_history_df.sort_values(by='Year', ascending=False).iloc[0]
             person_data = latest_year_series.to_dict()
 
-            # เริ่มสร้างเนื้อหาของคนนี้
-            current_person_html = ""
+            parts = []
             
             # 1. Health Report Part
             need_main = report_type in ["รายงานสุขภาพ (Health Report)", "ทั้งรายงานสุขภาพและสมรรถภาพ"]
             if need_main and has_basic_health_data(person_data):
-                # render_printable_report_body คืนค่า <div class="container">...</div>
-                current_person_html += render_printable_report_body(person_data, person_history_df)
+                parts.append(render_printable_report_body(person_data, person_history_df))
             
             # 2. Performance Report Part
             need_perf = report_type in ["รายงานสมรรถภาพ (Performance Report)", "ทั้งรายงานสุขภาพและสมรรถภาพ"]
@@ -187,15 +224,17 @@ def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข�
             has_lung = has_lung_data(person_data)
             
             if need_perf and (has_vis or has_hear or has_lung):
-                # render_performance_report_body คืนค่า <div class="container">...</div>
-                current_person_html += render_performance_report_body(person_data, person_history_df)
+                parts.append(render_performance_report_body(person_data, person_history_df))
 
-            if not current_person_html:
+            if not parts:
                 skipped_count += 1
                 continue
             
-            # Wrap เนื้อหาของคนนี้ไว้ใน wrapper
-            report_bodies.append(f'<div class="patient-wrapper">{current_person_html}</div>')
+            # Join parts with a dedicated separator div
+            patient_html_content = '<div class="report-separator"></div>'.join(parts)
+            
+            # Wrap in patient wrapper
+            report_bodies.append(f'<div class="patient-wrapper">{patient_html_content}</div>')
 
         except Exception as e:
             st.error(f"เกิดข้อผิดพลาด HN: {hn} - {e}")
