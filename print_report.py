@@ -57,7 +57,11 @@ def interpret_ekg(val):
 
 # --- HTML Generation Parts ---
 
-def get_report_css():
+def get_main_report_css():
+    """
+    Returns the CSS string for the main health report.
+    Renamed from get_report_css to get_main_report_css to match batch_print.py requirements.
+    """
     return """
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
@@ -103,6 +107,7 @@ def get_report_css():
             height: 100%;
             padding: 5mm !important; /* EXACTLY 0.5cm PADDING */
             position: relative;
+            page-break-after: always; /* Ensure page break for batch print */
         }
         
         /* Grid System */
@@ -138,7 +143,7 @@ def get_report_css():
         }
         .vital-item b { color: var(--primary-color); font-weight: 700; margin-right: 3px; }
 
-        /* Section Styling - UPDATED FOR SINGLE LINE */
+        /* Section Styling */
         .section-title {
             background-color: var(--primary-color);
             padding: 5px 8px;
@@ -211,12 +216,11 @@ def get_report_css():
             display: inline-block;
             text-align: center;
         }
-        /* REMOVED signature-dash */
 
         /* Screen Preview Adjustments */
         @media screen {
             body { background-color: #555; padding: 20px; display: flex; justify-content: center; }
-            .container { box-shadow: 0 0 15px rgba(0,0,0,0.3); }
+            .container { box-shadow: 0 0 15px rgba(0,0,0,0.3); background-color: white; margin-bottom: 20px; }
         }
         
         @media print {
@@ -225,6 +229,9 @@ def get_report_css():
         }
     </style>
     """
+
+# Alias for backward compatibility
+get_report_css = get_main_report_css
 
 def render_lab_row(name, value, unit, normal_range, is_abnormal):
     cls = "abnormal" if is_abnormal else ""
@@ -251,9 +258,10 @@ def render_rec_box(suggestions):
     content = "<br>".join([f"• {s}" for s in suggestions])
     return f'<div class="rec-box">{content}</div>'
 
-def generate_printable_report(person_data, all_person_history_df=None):
+def render_printable_report_body(person_data, all_person_history_df=None):
     """
-    Generates a single-page, modern, auto-printing HTML report with FULL data points.
+    Generates the HTML body content for the main health report.
+    Separated from generate_printable_report to allow batch printing.
     """
     # --- 1. Prepare Data ---
     name = person_data.get('ชื่อ-สกุล', '-')
@@ -365,21 +373,9 @@ def generate_printable_report(person_data, all_person_history_df=None):
         
     suggestion_html = "<br>".join([f"- {s}" for s in main_suggestions]) if main_suggestions else "สุขภาพโดยรวมอยู่ในเกณฑ์ดี โปรดรักษาสุขภาพให้แข็งแรงอยู่เสมอ"
 
-    # --- 5. Assemble Final HTML ---
+    # --- 5. Assemble Final HTML Body ---
     
-    # Create unique identifier to force re-render in Streamlit/Browser
-    unique_id = datetime.now().strftime("%Y%m%d%H%M%S%f")
-
     return f"""
-    <!DOCTYPE html>
-    <html lang="th">
-    <head>
-        <meta charset="UTF-8">
-        <title>Health Report - {name}</title>
-        {get_report_css()}
-    </head>
-    <body onload="setTimeout(function(){{window.print();}}, 500)">
-        <!-- Force Reload ID: {unique_id} -->
         <div class="container">
             
             <!-- Header -->
@@ -510,8 +506,30 @@ def generate_printable_report(person_data, all_person_history_df=None):
                     </div>
                 </div>
             </div>
+    """
 
-        </div>
+def generate_printable_report(person_data, all_person_history_df=None):
+    """
+    Generates a single-page, modern, auto-printing HTML report with FULL data points.
+    Wrapper for single-patient printing.
+    """
+    # Create unique identifier to force re-render in Streamlit/Browser
+    unique_id = datetime.now().strftime("%Y%m%d%H%M%S%f")
+    css = get_main_report_css()
+    body = render_printable_report_body(person_data, all_person_history_df)
+    name = person_data.get('ชื่อ-สกุล', '-')
+
+    return f"""
+    <!DOCTYPE html>
+    <html lang="th">
+    <head>
+        <meta charset="UTF-8">
+        <title>Health Report - {name}</title>
+        {css}
+    </head>
+    <body onload="setTimeout(function(){{window.print();}}, 500)">
+        <!-- Force Reload ID: {unique_id} -->
+        {body}
     </body>
     </html>
     """
