@@ -195,22 +195,17 @@ def get_report_css():
             font-style: italic;
         }
         
-        /* Footer */
+        /* Footer - UPDATED TO CENTER SIGNATURE IN RIGHT COLUMN */
         .footer {
-            margin-top: 10px;
-            text-align: right;
-            font-size: 14px; /* Adjusted font size to match standard readable size */
-            page-break-inside: avoid;
-            position: absolute;
-            bottom: 5mm;
-            right: 5mm;
-            width: 100%;
+            margin-top: 20px;
+            font-size: 14px; 
             font-family: 'Sarabun', sans-serif !important;
+            text-align: center; /* Center the text */
+            width: 100%;
         }
         .signature-line {
             display: inline-block;
             text-align: center;
-            margin-left: auto;
         }
         /* REMOVED signature-dash */
 
@@ -501,15 +496,14 @@ def generate_printable_report(person_data, all_person_history_df=None):
                             {suggestion_html}
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- Footer -->
-            <div class="footer">
-                <div class="signature-line">
-                    <!-- Dash Removed -->
-                    <b>นายแพทย์นพรัตน์ รัชฎาพร</b><br>
-                    แพทย์อาชีวเวชศาสตร์ (ว.26674)<br>
+                    <!-- Moved Footer Signature inside Right Column to center it relative to the right column content -->
+                    <div class="footer">
+                        <div class="signature-line">
+                            <b>นายแพทย์นพรัตน์ รัชฎาพร</b><br>
+                            แพทย์อาชีวเวชศาสตร์ (ว.26674)<br>
+                        </div>
+                    </div>
                 </div>
             </div>
 
