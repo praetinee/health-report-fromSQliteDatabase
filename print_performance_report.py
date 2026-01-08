@@ -96,12 +96,13 @@ def get_performance_report_css():
 
         @page {
             size: A4;
-            margin: 0.5cm !important; /* Force 0.5cm margin on page level */
+            margin: 0mm !important; /* Force 0 margin on page level to allow container padding to control it */
         }
 
         html, body {
             width: 210mm;
-            height: 297mm;
+            /* height: 297mm; REMOVED FIXED HEIGHT to allow batch printing */
+            min-height: 297mm;
             margin: 0 !important;
             padding: 0 !important;
             background-color: #fff;
@@ -115,10 +116,11 @@ def get_performance_report_css():
         /* Container acts as the printable area with Padding */
         .container { 
             width: 100%;
-            height: 100%;
-            padding: 0.5cm !important; /* EXACTLY 0.5cm PADDING matched with health report */
+            height: 297mm; /* Set fixed height PER PAGE here */
+            padding: 5mm !important; /* EXACTLY 0.5cm PADDING matched with health report */
             position: relative;
             page-break-after: always;
+            overflow: hidden; /* Prevent overflow */
         }
 
         /* Header Styles (Matched with Health Report) */
@@ -230,8 +232,8 @@ def get_performance_report_css():
         }
         .footer-signature-container {
             position: absolute;
-            bottom: 0.5cm; /* ขอบล่าง 0.5cm */
-            right: 0.5cm;
+            bottom: 0.5cm; /* ขอบล่าง 0.5cm (padding) */
+            right: 0.5cm; /* ขอบขวา 0.5cm (padding) */
             width: 30%; /* Approximate width of the side column or enough for the signature */
             text-align: center;
         }
