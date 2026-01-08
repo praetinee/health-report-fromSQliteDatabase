@@ -69,6 +69,8 @@ def get_report_css():
             --danger-color: #c0392b;
             --light-bg: #f8f9fa;
             --border-color: #bdc3c7;
+            --warning-bg: #fef9e7;
+            --warning-text: #b7950b;
         }
 
         /* RESET ALL MARGINS & FORCE SARABUN FONT */
@@ -152,7 +154,7 @@ def get_report_css():
         .col-50 .section-title:first-child { margin-top: 0; }
         
         /* Tables */
-        table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 5px; font-family: 'Sarabun', sans-serif !important; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 2px; font-family: 'Sarabun', sans-serif !important; }
         th, td { padding: 2px 4px; border-bottom: 1px solid #eee; text-align: left; vertical-align: middle; }
         th { background-color: #f1f2f6; font-weight: 600; color: var(--secondary-color); text-align: center; border-bottom: 2px solid #ddd; }
         td.val-col { text-align: center; font-weight: 500; }
@@ -160,18 +162,38 @@ def get_report_css():
         
         .abnormal { color: var(--danger-color); font-weight: 700; }
         
-        /* Summary Box */
+        /* Summary Box - MOVED TO RIGHT COLUMN ONLY */
         .summary-box {
             border: 2px solid var(--accent-color);
-            background-color: #f0faf9;
-            border-radius: 5px;
-            padding: 8px;
-            margin-top: 10px;
+            background-color: #e8f8f5; /* Lighter Green Tone */
+            border-radius: 8px; /* Rounded corners */
+            padding: 10px;
+            margin-top: 15px;
             page-break-inside: avoid;
             font-family: 'Sarabun', sans-serif !important;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.05); /* Soft shadow */
         }
-        .summary-title { font-weight: 700; color: var(--accent-color); margin-bottom: 3px; font-size: 14px; border-bottom: 1px dashed var(--accent-color); padding-bottom: 3px; }
-        .summary-content { font-size: 13px; line-height: 1.4; }
+        .summary-title { 
+            font-weight: 700; 
+            color: var(--accent-color); 
+            margin-bottom: 5px; 
+            font-size: 14px; 
+            border-bottom: 1px dashed var(--accent-color); 
+            padding-bottom: 3px; 
+        }
+        .summary-content { font-size: 13px; line-height: 1.5; color: #2c3e50; }
+
+        /* Specific Recommendation Box (Under Tables) */
+        .rec-box {
+            background-color: var(--warning-bg);
+            border-left: 3px solid var(--warning-text);
+            color: #7d6608;
+            padding: 4px 8px;
+            font-size: 11px;
+            margin-bottom: 8px;
+            border-radius: 0 3px 3px 0;
+            font-style: italic;
+        }
         
         /* Footer */
         .footer {
@@ -226,6 +248,15 @@ def render_lab_row(name, value, unit, normal_range, is_abnormal):
     </tr>
     """
 
+def render_rec_box(suggestions):
+    """
+    Renders a small recommendation box if there are suggestions.
+    """
+    if not suggestions:
+        return ""
+    content = "<br>".join([f"• {s}" for s in suggestions])
+    return f'<div class="rec-box">{content}</div>'
+
 def generate_printable_report(person_data, all_person_history_df=None):
     """
     Generates a single-page, modern, auto-printing HTML report with FULL data points.
@@ -251,7 +282,29 @@ def generate_printable_report(person_data, all_person_history_df=None):
     pulse = f"{int(get_float('pulse', person_data))}" if get_float('pulse', person_data) else "-"
     waist = person_data.get('รอบเอว', '-')
 
-    # --- 2. Build Lab Blocks ---
+    # --- 2. Calculate Specific Recommendations ---
+    rec_kidney = []
+    uric = get_float("Uric Acid", person_data)
+    if uric and uric > 7: rec_kidney.append("กรดยูริกสูง ควรลดการทานเครื่องในสัตว์ ยอดผัก และสัตว์ปีก")
+    
+    rec_sugar_lipid = []
+    fbs = get_float("FBS", person_data)
+    if fbs and fbs >= 100: rec_sugar_lipid.append("ระดับน้ำตาลสูง ควรควบคุมอาหารประเภทแป้ง/น้ำตาล")
+    chol = get_float("CHOL", person_data)
+    ldl = get_float("LDL", person_data)
+    tgl = get_float("TGL", person_data)
+    if (chol and chol > 200) or (ldl and ldl > 130) or (tgl and tgl > 150): rec_sugar_lipid.append("ไขมันในเลือดสูง เลี่ยงของทอด/มัน/กะทิ")
+    
+    rec_liver = []
+    sgot = get_float("SGOT", person_data)
+    sgpt = get_float("SGPT", person_data)
+    alp = get_float("ALP", person_data)
+    if (sgot and sgot > 40) or (sgpt and sgpt > 40) or (alp and (alp > 105 or alp < 35)): rec_liver.append("ค่าตับสูงกว่าปกติ งดแอลกอฮอล์/ยาไม่จำเป็น")
+
+    rec_vitals = [] # Use for BP
+    if sbp and sbp >= 140: rec_vitals.append("ความดันโลหิตสูง ลดเค็ม/ออกกำลังกาย")
+
+    # --- 3. Build Lab Blocks ---
     
     # Hematology
     hb_low = 12 if sex == "หญิง" else 13
@@ -306,27 +359,19 @@ def generate_printable_report(person_data, all_person_history_df=None):
     hbsab = safe_value(person_data.get("HbsAb"))
     hbcab = safe_value(person_data.get("HBcAb"))
     
-    # --- 3. Construct Doctor's Suggestion ---
-    suggestions = []
-    if sbp and sbp >= 140: suggestions.append("- ความดันโลหิตสูง ควรควบคุมอาหารเค็มและออกกำลังกาย")
-    fbs = get_float("FBS", person_data)
-    if fbs and fbs >= 100: suggestions.append("- ระดับน้ำตาลในเลือดสูง ควรควบคุมอาหารประเภทแป้งและน้ำตาล")
-    chol = get_float("CHOL", person_data)
-    ldl = get_float("LDL", person_data)
-    if (chol and chol > 200) or (ldl and ldl > 130): suggestions.append("- ไขมันในเลือดสูง ควรหลีกเลี่ยงของทอด ของมัน และกะทิ")
-    uric = get_float("Uric Acid", person_data)
-    if uric and uric > 7: suggestions.append("- กรดยูริกสูง ควรลดการทานเครื่องในสัตว์ ยอดผัก และสัตว์ปีก")
-    sgot = get_float("SGOT", person_data)
-    sgpt = get_float("SGPT", person_data)
-    if (sgot and sgot > 40) or (sgpt and sgpt > 40): suggestions.append("- ค่าเอนไซม์ตับสูงกว่าปกติ ควรลดแอลกอฮอล์และพักผ่อนให้เพียงพอ")
+    # --- 4. Main Doctor's Suggestion (Generic + Doctor Note) ---
+    main_suggestions = []
     
+    # Insert Vitals Recommendation here if exists (since Vitals is top bar)
+    if rec_vitals: main_suggestions.extend(rec_vitals)
+
     doc_note = str(person_data.get("DOCTER suggest", "")).strip()
     if doc_note and doc_note != "-":
-        suggestions.append(f"- {doc_note}")
+        main_suggestions.append(f"{doc_note}")
         
-    suggestion_html = "<br>".join(suggestions) if suggestions else "สุขภาพโดยรวมอยู่ในเกณฑ์ดี โปรดรักษาสุขภาพให้แข็งแรงอยู่เสมอ"
+    suggestion_html = "<br>".join([f"- {s}" for s in main_suggestions]) if main_suggestions else "สุขภาพโดยรวมอยู่ในเกณฑ์ดี โปรดรักษาสุขภาพให้แข็งแรงอยู่เสมอ"
 
-    # --- 4. Assemble Final HTML ---
+    # --- 5. Assemble Final HTML ---
     
     # Create unique identifier to force re-render in Streamlit/Browser
     unique_id = datetime.now().strftime("%Y%m%d%H%M%S%f")
@@ -387,6 +432,7 @@ def generate_printable_report(person_data, all_person_history_df=None):
                             {render_lab_row("Uric Acid", safe_value(person_data.get("Uric Acid")), "mg/dL", "2.4-7.0", get_float("Uric Acid", person_data) and get_float("Uric Acid", person_data) > 7)}
                         </tbody>
                     </table>
+                    {render_rec_box(rec_kidney)}
 
                     <div class="section-title">ปัสสาวะ (Urinalysis)</div>
                     <table>
@@ -416,6 +462,7 @@ def generate_printable_report(person_data, all_person_history_df=None):
                             {render_lab_row("LDL-C", safe_value(person_data.get("LDL")), "mg/dL", "< 130", get_float("LDL", person_data) and get_float("LDL", person_data) > 130)}
                         </tbody>
                     </table>
+                    {render_rec_box(rec_sugar_lipid)}
                     
                     <div class="section-title">การทำงานของตับ (Liver Function)</div>
                     <table>
@@ -426,6 +473,7 @@ def generate_printable_report(person_data, all_person_history_df=None):
                             {render_lab_row("Alkaline Phos.", safe_value(person_data.get("ALP")), "U/L", "35-105", get_float("ALP", person_data) and (get_float("ALP", person_data) > 105 or get_float("ALP", person_data) < 35))}
                         </tbody>
                     </table>
+                    {render_rec_box(rec_liver)}
 
                     <div class="section-title">ไวรัสตับอักเสบ (Hepatitis)</div>
                     <table>
@@ -450,14 +498,14 @@ def generate_printable_report(person_data, all_person_history_df=None):
                             </tr>
                         </tbody>
                     </table>
-                </div>
-            </div>
-
-            <!-- Summary Box -->
-            <div class="summary-box">
-                <div class="summary-title">สรุปผลการตรวจและคำแนะนำแพทย์ (Doctor's Recommendation)</div>
-                <div class="summary-content">
-                    {suggestion_html}
+                    
+                    <!-- Summary Box in Right Column -->
+                    <div class="summary-box">
+                        <div class="summary-title">สรุปผลการตรวจและคำแนะนำแพทย์ (Doctor's Recommendation)</div>
+                        <div class="summary-content">
+                            {suggestion_html}
+                        </div>
+                    </div>
                 </div>
             </div>
 
