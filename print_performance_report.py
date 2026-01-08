@@ -20,6 +20,14 @@ def is_empty(val):
     """Check if a value is empty, null, or whitespace."""
     return pd.isna(val) or str(val).strip().lower() in ["", "-", "none", "nan", "null"]
 
+def get_float(col, person_data):
+    """Safely gets a float value from person_data dictionary."""
+    try:
+        val = person_data.get(col, "")
+        if is_empty(val): return None
+        return float(str(val).replace(",", "").strip())
+    except: return None
+
 # เพิ่มฟังก์ชันนี้เข้ามาใหม่เพื่อแก้ปัญหา Import Error
 def interpret_cxr(val):
     val = str(val or "").strip()
@@ -125,6 +133,21 @@ def get_performance_report_css():
         .header p { font-family: 'Sarabun', sans-serif !important; margin: 0; font-size: 12px; color: var(--secondary-color); }
         .patient-info { font-family: 'Sarabun', sans-serif !important; font-size: 13px; text-align: right; }
         .patient-info b { color: var(--primary-color); }
+
+        /* Vitals Bar */
+        .vitals-bar {
+            background-color: var(--light-bg);
+            border-radius: 4px;
+            padding: 6px 10px;
+            margin-bottom: 10px;
+            border: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            flex-wrap: wrap;
+            font-family: 'Sarabun', sans-serif !important;
+        }
+        .vital-item b { color: var(--primary-color); font-weight: 700; margin-right: 3px; }
 
         /* Report Specific Styles */
         .report-section { margin-bottom: 15px; page-break-inside: avoid; } 
@@ -560,6 +583,31 @@ def render_print_lung(person_data):
 def render_performance_report_body(person_data, all_person_history_df):
     """Generates the HTML body content for the performance report."""
     header_html = render_html_header_and_personal_info(person_data)
+    
+    # --- Add Vitals Bar ---
+    weight = get_float('น้ำหนัก', person_data)
+    height = get_float('ส่วนสูง', person_data)
+    bmi = "-"
+    if weight and height:
+        bmi_val = weight / ((height/100)**2)
+        bmi = f"{bmi_val:.1f}"
+    
+    sbp, dbp = get_float("SBP", person_data), get_float("DBP", person_data)
+    bp = f"{int(sbp)}/{int(dbp)}" if sbp and dbp else "-"
+    pulse = f"{int(get_float('pulse', person_data))}" if get_float('pulse', person_data) else "-"
+    waist = person_data.get('รอบเอว', '-')
+
+    vitals_html = f"""
+            <div class="vitals-bar">
+                <span class="vital-item"><b>น้ำหนัก:</b> {weight} กก.</span>
+                <span class="vital-item"><b>ส่วนสูง:</b> {height} ซม.</span>
+                <span class="vital-item"><b>BMI:</b> {bmi}</span>
+                <span class="vital-item"><b>ความดัน:</b> {bp} mmHg</span>
+                <span class="vital-item"><b>ชีพจร:</b> {pulse} /นาที</span>
+                <span class="vital-item"><b>รอบเอว:</b> {waist} ซม.</span>
+            </div>
+    """
+    
     vision_html = render_print_vision(person_data)
     hearing_html = render_print_hearing(person_data, all_person_history_df)
     lung_html = render_print_lung(person_data)
@@ -577,6 +625,7 @@ def render_performance_report_body(person_data, all_person_history_df):
     return f"""
     <div class="container">
         {header_html}
+        {vitals_html}
         {vision_html}
         {hearing_html}
         {lung_html}
