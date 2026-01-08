@@ -68,6 +68,7 @@ except Exception:
 try:
     from shared_ui import (
         inject_custom_css, 
+        inject_keep_awake,  # เพิ่ม import นี้
         display_main_report, 
         display_performance_report,
         # เราจะไม่ใช้ display_common_header ตัวเดิมแล้ว เพราะจะสร้างใหม่ในนี้เพื่อแทรกปุ่ม
@@ -75,6 +76,7 @@ try:
     )
 except Exception:
     def inject_custom_css(): pass
+    def inject_keep_awake(): pass # Fallback
     def display_main_report(p, a): st.error("Main Report Module Missing")
     def display_performance_report(p, t, a=None): pass
     def get_float(c, p): return None
@@ -335,6 +337,8 @@ def load_sqlite_data():
 # -----------------------------------------------------------------------------
 def main_app(df):
     inject_custom_css()
+    inject_keep_awake() # Call this to keep the screen awake
+    
     if 'user_hn' not in st.session_state: st.stop()
     user_hn = st.session_state['user_hn']
     results_df = df[df['HN'] == user_hn].copy()
