@@ -71,9 +71,10 @@ def get_report_css():
             --border-color: #bdc3c7;
         }
 
-        /* RESET ALL MARGINS */
+        /* RESET ALL MARGINS & FORCE SARABUN FONT */
         * {
             box-sizing: border-box;
+            font-family: 'Sarabun', sans-serif !important;
         }
 
         @page {
@@ -87,7 +88,7 @@ def get_report_css():
             margin: 0 !important;
             padding: 0 !important;
             background-color: #fff;
-            font-family: 'Sarabun', sans-serif;
+            font-family: 'Sarabun', sans-serif !important;
             font-size: 14px; /* Standard readable size */
             line-height: 1.3;
             color: #333;
@@ -226,7 +227,7 @@ def generate_printable_report(person_data, all_person_history_df=None):
     """
     # --- 1. Prepare Data ---
     name = person_data.get('ชื่อ-สกุล', '-')
-    age = str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')
+    age = str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person_data.get('อายุ', '-')
     hn = str(int(float(person_data.get('HN')))) if str(person_data.get('HN')).replace('.', '', 1).isdigit() else person_data.get('HN', '-')
     date = person_data.get("วันที่ตรวจ", datetime.now().strftime("%d/%m/%Y"))
     dept = person_data.get('หน่วยงาน', '-')
@@ -371,13 +372,14 @@ def generate_printable_report(person_data, all_person_history_df=None):
                         <tbody>{cbc_rows}</tbody>
                     </table>
 
-                    <div class="section-title">การทำงานของไต (Kidney Function)</div>
+                    <div class="section-title">การทำงานของไต & กรดยูริก (Kidney & Uric Acid)</div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>
                             {render_lab_row("BUN", safe_value(person_data.get("BUN")), "mg/dL", "6-20", False)}
                             {render_lab_row("Creatinine", safe_value(person_data.get("Cr")), "mg/dL", "0.5-1.2", False)}
                             {render_lab_row("eGFR", safe_value(person_data.get("GFR")), "mL/min", ">90", False)}
+                            {render_lab_row("Uric Acid", safe_value(person_data.get("Uric Acid")), "mg/dL", "2.4-7.0", get_float("Uric Acid", person_data) and get_float("Uric Acid", person_data) > 7)}
                         </tbody>
                     </table>
 
@@ -410,11 +412,10 @@ def generate_printable_report(person_data, all_person_history_df=None):
                         </tbody>
                     </table>
                     
-                    <div class="section-title">กรดยูริก & การทำงานของตับ (Uric & Liver)</div>
+                    <div class="section-title">การทำงานของตับ (Liver Function)</div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>
-                            {render_lab_row("Uric Acid", safe_value(person_data.get("Uric Acid")), "mg/dL", "2.4-7.0", get_float("Uric Acid", person_data) and get_float("Uric Acid", person_data) > 7)}
                             {render_lab_row("SGOT (AST)", safe_value(person_data.get("SGOT")), "U/L", "< 40", get_float("SGOT", person_data) and get_float("SGOT", person_data) > 40)}
                             {render_lab_row("SGPT (ALT)", safe_value(person_data.get("SGPT")), "U/L", "< 40", get_float("SGPT", person_data) and get_float("SGPT", person_data) > 40)}
                             {render_lab_row("Alkaline Phos.", safe_value(person_data.get("ALP")), "U/L", "35-105", get_float("ALP", person_data) and (get_float("ALP", person_data) > 105 or get_float("ALP", person_data) < 35))}
