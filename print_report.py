@@ -221,28 +221,23 @@ def get_main_report_css():
             font-style: italic;
         }
         
-        /* Footer - Reverted to Absolute Bottom */
+        /* Footer - Positioned bottom right center */
         .footer {
-            /* กลับมาใช้ Absolute Position เพื่อให้ติดขอบล่างเหมือนเดิม */
             position: absolute;
             bottom: 0.5cm;
-            right: 0.5cm;
-            width: 100%;
-            text-align: right;
+            right: 0;
+            width: 50%; /* กินพื้นที่ครึ่งขวาของหน้ากระดาษ */
+            text-align: center; /* จัดข้อความกึ่งกลางในพื้นที่ 50% นั้น */
             font-size: 12px;
             page-break-inside: avoid;
+            padding-right: 0.5cm; /* เผื่อระยะขอบกระดาษขวา */
         }
         .signature-line {
             display: inline-block;
             text-align: center;
-            margin-left: auto;
+            /* ลบ margin-left: auto เพื่อให้ text-align: center ของ .footer ทำงานเต็มที่ */
         }
-        .signature-dash {
-            border-bottom: 1px dotted #333;
-            width: 200px;
-            margin-bottom: 5px;
-            display: inline-block;
-        }
+        /* ลบ signature-dash ออกแล้ว */
 
         /* Screen Preview Adjustments */
         @media screen {
@@ -551,38 +546,10 @@ def render_printable_report_body(person_data, all_person_history_df=None):
             <!-- Footer -->
             <div class="footer">
                 <div class="signature-line">
-                    <div class="signature-dash"></div>
                     <b>นายแพทย์นพรัตน์ รัชฎาพร</b><br>
-                    แพทย์อาชีวเวชศาสตร์ (ว.26674)<br>
-                    ผู้ตรวจ (Attending Physician)
+                    แพทย์อาชีวเวชศาสตร์ (ว.26674)
                 </div>
             </div>
 
         </div>
-    """
-
-def generate_printable_report(person_data, all_person_history_df=None):
-    """
-    Generates a single-page, modern, auto-printing HTML report with FULL data points.
-    Wrapper for single-patient printing.
-    """
-    # Create unique identifier to force re-render in Streamlit/Browser
-    unique_id = datetime.now().strftime("%Y%m%d%H%M%S%f")
-    css = get_main_report_css()
-    body = render_printable_report_body(person_data, all_person_history_df)
-    name = person_data.get('ชื่อ-สกุล', '-')
-
-    return f"""
-    <!DOCTYPE html>
-    <html lang="th">
-    <head>
-        <meta charset="UTF-8">
-        <title>Health Report - {name}</title>
-        {css}
-    </head>
-    <body onload="setTimeout(function(){{window.print();}}, 500)">
-        <!-- Force Reload ID: {unique_id} -->
-        {body}
-    </body>
-    </html>
     """
