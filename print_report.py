@@ -377,7 +377,7 @@ def generate_printable_report(person_data, all_person_history_df=None):
                         <tbody>{cbc_rows}</tbody>
                     </table>
 
-                    <div class="section-title">การทำงานของไตและกรดยูริก (Kidney Function & Uric Acid)</div>
+                    <div class="section-title">ไตและกรดยูริก (Kidney Function & Uric Acid)</div>
                     <table>
                         <thead><tr><th>รายการตรวจ</th><th>ผลตรวจ</th><th>ค่าปกติ</th></tr></thead>
                         <tbody>
