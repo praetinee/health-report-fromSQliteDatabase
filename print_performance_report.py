@@ -62,9 +62,170 @@ def has_lung_data(person_data):
 
 # --- HTML Rendering Functions for Standalone Report ---
 
+def get_performance_report_css():
+    """Returns the CSS string for the performance report, matching print_report.py styles."""
+    return """
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+        
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #34495e;
+            --accent-color: #16a085;
+            --danger-color: #c0392b;
+            --light-bg: #f8f9fa;
+            --border-color: #bdc3c7;
+            --warning-bg: #fef9e7;
+            --warning-text: #b7950b;
+        }
+
+        /* RESET ALL MARGINS & FORCE SARABUN FONT */
+        * {
+            box-sizing: border-box;
+            font-family: 'Sarabun', sans-serif !important;
+        }
+
+        @page {
+            size: A4;
+            margin: 0mm !important; /* Force 0 margin on page level */
+        }
+
+        html, body {
+            width: 210mm;
+            height: 297mm;
+            margin: 0 !important;
+            padding: 0 !important;
+            background-color: #fff;
+            font-family: 'Sarabun', sans-serif !important;
+            font-size: 14px; /* Standard readable size matched with health report */
+            line-height: 1.3;
+            color: #333;
+            -webkit-print-color-adjust: exact;
+        }
+
+        /* Container acts as the printable area with Padding */
+        .container { 
+            width: 100%;
+            height: 100%;
+            padding: 5mm !important; /* EXACTLY 0.5cm PADDING matched with health report */
+            position: relative;
+            page-break-after: always;
+        }
+
+        /* Header Styles (Matched with Health Report) */
+        .header {
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+        .header h1 { font-family: 'Sarabun', sans-serif !important; font-size: 22px; font-weight: 700; color: var(--primary-color); margin: 0; }
+        .header p { font-family: 'Sarabun', sans-serif !important; margin: 0; font-size: 12px; color: var(--secondary-color); }
+        .patient-info { font-family: 'Sarabun', sans-serif !important; font-size: 13px; text-align: right; }
+        .patient-info b { color: var(--primary-color); }
+
+        /* Report Specific Styles */
+        .report-section { margin-bottom: 15px; page-break-inside: avoid; } 
+        
+        .section-header {
+            background-color: var(--primary-color); 
+            color: white; 
+            padding: 5px 8px;
+            border-radius: 3px;
+            margin-bottom: 5px;
+            margin-top: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            font-family: 'Sarabun', sans-serif !important;
+        }
+
+        .content-columns { display: flex; gap: 15px; align-items: flex-start; }
+        .main-content { flex: 2; min-width: 0; }
+        .side-content { flex: 1; min-width: 0; }
+        .main-content-full { width: 100%; }
+
+        .data-table { width: 100%; font-size: 12px; border-collapse: collapse; margin-bottom: 5px; font-family: 'Sarabun', sans-serif !important; }
+        .data-table th, .data-table td { padding: 4px; border-bottom: 1px solid #eee; text-align: left; vertical-align: middle; }
+        .data-table th { background-color: #f1f2f6; font-weight: 600; color: var(--secondary-color); text-align: center; border-bottom: 2px solid #ddd; }
+        .data-table td:first-child { text-align: left; }
+        
+        /* Hearing Table specifics */
+        .data-table.hearing-table th, .data-table.hearing-table td { text-align: center; }
+        .data-table.hearing-table td:first-child { text-align: center; }
+
+        .summary-single-line-box {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 8px;
+            border: 1px solid #e0e0e0;
+            background-color: #f9f9f9;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            font-size: 13px;
+            font-weight: bold;
+            page-break-inside: avoid; 
+        }
+        
+        .summary-title-lung {
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 8px;
+            line-height: 1.2;
+        }
+        
+        .advice-box {
+            border-radius: 6px; padding: 8px 12px; font-size: 13px;
+            line-height: 1.4; border: 1px solid;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 5px; 
+            height: 100%;
+            box-sizing: border-box;
+            background-color: #fff8e1; 
+            border-color: #ffecb3;
+        }
+        
+        .status-ok-text { color: #1b5e20; }
+        .status-abn-text { color: #b71c1c; }
+        .status-nt-text { color: #555; }
+        
+        /* Footer */
+        .footer {
+            margin-top: auto; 
+            padding-bottom: 0;
+            font-size: 14px; 
+            font-family: 'Sarabun', sans-serif !important;
+            text-align: center;
+            width: 100%;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+        }
+        .signature-line {
+            display: inline-block;
+            text-align: center;
+        }
+
+        @media print {
+            body { background-color: white; padding: 0; }
+            .container { box-shadow: none; margin: 0; }
+        }
+        
+        @media screen {
+            body { background-color: #555; padding: 20px; display: flex; justify-content: center; }
+            .container { box-shadow: 0 0 15px rgba(0,0,0,0.3); background-color: white; margin-bottom: 20px; }
+        }
+    </style>
+    """
+
 def render_section_header(title, subtitle=None):
-    """Renders a styled section header for the print report."""
-    full_title = f"{title} <span style='font-weight: normal;'>({subtitle})</span>" if subtitle else title
+    """Renders a styled section header matching the theme."""
+    full_title = f"{title} <span style='font-weight: normal; font-size: 12px;'>({subtitle})</span>" if subtitle else title
     return f"""
     <div class='section-header'>
         {full_title}
@@ -72,63 +233,31 @@ def render_section_header(title, subtitle=None):
     """
 
 def render_html_header_and_personal_info(person):
-    """Renders the main header and personal info table for the print report."""
-    check_date = person.get("วันที่ตรวจ", "-")
+    """Renders the main header matching print_report.py structure."""
+    check_date = person.get("วันที่ตรวจ", datetime.now().strftime("%d/%m/%Y"))
     name = person.get('ชื่อ-สกุล', '-')
     age = str(int(float(person.get('อายุ')))) if str(person.get('อายุ')).replace('.', '', 1).isdigit() else person.get('อายุ', '-')
     sex = person.get('เพศ', '-')
     hn = str(int(float(person.get('HN')))) if str(person.get('HN')).replace('.', '', 1).isdigit() else person.get('HN', '-')
     department = person.get('หน่วยงาน', '-')
     
-    sbp = person.get("SBP", "")
-    dbp = person.get("DBP", "")
-    try:
-        sbp_int, dbp_int = int(float(sbp)), int(float(dbp))
-        bp_val = f"{sbp_int}/{dbp_int}"
-    except: bp_val = "-"
-    
-    pulse_raw = person.get("pulse", "-")
-    pulse_val = str(int(float(pulse_raw))) if not is_empty(pulse_raw) and str(pulse_raw).replace('.', '', 1).isdigit() else "-"
-
-    waist_val = person.get("รอบเอว", "-")
-    waist_display = f"{waist_val}" if not is_empty(waist_val) else "-"
-    
-    weight = person.get("น้ำหนัก", "-")
-    height = person.get("ส่วนสูง", "-")
-
     return f"""
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #00796B; padding-bottom: 10px; margin-bottom: 15px; font-family: 'Sarabun', sans-serif;">
-        <div style="width: 40%;">
-            <h3 style="margin: 0; color: #00796B; font-size: 18px; line-height: 1.2;">รายงานผลการตรวจสมรรถภาพ</h3>
-            <p style="margin: 4px 0 0 0; font-size: 16px; font-weight: 600;">คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม</p>
-            <p style="margin: 0; font-size: 16px;">โรงพยาบาลสันทราย</p>
-            <p style="margin-top: 8px; font-size: 16px;"><b>วันที่ตรวจ:</b> {check_date}</p>
+    <div class="header">
+        <div>
+            <h1>รายงานผลการตรวจสมรรถภาพ</h1>
+            <p>โรงพยาบาลสันทราย (San Sai Hospital)</p>
+            <p>คลินิกตรวจสุขภาพ กลุ่มงานอาชีวเวชกรรม</p>
         </div>
-        <div style="width: 60%; text-align: right;">
-            <h3 style="margin: 0; font-size: 18px; line-height: 1.2;">{name}</h3>
-            <p style="margin: 4px 0 0 0; font-size: 16px;">
-                <b>HN:</b> {hn}
-                <span style="color: #ddd; margin: 0 8px;">|</span>
-                <b>เพศ:</b> {sex}
-                <span style="color: #ddd; margin: 0 8px;">|</span>
-                <b>อายุ:</b> {age} ปี
-            </p>
-            <p style="margin: 2px 0 0 0; font-size: 16px;"><b>หน่วยงาน:</b> {department}</p>
-            
-            <div style="margin-top: 8px; font-size: 16px; background-color: #f8f9fa; display: inline-block; padding: 4px 10px; border-radius: 4px; border: 1px solid #e0e0e0;">
-                <span style="white-space: nowrap;"><b>นน.</b> {weight}</span> <span style="color: #ccc; margin: 0 4px;">|</span>
-                <span style="white-space: nowrap;"><b>ส่วนสูง</b> {height}</span> <span style="color: #ccc; margin: 0 4px;">|</span>
-                <span style="white-space: nowrap;"><b>รอบเอว</b> {waist_display}</span> <span style="color: #ccc; margin: 0 8px; font-weight: 300;">/</span>
-                <span style="white-space: nowrap;"><b>BP:</b> {bp_val}</span> <span style="color: #ccc; margin: 0 4px;">|</span>
-                <span style="white-space: nowrap;"><b>PR:</b> {pulse_val}</span>
-            </div>
+        <div class="patient-info">
+            <p><b>ชื่อ-สกุล:</b> {name} &nbsp;|&nbsp; <b>อายุ:</b> {age} ปี &nbsp;|&nbsp; <b>เพศ:</b> {sex}</p>
+            <p><b>HN:</b> {hn} &nbsp;|&nbsp; <b>หน่วยงาน:</b> {department}</p>
+            <p><b>วันที่ตรวจ:</b> {check_date}</p>
         </div>
     </div>
     """
 
-
 def render_print_vision(person_data):
-    """Renders the Vision Test section for the print report with complete logic."""
+    """Renders the Vision Test section for the print report."""
     if not has_vision_data(person_data):
         return ""
 
@@ -428,129 +557,6 @@ def render_print_lung(person_data):
     </div>
     """
 
-# --- NEW FUNCTIONS FOR REFACTORING ---
-
-def get_performance_report_css():
-    """Returns the CSS string for the performance report."""
-    return """
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
-        body {
-            font-family: 'Sarabun', sans-serif !important;
-            font-size: 16px; 
-            margin: 0.5cm 0.7cm; 
-            color: #333;
-            background-color: #fff;
-        }
-        hr { border: 0; border-top: 1px solid #e0e0e0; margin: 0.5rem 0; }
-        .info-table { width: 100%; font-size: 16px; text-align: left; border-collapse: collapse; }
-        .info-table td { padding: 1px 5px; font-size: 16px; }
-        
-        .header-grid { display: flex; align-items: flex-end; justify-content: space-between; }
-        .header-left { text-align: left; }
-        .header-right { text-align: right; }
-
-        .report-section { margin-bottom: 0.5rem; page-break-inside: avoid; } 
-        
-        .section-header {
-            background-color: #00796B; 
-            color: white; text-align: center;
-            padding: 0.4rem; font-weight: bold; border-radius: 8px;
-            margin-bottom: 0.7rem;
-            font-size: 16px;
-            font-family: 'Sarabun', sans-serif;
-        }
-
-        .content-columns { display: flex; gap: 15px; align-items: flex-start; }
-        .main-content { flex: 2; min-width: 0; }
-        .side-content { flex: 1; min-width: 0; }
-        .main-content-full { width: 100%; }
-
-        .data-table { width: 100%; font-size: 16px; border-collapse: collapse; }
-        .data-table.hearing-table { table-layout: fixed; }
-        .data-table th, .data-table td {
-            border: 1px solid #e0e0e0; padding: 4px; text-align: center;
-            vertical-align: middle;
-            font-size: 16px;
-        }
-        .data-table th { background-color: #f5f5f5; font-weight: bold; }
-        .data-table td:first-child { text-align: left; }
-
-        .summary-single-line-box {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-            padding: 8px;
-            border: 1px solid #e0e0e0;
-            background-color: #f9f9f9;
-            border-radius: 6px;
-            margin-bottom: 0.5rem;
-            font-size: 16px;
-            font-weight: bold;
-            page-break-inside: avoid; 
-        }
-        
-        .summary-single-line-box span {
-            text-align: left;
-        }
-
-        .summary-container { margin-top: 0; }
-        .summary-container-lung { margin-top: 10px; }
-        .summary-title-lung {
-            text-align: center;
-            font-weight: bold;
-            font-size: 16px;
-            margin-bottom: 8px;
-            line-height: 1.2;
-        }
-        .advice-box {
-            border-radius: 6px; padding: 8px 12px; font-size: 16px;
-            line-height: 1.5; border: 1px solid;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            margin-bottom: 5px; 
-            height: 100%;
-            box-sizing: border-box;
-            background-color: #fff8e1; 
-            border-color: #ffecb3;
-        }
-        .summary-container .advice-box:last-child {
-            margin-bottom: 0;
-        }
-        
-        .status-ok-text { color: #1b5e20; }
-        .status-abn-text { color: #b71c1c; }
-        .status-nt-text { color: #555; }
-        
-        .signature-section {
-            margin-top: 2rem;
-            text-align: right;
-            padding-right: 1rem;
-            page-break-inside: avoid;
-            font-family: 'Sarabun', sans-serif;
-        }
-        .signature-line {
-            display: inline-block;
-            text-align: center;
-            width: 280px;
-        }
-        .signature-line .line {
-            border-bottom: 1px dotted #333;
-            margin-bottom: 0.4rem;
-            width: 100%;
-        }
-        .signature-line .name, .signature-line .title, .signature-line .license {
-            white-space: nowrap;
-            font-size: 16px;
-        }
-
-        @media print {
-            body { -webkit-print-color-adjust: exact; margin: 0; }
-        }
-    </style>
-    """
-
 def render_performance_report_body(person_data, all_person_history_df):
     """Generates the HTML body content for the performance report."""
     header_html = render_html_header_and_personal_info(person_data)
@@ -558,24 +564,23 @@ def render_performance_report_body(person_data, all_person_history_df):
     hearing_html = render_print_hearing(person_data, all_person_history_df)
     lung_html = render_print_lung(person_data)
     
-    signature_html = """
-    <div class="signature-section">
+    # Footer with Signature
+    footer_html = """
+    <div class="footer">
         <div class="signature-line">
-            <div class="line"></div>
-            <div class="name">นายแพทย์นพรัตน์ รัชฎาพร</div>
-            <div class="title">แพทย์อาชีวเวชศาสตร์</div>
-            <div class="license">ว.26674</div>
+            <b>นายแพทย์นพรัตน์ รัชฎาพร</b><br>
+            แพทย์อาชีวเวชศาสตร์ (ว.26674)<br>
         </div>
     </div>
     """
     
     return f"""
-    <div class="report-container">
+    <div class="container">
         {header_html}
         {vision_html}
         {hearing_html}
         {lung_html}
-        {signature_html}
+        {footer_html}
     </div>
     """
 
@@ -595,7 +600,7 @@ def generate_performance_report_html(person_data, all_person_history_df):
         <title>รายงานผลการตรวจสมรรถภาพ - {html.escape(person_data.get('ชื่อ-สกุล', ''))}</title>
         {css_html}
     </head>
-    <body onload="window.print()">
+    <body onload="setTimeout(function(){{window.print();}}, 500)">
         {body_html}
     </body>
     </html>
