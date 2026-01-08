@@ -72,6 +72,11 @@ def get_main_report_css():
             --danger-color: #c0392b;
             --light-bg: #f8f9fa;
             --border-color: #bdc3c7;
+            /* New colors for the recommendation box */
+            --rec-box-bg: #fdfefe;
+            --rec-box-border: #e0f2f1;
+            --rec-title-color: #00695c;
+            --rec-text-color: #455a64;
         }
 
         /* RESET ALL MARGINS */
@@ -167,17 +172,43 @@ def get_main_report_css():
         
         .abnormal { color: var(--danger-color); font-weight: 700; }
         
-        /* Summary Box */
+        /* Premium Summary Box Styling */
         .summary-box {
-            border: 2px solid var(--accent-color);
-            background-color: #f0faf9;
-            border-radius: 5px;
-            padding: 8px;
-            margin-top: 10px;
+            position: relative;
+            background-color: var(--rec-box-bg);
+            border: 1px solid var(--rec-box-border);
+            border-left: 5px solid var(--rec-title-color); /* Premium left accent */
+            border-radius: 4px; /* Slightly sharper corners for professional look */
+            padding: 12px 15px;
+            margin-top: 15px;
             page-break-inside: avoid;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.03); /* Subtle shadow */
         }
-        .summary-title { font-weight: 700; color: var(--accent-color); margin-bottom: 3px; font-size: 14px; border-bottom: 1px dashed var(--accent-color); padding-bottom: 3px; }
-        .summary-content { font-size: 13px; line-height: 1.4; }
+        
+        .summary-title {
+            font-weight: 700;
+            color: var(--rec-title-color);
+            margin-bottom: 8px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+        }
+        
+        /* Optional icon before title */
+        .summary-title::before {
+            content: "⚕"; /* Medical symbol or simple bullet */
+            margin-right: 6px;
+            font-size: 16px;
+        }
+
+        .summary-content {
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--rec-text-color);
+            padding-left: 5px;
+        }
         
         /* Footer - Reverted to Absolute Bottom */
         .footer {
@@ -446,14 +477,14 @@ def render_printable_report_body(person_data, all_person_history_df=None):
                             </tr>
                         </tbody>
                     </table>
-                </div>
-            </div>
-
-            <!-- Summary Box -->
-            <div class="summary-box">
-                <div class="summary-title">สรุปผลการตรวจและคำแนะนำแพทย์ (Doctor's Recommendation)</div>
-                <div class="summary-content">
-                    {suggestion_html}
+                    
+                    <!-- New Premium Summary Box -->
+                    <div class="summary-box">
+                        <div class="summary-title">สรุปผลการตรวจและคำแนะนำแพทย์ (Doctor's Recommendation)</div>
+                        <div class="summary-content">
+                            {suggestion_html}
+                        </div>
+                    </div>
                 </div>
             </div>
 
