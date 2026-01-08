@@ -171,9 +171,9 @@ def get_performance_report_css():
         .main-content-full { width: 100%; }
 
         .data-table { width: 100%; font-size: 12px; border-collapse: collapse; margin-bottom: 5px; font-family: 'Sarabun', sans-serif !important; }
-        .data-table th, .data-table td { padding: 4px; border-bottom: 1px solid #eee; text-align: left; vertical-align: middle; }
+        .data-table th, .data-table td { padding: 2px 4px; border-bottom: 1px solid #eee; text-align: left; vertical-align: middle; white-space: nowrap; } /* Reduced padding and added nowrap */
         .data-table th { background-color: #f1f2f6; font-weight: 600; color: var(--secondary-color); text-align: center; border-bottom: 2px solid #ddd; }
-        .data-table td:first-child { text-align: left; }
+        .data-table td:first-child { text-align: left; white-space: normal; } /* Allow wrapping only on the first column (labels) if needed, but keeping others tight */
         
         /* Hearing Table specifics */
         .data-table.hearing-table th, .data-table.hearing-table td { text-align: center; }
@@ -380,6 +380,10 @@ def render_print_vision(person_data):
         <div class="content-columns">
             <div class="main-content">
                 <table class="data-table">
+                    <colgroup>
+                        <col style="width: 70%;">
+                        <col style="width: 30%;">
+                    </colgroup>
                     <thead><tr><th>รายการตรวจ</th><th>ผลการตรวจ</th></tr></thead>
                     <tbody>{rows_html}</tbody>
                 </table>
@@ -577,6 +581,12 @@ def render_print_lung(person_data):
     
     data_table_html = f"""
     <table class="data-table">
+        <colgroup>
+            <col style="width: 25%;">
+            <col style="width: 25%;">
+            <col style="width: 25%;">
+            <col style="width: 25%;">
+        </colgroup>
         <thead>
             <tr><th>การทดสอบ</th><th>ค่าที่วัดได้ (Actual)</th><th>ค่ามาตรฐาน (Pred)</th><th>% เทียบค่ามาตรฐาน (%Pred)</th></tr>
         </thead>
