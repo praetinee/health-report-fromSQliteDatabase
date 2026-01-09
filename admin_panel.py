@@ -4,7 +4,6 @@ from collections import OrderedDict
 import json
 import base64
 
-# --- Imports with Error Handling (Optional modules) ---
 try:
     from utils import (
         is_empty,
@@ -32,6 +31,11 @@ except ImportError:
     def generate_performance_report_html(*args): return ""
 
 try:
+    from batch_print import display_print_center_page
+except ImportError:
+    def display_print_center_page(*args): st.info("Batch Print module not found")
+
+try:
     from visualization import display_visualization_tab 
 except ImportError:
     def display_visualization_tab(person_data, all_df): st.info("Visualization module not found")
@@ -46,19 +50,6 @@ except Exception as e:
     def inject_custom_css(): pass
     def display_main_report(p, a): st.error("Main Report Function Missing")
     def display_performance_report(p, r, a=None): st.error("Performance Report Function Missing")
-
-# --- Safe Import for Batch Print (แก้ไขใหม่) ---
-# ใช้ try-except เพื่อป้องกันหน้าเว็บพัง (Crash) หากไฟล์ batch_print.py มีปัญหา
-# แต่จะแสดง Error จริงออกมาเพื่อให้ทราบสาเหตุแทนข้อความ Not Found
-try:
-    from batch_print import display_print_center_page
-except Exception as e:
-    # Capture error message to a variable to avoid scope issues in Python 3
-    # (Exception variables are deleted at the end of the except block)
-    error_msg = str(e)
-    def display_print_center_page(df):
-        st.error(f"❌ Batch Print Module Error: {error_msg}")
-        st.warning("สาเหตุอาจเกิดจาก: ไฟล์ batch_print.py หรือไฟล์ที่เกี่ยวข้อง (print_report.py, print_performance_report.py) มีข้อผิดพลาด")
 
 # Note: We duplicate the custom header function here to avoid circular imports with app.py
 def render_admin_header_with_actions(person_data, available_years):
