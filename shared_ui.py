@@ -243,7 +243,9 @@ def inject_custom_css():
             vertical-align: middle;
         }
         
-        .lab-table tr:last-child td { border-bottom: none; }
+        /* แก้ไข: ลบคำสั่งซ่อนเส้นขอบล่างของแถวสุดท้ายออก เพื่อให้มีเส้นปิดท้ายตารางเสมอ */
+        /* .lab-table tr:last-child td { border-bottom: none; } */
+        
         .abnormal-row { background-color: var(--danger-bg) !important; }
         .text-danger { color: var(--danger-text) !important; font-weight: bold; }
 
