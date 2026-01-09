@@ -378,6 +378,7 @@ def display_print_center_page(df):
         .status-gray { background-color: rgba(158, 158, 158, 0.15); color: var(--text-color); }
 
         /* ปุ่มลบ (Secondary) - Minimal Gray Style */
+        /* Target เฉพาะปุ่มในตารางเพื่อความปลอดภัย */
         div[data-testid="column"] button[kind="secondary"] {
             border: 1px solid transparent !important;
             background-color: transparent !important;
@@ -399,12 +400,8 @@ def display_print_center_page(df):
             transform: scale(1.1);
         }
         
-        /* บังคับให้ Column ของ Streamlit จัด Vertical Center */
-        div[data-testid="column"] {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
+        /* [DELETED] ลบ Global Column Center Override ที่รุนแรงออกแล้ว */
+        /* เพื่อให้ vertical_alignment="center" ทำงานได้ถูกต้องตามปกติ */
     </style>
     """, unsafe_allow_html=True)
 
@@ -533,7 +530,7 @@ def display_print_center_page(df):
             
             # Row Container (Styled by CSS .grid-row to be flex)
             with st.container():
-                # ใช้ vertical_alignment="center" ช่วยจัด widget ให้ตรงกลางแนวตั้ง
+                # ใช้ vertical_alignment="center" ช่วยจัด widget ให้ตรงกลางแนวตั้ง (Native Streamlit feature)
                 cols = st.columns(col_ratios, vertical_alignment="center")
                 
                 # 1. Delete Button
@@ -544,11 +541,10 @@ def display_print_center_page(df):
                 
                 # 2. Checkbox
                 with cols[1]:
-                    _, mid, _ = st.columns([1,1,1]) 
-                    with mid:
-                        is_selected = st.checkbox("เลือก", value=default_chk, key=f"sel_{hn}", label_visibility="collapsed")
-                        if is_selected:
-                            selected_to_print_hns.append(hn)
+                    # [EDITED] ลบการซ้อนคอลัมน์ [1,1,1] ที่ทำให้ Layout พัง
+                    is_selected = st.checkbox("เลือก", value=default_chk, key=f"sel_{hn}", label_visibility="collapsed")
+                    if is_selected:
+                        selected_to_print_hns.append(hn)
 
                 # 3. Status Badge (Use HTML for consistent height)
                 with cols[2]:
