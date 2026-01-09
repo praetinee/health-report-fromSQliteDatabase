@@ -62,21 +62,102 @@ def render_admin_header_with_actions(person_data, available_years):
     
     icon_profile = """<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>"""
     
-    # Simple container for header
+    # --- CSS Styling for Responsive Header ---
+    st.markdown("""
+    <style>
+        .admin-header-card {
+            background-color: var(--card-bg, #ffffff); /* ใช้ตัวแปรธีม ถ้าไม่มีใช้สีขาว */
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color, #e0e0e0);
+            margin-bottom: 20px;
+            color: var(--text-color, #333); /* สีข้อความตามธีม */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .admin-header-flex {
+            display: flex;
+            align-items: center; /* จัดกึ่งกลางแนวตั้ง */
+            gap: 15px;
+            flex-wrap: wrap; /* ให้ตกบรรทัดได้ถ้าจอเล็ก */
+        }
+        
+        .admin-profile-icon {
+            width: 60px;
+            height: 60px;
+            min-width: 60px; /* ห้ามหด */
+            background-color: var(--primary-light, rgba(0, 121, 107, 0.1));
+            color: var(--primary, #00796B);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .admin-profile-info {
+            flex: 1; /* ขยายเต็มพื้นที่ที่เหลือ */
+            min-width: 250px; /* ถ้าเล็กกว่านี้ให้ตกบรรทัด */
+        }
+        
+        .admin-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+            line-height: 1.2;
+            margin-bottom: 4px;
+        }
+        
+        .admin-meta {
+            font-size: 0.95rem;
+            opacity: 0.8;
+        }
+        
+        .admin-date-box {
+            text-align: right;
+            min-width: 150px;
+        }
+        
+        .admin-date-label {
+            font-weight: bold;
+            color: var(--primary, #00796B);
+            font-size: 1rem;
+        }
+
+        /* Mobile Responsive Adjustments */
+        @media (max-width: 600px) {
+            .admin-header-flex {
+                flex-direction: column; /* เรียงแนวตั้งบนมือถือ */
+                align-items: flex-start;
+            }
+            .admin-profile-icon {
+                margin-bottom: 10px;
+            }
+            .admin-date-box {
+                text-align: left;
+                width: 100%;
+                margin-top: 10px;
+                padding-top: 10px;
+                border-top: 1px solid var(--border-color, #e0e0e0);
+            }
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # --- HTML Structure ---
     st.markdown(f"""
-    <div style="background-color: white; padding: 20px; border-radius: 12px; border: 1px solid #ddd; margin-bottom: 20px;">
-        <div style="display: flex; gap: 15px; align-items: flex-start;">
-            <div style="min-width: 60px; height: 60px; background-color: rgba(0, 121, 107, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #00796B;">
+    <div class="admin-header-card">
+        <div class="admin-header-flex">
+            <div class="admin-profile-icon">
                 {icon_profile}
             </div>
-            <div style="flex: 1;">
-                <div style="font-size: 1.5rem; font-weight: bold; line-height: 1.2;">{name}</div>
-                <div style="font-size: 0.95rem; opacity: 0.8; margin-top: 4px;">
-                    HN: {hn} | เพศ: {sex} | อายุ: {age} ปี | หน่วยงาน: {department}
+            <div class="admin-profile-info">
+                <div class="admin-name">{name}</div>
+                <div class="admin-meta">
+                    HN: {hn} | เพศ: {sex} | อายุ: {age} ปี <br>
+                    หน่วยงาน: {department}
                 </div>
             </div>
-            <div style="text-align: right;">
-                <div style="font-weight: bold; color: #00796B;">วันที่ตรวจ: {check_date}</div>
+            <div class="admin-date-box">
+                <div class="admin-date-label">วันที่ตรวจ: {check_date}</div>
             </div>
         </div>
     </div>
