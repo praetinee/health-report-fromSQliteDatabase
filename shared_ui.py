@@ -390,9 +390,9 @@ def inject_custom_css():
         .result-card {
             background-color: var(--card-bg);
             border: 1px solid var(--border-color);
-            border-radius: 12px;
+            border-radius: 16px; /* โค้งมนขึ้น */
             padding: 15px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04); /* เงาบางๆ */
             transition: transform 0.2s, box-shadow 0.2s;
             position: relative;
             overflow: hidden;
@@ -400,56 +400,63 @@ def inject_custom_css():
         
         .result-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.08); /* เงาลอยเมื่อ hover */
         }
         
         .card-header {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             margin-bottom: 12px;
-            padding-bottom: 8px;
+            padding-bottom: 10px;
             border-bottom: 1px solid var(--border-color);
         }
         
         .card-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.2rem;
+            font-size: 1.3rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
         
         .card-title {
             font-weight: 700;
-            font-size: 1rem;
+            font-size: 1.05rem;
             color: var(--text-color);
         }
         
         .card-status {
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: 600;
-            margin-bottom: 8px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-bottom: 10px;
         }
         
         .card-detail {
             font-size: 0.9rem;
-            opacity: 0.8;
-            line-height: 1.4;
+            opacity: 0.9;
+            line-height: 1.6;
+            background-color: rgba(128,128,128,0.05);
+            padding: 10px;
+            border-radius: 8px;
         }
         
-        /* Status Colors for Cards */
-        .status-normal { color: #2e7d32; background-color: rgba(46, 125, 50, 0.1); }
-        .status-abnormal { color: #c62828; background-color: rgba(198, 40, 40, 0.1); }
-        .status-warning { color: #ef6c00; background-color: rgba(239, 108, 0, 0.1); }
-        .status-neutral { color: #455a64; background-color: rgba(69, 90, 100, 0.1); }
+        /* Status Colors for Cards (Badge Style) */
+        .status-normal { color: #1b5e20; background-color: #e8f5e9; border: 1px solid #c8e6c9; }
+        .status-abnormal { color: #b71c1c; background-color: #ffebee; border: 1px solid #ffcdd2; }
+        .status-warning { color: #e65100; background-color: #fff3e0; border: 1px solid #ffe0b2; }
+        .status-neutral { color: #37474f; background-color: #eceff1; border: 1px solid #cfd8dc; }
         
-        /* Icon Colors */
-        .icon-blue { background-color: rgba(33, 150, 243, 0.15); color: #1976d2; }
-        .icon-purple { background-color: rgba(156, 39, 176, 0.15); color: #7b1fa2; }
-        .icon-teal { background-color: rgba(0, 150, 136, 0.15); color: #00796b; }
+        /* Icon Gradients */
+        .icon-blue { background: linear-gradient(135deg, #2196F3, #1976D2); color: white; }
+        .icon-purple { background: linear-gradient(135deg, #9C27B0, #7B1FA2); color: white; }
+        .icon-teal { background: linear-gradient(135deg, #009688, #00796B); color: white; }
 
         /* Mobile Adjustments (Responsive) */
         @media (max-width: 768px) {
@@ -878,7 +885,8 @@ def display_performance_report_hearing(person_data, all_person_history_df):
     l_speech_val, l_speech_style = format_avg_db(results['averages']['left_500_2000'])
     l_high_val, l_high_style = format_avg_db(results['averages']['left_3000_6000'])
 
-    st.markdown(f"""
+    # ใช้ clean_html_string ครอบเพื่อป้องกันปัญหา Indentation
+    summary_html = clean_html_string(f"""
     <div class="result-card-container">
         <!-- Right Ear Card -->
         <div class="result-card">
@@ -918,18 +926,21 @@ def display_performance_report_hearing(person_data, all_person_history_df):
             </div>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """)
+    st.markdown(summary_html, unsafe_allow_html=True)
 
     # 2. Recommendation Card (Full Width)
     advice_text = results.get('advice', '')
     if advice_text and advice_text != 'ไม่มีคำแนะนำเพิ่มเติม':
-        st.markdown(f"""
+        # ใช้ clean_html_string ครอบเช่นกัน
+        advice_html = clean_html_string(f"""
         <div style="margin-top: 15px;">
             <div class="custom-advice-box warning-box">
                 {advice_text}
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """)
+        st.markdown(advice_html, unsafe_allow_html=True)
 
 def display_performance_report_lung(person_data):
     # ย้าย import มาไว้ในฟังก์ชันเพื่อแก้ Circular Import
