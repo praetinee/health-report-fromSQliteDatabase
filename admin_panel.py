@@ -53,8 +53,11 @@ except Exception as e:
 try:
     from batch_print import display_print_center_page
 except Exception as e:
+    # Capture error message to a variable to avoid scope issues in Python 3
+    # (Exception variables are deleted at the end of the except block)
+    error_msg = str(e)
     def display_print_center_page(df):
-        st.error(f"❌ Batch Print Module Error: {e}")
+        st.error(f"❌ Batch Print Module Error: {error_msg}")
         st.warning("สาเหตุอาจเกิดจาก: ไฟล์ batch_print.py หรือไฟล์ที่เกี่ยวข้อง (print_report.py, print_performance_report.py) มีข้อผิดพลาด")
 
 # Note: We duplicate the custom header function here to avoid circular imports with app.py
