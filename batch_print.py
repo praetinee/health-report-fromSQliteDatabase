@@ -1,628 +1,896 @@
 import streamlit as st
 import pandas as pd
-import html
-import json
 import re
+import html
+import numpy as np
+import textwrap
+from collections import OrderedDict
 from datetime import datetime
-
-# --- Import ฟังก์ชันสำหรับการสร้างรายงาน (Report Generation) ---
-from print_report import (
-    render_printable_report_body,
-    get_main_report_css
-)
-from print_performance_report import (
-    render_performance_report_body,
-    get_performance_report_css,
-    has_vision_data,
-    has_hearing_data,
-    has_lung_data
-)
+import json
+import streamlit.components.v1 as components
 
 # --- Helper Functions ---
 def is_empty(val):
     return pd.isna(val) or str(val).strip().lower() in ["", "-", "none", "nan", "null"]
 
-def has_basic_health_data(person_data):
-    """ตรวจสอบว่ามีข้อมูลสุขภาพพื้นฐาน (Main Report) หรือไม่"""
-    key_indicators = ['FBS', 'CHOL', 'HCT', 'Cr', 'WBC (cumm)', 'SBP', 'Hb(%)']
-    return any(not is_empty(person_data.get(key)) for key in key_indicators)
+def normalize_name(name):
+    if is_empty(name):
+        return ""
+    return re.sub(r'\s+', '', str(name).strip())
 
-def check_data_readiness(person_data, report_type):
-    """
-    ตรวจสอบสถานะความพร้อมของข้อมูลตามประเภทรายงาน
-    Returns: (is_ready: bool, status_text: str, status_color: str)
-    """
-    has_main = has_basic_health_data(person_data)
-    
-    has_vis = has_vision_data(person_data)
-    has_hear = has_hearing_data(person_data)
-    has_lung = has_lung_data(person_data)
-    has_perf = has_vis or has_hear or has_lung
+def get_float(col, person_data):
+    try:
+        val = person_data.get(col, "")
+        if is_empty(val): return None
+        return float(str(val).replace(",", "").strip())
+    except: return None
 
-    status_color = "gray"
-    status_text = "❓ ไม่ระบุ"
-    is_ready = False
-
-    if report_type == "รายงานสุขภาพ (Health Report)":
-        if has_main:
-            return True, "✅ ข้อมูลพร้อม", "green"
-        else:
-            return False, "⚠️ ขาดผลตรวจ", "orange"
-            
-    elif report_type == "รายงานสมรรถภาพ (Performance Report)":
-        if has_perf:
-            details = []
-            if has_vis: details.append("ตา")
-            if has_hear: details.append("หู")
-            if has_lung: details.append("ปอด")
-            return True, f"✅ มีผล: {','.join(details)}", "green"
-        else:
-            return False, "⚠️ ไม่มีผลสมรรถภาพ", "orange"
-            
-    elif report_type == "ทั้งรายงานสุขภาพและสมรรถภาพ":
-        if has_main and has_perf:
-            return True, "✅ ครบถ้วน", "green"
-        elif has_main:
-            return True, "⚠️ ขาดสมรรถภาพ", "blue" 
-        elif has_perf:
-            return True, "⚠️ ขาดผลสุขภาพ", "blue"
-        else:
-            return False, "❌ ไม่มีข้อมูล", "red"
-
-    return is_ready, status_text, status_color
-
-def generate_batch_html(df, selected_hns, report_type, year_logic="ใช้ข้อมูลปีล่าสุดของแต่ละคน"):
-    """สร้าง HTML สำหรับพิมพ์"""
-    report_bodies = []
-    
-    # ดึง CSS จากไฟล์ต้นฉบับ
-    css_main = get_main_report_css()
-    css_perf = get_performance_report_css()
-    
-    # สกัดเฉพาะเนื้อหาใน <style>...</style>
-    main_style_match = re.search(r'<style>(.*?)</style>', css_main, re.DOTALL)
-    perf_style_match = re.search(r'<style>(.*?)</style>', css_perf, re.DOTALL)
-    
-    main_css_content = main_style_match.group(1) if main_style_match else ""
-    perf_css_content = perf_style_match.group(1) if perf_style_match else ""
-
-    # สร้าง CSS รวม และเพิ่ม style สำหรับการแบ่งหน้า (Batch Print Specific)
-    # เราใช้ !important เพื่อทับค่าที่อาจจะติดมาจากไฟล์ต้นฉบับ
-    full_css = f"""
-    <style>
-        /* --- Base Styles from Files --- */
-        {main_css_content}
-        {perf_css_content}
-
-        /* --- BATCH PRINT OVERRIDES --- */
-        @media print {{
-            @page {{
-                size: A4;
-                margin: 0 !important; /* Reset page margins, let container padding handle it */
-            }}
-
-            html, body {{ 
-                margin: 0 !important; 
-                padding: 0 !important; 
-                width: 210mm !important;
-                height: auto !important; /* Allow growing height for multiple pages */
-                min-height: 100vh !important;
-                background-color: white !important;
-                -webkit-print-color-adjust: exact !important; 
-                print-color-adjust: exact !important;
-                overflow: visible !important; /* Ensure no clipping */
-            }}
-            
-            /* Wrapper ของคนไข้แต่ละคน */
-            .patient-wrapper {{
-                display: block;
-                width: 100%;
-                margin: 0;
-                padding: 0;
-                page-break-after: always !important; /* จบคนนึงขึ้นหน้าใหม่ */
-                break-after: page !important;
-            }}
-            
-            /* หน้าสุดท้ายของคนสุดท้ายไม่ต้อง break */
-            .patient-wrapper:last-child {{
-                page-break-after: auto !important;
-                break-after: auto !important;
-            }}
-
-            /* Container ของแต่ละรายงาน (สุขภาพ/สมรรถภาพ) */
-            .container {{
-                box-sizing: border-box !important;
-                margin: 0 !important;
-                padding: 0.5cm !important; /* ขอบ 0.5cm */
-                width: 210mm !important;
-                
-                /* ใช้ min-height A4 เพื่อดัน Footer ไปล่างสุดถ้าเนื้อหาน้อย */
-                min-height: 297mm !important; 
-                height: auto !important; 
-                
-                position: relative !important;
-                background-color: white !important;
-                overflow: visible !important; /* ห้ามซ่อนเนื้อหา */
-                
-                /* ห้าม break ในตัว container เองโดยไม่จำเป็น */
-                page-break-inside: avoid;
-            }}
-
-            /* ตัวคั่นระหว่างรายงานสุขภาพและสมรรถภาพ */
-            .report-separator {{
-                display: block;
-                height: 0;
-                margin: 0;
-                padding: 0;
-                page-break-before: always !important; /* ขึ้นหน้าใหม่เสมอ */
-                break-before: page !important;
-            }}
-            
-            /* Footer Fix */
-            .footer {{
-                position: absolute !important;
-                bottom: 0.5cm !important; /* ติดขอบล่าง 0.5cm */
-                left: 0 !important;
-                width: 100% !important;
-            }}
-        }}
-        
-        /* Screen view adjustments */
-        @media screen {{
-            .patient-wrapper {{
-                border-bottom: 5px solid #ccc;
-                margin-bottom: 20px;
-                padding-bottom: 20px;
-            }}
-            .report-separator {{
-                border-top: 2px dashed #999;
-                margin: 20px 0;
-                position: relative;
-            }}
-            .report-separator::after {{
-                content: "--- Page Break (Next Report) ---";
-                position: absolute;
-                top: -12px;
-                left: 50%;
-                transform: translateX(-50%);
-                background: white;
-                padding: 0 10px;
-                color: #666;
-                font-size: 12px;
-            }}
-        }}
-    </style>
-    """
-
-    progress_bar = st.progress(0)
-    total_patients = len(selected_hns)
-    skipped_count = 0
-    
-    for i, hn in enumerate(selected_hns):
-        try:
-            progress_bar.progress((i + 1) / total_patients, text=f"กำลังสร้างรายงานคนที่ {i+1}/{total_patients} (HN: {hn})")
-            
-            person_history_df = df[df['HN'] == hn].copy()
-            if person_history_df.empty:
-                skipped_count += 1
-                continue
-
-            latest_year_series = person_history_df.sort_values(by='Year', ascending=False).iloc[0]
-            person_data = latest_year_series.to_dict()
-
-            parts = []
-            
-            # 1. Health Report Part
-            need_main = report_type in ["รายงานสุขภาพ (Health Report)", "ทั้งรายงานสุขภาพและสมรรถภาพ"]
-            if need_main and has_basic_health_data(person_data):
-                parts.append(render_printable_report_body(person_data, person_history_df))
-            
-            # 2. Performance Report Part
-            need_perf = report_type in ["รายงานสมรรถภาพ (Performance Report)", "ทั้งรายงานสุขภาพและสมรรถภาพ"]
-            has_vis = has_vision_data(person_data)
-            has_hear = has_hearing_data(person_data)
-            has_lung = has_lung_data(person_data)
-            
-            if need_perf and (has_vis or has_hear or has_lung):
-                parts.append(render_performance_report_body(person_data, person_history_df))
-
-            if not parts:
-                skipped_count += 1
-                continue
-            
-            # Join parts with a dedicated separator div
-            patient_html_content = '<div class="report-separator"></div>'.join(parts)
-            
-            # Wrap in patient wrapper
-            report_bodies.append(f'<div class="patient-wrapper">{patient_html_content}</div>')
-
-        except Exception as e:
-            st.error(f"เกิดข้อผิดพลาด HN: {hn} - {e}")
-            continue 
-
-    progress_bar.empty()
-
-    if not report_bodies:
-        return None, skipped_count
-
-    all_bodies = "".join(report_bodies)
-    
-    full_html = f"""
-    <!DOCTYPE html>
-    <html lang="th">
-    <head>
-        <meta charset="UTF-8">
-        <title>รายงานผลการตรวจสุขภาพ (Batch Print)</title>
-        {full_css}
-    </head>
-    <body>
-        {all_bodies}
-    </body>
-    </html>
-    """
-    return full_html, skipped_count
-
-# --- Callback Functions ---
-
-def add_patient_to_list_callback(df):
-    """Callback สำหรับปุ่มเพิ่มรายการ"""
-    name = st.session_state.get("bp_name_search")
-    hn = st.session_state.get("bp_hn_search")
-    cid = st.session_state.get("bp_cid_search")
-    
-    target_hn = None
-    found_msg = ""
-    
-    if name:
-        matched = df[df['ชื่อ-สกุล'] == name]
-        if not matched.empty:
-            target_hn = matched.iloc[0]['HN']
-            found_msg = f"เพิ่มคุณ {name} เรียบร้อย"
-    elif hn:
-        matched = df[df['HN'].astype(str) == hn.strip()]
-        if not matched.empty:
-            target_hn = matched.iloc[0]['HN']
-            name_found = matched.iloc[0]['ชื่อ-สกุล']
-            found_msg = f"เพิ่ม HN {hn} ({name_found}) เรียบร้อย"
-    elif cid:
-        matched = df[df['เลขบัตรประชาชน'].astype(str) == cid.strip()]
-        if not matched.empty:
-            target_hn = matched.iloc[0]['HN']
-            name_found = matched.iloc[0]['ชื่อ-สกุล']
-            found_msg = f"เพิ่มเลขบัตร {cid} ({name_found}) เรียบร้อย"
-            
-    if target_hn:
-        if 'bp_manual_hns' not in st.session_state:
-            st.session_state.bp_manual_hns = set()
-            
-        st.session_state.bp_manual_hns.add(target_hn)
-        st.session_state.bp_action_msg = {"type": "success", "text": found_msg}
-        
-        # Reset inputs
-        st.session_state.bp_name_search = None 
-        st.session_state.bp_hn_search = ""
-        st.session_state.bp_cid_search = ""
-        
+def flag(val, low=None, high=None, higher_is_better=False):
+    try:
+        val = float(str(val).replace(",", "").strip())
+    except: return "-", False
+    formatted_val = f"{int(val):,}" if val == int(val) else f"{val:,.1f}"
+    is_abnormal = False
+    if higher_is_better:
+        if low is not None and val < low: is_abnormal = True
     else:
-        st.session_state.bp_action_msg = {"type": "error", "text": "❌ ไม่พบข้อมูล หรือไม่ได้ระบุเงื่อนไขการค้นหา"}
+        if low is not None and val < low: is_abnormal = True
+        if high is not None and val > high: is_abnormal = True
+    return formatted_val, is_abnormal
 
-def remove_hn_callback(hn_to_remove):
-    """Callback ลบ HN"""
-    if 'bp_manual_hns' in st.session_state and hn_to_remove in st.session_state.bp_manual_hns:
-        st.session_state.bp_manual_hns.remove(hn_to_remove)
+def clean_html_string(html_str):
+    """
+    ฟังก์ชันล้างช่องว่างนำหน้าบรรทัด (Indentation) ทั้งหมด
+    เพื่อป้องกันไม่ให้ Streamlit ตีความ HTML เป็น Code Block
+    """
+    if not html_str: return ""
+    return "\n".join([line.strip() for line in html_str.split('\n') if line.strip()])
 
-def display_print_center_page(df):
-    """แสดงหน้าจอ Print Center"""
-    st.title("🖨️ ศูนย์จัดการพิมพ์รายงาน (Print Center)")
-    st.markdown("---")
-    
-    # --- CSS Styling (Clean & Precise Alignment) ---
-    st.markdown("""
+def inject_keep_awake():
+    """
+    ฝัง JavaScript เพื่อป้องกันหน้าจอ Sleep (Wake Lock API)
+    เหมาะสำหรับแพทย์ที่เปิดหน้าจอทิ้งไว้ดูผลตรวจ
+    """
+    js_code = """
+    <script>
+    (async () => {
+        try {
+            let wakeLock = null;
+            const requestWakeLock = async () => {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    console.log('✅ Wake Lock is active!');
+                }
+            };
+            
+            // เรียกขอสิทธิ์ทันทีที่โหลด
+            await requestWakeLock();
+            
+            // ขอสิทธิ์ใหม่เมื่อกลับมาที่แท็บเดิม (เผื่อหลุด)
+            document.addEventListener('visibilitychange', async () => {
+                if (document.visibilityState === 'visible') {
+                    await requestWakeLock();
+                }
+            });
+        } catch (err) {
+            console.log('Wake Lock Error:', err);
+        }
+    })();
+    </script>
+    """
+    # ใช้ height=0 เพื่อซ่อน component ไม่ให้รกหน้าจอ
+    components.html(js_code, height=0, width=0)
+
+def inject_custom_css():
+    """
+    Inject CSS เพื่อปรับแต่งหน้าตาของแอปพลิเคชัน
+    เน้นการรองรับ Responsive (มือถือ/Desktop) และ Theme (Light/Dark Mode)
+    """
+    css_content = clean_html_string("""
     <style>
-        /* ปุ่มเพิ่มรายการ (Primary) */
-        div[data-testid="stButton"] > button[kind="primary"] {
-            background-color: #1B5E20 !important;
-            color: #ffffff !important;
-            border: none;
-            padding: 0.6rem 1.2rem;
-            border-radius: 8px;
-            width: 100%;
-            font-size: 1rem;
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+        
+        :root {
+            /* ใช้ตัวแปรสีของ Streamlit เพื่อรองรับ Light/Dark Mode อัตโนมัติ */
+            --bg-color: var(--background-color);
+            --text-color: var(--text-color);
+            --card-bg: var(--secondary-background-color); /* ใช้สีพื้นหลังรองของ Streamlit */
+            --border-color: rgba(128, 128, 128, 0.2);     /* สีขอบแบบจางๆ */
+            
+            /* สีธีมหลัก */
+            --primary: #00796B;
+            --primary-light: rgba(0, 121, 107, 0.1);
+            
+            /* สีสถานะ (ปรับให้ดูนุ่มนวลขึ้นใน Dark Mode ได้ถ้าต้องการ แต่สีพื้นฐานนี้ใช้ได้ดีทั้งคู่) */
+            --danger-text: #FF5252;
+            --warning-text: #FF9800;
+            --success-text: #4CAF50;
+            
+            --danger-bg: rgba(255, 82, 82, 0.1);
+            --warning-bg: rgba(255, 152, 0, 0.1);
+            --success-bg: rgba(76, 175, 80, 0.1);
+            
+            /* สี Header ตาราง (ปรับความเข้มให้เหมาะกับธีม) */
+            --header-bg: rgba(128, 128, 128, 0.1); 
+        }
+
+        /* บังคับใช้ Font Sarabun ทั้งหมด */
+        html, body, [class*="st-"], h1, h2, h3, h4, h5, h6, p, div, span, th, td {
+            font-family: 'Sarabun', sans-serif !important;
+        }
+        
+        /* --- Customized Tabs Style (Green Bar Theme) --- */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 8px;
+            background-color: var(--primary); 
+            border-radius: 10px 10px 0px 0px;
+            padding: 10px 10px 0px 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            flex-wrap: wrap; /* ให้แท็บขึ้นบรรทัดใหม่ได้ถ้าหน้าจอเล็กมาก */
+        }
+
+        .stTabs [data-baseweb="tab"] {
+            height: auto;
+            white-space: pre-wrap;
+            background-color: transparent; 
+            border-radius: 8px 8px 0px 0px;
+            gap: 1px;
+            padding: 8px 16px; /* ลด Padding เล็กน้อยเพื่อให้พอดีจอมือถือ */
+            color: rgba(255, 255, 255, 0.85);
             font-weight: 600;
-            min-height: 48px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        div[data-testid="stButton"] > button[kind="primary"]:hover {
-            background-color: #2E7D32 !important;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-        }
-
-        /* --- Custom Grid Styling --- */
-        
-        /* Data Row Container */
-        .grid-row {
-            background-color: var(--secondary-background-color);
-            border: 1px solid rgba(128,128,128,0.1);
-            border-radius: 8px;
-            padding: 5px 0;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center; /* Vertical Center */
-            min-height: 50px;
-        }
-        
-        /* Text Cell Content */
-        .grid-cell-text {
             font-size: 0.95rem;
+            border: none; 
+            transition: all 0.2s ease;
+            flex-grow: 1; /* ให้แท็บขยายเต็มพื้นที่ที่มี */
+            text-align: center;
+        }
+
+        .stTabs [data-baseweb="tab"]:hover {
+            color: #ffffff;
+            background-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .stTabs [aria-selected="true"] {
+            background-color: #ffffff !important; /* เปลี่ยนเป็นสีขาวตามที่ขอ */
+            color: var(--primary) !important;
+            border-radius: 10px 10px 0px 0px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1); 
+            padding: 10px 20px;
+            font-weight: 700;
+            position: relative;
+            top: 1px;
+        }
+        
+        .stTabs [data-baseweb="tab-border"] { display: none; }
+
+        /* --------------------------- */
+
+        /* หัวข้อ Section */
+        .section-header-styled {
+            font-size: 1.2rem; 
+            font-weight: 600; 
+            color: var(--primary);
+            border-left: 5px solid var(--primary); 
+            padding-left: 15px; 
+            margin-top: 25px; 
+            margin-bottom: 15px;
+            background: linear-gradient(90deg, var(--primary-light) 0%, rgba(0,0,0,0) 100%);
+            padding-top: 8px; 
+            padding-bottom: 8px; 
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .section-subtitle { 
+            font-weight: 600; 
+            color: var(--text-color); 
+            opacity: 0.9; 
+            margin-top: 1rem; 
+            margin-bottom: 0.5rem; 
+            font-size: 1rem; 
+        }
+
+        /* Card Container (กล่องขาว/ดำ รองรับ Theme) */
+        .card-container {
+            background-color: var(--card-bg); 
+            border-radius: 12px; 
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+            border: 1px solid var(--border-color);
+            margin-bottom: 15px; 
             color: var(--text-color);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            padding: 0 5px;
-            line-height: 1.5;
+            overflow: hidden; /* ป้องกันเนื้อหาล้น */
+        }
+
+        /* ตาราง (Table) */
+        .table-title { 
+            font-weight: 700; 
+            color: var(--text-color); 
+            margin-bottom: 12px; 
+            font-size: 1rem; 
+            border-bottom: 2px solid var(--border-color); 
+            padding-bottom: 8px; 
         }
         
-        /* Status Badge */
-        .status-badge {
-            display: inline-block;
+        .table-responsive { 
+            width: 100%;
+            overflow-x: auto; /* เลื่อนแนวนอนได้ถ้าตารางกว้างเกินจอ */
+            -webkit-overflow-scrolling: touch; /* เลื่อนลื่นๆ บน iOS */
+        }
+        
+        .lab-table, .info-detail-table { 
+            width: 100%; 
+            min-width: 300px; /* กำหนดความกว้างขั้นต่ำป้องกันตารางบีบเกินไป */
+            border-collapse: collapse; 
+            font-size: 0.9rem; 
+            color: var(--text-color); 
+        }
+        
+        .lab-table th, .info-detail-table th {
+            background-color: var(--header-bg); 
+            color: var(--text-color); 
+            font-weight: 600; 
+            padding: 10px; 
+            font-size: 0.85rem; 
+            border-bottom: 2px solid var(--border-color);
+            text-align: left;
+            white-space: nowrap; /* ป้องกันหัวตารางตัดคำถ้าไม่จำเป็น */
+            /* ลบ text-transform: uppercase; ออกแล้ว */
+        }
+        
+        .lab-table td, .info-detail-table td { 
+            padding: 10px; 
+            border-bottom: 1px solid var(--border-color); 
+            vertical-align: middle;
+        }
+        
+        /* แก้ไข: ลบคำสั่งซ่อนเส้นขอบล่างของแถวสุดท้ายออก เพื่อให้มีเส้นปิดท้ายตารางเสมอ */
+        /* .lab-table tr:last-child td { border-bottom: none; } */
+        
+        .abnormal-row { background-color: var(--danger-bg) !important; }
+        .text-danger { color: var(--danger-text) !important; font-weight: bold; }
+
+        /* Report Header (ส่วนหัวข้อมูลผู้ป่วย) */
+        .report-header-container {
+            background-color: var(--card-bg); 
+            border-radius: 12px; 
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+            border: 1px solid var(--border-color); 
+            margin-bottom: 20px; 
+            color: var(--text-color);
+        }
+        
+        .header-main { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: flex-start; 
+            flex-wrap: wrap; 
+            gap: 15px; 
+        }
+        
+        .patient-profile { 
+            display: flex; 
+            gap: 15px; 
+            align-items: center; 
+            flex: 1 1 300px; /* ยืดหยุ่นแต่มีความกว้างขั้นต่ำ */
+        }
+        
+        .profile-icon {
+            width: 50px; height: 50px; 
+            background-color: var(--primary-light); 
+            color: var(--primary);
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            flex-shrink: 0; /* ไม่ให้ไอคอนหดตัว */
+        }
+        
+        .patient-name { font-size: 1.3rem; font-weight: 700; line-height: 1.2; margin-bottom: 4px; }
+        .patient-meta { opacity: 0.8; font-size: 0.9rem; }
+        .patient-dept {
+            background-color: var(--header-bg); 
+            display: inline-block; 
             padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            font-weight: bold;
-            white-space: nowrap;
-        }
-        .status-green { background-color: rgba(76, 175, 80, 0.15); color: #1b5e20; }
-        .status-orange { background-color: rgba(255, 152, 0, 0.15); color: #e65100; }
-        .status-red { background-color: rgba(244, 67, 54, 0.15); color: #c62828; }
-        .status-blue { background-color: rgba(33, 150, 243, 0.15); color: #0d47a1; }
-        .status-gray { background-color: rgba(158, 158, 158, 0.15); color: var(--text-color); }
-
-        /* ปุ่มลบ (Secondary) - Minimal Gray Style */
-        /* Target เฉพาะปุ่มในตารางเพื่อความปลอดภัย */
-        div[data-testid="column"] button[kind="secondary"] {
-            border: 1px solid transparent !important;
-            background-color: transparent !important;
-            color: #757575 !important; /* สีเทา */
-            padding: 0 !important;
-            font-size: 1.2rem !important; /* ไอคอนใหญ่ขึ้น */
-            line-height: 1 !important;
-            height: 40px !important;
-            width: 40px !important;
-            border-radius: 50% !important;
-            display: flex !important;
-            justify-content: center !important;
-            align-items: center !important;
-            margin: 0 auto !important; /* จัดกึ่งกลางแนวนอน */
-        }
-        div[data-testid="column"] button[kind="secondary"]:hover {
-            background-color: rgba(0,0,0,0.05) !important;
-            color: #333 !important;
-            transform: scale(1.1);
+            border-radius: 4px; 
+            font-size: 0.8rem; 
+            margin-top: 6px; 
+            font-weight: 500;
         }
         
-        /* [DELETED] ลบ Global Column Center Override ที่รุนแรงออกแล้ว */
-        /* เพื่อให้ vertical_alignment="center" ทำงานได้ถูกต้องตามปกติ */
-    </style>
-    """, unsafe_allow_html=True)
+        .report-meta { 
+            text-align: right; 
+            flex: 1 1 200px;
+        }
+        
+        .hospital-brand .hosp-name { font-weight: 700; color: var(--primary); font-size: 1.1rem; }
+        .hospital-brand .hosp-dept { font-size: 0.95rem; opacity: 0.9; }
+        .hospital-brand .hosp-sub { font-size: 0.85rem; opacity: 0.7; }
 
-    # --- Session State Init ---
-    if 'bp_dept_filter' not in st.session_state: st.session_state.bp_dept_filter = []
-    if 'bp_date_filter' not in st.session_state: st.session_state.bp_date_filter = "(ทั้งหมด)"
-    if 'bp_report_type' not in st.session_state: st.session_state.bp_report_type = "รายงานสุขภาพ (Health Report)"
-    if 'bp_name_search' not in st.session_state: st.session_state.bp_name_search = None
-    if 'bp_hn_search' not in st.session_state: st.session_state.bp_hn_search = ""
-    if 'bp_cid_search' not in st.session_state: st.session_state.bp_cid_search = ""
-    if 'bp_manual_hns' not in st.session_state: st.session_state.bp_manual_hns = set()
+        /* Vitals Grid (ตารางค่าชีพจรต่างๆ) */
+        .vitals-grid-container { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); /* ปรับ minmax ให้เล็กลงเพื่อให้แสดงผลในมือถือได้ 2 คอลัมน์ */
+            gap: 15px; 
+            margin-bottom: 25px; 
+        }
+        
+        .vital-card {
+            background: var(--card-bg); 
+            border-radius: 10px; 
+            padding: 15px; 
+            display: flex; 
+            align-items: center; 
+            gap: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
+            border: 1px solid var(--border-color); 
+            color: var(--text-color);
+        }
+        
+        .vital-icon-box { 
+            width: 40px; height: 40px; 
+            display: flex; align-items: center; justify-content: center; 
+            flex-shrink: 0;
+        }
+        .vital-icon-box svg { width: 28px; height: 28px; }
+        
+        .color-blue { color: #2196F3; } .color-green { color: #4CAF50; } .color-red { color: #F44336; } .color-orange { color: #FF9800; }
+        
+        .vital-content { flex: 1; min-width: 0; /* ป้องกัน content ดันกล่องขยาย */ }
+        .vital-label { font-size: 0.8rem; opacity: 0.7; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .vital-value { font-size: 1.2rem; font-weight: 700; line-height: 1.2; }
+        .unit { font-size: 0.8rem; opacity: 0.6; font-weight: 400; }
+        .vital-sub { font-size: 0.75rem; opacity: 0.6; margin-top: 2px; }
+        
+        .badge { display: inline-block; padding: 2px 6px; border-radius: 10px; font-size: 0.7rem; font-weight: 600; }
+        .badge-bmi { background-color: var(--header-bg); }
 
-    # --- 1. เลือกประเภทรายงาน ---
-    st.subheader("1. เลือกประเภทรายงาน")
-    report_type_options = [
-        "รายงานสุขภาพ (Health Report)", 
-        "รายงานสมรรถภาพ (Performance Report)",
-        "ทั้งรายงานสุขภาพและสมรรถภาพ"
+        /* Recommendation Box */
+        .recommendation-container {
+            background-color: var(--card-bg); 
+            border-radius: 12px; 
+            padding: 20px; 
+            border-left: 6px solid var(--primary);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+            color: var(--text-color);
+        }
+        
+        .custom-advice-box { 
+            padding: 15px; 
+            border-radius: 8px; 
+            margin-top: 15px; 
+            border: 1px solid transparent; 
+            font-weight: 500; 
+            display: flex; 
+            align-items: flex-start; /* จัดชิดบนเพื่อให้ไอคอนไม่ลอยถ้าข้อความยาว */
+            gap: 10px; 
+        }
+        .custom-advice-box::before { content: "💡"; font-size: 1.2rem; line-height: 1; }
+        
+        .immune-box { background-color: var(--success-bg); color: var(--success-text); border-color: rgba(76, 175, 80, 0.2); }
+        .no-immune-box { background-color: var(--danger-bg); color: var(--danger-text); border-color: rgba(255, 82, 82, 0.2); }
+        .warning-box { background-color: var(--warning-bg); color: var(--warning-text); border-color: rgba(255, 152, 0, 0.2); }
+
+        /* Vision Result Pills */
+        .vision-result { padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; white-space: nowrap; }
+        .vision-normal { background-color: var(--success-bg); color: var(--success-text); }
+        .vision-abnormal { background-color: var(--danger-bg); color: var(--danger-text); }
+        .vision-warning { background-color: var(--warning-bg); color: var(--warning-text); }
+        .vision-not-tested { background-color: var(--header-bg); opacity: 0.6; }
+
+        /* Mobile Adjustments (Responsive) */
+        @media (max-width: 768px) {
+            .header-main { flex-direction: column; align-items: flex-start; gap: 15px; }
+            .report-meta { text-align: left; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-color); width: 100%; }
+            
+            .vitals-grid-container { grid-template-columns: 1fr 1fr; gap: 10px; } /* มือถือแสดง 2 คอลัมน์ */
+            .vital-value { font-size: 1.1rem; }
+            
+            .table-responsive { overflow-x: auto; }
+            
+            /* ลดขนาด Font บนมือถือเล็กน้อย */
+            .section-header-styled { font-size: 1.1rem; padding-left: 10px; margin-top: 20px; }
+            .patient-name { font-size: 1.2rem; }
+            
+            /* ปรับตารางให้เลื่อนได้ */
+            .lab-table th, .lab-table td { padding: 8px; font-size: 0.85rem; }
+        }
+        
+        @media (max-width: 480px) {
+            .vitals-grid-container { grid-template-columns: 1fr; } /* จอเล็กมากแสดง 1 คอลัมน์ */
+            .profile-icon { width: 40px; height: 40px; }
+            .profile-icon svg { width: 24px; height: 24px; }
+        }
+    </style>""")
+    st.markdown(css_content, unsafe_allow_html=True)
+
+def render_section_header(title):
+    st.markdown(clean_html_string(f"""<div class="section-header-styled">{title}</div>"""), unsafe_allow_html=True)
+
+def render_lab_table_html(title, headers, rows, table_class="lab-table"):
+    header_html = f"<div class='table-title'>{title}</div>"
+    thead = "<thead><tr>"
+    for i, h in enumerate(headers):
+        align = "left" if i in [0, 2] else "center"
+        thead += f"<th style='text-align: {align};'>{h}</th>"
+    thead += "</tr></thead>"
+    tbody = "<tbody>"
+    for row in rows:
+        is_row_abnormal = any(item[1] for item in row)
+        row_class = "abnormal-row" if is_row_abnormal else ""
+        tbody += f"<tr class='{row_class}'>"
+        tbody += f"<td style='text-align: left; font-weight: 500;'>{row[0][0]}</td>"
+        val_class = "text-danger" if row[1][1] else ""
+        tbody += f"<td class='{val_class}' style='text-align: center; font-weight: bold;'>{row[1][0]}</td>"
+        tbody += f"<td style='text-align: left; opacity: 0.8;'>{row[2][0]}</td>"
+        tbody += "</tr>"
+    tbody += "</tbody>"
+    html_content = clean_html_string(f"""<div class="card-container">{header_html}<div class='table-responsive'><table class='{table_class}'><colgroup><col style='width:40%;'><col style='width:20%;'><col style='width:40%;'></colgroup>{thead}{tbody}</table></div></div>""")
+    return html_content
+
+def safe_text(val): return "-" if str(val).strip().lower() in ["", "none", "nan", "-"] else str(val).strip()
+def safe_value(val):
+    val = str(val or "").strip()
+    return "-" if val.lower() in ["", "nan", "none", "-"] else val
+
+def parse_range_or_number(val):
+    val = val.replace("cell/hpf", "").replace("cells/hpf", "").replace("cell", "").strip().lower()
+    try:
+        if "-" in val: return map(float, val.split("-"))
+        else: num = float(val); return num, num
+    except: return None, None
+
+def interpret_rbc(value):
+    val = str(value or "").strip().lower()
+    if val in ["-", "", "none", "nan"]: return "-"
+    _, high = parse_range_or_number(val)
+    if high is None: return value
+    if high <= 2: return "ปกติ"
+    if high <= 5: return "พบเม็ดเลือดแดงในปัสสาวะเล็กน้อย"
+    return "พบเม็ดเลือดแดงในปัสสาวะ"
+
+def interpret_wbc(value):
+    val = str(value or "").strip().lower()
+    if val in ["-", "", "none", "nan"]: return "-"
+    _, high = parse_range_or_number(val)
+    if high is None: return value
+    if high <= 5: return "ปกติ"
+    if high <= 10: return "พบเม็ดเลือดขาวในปัสสาวะเล็กน้อย"
+    return "พบเม็ดเลือดขาวในปัสสาวะ"
+
+def is_urine_abnormal(test_name, value, normal_range):
+    val = str(value or "").strip().lower()
+    if val in ["", "-", "none", "nan", "null"]: return False
+    if test_name == "กรด-ด่าง (pH)":
+        try: return not (5.0 <= float(val) <= 8.0)
+        except: return True
+    if test_name == "ความถ่วงจำเพาะ (Sp.gr)":
+        try: return not (1.003 <= float(val) <= 1.030)
+        except: return True
+    if test_name == "เม็ดเลือดแดง (RBC)": return "พบ" in interpret_rbc(val).lower()
+    if test_name == "เม็ดเลือดขาว (WBC)": return "พบ" in interpret_wbc(val).lower()
+    if test_name == "น้ำตาล (Sugar)": return val.lower() not in ["negative"]
+    if test_name == "โปรตีน (Albumin)": return val.lower() not in ["negative", "trace"]
+    if test_name == "สี (Colour)": return val not in ["yellow", "pale yellow", "colorless", "paleyellow", "light yellow"]
+    return False
+
+def interpret_stool_exam(val):
+    if is_empty(val): return "ไม่ได้ตรวจ"
+    val_lower = str(val).strip().lower()
+    if val_lower == "normal": return "ไม่พบเม็ดเลือดขาวในอุจจาระ ถือว่าปกติ"
+    if "wbc" in val_lower or "เม็ดเลือดขาว" in val_lower: return "พบเม็ดเลือดขาวในอุจจาระ นัดตรวจซ้ำ"
+    return val
+
+def interpret_stool_cs(value):
+    if is_empty(value): return "ไม่ได้ตรวจ"
+    val_strip = str(value).strip()
+    if "ไม่พบ" in val_strip or "ปกติ" in val_strip: return "ไม่พบการติดเชื้อ"
+    return "พบการติดเชื้อในอุจจาระ ให้พบแพทย์เพื่อตรวจรักษาเพิ่มเติม"
+
+def get_ekg_col_name(year):
+    current_thai_year = datetime.now().year + 543
+    return "EKG" if year == current_thai_year else f"EKG{str(year)[-2:]}"
+
+def interpret_ekg(val):
+    val = str(val or "").strip()
+    if is_empty(val): return "ไม่ได้ตรวจ"
+    if any(x in val.lower() for x in ["ผิดปกติ", "abnormal", "arrhythmia"]): return f"<span class='text-danger'>{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม</span>"
+    return val
+
+def hepatitis_b_advice(hbsag, hbsab, hbcab):
+    hbsag, hbsab, hbcab = str(hbsag).lower(), str(hbsab).lower(), str(hbcab).lower()
+    if "positive" in hbsag: return "ติดเชื้อไวรัสตับอักเสบบี", "infection"
+    if "positive" in hbsab and "positive" not in hbsag: return "มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี", "immune"
+    if "positive" in hbcab and "positive" not in hbsab: return "เคยติดเชื้อแต่ไม่มีภูมิคุ้มกันในปัจจุบัน", "unclear"
+    if all(x == "negative" for x in [hbsag, hbsab, hbcab]): return "ไม่มีภูมิคุ้มกันต่อไวรัสตับอักเสบบี ควรปรึกษาแพทย์เพื่อรับวัคซีน", "no_immune"
+    return "ไม่สามารถสรุปผลชัดเจน แนะนำให้พบแพทย์เพื่อประเมินซ้ำ", "unclear"
+
+def interpret_bp(sbp, dbp):
+    try:
+        sbp, dbp = float(sbp), float(dbp)
+        if sbp == 0 or dbp == 0: return "-"
+        if sbp >= 160 or dbp >= 100: return "ความดันสูง"
+        if sbp >= 140 or dbp >= 90: return "ความดันสูงเล็กน้อย"
+        if sbp < 120 and dbp < 80: return "ความดันปกติ"
+        return "ความดันค่อนข้างสูง"
+    except: return "-"
+
+def interpret_cxr(val):
+    val = str(val or "").strip()
+    if is_empty(val): return "ไม่ได้ตรวจ"
+    if any(keyword in val.lower() for keyword in ["ผิดปกติ", "ฝ้า", "รอย", "abnormal", "infiltrate", "lesion"]): return f"<span class='text-danger'>{val} ⚠️ กรุณาพบแพทย์เพื่อตรวจเพิ่มเติม</span>"
+    return val
+
+def interpret_bmi(bmi):
+    if bmi is None: return ""
+    if bmi < 18.5: return "น้ำหนักน้อยกว่าเกณฑ์"
+    elif 18.5 <= bmi < 23: return "น้ำหนักปกติ"
+    elif 23 <= bmi < 25: return "น้ำหนักเกิน (ท้วม)"
+    elif 25 <= bmi < 30: return "เข้าเกณฑ์โรคอ้วน"
+    elif bmi >= 30: return "เข้าเกณฑ์โรคอ้วนอันตราย"
+    return ""
+
+def display_common_header(person_data):
+    name = person_data.get('ชื่อ-สกุล', '-')
+    age = str(int(float(person_data.get('อายุ')))) if str(person_data.get('อายุ')).replace('.', '', 1).isdigit() else person_data.get('อายุ', '-')
+    sex = person_data.get('เพศ', '-')
+    hn = str(int(float(person_data.get('HN')))) if str(person_data.get('HN')).replace('.', '', 1).isdigit() else person_data.get('HN', '-')
+    department = person_data.get('หน่วยงาน', '-')
+    check_date = person_data.get("วันที่ตรวจ", "-")
+    try:
+        sbp_int, dbp_int = int(float(person_data.get("SBP", ""))), int(float(person_data.get("DBP", "")))
+        bp_val = f"{sbp_int}/{dbp_int}"
+        bp_desc = interpret_bp(sbp_int, dbp_int)
+    except:
+        bp_val = "-"
+        bp_desc = "ไม่มีข้อมูล"
+    try: pulse_val = f"{int(float(person_data.get('pulse', '-')))}"
+    except: pulse_val = "-"
+    weight = get_float('น้ำหนัก', person_data)
+    height = get_float('ส่วนสูง', person_data)
+    weight_val = f"{weight}" if weight is not None else "-"
+    height_val = f"{height}" if height is not None else "-"
+    waist_val = f"{person_data.get('รอบเอว', '-')}"
+    bmi_val_str = "-"
+    bmi_desc = ""
+    if weight is not None and height is not None and height > 0:
+        bmi = weight / ((height / 100) ** 2)
+        bmi_val_str = f"{bmi:.1f}"
+        bmi_desc = interpret_bmi(bmi)
+
+    icon_profile = """<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>"""
+    icon_body = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>"""
+    icon_waist = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 12h8"></path></svg>"""
+    icon_heart = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>"""
+    icon_pulse = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>"""
+
+    html_content = clean_html_string(f"""
+    <div class="report-header-container">
+        <div class="header-main">
+            <div class="patient-profile">
+                <div class="profile-icon">{icon_profile}</div>
+                <div class="profile-details">
+                    <div class="patient-name">{name}</div>
+                    <div class="patient-meta"><span>HN: {hn}</span> | <span>เพศ: {sex}</span> | <span>อายุ: {age} ปี</span></div>
+                    <div class="patient-dept">หน่วยงาน: {department}</div>
+                </div>
+            </div>
+            <div class="report-meta">
+                <div class="meta-date">วันที่ตรวจ: {check_date}</div>
+                <div class="hospital-brand">
+                    <div class="hosp-name">คลินิกตรวจสุขภาพ</div>
+                    <div class="hosp-dept">อาชีวเวชกรรม</div>
+                    <div class="hosp-sub">รพ.สันทราย</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="vitals-grid-container">
+        <div class="vital-card">
+            <div class="vital-icon-box color-blue">{icon_body}</div>
+            <div class="vital-content">
+                <div class="vital-label">สัดส่วนร่างกาย</div>
+                <div class="vital-value">{weight_val} <span class="unit">kg</span> / {height_val} <span class="unit">cm</span></div>
+                <div class="vital-sub">BMI: {bmi_val_str} <br><span class="badge badge-bmi">{bmi_desc}</span></div>
+            </div>
+        </div>
+        <div class="vital-card">
+            <div class="vital-icon-box color-green">{icon_waist}</div>
+            <div class="vital-content"><div class="vital-label">รอบเอว</div><div class="vital-value">{waist_val} <span class="unit">cm</span></div></div>
+        </div>
+        <div class="vital-card">
+            <div class="vital-icon-box color-red">{icon_heart}</div>
+            <div class="vital-content">
+                <div class="vital-label">ความดันโลหิต</div>
+                <div class="vital-value">{bp_val} <span class="unit">mmHg</span></div>
+                <div class="vital-sub">{bp_desc}</div>
+            </div>
+        </div>
+        <div class="vital-card">
+            <div class="vital-icon-box color-orange">{icon_pulse}</div>
+            <div class="vital-content"><div class="vital-label">ชีพจร</div><div class="vital-value">{pulse_val} <span class="unit">bpm</span></div></div>
+        </div>
+    </div>
+    """)
+    st.markdown(html_content, unsafe_allow_html=True)
+
+def render_vision_details_table(person_data):
+    vision_config = [
+        {'id': 'V_Binocular_Far', 'label': '1. การมองด้วย 2 ตา (Binocular vision)', 'keys': ['ป.การรวมภาพ', 'ผ.การรวมภาพ', 'Binocular', 'Binocular Vision']},
+        {'id': 'V_Both_Far', 'label': '2. ความชัดระยะไกล - สองตา (Far vision - Both)', 'keys': ['ป.ความชัดของภาพระยะไกล', 'ผ.ความชัดของภาพระยะไกล', 'Far Both', 'V_Both_Far']},
+        {'id': 'V_R_Far', 'label': '3. ความชัดระยะไกล - ตาขวา (Far vision - Right)', 'keys': ['V_R_Far', 'R_Far', 'Right Far', 'Far Vision Right', 'การมองภาพระยะไกลด้วยตาขวา(Far vision – Right)', 'R-Far']},
+        {'id': 'V_L_Far', 'label': '4. ความชัดระยะไกล - ตาซ้าย (Far vision - Left)', 'keys': ['V_L_Far', 'L_Far', 'Left Far', 'Far Vision Left', 'การมองภาพระยะไกลด้วยตาซ้าย(Far vision –Left)', 'L-Far']},
+        {'id': 'Stereo', 'label': '5. การมองภาพ 3 มิติ (Stereo depth)', 'keys': ['ป.การกะระยะและมองความชัดลึกของภาพ', 'ผ.การกะระยะและมองความชัดลึกของภาพ', 'Stereo', 'Stereopsis']},
+        {'id': 'Color_Blind', 'label': '6. การจำแนกสี (Color discrimination)', 'keys': ['Color_Blind', 'ColorBlind', 'Ishihara', 'Color', 'ตาบอดสี', 'ป.การจำแนกสี', 'ผ.การจำแนกสี']},
+        {'id': 'Phoria_V_Far', 'label': '7. สมดุลกล้ามเนื้อตาแนวดิ่ง (Far vertical phoria)', 'keys': ['ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวตั้ง', 'Far Vertical Phoria', 'Phoria V Far']},
+        {'id': 'Phoria_H_Far', 'label': '8. สมดุลกล้ามเนื้อตาแนวนอน (Far lateral phoria)', 'keys': ['ปกติความสมดุลกล้ามเนื้อตาระยะไกลแนวนอน', 'Far Lateral Phoria', 'Phoria H Far']},
+        {'id': 'V_Both_Near', 'label': '9. ความชัดระยะใกล้ - สองตา (Near vision - Both)', 'keys': ['ป.ความชัดของภาพระยะใกล้', 'ผ.ความชัดของภาพระยะใกล้', 'Near Both', 'V_Both_Near']},
+        {'id': 'V_R_Near', 'label': '10. ความชัดระยะใกล้ - ตาขวา (Near vision - Right)', 'keys': ['V_R_Near', 'R_Near', 'Right Near', 'Near Vision Right', 'การมองภาพระยะใกล้ด้วยตาขวา (Near vision – Right)', 'R-Near']},
+        {'id': 'V_L_Near', 'label': '11. ความชัดระยะใกล้ - ตาซ้าย (Near vision - Left)', 'keys': ['V_L_Near', 'L_Near', 'Left Near', 'Near Vision Left', 'การมองภาพระยะใกล้ด้วยตาซ้าย (Near vision – Left)', 'L-Near']},
+        {'id': 'Phoria_H_Near', 'label': '12. สมดุลกล้ามเนื้อตาแนวนอน-ใกล้ (Near lateral phoria)', 'keys': ['ปกติความสมดุลกล้ามเนื้อตาระยะใกล้แนวนอน', 'Near Lateral Phoria', 'Phoria H Near']},
+        {'id': 'Visual_Field', 'label': '13. ลานสายตา (Visual field)', 'keys': ['ป.ลานสายตา', 'ผ.ลานสายตา', 'Visual Field', 'Perimetry']}
     ]
-    type_idx = 0
-    if st.session_state.bp_report_type in report_type_options:
-        type_idx = report_type_options.index(st.session_state.bp_report_type)
-    
-    report_type = st.selectbox(
-        "เลือกรูปแบบรายงานที่จะพิมพ์", 
-        options=report_type_options,
-        index=type_idx,
-        key="bp_report_type",
-        label_visibility="collapsed"
-    )
-    st.markdown("---")
+    def check_vision(val, test_type):
+        if is_empty(val): return "-", "vision-not-tested"
+        val_str = str(val).strip().lower()
+        normal_keywords = ['normal', 'ปกติ', 'pass', 'ผ่าน', 'within normal', 'no', 'none', 'ortho', 'orthophoria', 'clear', 'ok', 'good', 'binocular', '6/6', '20/20']
+        warning_keywords = ['mild', 'slight', 'เล็กน้อย', 'trace', 'low', 'ต่ำ', 'below', 'drop']
+        abnormal_keywords = ['abnormal', 'ผิดปกติ', 'fail', 'ไม่ผ่าน', 'detect', 'found', 'พบ', 'deficiency', 'color blind', 'blind', 'eso', 'exo', 'hyper', 'hypo']
+        if val_str in normal_keywords: return "ปกติ", "vision-normal"
+        if any(kw in val_str for kw in abnormal_keywords):
+            if any(kw in val_str for kw in warning_keywords): return "ต่ำกว่าเกณฑ์", "vision-warning"
+            return "ผิดปกติ", "vision-abnormal"
+        if any(kw in val_str for kw in warning_keywords): return "ต่ำกว่าเกณฑ์", "vision-warning"
+        if re.match(r'^\d+/\d+$', val_str): return str(val), "vision-normal"
+        if len(val_str) > 20: return "ผิดปกติ", "vision-abnormal"
+        return str(val), "vision-normal"
 
-    # --- 2. ค้นหาและเพิ่มผู้ป่วย ---
-    st.subheader("2. ค้นหาและเพิ่มรายชื่อ (ทีละคน)")
+    html_rows = ""
+    any_data_found = False
+    for item in vision_config:
+        val = None
+        for key in item['keys']:
+            if not is_empty(person_data.get(key)):
+                val = person_data.get(key)
+                any_data_found = True
+                break
+        res_text, res_class = check_vision(val, item['id'])
+        html_rows += f"<tr><td>{item['label']}</td><td class='result-cell' style='text-align:center;'><span class='vision-result {res_class}'>{res_text}</span></td></tr>"
     
-    if 'bp_action_msg' in st.session_state:
-        msg = st.session_state.bp_action_msg
-        if msg['type'] == 'success':
-            st.success(msg['text'])
-        else:
-            st.error(msg['text'])
-        del st.session_state.bp_action_msg
-    
-    # Input Row
-    c1, c2, c3 = st.columns([2, 1.5, 1.5])
-    with c1:
-        all_names = sorted(df['ชื่อ-สกุล'].dropna().unique().tolist())
-        st.selectbox("ค้นหาด้วยชื่อ-สกุล", options=all_names, index=None, placeholder="พิมพ์หรือเลือกชื่อ...", key="bp_name_search")
-    with c2:
-        st.text_input("ค้นหาด้วย HN", key="bp_hn_search", placeholder="พิมพ์ HN")
-    with c3:
-        st.text_input("ค้นหาด้วยเลขบัตรฯ", key="bp_cid_search", placeholder="พิมพ์เลขบัตร")
+    doctor_advice = person_data.get('แนะนำABN EYE', '')
+    summary_advice = person_data.get('สรุปเหมาะสมกับงาน', '')
+    footer_html = ""
+    if not is_empty(summary_advice) or not is_empty(doctor_advice):
+        footer_html = "<div class='card-container' style='margin-top: 10px; background-color: var(--warning-bg); border-color: rgba(255, 152, 0, 0.3);'>"
+        if not is_empty(summary_advice): footer_html += f"<b>สรุปความเหมาะสมกับงาน:</b> {summary_advice}<br>"
+        if not is_empty(doctor_advice): footer_html += f"<b>คำแนะนำแพทย์:</b> {doctor_advice}"
+        footer_html += "</div>"
+    html_content = clean_html_string(f"""<div class='card-container'><div class='table-title'>ผลการตรวจสมรรถภาพการมองเห็น (Vision Test)</div><table class='vision-table'><thead><tr><th>รายการทดสอบ</th><th style='text-align: center; width: 150px;'>ผลการตรวจ</th></tr></thead><tbody>{html_rows}</tbody></table></div>{footer_html}""")
+    if any_data_found: st.markdown(html_content, unsafe_allow_html=True)
+    else: st.info("ไม่พบข้อมูลการตรวจสายตา")
 
-    # Button Row: ใช้สัดส่วน 2:3 เพื่อให้ปุ่มตรงกับช่อง "ชื่อ-สกุล" ด้านบน
-    col_add, _ = st.columns([2, 3])
-    with col_add:
-        st.button("➕ เพิ่มลงรายการ", use_container_width=True, on_click=add_patient_to_list_callback, args=(df,))
+def display_performance_report_vision(person_data):
+    """Wrapper function to match calling convention"""
+    render_vision_details_table(person_data)
+
+def display_performance_report_hearing(person_data, all_person_history_df):
+    # ย้าย import มาไว้ในฟังก์ชันเพื่อแก้ Circular Import
+    from performance_tests import interpret_audiogram
+    results = interpret_audiogram(person_data, all_person_history_df)
+    freqs = [250, 500, 1000, 2000, 3000, 4000, 6000, 8000]
+    def get_hearing_val(side, freq):
+        suffixes = [str(freq)]
+        if freq >= 1000: suffixes.append(f"{freq//1000}k")
+        candidates = []
+        for s in suffixes: candidates.extend([f"{side}{s}", f"{side}_{s}", f"{side}_{s}Hz", f"{side}{s}Hz"])
+        for k in candidates:
+            val = person_data.get(k)
+            if not is_empty(val): return val
+        return "-"
+    r_vals = [get_hearing_val('R', f) for f in freqs]
+    l_vals = [get_hearing_val('L', f) for f in freqs]
+    st.markdown(clean_html_string("""<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px;"><div class="card-container" style="margin: 0; border-left: 4px solid #FF9800;"><div style="font-weight: bold; color: var(--main-text-color); margin-bottom: 5px;">🔊 ความถี่ (Hz)</div><div style="font-size: 0.85rem; opacity: 0.8;">คือ ระดับเสียงทุ้ม-แหลม (250=ทุ้มต่ำ, 8000=แหลมสูง)</div></div><div class="card-container" style="margin: 0; border-left: 4px solid #4CAF50;"><div style="font-weight: bold; color: var(--main-text-color); margin-bottom: 5px;">👂 ระดับการได้ยิน (dB)</div><div style="font-size: 0.85rem; opacity: 0.8;">คือ ความดังที่เริ่มได้ยิน <b>(ค่าปกติ ≤ 25 dB)</b> *ค่ายิ่งน้อย ยิ่งได้ยินดี</div></div></div>"""), unsafe_allow_html=True)
+    table_html = clean_html_string(f"""<div class='card-container'><div class='table-title'>ตารางระดับการได้ยิน (dB)</div><div class='table-responsive'><table class='lab-table'><thead><tr><th>ความถี่ (Hz)</th>{"".join([f"<th>{f}</th>" for f in freqs])}</tr></thead><tbody><tr><td><b>หูขวา (Right)</b></td>{"".join([f"<td style='text-align:center;'>{v}</td>" for v in r_vals])}</tr><tr><td><b>หูซ้าย (Left)</b></td>{"".join([f"<td style='text-align:center;'>{v}</td>" for v in l_vals])}</tr></tbody></table></div></div>""")
+    st.markdown(table_html, unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    with col1: st.markdown(f"<div class='card-container'><b>สรุปผลหูขวา:</b><br>{results['summary']['right']}</div>", unsafe_allow_html=True)
+    with col2: st.markdown(f"<div class='card-container'><b>สรุปผลหูซ้าย:</b><br>{results['summary']['left']}</div>", unsafe_allow_html=True)
+    if results['advice']: st.warning(f"คำแนะนำ: {results['advice']}")
+
+def display_performance_report_lung(person_data):
+    # ย้าย import มาไว้ในฟังก์ชันเพื่อแก้ Circular Import
+    from performance_tests import interpret_lung_capacity
+    summary, advice, raw_data = interpret_lung_capacity(person_data)
+    st.markdown(clean_html_string("""<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px;"><div class="card-container" style="margin: 0; border-left: 4px solid #2196F3;"><div style="font-weight: bold; color: var(--main-text-color); margin-bottom: 5px;">🫁 FVC (ความจุปอด)</div><div style="font-size: 0.85rem; opacity: 0.8;">ปริมาตรอากาศทั้งหมดที่เป่าออกมาได้เต็มที่ (บอกขนาดปอด)</div></div><div class="card-container" style="margin: 0; border-left: 4px solid #00BCD4;"><div style="font-weight: bold; color: var(--main-text-color); margin-bottom: 5px;">💨 FEV1 (ปริมาตรลมเป่าเร็ว)</div><div style="font-size: 0.85rem; opacity: 0.8;">ปริมาตรอากาศที่เป่าออกได้ในวินาทีแรก (บอกความโล่งของหลอดลม)</div></div></div>"""), unsafe_allow_html=True)
+    lung_items = [("FVC (ความจุปอด)", raw_data['FVC predic'], raw_data['FVC'], raw_data['FVC %']), ("FEV1 (ปริมาตรลมเป่าเร็ว)", raw_data['FEV1 predic'], raw_data['FEV1'], raw_data['FEV1 %']), ("FEV1/FVC Ratio (สัดส่วน)", "-", raw_data['FEV1/FVC %'], "-")]
+    def make_bar(val):
+        try:
+            v = float(str(val).replace('%','').strip())
+            color = "var(--success-text)" if v >= 80 else "var(--warning-text)" if v >= 60 else "var(--danger-text)"
+            return f"<div style='background:rgba(128,128,128,0.2);height:6px;border-radius:3px;width:100px;display:inline-block;vertical-align:middle;margin-right:8px;'><div style='width:{min(v,100)}%;background:{color};height:100%;border-radius:3px;'></div></div> {v}%"
+        except: return str(val)
+    html_content = clean_html_string("""<div class='card-container'><div class='table-title'>ผลการตรวจสมรรถภาพปอด (Spirometry)</div><table class='lab-table'><thead><tr><th style='width: 30%;'>รายการ</th><th style='text-align: center;'>ค่ามาตรฐาน</th><th style='text-align: center;'>ค่าที่วัดได้</th><th style='width: 35%;'>ผลเทียบมาตรฐาน (%)</th></tr></thead><tbody>""")
+    for label, pred, act, per in lung_items:
+        display_per = make_bar(per) if per != "-" else "-"
+        html_content += f"<tr><td>{label}</td><td style='text-align:center;'>{pred}</td><td style='text-align:center;'>{act}</td><td>{display_per}</td></tr>"
+    html_content += "</tbody></table></div>"
+    st.markdown(html_content, unsafe_allow_html=True)
+    st.markdown(f"<div class='card-container'><b>สรุปผล:</b> {summary}<br><br><b>คำแนะนำ:</b> {advice}</div>", unsafe_allow_html=True)
+
+def display_performance_report(person_data, report_type, all_person_history_df=None):
+    if report_type == 'lung':
+        render_section_header("ผลตรวจสมรรถภาพปอด (Lung Function Test)")
+        display_performance_report_lung(person_data)
+    elif report_type == 'vision':
+        render_section_header("ผลตรวจการมองเห็น (Vision Test)")
+        display_performance_report_vision(person_data)
+    elif report_type == 'hearing':
+        render_section_header("ผลตรวจการได้ยิน (Audiometry)")
+        display_performance_report_hearing(person_data, all_person_history_df)
+
+def render_urine_section(person_data, sex, year):
+    # Config for Urine Tests
+    urine_config = [
+        ("สี (Colour)", "Color", "Yellow"),
+        ("น้ำตาล (Sugar)", "sugar", "Negative"),
+        ("โปรตีน (Albumin)", "Alb", "Negative"),
+        ("กรด-ด่าง (pH)", "pH", "5.0 - 8.0"),
+        ("ความถ่วงจำเพาะ (Sp.gr)", "Spgr", "1.003 - 1.030"),
+        ("เม็ดเลือดแดง (RBC)", "RBC1", "0 - 2"),
+        ("เม็ดเลือดขาว (WBC)", "WBC1", "0 - 5"),
+        ("เซลล์เยื่อบุผิว (Epit)", "SQ-epi", "0 - 10"),
+        ("อื่นๆ", "ORTER", "-")
+    ]
     
-    st.markdown("---")
-    
-    # Bulk Filter
-    st.write("หรือเลือกเพิ่มจากกลุ่มหน่วยงาน (Bulk Selection)")
-    c4, c5 = st.columns(2)
-    with c4:
-        all_depts = sorted(df['หน่วยงาน'].dropna().astype(str).str.strip().unique())
-        selected_depts = st.multiselect("กรองตามหน่วยงาน", options=all_depts, placeholder="เลือกหน่วยงาน...", key="bp_dept_filter")
-    with c5:
-        temp_df = df.copy()
-        if selected_depts:
-            temp_df = temp_df[temp_df['หน่วยงาน'].astype(str).str.strip().isin(selected_depts)]
-        available_dates = sorted(temp_df['วันที่ตรวจ'].dropna().astype(str).unique(), reverse=True)
-        date_options = ["(ทั้งหมด)"] + list(available_dates)
+    rows = []
+    for label, col, norm in urine_config:
+        val = person_data.get(col)
+        # Check abnormality
+        is_abn = is_urine_abnormal(label, val, norm)
         
-        idx = 0
-        if st.session_state.bp_date_filter in date_options: idx = date_options.index(st.session_state.bp_date_filter)
-        selected_date = st.selectbox("กรองตามวันที่ตรวจ", options=date_options, index=idx, key="bp_date_filter")
-
-    # --- 3. รายชื่อที่เลือก (Custom Grid Table) ---
-    st.subheader("3. รายชื่อที่เลือก (รอสั่งพิมพ์)")
+        # Format for table: (Text, Is_Abnormal)
+        label_tuple = (label, is_abn)
+        val_tuple = (safe_value(val), is_abn)
+        norm_tuple = (norm, is_abn)
+        
+        rows.append([label_tuple, val_tuple, norm_tuple])
     
-    # Data Preparation
-    filtered_df = pd.DataFrame(columns=df.columns)
-    filter_active = False
-    if selected_depts or (selected_date != "(ทั้งหมด)"):
-        filtered_df = df.copy()
-        if selected_depts: filtered_df = filtered_df[filtered_df['หน่วยงาน'].astype(str).str.strip().isin(selected_depts)]
-        if selected_date != "(ทั้งหมด)": filtered_df = filtered_df[filtered_df['วันที่ตรวจ'].astype(str) == selected_date]
-        filter_active = True
+    # Render table
+    st.markdown(render_lab_table_html("ผลการตรวจปัสสาวะ (Urinalysis)", ["รายการ", "ผลตรวจ", "ค่าปกติ"], rows), unsafe_allow_html=True)
 
-    manual_hns = list(st.session_state.bp_manual_hns)
-    manual_df = df[df['HN'].isin(manual_hns)].copy()
-    
-    if filter_active:
-        display_pool = pd.concat([manual_df, filtered_df]).drop_duplicates(subset=['HN'])
-    elif manual_hns:
-        display_pool = manual_df
-    else:
-        display_pool = pd.DataFrame(columns=df.columns)
+def render_stool_html_table(exam_result, cs_result):
+    html = f"""
+    <div class="card-container">
+        <div class='table-title'>ผลการตรวจอุจจาระ (Stool Examination)</div>
+        <table class="lab-table">
+            <thead><tr><th>รายการ</th><th>ผลตรวจ</th></tr></thead>
+            <tbody>
+                <tr><td>Stool Examination</td><td>{exam_result}</td></tr>
+                <tr><td>Stool Culture</td><td>{cs_result}</td></tr>
+            </tbody>
+        </table>
+    </div>
+    """
+    return clean_html_string(html)
 
-    display_pool = display_pool.sort_values(by=['Year'], ascending=False)
-    unique_patients_df = display_pool.drop_duplicates(subset=['HN'])
-    
-    selected_to_print_hns = []
-    
-    # Limit rows
-    ROW_LIMIT = 200
-    if len(unique_patients_df) > ROW_LIMIT:
-        st.warning(f"⚠️ แสดงผล {ROW_LIMIT} คนแรก จากทั้งหมด {len(unique_patients_df)} คน (เพื่อความรวดเร็ว)")
-        unique_patients_df = unique_patients_df.head(ROW_LIMIT)
+def display_main_report(person_data, all_person_history_df):
+    person = person_data
+    sex = str(person.get("เพศ", "")).strip()
+    if sex not in ["ชาย", "หญิง"]: sex = "ไม่ระบุ"
+    hb_low, hct_low = (12, 36) if sex == "หญิง" else (13, 39)
+    cbc_config = [("ฮีโมโกลบิน (Hb)", "Hb(%)", "ชาย > 13, หญิง > 12 g/dl", hb_low, None), ("ฮีมาโตคริต (Hct)", "HCT", "ชาย > 39%, หญิง > 36%", hct_low, None), ("เม็ดเลือดขาว (wbc)", "WBC (cumm)", "4,000 - 10,000 /cu.mm", 4000, 10000), ("นิวโทรฟิล (Neutrophil)", "Ne (%)", "43 - 70%", 43, 70), ("ลิมโฟไซต์ (Lymphocyte)", "Ly (%)", "20 - 44%", 20, 44), ("โมโนไซต์ (Monocyte)", "M", "3 - 9%", 3, 9), ("อีโอซิโนฟิล (Eosinophil)", "Eo", "0 - 9%", 0, 9), ("เบโซฟิล (Basophil)", "BA", "0 - 3%", 0, 3), ("เกล็ดเลือด (Platelet)", "Plt (/mm)", "150,000 - 500,000 /cu.mm", 150000, 500000)]
+    cbc_rows = [([(label, is_abn), (result, is_abn), (norm, is_abn)]) for label, col, norm, low, high in cbc_config for val in [get_float(col, person)] for result, is_abn in [flag(val, low, high)]]
 
-    if unique_patients_df.empty:
-        if filter_active: st.info("ไม่พบข้อมูลตามเงื่อนไขหน่วยงาน/วันที่")
-        else: st.info("ยังไม่มีรายชื่อในรายการ กรุณากดปุ่ม ➕ เพิ่มรายชื่อ")
-    else:
-        # --- Config Ratio ---
-        col_ratios = [0.6, 0.6, 1.2, 1.2, 2.5, 1.5, 1.2]
+    blood_config = [("น้ำตาลในเลือด (FBS)", "FBS", "74 - 106 mg/dl", 74, 106), ("กรดยูริก (Uric Acid)", "Uric Acid", "2.6 - 7.2 mg%", 2.6, 7.2), ("การทำงานของเอนไซม์ตับ (ALK)", "ALP", "30 - 120 U/L", 30, 120), ("การทำงานของเอนไซม์ตับ (SGOT)", "SGOT", "< 37 U/L", None, 37), ("การทำงานของเอนไซม์ตับ (SGPT)", "SGPT", "< 41 U/L", None, 41), ("คลอเรสเตอรอล (CHOL)", "CHOL", "150 - 200 mg/dl", 150, 200), ("ไตรกลีเซอไรด์ (TGL)", "TGL", "35 - 150 mg/dl", 35, 150), ("ไขมันดี (HDL)", "HDL", "> 40 mg/dl", 40, None, True), ("ไขมันเลว (LDL)", "LDL", "0 - 160 mg/dl", 0, 160), ("การทำงานของไต (BUN)", "BUN", "7.9 - 20 mg/dl", 7.9, 20), ("การทำงานของไต (Cr)", "Cr", "0.5 - 1.17 mg/dl", 0.5, 1.17), ("ประสิทธิภาพการกรองของไต (GFR)", "GFR", "> 60 mL/min", 60, None, True)]
+    blood_rows = [([(label, is_abn), (result, is_abn), (norm, is_abn)]) for label, col, norm, low, high, *opt in blood_config for higher in [opt[0] if opt else False] for val in [get_float(col, person)] for result, is_abn in [flag(val, low, high, higher)]]
 
-        # --- Data Rows Loop ---
-        for i, row in unique_patients_df.iterrows():
-            hn = row['HN']
-            full_data = row.to_dict()
-            is_ready, status_text, status_color = check_data_readiness(full_data, report_type)
+    with st.container(border=True):
+        render_section_header("ผลการตรวจทางห้องปฏิบัติการ (Laboratory Results)")
+        col1, col2 = st.columns(2)
+        with col1: st.markdown(render_lab_table_html("ผลตรวจความสมบูรณ์ของเม็ดเลือด (CBC)", ["การตรวจ", "ผล", "ค่าปกติ"], cbc_rows), unsafe_allow_html=True)
+        with col2: st.markdown(render_lab_table_html("ผลตรวจเลือด (Blood Chemistry)", ["การตรวจ", "ผล", "ค่าปกติ"], blood_rows), unsafe_allow_html=True)
+
+    selected_year = person.get("Year", datetime.now().year + 543)
+
+    with st.container(border=True):
+        render_section_header("ผลการตรวจอื่นๆ (Other Examinations)")
+        col_ua_left, col_ua_right = st.columns(2)
+        with col_ua_left:
+            render_urine_section(person, sex, selected_year)
+            # st.markdown("<h5 class='section-subtitle'>ผลตรวจอุจจาระ (Stool Examination)</h5>", unsafe_allow_html=True)
+            # Use new function
+            st.markdown(render_stool_html_table(interpret_stool_exam(person.get("Stool exam", "")), interpret_stool_cs(person.get("Stool C/S", ""))), unsafe_allow_html=True)
+
+        with col_ua_right:
+            st.markdown("<h5 class='section-subtitle'>ผลตรวจพิเศษ</h5>", unsafe_allow_html=True)
             
-            is_manual = hn in manual_hns
-            default_chk = is_ready and is_manual
+            # --- CXR Logic: Check "CXR" column first ---
+            cxr_val = person.get("CXR")
+            if is_empty(cxr_val):
+                # Fallback logic: Try to find year-specific column e.g. CXR66
+                cxr_col = f"CXR{str(selected_year)[-2:]}"
+                cxr_val = person.get(cxr_col)
+            # ------------------------------------------
+
+            # --- EKG Logic: Check "EKG" column first ---
+            ekg_val = person.get("EKG")
+            if is_empty(ekg_val):
+                ekg_col = f"EKG{str(selected_year)[-2:]}"
+                ekg_val = person.get(ekg_col)
+            # ------------------------------------------
+
+            # --- Hepatitis A Logic: Check "Hepatitis A" column first ---
+            # NOTE: Assuming year specific columns might exist like Hepatitis A66
+            # If not, this logic will just fallback to None and display "ไม่ได้ตรวจ"
+            hep_a_val = person.get("Hepatitis A")
+            if is_empty(hep_a_val):
+                hep_a_col = f"Hepatitis A{str(selected_year)[-2:]}"
+                hep_a_val = person.get(hep_a_col)
             
-            # Row Container (Styled by CSS .grid-row to be flex)
-            with st.container():
-                # ใช้ vertical_alignment="center" ช่วยจัด widget ให้ตรงกลางแนวตั้ง (Native Streamlit feature)
-                cols = st.columns(col_ratios, vertical_alignment="center")
-                
-                # 1. Delete Button
-                with cols[0]:
-                    if st.button("🗑️", key=f"del_{hn}", help="ลบรายการนี้", type="secondary"):
-                        remove_hn_callback(hn)
-                        st.rerun()
-                
-                # 2. Checkbox
-                with cols[1]:
-                    # [EDITED] ลบการซ้อนคอลัมน์ [1,1,1] ที่ทำให้ Layout พัง
-                    is_selected = st.checkbox("เลือก", value=default_chk, key=f"sel_{hn}", label_visibility="collapsed")
-                    if is_selected:
-                        selected_to_print_hns.append(hn)
+            hep_a_display_text = "ไม่ได้ตรวจ" if is_empty(hep_a_val) else safe_text(hep_a_val)
+            # -----------------------------------------------------------
 
-                # 3. Status Badge (Use HTML for consistent height)
-                with cols[2]:
-                    st.markdown(f"<div style='text-align:center;'><span class='status-badge status-{status_color}'>{status_text}</span></div>", unsafe_allow_html=True)
+            st.markdown(clean_html_string(f"""
+            <div class="table-container">
+                <table class="info-detail-table">
+                    <tbody>
+                        <tr><th>ผลเอกซเรย์ (Chest X-ray)</th><td>{interpret_cxr(cxr_val)}</td></tr>
+                        <tr><th>ผลคลื่นไฟฟ้าหัวใจ (EKG)</th><td>{interpret_ekg(ekg_val)}</td></tr>
+                        <tr><th>ไวรัสตับอักเสบเอ (Hepatitis A)</th><td>{hep_a_display_text}</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            """), unsafe_allow_html=True)
 
-                # 4. HN (Use HTML)
-                with cols[3]:
-                    st.markdown(f"<div class='grid-cell-text' style='text-align:center; font-family:monospace;'>{hn}</div>", unsafe_allow_html=True)
+            # --- Logic to get correct Hepatitis B columns based on year ---
+            hbsag_col = "HbsAg"
+            hbsab_col = "HbsAb"
+            hbcab_col = "HBcAB"
+            current_thai_year = datetime.now().year + 543
+            if selected_year != current_thai_year:
+                suffix = str(selected_year)[-2:]
+                if f"HbsAg{suffix}" in person: hbsag_col = f"HbsAg{suffix}"
+                if f"HbsAb{suffix}" in person: hbsab_col = f"HbsAb{suffix}"
+                if f"HBcAB{suffix}" in person: hbcab_col = f"HBcAB{suffix}"
 
-                # 5. Name (Use HTML)
-                with cols[4]:
-                    st.markdown(f"<div class='grid-cell-text' style='text-align:left;'>{row['ชื่อ-สกุล']}</div>", unsafe_allow_html=True)
+            hep_year_rec = str(person.get("ปีตรวจHEP", "")).strip()
+            header_suffix = ""
+            if not is_empty(hep_year_rec):
+                 header_suffix = f" (ตรวจเมื่อ: {hep_year_rec})"
+            elif selected_year and selected_year != current_thai_year:
+                 header_suffix = f" (พ.ศ. {selected_year})"
 
-                # 6. Dept (Use HTML)
-                with cols[5]:
-                    st.markdown(f"<div class='grid-cell-text' style='text-align:left; color:#666;'>{row['หน่วยงาน']}</div>", unsafe_allow_html=True)
+            st.markdown(f"<h5 class='section-subtitle'>ผลการตรวจไวรัสตับอักเสบบี (Viral hepatitis B){header_suffix}</h5>", unsafe_allow_html=True)
 
-                # 7. Date (Use HTML)
-                with cols[6]:
-                    st.markdown(f"<div class='grid-cell-text' style='text-align:center;'>{str(row['วันที่ตรวจ']).split(' ')[0]}</div>", unsafe_allow_html=True)
-                
-                st.markdown("<hr style='margin:0; opacity:0.1; border-top:1px solid #ddd;'>", unsafe_allow_html=True)
+            hbsag = safe_text(person.get(hbsag_col))
+            hbsab = safe_text(person.get(hbsab_col))
+            hbcab = safe_text(person.get(hbcab_col))
+            
+            # แก้ไข: ตรงนี้หัวตารางจะแสดง HBsAg, HBsAb, HBcAb ตามที่ต้องการได้แล้ว เพราะลบ uppercase ออกจาก CSS
+            st.markdown(clean_html_string(f"""
+            <div class="table-container">
+                <table class='lab-table'>
+                    <thead><tr><th style='text-align: center;'>HBsAg</th><th style='text-align: center;'>HBsAb</th><th style='text-align: center;'>HBcAb</th></tr></thead>
+                    <tbody><tr><td style='text-align: center;'>{hbsag}</td><td style='text-align: center;'>{hbsab}</td><td style='text-align: center;'>{hbcab}</td></tr></tbody>
+                </table>
+            </div>
+            """), unsafe_allow_html=True)
 
-        # --- Footer Actions ---
-        col_summary, col_clear_btn = st.columns([4, 1])
-        with col_clear_btn:
-             if manual_hns:
-                if st.button("🗑️ ล้างรายการทั้งหมด", type="secondary", use_container_width=True):
-                    st.session_state.bp_manual_hns = set()
-                    st.rerun()
-
-    # --- Print Button ---
-    count_selected = len(selected_to_print_hns)
-    st.markdown("")
-    col_l, col_c, col_r = st.columns([1, 2, 1])
-    with col_c:
-        if st.button(f"สั่งพิมพ์รายงาน ({count_selected} ท่าน)", type="primary", use_container_width=True, disabled=(count_selected == 0)):
-            if count_selected > 0:
-                html_content, skipped = generate_batch_html(df, selected_to_print_hns, report_type)
-                if html_content:
-                    st.session_state.batch_print_html = html_content
-                    st.session_state.batch_print_ready = True
-                    if skipped > 0:
-                        st.warning(f"สร้างรายงานสำเร็จ! (ข้าม {skipped} คน เนื่องจากไม่มีข้อมูล)")
-                    else:
-                        st.success("สร้างรายงานสำเร็จครบถ้วน!")
-                    st.rerun()
+            if not (is_empty(hbsag) and is_empty(hbsab) and is_empty(hbcab)):
+                advice, status = hepatitis_b_advice(hbsag, hbsab, hbcab)
+                status_class = ""
+                if status == 'immune':
+                    status_class = 'immune-box'
+                elif status == 'no-immune':
+                    status_class = 'no-immune-box'
                 else:
-                    st.error("ไม่สามารถสร้างรายงานได้")
+                    status_class = 'warning-box'
+                
+                st.markdown(clean_html_string(f"""<div class='custom-advice-box {status_class}'>{advice}</div>"""), unsafe_allow_html=True)
 
-    # --- Hidden Print Trigger ---
-    if st.session_state.get("batch_print_ready", False):
-        html_content = st.session_state.batch_print_html
-        escaped_html = json.dumps(html_content)
-        iframe_id = f"print-batch-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
-        
-        print_script = f"""
-        <iframe id="{iframe_id}" style="display:none;"></iframe>
-        <script>
-            (function() {{
-                const iframe = document.getElementById('{iframe_id}');
-                if (!iframe) return;
-                const doc = iframe.contentWindow.document;
-                doc.open();
-                doc.write({escaped_html});
-                doc.close();
-                iframe.onload = function() {{
-                    setTimeout(function() {{
-                        try {{ 
-                            iframe.contentWindow.focus(); 
-                            iframe.contentWindow.print(); 
-                        }} catch (e) {{ 
-                            console.error("Print error:", e); 
-                        }}
-                    }}, 1000);
-                }};
-            }})();
-        </script>
-        """
-        st.components.v1.html(print_script, height=0, width=0)
-        st.session_state.batch_print_ready = False
+    with st.container(border=True):
+        # ย้าย import มาไว้ในฟังก์ชันเพื่อแก้ Circular Import
+        from performance_tests import generate_comprehensive_recommendations
+        render_section_header("สรุปและคำแนะนำการปฏิบัติตัว (Summary & Recommendations)")
+        recommendations_html = generate_comprehensive_recommendations(person_data)
+        st.markdown(f"<div class='recommendation-container'>{recommendations_html}</div>", unsafe_allow_html=True)
