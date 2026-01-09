@@ -28,7 +28,7 @@ def get_float(col, person_data):
         return float(str(val).replace(",", "").strip())
     except: return None
 
-# เพิ่มฟังก์ชันนี้เข้ามาใหม่เพื่อแก้ปัญหา Import Error
+# เพิ่มฟังก์ชันนี้เข้ามาใหม่เพื่อแก้ปัญหา Import Error และปรับ Logic ให้ตรงกับความต้องการ
 def interpret_cxr(val):
     val = str(val or "").strip()
     if is_empty(val): return "ไม่ได้ตรวจ", False
@@ -562,13 +562,20 @@ def render_print_lung(person_data):
     
     advice_box_html = f"<div class='advice-box'><b>คำแนะนำ:</b> {html.escape(advice)}</div>"
     
-    year = person_data.get("Year")
-    cxr_result_text = "ไม่มีข้อมูล"
-    if year:
-        cxr_col = f"CXR{str(year)[-2:]}" if year != (datetime.now().year + 543) else "CXR"
-        # ใช้ interpret_cxr ที่แก้ใหม่ให้มีสีแดงถ้าผิดปกติ
-        cxr_result, cxr_status = interpret_cxr(person_data.get(cxr_col, ''))
-        cxr_result_text = cxr_result
+    # --- CXR Logic Implementation ---
+    # 1. เช็คคอลัมน์ CXR ก่อน
+    cxr_val = person_data.get("CXR")
+    
+    # 2. ถ้าไม่มีข้อมูล เช็คคอลัมน์ปี CXR{YY}
+    if is_empty(cxr_val):
+        data_year = person_data.get("Year")
+        if data_year:
+            suffix = str(data_year)[-2:]
+            cxr_val = person_data.get(f"CXR{suffix}")
+    
+    # 3. ถ้าไม่มีทั้งคู่ interpret_cxr จะคืนค่า "ไม่ได้ตรวจ" ให้เอง
+    cxr_result_text, _ = interpret_cxr(cxr_val)
+    # --------------------------------
     
     # ไม่ต้อง escape cxr_result_text อีกรอบเพราะ interpret_cxr ใส่ HTML tag มาแล้ว
     cxr_html = f"""
