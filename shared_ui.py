@@ -379,6 +379,78 @@ def inject_custom_css():
         .vision-warning { background-color: var(--warning-bg); color: var(--warning-text); }
         .vision-not-tested { background-color: var(--header-bg); opacity: 0.6; }
 
+        /* Result Card Styles (Modern UI) */
+        .result-card-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .result-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .result-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .card-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+        
+        .card-title {
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--text-color);
+        }
+        
+        .card-status {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .card-detail {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            line-height: 1.4;
+        }
+        
+        /* Status Colors for Cards */
+        .status-normal { color: #2e7d32; background-color: rgba(46, 125, 50, 0.1); }
+        .status-abnormal { color: #c62828; background-color: rgba(198, 40, 40, 0.1); }
+        .status-warning { color: #ef6c00; background-color: rgba(239, 108, 0, 0.1); }
+        .status-neutral { color: #455a64; background-color: rgba(69, 90, 100, 0.1); }
+        
+        /* Icon Colors */
+        .icon-blue { background-color: rgba(33, 150, 243, 0.15); color: #1976d2; }
+        .icon-purple { background-color: rgba(156, 39, 176, 0.15); color: #7b1fa2; }
+        .icon-teal { background-color: rgba(0, 150, 136, 0.15); color: #00796b; }
+
         /* Mobile Adjustments (Responsive) */
         @media (max-width: 768px) {
             .header-main { flex-direction: column; align-items: flex-start; gap: 15px; }
@@ -749,6 +821,12 @@ def display_performance_report_hearing(person_data, all_person_history_df):
         x_domain = [125, 8500] 
         y_domain = [-10, 100] # dB range
         
+        # 1. สร้างแถบสีเขียวแสดงช่วงปกติ (0-25 dB)
+        normal_band = alt.Chart(pd.DataFrame({'y': [-10], 'y2': [25]})).mark_rect(
+            color='#4CAF50', opacity=0.1
+        ).encode(y='y', y2='y2')
+
+        # 2. เส้นกราฟหลัก
         base = alt.Chart(df_chart).encode(
             x=alt.X('Frequency:Q', scale=alt.Scale(type='log', domain=x_domain), title='ความถี่ (Hz)'),
             y=alt.Y('dB:Q', scale=alt.Scale(domain=y_domain, reverse=True), title='ระดับการได้ยิน (dB)'),
@@ -760,24 +838,98 @@ def display_performance_report_hearing(person_data, all_person_history_df):
             shape=alt.Shape('Ear:N', scale=alt.Scale(domain=['Right (หูขวา)', 'Left (หูซ้าย)'], range=['circle', 'cross']))
         )
         
-        # เพิ่มเส้นประที่ระดับ 25 dB (ค่าปกติ)
+        # 3. เส้นประที่ระดับ 25 dB (ขอบเขตค่าปกติ)
         rule = alt.Chart(pd.DataFrame({'y': [25]})).mark_rule(color='green', strokeDash=[5, 5]).encode(y='y')
         
-        final_chart = (lines + rule).properties(
-            title="กราฟแสดงผลการตรวจการได้ยิน (Audiogram)",
+        # รวมเลเยอร์: แถบสี -> เส้นประ -> เส้นกราฟ
+        final_chart = (normal_band + rule + lines).properties(
+            title="กราฟแสดงผลการตรวจการได้ยิน (Audiogram) [โซนสีเขียว = ปกติ]",
             height=350
         ).interactive()
 
         st.altair_chart(final_chart, use_container_width=True)
 
     # -------------------------------------------------------------
-    # ส่วนแสดงข้อมูลสรุปด้านล่างกราฟ
+    # ส่วนแสดงข้อมูลสรุปด้านล่างกราฟ (ปรับปรุงเป็น Card Design แบบเข้าใจง่าย)
     # -------------------------------------------------------------
     
-    col1, col2 = st.columns(2)
-    with col1: st.markdown(f"<div class='card-container'><b>สรุปผลหูขวา:</b><br>{results['summary']['right']}</div>", unsafe_allow_html=True)
-    with col2: st.markdown(f"<div class='card-container'><b>สรุปผลหูซ้าย:</b><br>{results['summary']['left']}</div>", unsafe_allow_html=True)
-    if results['advice']: st.warning(f"คำแนะนำ: {results['advice']}")
+    # Helper to check status for coloring
+    def get_status_style(text):
+        if "ปกติ" in str(text): return "status-normal"
+        if "ผิดปกติ" in str(text) or "เสื่อม" in str(text): return "status-abnormal"
+        if "N/A" in str(text) or "ไม่ได้ตรวจ" in str(text): return "status-neutral"
+        return "status-warning"
+
+    def format_avg_db(val):
+        if val is None: return "-", ""
+        try:
+            val_float = float(val)
+            color_style = "color: #2e7d32;" if val_float <= 25 else "color: #c62828; font-weight: bold;"
+            return f"{val_float:.1f} dB", color_style
+        except: return str(val), ""
+
+    # 1. Summary Cards (Left/Right Ear)
+    left_status_class = get_status_style(results['summary']['left'])
+    right_status_class = get_status_style(results['summary']['right'])
+    
+    # Prepare formatted values
+    r_speech_val, r_speech_style = format_avg_db(results['averages']['right_500_2000'])
+    r_high_val, r_high_style = format_avg_db(results['averages']['right_3000_6000'])
+    l_speech_val, l_speech_style = format_avg_db(results['averages']['left_500_2000'])
+    l_high_val, l_high_style = format_avg_db(results['averages']['left_3000_6000'])
+
+    st.markdown(f"""
+    <div class="result-card-container">
+        <!-- Right Ear Card -->
+        <div class="result-card">
+            <div class="card-header">
+                <div class="card-icon icon-blue">👂</div>
+                <div class="card-title">หูขวา (Right Ear)</div>
+            </div>
+            <div class="card-status {right_status_class}">{results['summary']['right']}</div>
+            <div class="card-detail">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                    <span title="ความถี่ 500-2000 Hz: ใช้ในการฟังเสียงพูดคุยทั่วไป">🗣️ เสียงพูด (สื่อสาร):</span>
+                    <span style="{r_speech_style}">{r_speech_val}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span title="ความถี่ 3000-6000 Hz: ไวต่อเสียงดัง มักเสื่อมก่อนในโรคหูตึงจากเสียง">🔔 เสียงสูง (เฝ้าระวัง):</span>
+                    <span style="{r_high_style}">{r_high_val}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Left Ear Card -->
+        <div class="result-card">
+            <div class="card-header">
+                <div class="card-icon icon-purple">👂</div>
+                <div class="card-title">หูซ้าย (Left Ear)</div>
+            </div>
+            <div class="card-status {left_status_class}">{results['summary']['left']}</div>
+            <div class="card-detail">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                    <span title="ความถี่ 500-2000 Hz: ใช้ในการฟังเสียงพูดคุยทั่วไป">🗣️ เสียงพูด (สื่อสาร):</span>
+                    <span style="{l_speech_style}">{l_speech_val}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span title="ความถี่ 3000-6000 Hz: ไวต่อเสียงดัง มักเสื่อมก่อนในโรคหูตึงจากเสียง">🔔 เสียงสูง (เฝ้าระวัง):</span>
+                    <span style="{l_high_style}">{l_high_val}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # 2. Recommendation Card (Full Width)
+    advice_text = results.get('advice', '')
+    if advice_text and advice_text != 'ไม่มีคำแนะนำเพิ่มเติม':
+        st.markdown(f"""
+        <div style="margin-top: 15px;">
+            <div class="custom-advice-box warning-box">
+                {advice_text}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
 def display_performance_report_lung(person_data):
     # ย้าย import มาไว้ในฟังก์ชันเพื่อแก้ Circular Import
