@@ -62,25 +62,21 @@ def render_admin_header_with_actions(person_data, available_years):
     
     icon_profile = """<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>"""
     
-    # ใช้ CSS Classes จาก shared_ui เพื่อรองรับ Theme และ Responsive
+    # Simple container for header
     st.markdown(f"""
-    <div class="report-header-container">
-        <div class="header-main">
-            <div class="patient-profile">
-                <div class="profile-icon">{icon_profile}</div>
-                <div class="profile-details">
-                    <div class="patient-name">{name}</div>
-                    <div class="patient-meta"><span>HN: {hn}</span> | <span>เพศ: {sex}</span> | <span>อายุ: {age} ปี</span></div>
-                    <div class="patient-dept">หน่วยงาน: {department}</div>
+    <div style="background-color: white; padding: 20px; border-radius: 12px; border: 1px solid #ddd; margin-bottom: 20px;">
+        <div style="display: flex; gap: 15px; align-items: flex-start;">
+            <div style="min-width: 60px; height: 60px; background-color: rgba(0, 121, 107, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #00796B;">
+                {icon_profile}
+            </div>
+            <div style="flex: 1;">
+                <div style="font-size: 1.5rem; font-weight: bold; line-height: 1.2;">{name}</div>
+                <div style="font-size: 0.95rem; opacity: 0.8; margin-top: 4px;">
+                    HN: {hn} | เพศ: {sex} | อายุ: {age} ปี | หน่วยงาน: {department}
                 </div>
             </div>
-            <div class="report-meta">
-                <div class="meta-date">วันที่ตรวจ: {check_date}</div>
-                <div class="hospital-brand">
-                    <div class="hosp-name">คลินิกตรวจสุขภาพ</div>
-                    <div class="hosp-dept">อาชีวเวชกรรม</div>
-                    <div class="hosp-sub">รพ.สันทราย</div>
-                </div>
+            <div style="text-align: right;">
+                <div style="font-weight: bold; color: #00796B;">วันที่ตรวจ: {check_date}</div>
             </div>
         </div>
     </div>
