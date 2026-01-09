@@ -165,8 +165,9 @@ def get_main_report_css():
         
         /* Tables */
         table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 5px; }
-        th, td { padding: 2px 4px; border-bottom: 1px solid #eee; text-align: left; vertical-align: middle; }
-        th { background-color: #f1f2f6; font-weight: 600; color: var(--secondary-color); text-align: center; border-bottom: 2px solid #ddd; }
+        /* ปรับสีเส้นขอบให้เข้มขึ้นจาก #eee เป็น #bdc3c7 (var--border-color) */
+        th, td { padding: 2px 4px; border-bottom: 1px solid #bdc3c7; text-align: left; vertical-align: middle; }
+        th { background-color: #f1f2f6; font-weight: 600; color: var(--secondary-color); text-align: center; border-bottom: 2px solid #bdc3c7; }
         td.val-col { text-align: center; font-weight: 500; }
         td.range-col { text-align: center; color: #7f8c8d; font-size: 11px; }
         
