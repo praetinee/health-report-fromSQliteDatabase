@@ -8,6 +8,7 @@ from collections import OrderedDict
 from datetime import datetime
 import json
 import streamlit.components.v1 as components
+import altair as alt # เพิ่ม import altair สำหรับกราฟ
 
 # --- Helper Functions ---
 def is_empty(val):
@@ -677,21 +678,102 @@ def display_performance_report_hearing(person_data, all_person_history_df):
     # ย้าย import มาไว้ในฟังก์ชันเพื่อแก้ Circular Import
     from performance_tests import interpret_audiogram
     results = interpret_audiogram(person_data, all_person_history_df)
-    freqs = [250, 500, 1000, 2000, 3000, 4000, 6000, 8000]
-    def get_hearing_val(side, freq):
-        suffixes = [str(freq)]
-        if freq >= 1000: suffixes.append(f"{freq//1000}k")
-        candidates = []
-        for s in suffixes: candidates.extend([f"{side}{s}", f"{side}_{s}", f"{side}_{s}Hz", f"{side}{s}Hz"])
-        for k in candidates:
-            val = person_data.get(k)
-            if not is_empty(val): return val
-        return "-"
-    r_vals = [get_hearing_val('R', f) for f in freqs]
-    l_vals = [get_hearing_val('L', f) for f in freqs]
-    st.markdown(clean_html_string("""<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px;"><div class="card-container" style="margin: 0; border-left: 4px solid #FF9800;"><div style="font-weight: bold; color: var(--main-text-color); margin-bottom: 5px;">🔊 ความถี่ (Hz)</div><div style="font-size: 0.85rem; opacity: 0.8;">คือ ระดับเสียงทุ้ม-แหลม (250=ทุ้มต่ำ, 8000=แหลมสูง)</div></div><div class="card-container" style="margin: 0; border-left: 4px solid #4CAF50;"><div style="font-weight: bold; color: var(--main-text-color); margin-bottom: 5px;">👂 ระดับการได้ยิน (dB)</div><div style="font-size: 0.85rem; opacity: 0.8;">คือ ความดังที่เริ่มได้ยิน <b>(ค่าปกติ ≤ 25 dB)</b> *ค่ายิ่งน้อย ยิ่งได้ยินดี</div></div></div>"""), unsafe_allow_html=True)
-    table_html = clean_html_string(f"""<div class='card-container'><div class='table-title'>ตารางระดับการได้ยิน (dB)</div><div class='table-responsive'><table class='lab-table'><thead><tr><th>ความถี่ (Hz)</th>{"".join([f"<th>{f}</th>" for f in freqs])}</tr></thead><tbody><tr><td><b>หูขวา (Right)</b></td>{"".join([f"<td style='text-align:center;'>{v}</td>" for v in r_vals])}</tr><tr><td><b>หูซ้าย (Left)</b></td>{"".join([f"<td style='text-align:center;'>{v}</td>" for v in l_vals])}</tr></tbody></table></div></div>""")
-    st.markdown(table_html, unsafe_allow_html=True)
+    
+    # -------------------------------------------------------------
+    # สร้างกราฟ Audiogram ด้วย Altair
+    # -------------------------------------------------------------
+    
+    freq_map = {
+        '250 Hz': 250, '500 Hz': 500, '1000 Hz': 1000, 
+        '2000 Hz': 2000, '3000 Hz': 3000, '4000 Hz': 4000, 
+        '6000 Hz': 6000, '8000 Hz': 8000
+    }
+    
+    # เตรียมข้อมูลสำหรับกราฟ
+    chart_data = []
+    
+    # วนลูปข้อมูล raw_values ที่ได้จาก interpret_audiogram
+    # results['raw_values'] จะมีโครงสร้าง { '500 Hz': {'right': 20, 'left': 25}, ... }
+    # ต้องเพิ่ม 250 Hz ถ้ามีใน person_data เพราะ interpret_audiogram อาจไม่ได้ส่งมาทุกความถี่
+    
+    # สร้าง list ความถี่ทั้งหมดที่ต้องการแสดง
+    all_freqs = ['250 Hz', '500 Hz', '1000 Hz', '2000 Hz', '3000 Hz', '4000 Hz', '6000 Hz', '8000 Hz']
+    
+    for freq_str in all_freqs:
+        freq_num = freq_map[freq_str]
+        
+        # พยายามดึงค่าจาก results ก่อน
+        r_val = None
+        l_val = None
+        
+        if freq_str in results['raw_values']:
+            r_val = results['raw_values'][freq_str]['right']
+            l_val = results['raw_values'][freq_str]['left']
+        else:
+            # ถ้าไม่มีใน results (เช่น 250 Hz) ให้ลองดึงตรงๆ จาก person_data
+            # สร้าง key ที่เป็นไปได้ เช่น R250, L250
+            suffix = str(freq_num)
+            if freq_num >= 1000: suffix = f"{freq_num//1000}k"
+            
+            # ลองหาหลายแบบ
+            r_keys = [f"R{suffix}", f"R_{suffix}", f"R{suffix}Hz"]
+            l_keys = [f"L{suffix}", f"L_{suffix}", f"L{suffix}Hz"]
+            
+            for k in r_keys:
+                if not is_empty(person_data.get(k)): 
+                    try: r_val = int(float(person_data.get(k)))
+                    except: pass
+                    break
+            
+            for k in l_keys:
+                if not is_empty(person_data.get(k)): 
+                    try: l_val = int(float(person_data.get(k)))
+                    except: pass
+                    break
+
+        if r_val is not None:
+            chart_data.append({'Frequency': freq_num, 'dB': r_val, 'Ear': 'Right (หูขวา)'})
+        if l_val is not None:
+            chart_data.append({'Frequency': freq_num, 'dB': l_val, 'Ear': 'Left (หูซ้าย)'})
+
+    if not chart_data:
+        st.info("ไม่พบข้อมูลกราฟการได้ยิน")
+    else:
+        df_chart = pd.DataFrame(chart_data)
+        
+        # สร้างกราฟ Altair
+        # แกน X: Frequency (Log Scale เพื่อความสวยงามแบบ Audiogram มาตรฐาน หรือ Linear ก็ได้ตามชอบ แต่มาตรฐานคือ Log)
+        # แกน Y: dB (Reverse Scale เพราะค่ายิ่งน้อยยิ่งดี)
+        
+        # ปรับแต่ง Domain แกน X และ Y
+        x_domain = [125, 8500] 
+        y_domain = [-10, 100] # dB range
+        
+        base = alt.Chart(df_chart).encode(
+            x=alt.X('Frequency:Q', scale=alt.Scale(type='log', domain=x_domain), title='ความถี่ (Hz)'),
+            y=alt.Y('dB:Q', scale=alt.Scale(domain=y_domain, reverse=True), title='ระดับการได้ยิน (dB)'),
+            color=alt.Color('Ear:N', scale=alt.Scale(domain=['Right (หูขวา)', 'Left (หูซ้าย)'], range=['#ef5350', '#42a5f5']), legend=alt.Legend(title="ข้างที่ตรวจ")),
+            tooltip=['Ear', 'Frequency', 'dB']
+        )
+
+        lines = base.mark_line(point=True).encode(
+            shape=alt.Shape('Ear:N', scale=alt.Scale(domain=['Right (หูขวา)', 'Left (หูซ้าย)'], range=['circle', 'cross']))
+        )
+        
+        # เพิ่มเส้นประที่ระดับ 25 dB (ค่าปกติ)
+        rule = alt.Chart(pd.DataFrame({'y': [25]})).mark_rule(color='green', strokeDash=[5, 5]).encode(y='y')
+        
+        final_chart = (lines + rule).properties(
+            title="กราฟแสดงผลการตรวจการได้ยิน (Audiogram)",
+            height=350
+        ).interactive()
+
+        st.altair_chart(final_chart, use_container_width=True)
+
+    # -------------------------------------------------------------
+    # ส่วนแสดงข้อมูลสรุปด้านล่างกราฟ
+    # -------------------------------------------------------------
+    
     col1, col2 = st.columns(2)
     with col1: st.markdown(f"<div class='card-container'><b>สรุปผลหูขวา:</b><br>{results['summary']['right']}</div>", unsafe_allow_html=True)
     with col2: st.markdown(f"<div class='card-container'><b>สรุปผลหูซ้าย:</b><br>{results['summary']['left']}</div>", unsafe_allow_html=True)
