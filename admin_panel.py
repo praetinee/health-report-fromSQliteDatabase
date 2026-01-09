@@ -4,6 +4,7 @@ from collections import OrderedDict
 import json
 import base64
 
+# --- Imports with Error Handling (Optional modules) ---
 try:
     from utils import (
         is_empty,
@@ -31,11 +32,6 @@ except ImportError:
     def generate_performance_report_html(*args): return ""
 
 try:
-    from batch_print import display_print_center_page
-except ImportError:
-    def display_print_center_page(*args): st.info("Batch Print module not found")
-
-try:
     from visualization import display_visualization_tab 
 except ImportError:
     def display_visualization_tab(person_data, all_df): st.info("Visualization module not found")
@@ -50,6 +46,11 @@ except Exception as e:
     def inject_custom_css(): pass
     def display_main_report(p, a): st.error("Main Report Function Missing")
     def display_performance_report(p, r, a=None): st.error("Performance Report Function Missing")
+
+# --- FIX: Import batch_print directly without try-except ---
+# เพื่อให้แสดงผล Error จริงหาก module มีปัญหา แทนที่จะซ่อนด้วยข้อความ "not found"
+from batch_print import display_print_center_page
+
 
 # Note: We duplicate the custom header function here to avoid circular imports with app.py
 def render_admin_header_with_actions(person_data, available_years):
